@@ -102,6 +102,7 @@ class MenuPlan():
 class RunState():
     def __init__(self):
         self.reset()
+        self.debug_env = None
 
     def reset(self):
         self.step_count = 0
@@ -157,10 +158,13 @@ def check_stall(run_state, observation):
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
 
-    def __init__(self, num_envs, num_actions):
+    def __init__(self, num_envs, num_actions, debug_envs):
         """Set up and load you model here"""
-        super().__init__(num_envs, num_actions)
+        super().__init__(num_envs, num_actions, debug_envs)
         self.run_states = [RunState()] * num_envs
+        if self.debug_envs:
+            for i, env in enumerate(self.debug_envs):
+                self.run_states[i].debug_env = env
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)

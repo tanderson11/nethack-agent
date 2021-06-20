@@ -3,6 +3,13 @@ import numpy as np
 
 from collections.abc import Iterable
 
+def log_new_run(batch_number, env):
+    env = env.unwrapped
+    core_seed, disp_seed, reseed = env.get_seeds()
+    if not reseed:
+        Exception("Surprise reseed value")
+    print(f"[{batch_number} {env._episode} {core_seed} {disp_seed}] Starting run.")
+
 class BatchedEnv:
     def __init__(self, env_make_fn, num_envs=32):
         """
@@ -24,10 +31,11 @@ class BatchedEnv:
             actions) == self.num_envs, f"actions has length {len(actions)} which different from num_envs"
 
         observations, rewards, dones, infos = [], [], [], []
-        for env, a in zip(self.envs, actions):
+        for i, env, a in zip(range(len(self.envs)), self.envs, actions):
             observation, reward, done, info = env.step(a)
             if done:
                 observation = env.reset()
+                log_new_run(i, env)
             observations.append(observation)
             rewards.append(reward)
             dones.append(done)
@@ -40,6 +48,7 @@ class BatchedEnv:
         Resets all the environments in self.envs
         """
         observation = [env.reset() for env in self.envs]
+        [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation
 
 

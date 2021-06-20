@@ -12,6 +12,7 @@ from submission_config import SubmissionConfig, TestEvaluationConfig
 from rollout import run_batched_rollout
 from envs.batched_env import BatchedEnv
 
+import environment
 
 def evaluate():
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
@@ -22,7 +23,7 @@ def evaluate():
 
     batched_env = BatchedEnv(env_make_fn=env_make_fn, num_envs=num_envs)
 
-    agent = Agent(num_envs, batched_env.num_actions)
+    agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.debug else None)
 
     ascensions, scores = run_batched_rollout(num_episodes, batched_env, agent)
     print(
