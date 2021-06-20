@@ -5,7 +5,6 @@ import numpy as np
 from nle import nethack
 from agents.base import BatchedAgent
 
-
 # Config variable that are screwing with me
 # pile_limit
 
