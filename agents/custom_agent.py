@@ -196,8 +196,6 @@ class CustomAgent(BatchedAgent):
             except ValueError:
                 food_index = None
             if food_index:
-                # If this runs while we're standing on food, we'll get wedged
-                # print("EATING")
                 letter = observation['inv_letters'][food_index]
                 possible_actions = [nethack.actions.Command.EAT]
                 menu_plan = MenuPlan({
