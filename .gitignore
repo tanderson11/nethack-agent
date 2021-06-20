@@ -131,4 +131,4 @@ dmypy.json
 
 nle_data/
 test_batched_env.py
-notebooks/NetHackTutorial.ipynb
+notebooks/*.ipynb

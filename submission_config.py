@@ -1,3 +1,5 @@
+import os
+
 from agents.custom_agent import CustomAgent
 from agents.torchbeast_agent import TorchBeastAgent
 
@@ -11,6 +13,8 @@ from envs.wrappers import addtimelimitwrapper_fn
 #        Test with local_evaluation.py         #
 ################################################
 
+num_environments = os.getenv('NLE_DEV_NUM_ENVIRONMENTS')
+num_episodes = os.getenv('NLE_DEV_NUM_EPISODES')
 
 class SubmissionConfig:
     ## Add your own agent class
@@ -21,7 +25,7 @@ class SubmissionConfig:
     ## Change the NUM_ENVIRONMENTS as you need
     ## for example reduce it if your GPU doesn't fit
     ## Increasing above 32 is not advisable for the Nethack Challenge 2021
-    NUM_ENVIRONMENTS = 32
+    NUM_ENVIRONMENTS = int(num_environments) if num_environments else 32
 
 
     ## Add a function that creates your nethack env
@@ -35,4 +39,4 @@ class TestEvaluationConfig:
     # Change this to locally check a different number of rollouts
     # The AIcrowd submission evaluator will not use this
     # It is only for your local evaluation
-    NUM_EPISODES = 512
+    NUM_EPISODES = int(num_episodes) if num_episodes else 512
