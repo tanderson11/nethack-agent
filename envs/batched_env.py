@@ -3,12 +3,12 @@ import numpy as np
 
 from collections.abc import Iterable
 
+import environment
+
 def log_new_run(batch_number, env):
     env = env.unwrapped
     core_seed, disp_seed, reseed = env.get_seeds()
-    if not reseed:
-        Exception("Surprise reseed value")
-    print(f"[{batch_number} {env._episode} {core_seed} {disp_seed}] Starting run.")
+    print(f"[{batch_number} {env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
 
 class BatchedEnv:
     def __init__(self, env_make_fn, num_envs=32):
@@ -17,6 +17,8 @@ class BatchedEnv:
         """
         self.num_envs = num_envs
         self.envs = [env_make_fn() for _ in range(self.num_envs)]
+        if environment.env.debug:
+            [env.unwrapped.seed(None, None, False) for env in self.envs]
         self.num_actions = self.envs[0].action_space.n
 
     def batch_step(self, actions):
@@ -34,6 +36,8 @@ class BatchedEnv:
         for i, env, a in zip(range(len(self.envs)), self.envs, actions):
             observation, reward, done, info = env.step(a)
             if done:
+                if environment.env.debug:
+                    env.unwrapped.seed(None, None, False)
                 observation = env.reset()
                 log_new_run(i, env)
             observations.append(observation)
@@ -47,6 +51,7 @@ class BatchedEnv:
         """
         Resets all the environments in self.envs
         """
+        # [env.unwrapped.seed(core=1723886515033083678, disp=8907974946124747376, reseed=False) for env in self.envs]
         observation = [env.reset() for env in self.envs]
         [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation

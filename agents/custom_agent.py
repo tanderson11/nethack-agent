@@ -47,6 +47,7 @@ class Message():
         "Other things that are here:",
         "There is a staircase up here.",
         "There is a staircase down here.",
+        "Other things that you feel here:",
         ])
     def __init__(self, message, tty_chars):
         self.raw_message = message
