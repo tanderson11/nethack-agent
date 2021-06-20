@@ -48,7 +48,7 @@ class Message():
         "There is a staircase up here.",
         "There is a staircase down here.",
         "There is a fountain here.",
-        "You are a neutral female gnomish"
+        "You are a neutral female gnomish",
         ])
     def __init__(self, message, tty_chars):
         self.raw_message = message
@@ -191,7 +191,9 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         possible_actions = list(nethack.actions.CompassDirection)
-        import pdb; pdb.set_trace()
+        possible_actions.append(nethack.actions.MiscDirection.DOWN)
+        possible_actions.append(nethack.actions.Command.TRAVEL)
+
         if BLStats(observation['blstats']).get('hunger_state') > 2:
             try:
                 FOOD_CLASS = 7
@@ -212,6 +214,15 @@ class CustomAgent(BatchedAgent):
                 run_state.set_menu_plan(menu_plan)
 
         action = random.choice(possible_actions)
+
+        if action == nethack.actions.Command.TRAVEL:
+            menu_plan = MenuPlan({
+                "Can't find dungeon feature": nethack.actions.Command.ESC,
+                "staircase down": keypress_action(ord('.')),
+                "Where do you want to travel to?": keypress_action(ord('>')),
+                })
+            run_state.set_menu_plan(menu_plan)
+
         retval = nethack.ACTIONS.index(action)
         run_state.log_action(retval)
         return retval
