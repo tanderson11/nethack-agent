@@ -47,6 +47,8 @@ class Message():
         "Other things that are here:",
         "There is a staircase up here.",
         "There is a staircase down here.",
+        "There is a fountain here.",
+        "You are a neutral female gnomish"
         ])
     def __init__(self, message, tty_chars):
         self.raw_message = message
@@ -189,10 +191,11 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         possible_actions = list(nethack.actions.CompassDirection)
-
+        import pdb; pdb.set_trace()
         if BLStats(observation['blstats']).get('hunger_state') > 2:
             try:
-                food_index = observation['inv_oclasses'].tolist().index(7)
+                FOOD_CLASS = 7
+                food_index = observation['inv_oclasses'].tolist().index(FOOD_CLASS)
             except ValueError:
                 food_index = None
             if food_index:
