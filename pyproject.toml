@@ -1,0 +1,26 @@
+[tool.poetry]
+name = "neurips-2021-the-nethack-challenge"
+version = "0.1.0"
+description = ""
+authors = ["Christian Anderson <canderson13@gmail.com>"]
+
+[tool.poetry.dependencies]
+python = ">=3.7,<3.10"
+aicrowd-api = "^0.1.23"
+aicrowd-gym = "^0.0.3"
+numpy = "^1.20.3"
+scipy = "^1.6.3"
+nle = "^0.7.1"
+tqdm = "^4.61.1"
+wandb = "^0.10.32"
+torch = "^1.9.0"
+einops = "^0.3.0"
+hydra-core = "^1.1.0"
+hydra-colorlog = "^1.1.0"
+
+[tool.poetry.dev-dependencies]
+jupyter = "^1.0.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
