@@ -48,6 +48,8 @@ class Message():
         "There is a staircase up here.",
         "There is a staircase down here.",
         "Other things that you feel here:",
+        "Hello Agent, welcome to NetHack!  You are a neutral female gnomish", # see issue_report_1
+        "There is a fountain here.",
         ])
     def __init__(self, message, tty_chars):
         self.raw_message = message
@@ -100,6 +102,11 @@ class MenuPlan():
             pass
         return None
 
+BackgroundMenuPlan = MenuPlan({
+    '"Hello stranger, who are you?" - ': keypress_action(ord('\r')),
+    "Call a ": keypress_action(ord('\r')),
+})
+
 class RunState():
     def __init__(self):
         self.reset()
@@ -111,16 +118,24 @@ class RunState():
         self.done = False
         self.time = None
         self.tty = None
-        self.active_menu_plan = None
+        self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
         self.action_log = []
+        self.time_hung = 0
 
     def update(self, done, reward, observation):
         self.done = done
         self.step_count += 1
         self.reward += reward
         # Potentially useful for checking stalls
-        self.time = BLStats(observation['blstats']).get('time')
+        new_time = BLStats(observation['blstats']).get('time')
+        if self.time == new_time:
+            self.time_hung += 1
+        else:
+            self.time_hung = 0
+        if self.time_hung > 1_000:
+            import pdb; pdb.set_trace()
+        self.time = new_time
         self.tty = observation['tty_chars']
 
     def set_menu_plan(self, menu_plan):
@@ -131,7 +146,7 @@ class RunState():
             return None
         retval = self.active_menu_plan.interact(message)
         if retval is None:
-            self.active_menu_plan = None
+            self.active_menu_plan = BackgroundMenuPlan
         return retval
 
     def log_message(self, message):
@@ -149,12 +164,6 @@ def print_stats(run_state, blstats):
         f"elevel {blstats.get('experience_level')}, " + \
         f"time {blstats.get('time')}"
     )
-
-def check_stall(run_state, observation):
-    if np.array_equal(run_state.tty, observation['tty_chars']) and \
-        run_state.time == BLStats(observation['blstats']).get('time') and \
-            not "It's " in bytes(observation['tty_chars'][0]).decode('ascii'):
-            import pdb; pdb.set_trace()
 
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
