@@ -1,9 +1,12 @@
 import random
 
 import numpy as np
+import pdb
 
 from nle import nethack
 from agents.base import BatchedAgent
+
+import environment
 
 # Config variable that are screwing with me
 # pile_limit
@@ -11,7 +14,6 @@ from agents.base import BatchedAgent
 def keypress_action(ascii_ord):
     action = nethack.ACTIONS.index(ascii_ord)
     if action is None:
-        # import pdb; pdb.set_trace()
         raise Exception("Bad keypress")
     return action
 
@@ -63,7 +65,7 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                import pdb; pdb.set_trace()
+                if environment.env.debug: pdb.set_trace()
                 pass
             self.message = potential_message
 
@@ -79,7 +81,7 @@ class Message():
         truly_has_more = "--More--" in bytes(tty_chars).decode('ascii')
 
         if truly_has_more != self.has_more:
-            import pdb; pdb.set_trace()
+            if environment.env.debug: pdb.set_trace()
             self.has_more = truly_has_more
 
     def __bool__(self):
@@ -91,14 +93,11 @@ class MenuPlan():
         self.keypress_count = 0
 
     def interact(self, message_obj):
-        # import pdb; pdb.set_trace()
         for k, v in self.match_to_keypress.items():
             if k in message_obj.message:
                 self.keypress_count += 1
                 return v
         if self.keypress_count == 0:
-            # Can misfire if interrupting message
-            # import pdb; pdb.set_trace()
             pass
         return None
 
@@ -134,7 +133,8 @@ class RunState():
         else:
             self.time_hung = 0
         if self.time_hung > 1_000:
-            import pdb; pdb.set_trace()
+            if environment.env.debug: pdb.set_trace()
+            pass
         self.time = new_time
         self.tty = observation['tty_chars']
 
