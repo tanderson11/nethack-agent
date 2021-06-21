@@ -55,6 +55,8 @@ class Message():
         self.message = ''
         self.has_more = False
 
+        self.escape_flag = False
+
         if np.count_nonzero(message) > 0:
             self.message = bytes(message).decode('ascii').rstrip('\x00')
 
@@ -62,8 +64,9 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                import pdb; pdb.set_trace()
-                pass
+                #import pdb; pdb.set_trace()
+                #pass
+                self.escape_flag = True
             self.message = potential_message
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
@@ -190,9 +193,16 @@ class CustomAgent(BatchedAgent):
                 run_state.log_action(retval)
                 return retval
 
+        if message.escape_flag:
+            retval = keypress_action(ord('.'))#nethack.ACTIONS.index(nethack.actions.Command.ESC)
+            #import pdb; pdb.set_trace()
+            return retval
+
         possible_actions = list(nethack.actions.CompassDirection)
         possible_actions.append(nethack.actions.MiscDirection.DOWN)
-        possible_actions.append(nethack.actions.Command.TRAVEL)
+
+        if random.random() < 0.005:
+            possible_actions.append(nethack.actions.Command.TRAVEL)
 
         if BLStats(observation['blstats']).get('hunger_state') > 2:
             try:
@@ -217,7 +227,7 @@ class CustomAgent(BatchedAgent):
 
         if action == nethack.actions.Command.TRAVEL:
             menu_plan = MenuPlan({
-                "Can't find dungeon feature": nethack.actions.Command.ESC,
+                "Can't find dungeon feature": keypress_action(ord(' ')),#nethack.ACTIONS.index(nethack.actions.Command.ESC),
                 "staircase down": keypress_action(ord('.')),
                 "Where do you want to travel to?": keypress_action(ord('>')),
                 })
