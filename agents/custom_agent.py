@@ -6,6 +6,7 @@ import itertools
 from nle import nethack
 from agents.base import BatchedAgent
 
+import glyphs as gd
 import environment
 
 if environment.env.debug:
@@ -95,6 +96,70 @@ class Message():
     def __bool__(self):
         return bool(self.message)
 
+
+def find_player_location(observation):
+    PLAYER_GLYPHS = range(327, 342)
+    player_location = np.array(np.where(np.isin(observation['glyphs'], PLAYER_GLYPHS))).squeeze()
+
+    if not player_location.any(): # if we didn't locate the player (possibly because our player glyph range isn't wide enough)
+        if environment.env.debug: pdb.set_trace()
+        pass
+    return player_location
+
+def is_walkable_glyph(glyph):
+    WALL_GLYPHS = range(2360, 2366)
+
+    if not glyph or glyph in WALL_GLYPHS or glyph == 0:
+        return False
+    else:
+        return True
+
+class Neighborhood():
+    cardinal_action_index_to_offsets = {
+        0: (-1,0),
+        1: (0,1),
+        2: (1,0),
+        3: (0,-1),
+        4: (-1,1),
+        5: (1,1),
+        6: (1,-1),
+        7: (-1,-1),
+    }
+    
+    def __init__(self, observation):
+        self.player_location = find_player_location(observation)
+        self.player_y, self.player_x = self.player_location
+
+        x_lim = observation['glyphs'].shape[1]
+        y_lim = observation['glyphs'].shape[0]
+
+        y_slice = slice(max(self.player_y-1, 0),min(self.player_y+2, y_lim+1))
+        x_slice = slice(max(self.player_x-1, 0),min(self.player_x+2, x_lim+1))
+        self.glyphs = observation['glyphs'][y_slice, x_slice] # +2 because non inclusive on upper end
+
+        directions = list(nethack.actions.CompassDirection)
+        self.directions_to_glyphs = {a:self.cardinal_to_glyph(a) for a in directions}
+
+    def cardinal_to_glyph(self, cardinal_action):
+        action_index = nethack.ACTIONS.index(cardinal_action)
+        assert action_index in range(0, 16), "action should be a CompassDirection or CompassDirectionLonger. It is {}, {}".format(cardinal_action.name, cardinal_action.value) # compass direction and compasss direction longer
+        if action_index > 7:
+            action_index = action_index % 8 # CompassDirectionLonger -> CompassDirection
+
+        offset = self.__class__.cardinal_action_index_to_offsets[action_index]
+
+        try:
+            y_offset, x_offset = offset
+            directional_glyph = self.glyphs[1+y_offset, 1+x_offset]
+            
+        except IndexError: #sometimes we are on the edge of the map
+            return None
+
+        return directional_glyph
+
+    def walkable_directions(self):
+        return [a for a,g in self.directions_to_glyphs.items() if gd.is_walkable_glyph(g)]
+
 class MenuPlan():
     def __init__(self, name, match_to_keypress, queue_final=None, handles_bad_messages=None):
         self.name = name
@@ -131,6 +196,7 @@ BackgroundMenuPlan = MenuPlan("background",{
     "Call a ": keypress_action(ord('\r')),
     "Call an ": keypress_action(ord('\r')),
     "Really attack": keypress_action(ord('n')),
+    "Shall I remove": keypress_action(ord('n')),
 })
 
 class RunState():
@@ -148,7 +214,6 @@ class RunState():
         self.message_log = []
         self.action_log = []
         self.time_hung = 0
-        self.player_location = None
 
     def update(self, done, reward, observation):
         self.done = done
@@ -195,61 +260,6 @@ def print_stats(run_state, blstats):
         f"time {blstats.get('time')}"
     )
 
-def find_player_location(observation):
-    PLAYER_GLYPHS = range(327, 342)
-    player_location = np.array(np.where(np.isin(observation['glyphs'], PLAYER_GLYPHS))).squeeze()
-
-    if not player_location.any(): # if we didn't locate the player (possibly because our player glyph range isn't wide enough)
-        if environment.env.debug: pdb.set_trace()
-        pass
-    return player_location
-
-def glyph_in_direction(observation, start, a):
-    '''a is a cardinal direction action, this function returns the glyph one space along that cardinal direction'''
-    action_index = nethack.ACTIONS.index(a)
-    assert action_index in range(0, 16), "action should be a CompassDirection or CompassDirectionLonger. It is {}, {}".format(a.name, a.value) # compass direction and compasss direction longer
-    if action_index > 7:
-        action_index = action_index % 8 # CompassDirectionLonger -> CompassDirection
-
-    # N, E, S, W, NE, SE, SW, NW
-    action_index_to_offsets = {
-        0: (-1,0),
-        1: (0,1),
-        2: (1,0),
-        3: (0,-1),
-        4: (-1,1),
-        5: (1,1),
-        6: (1,-1),
-        7: (-1,-1),
-    }
-
-    offset = action_index_to_offsets[action_index]
-
-    try:
-        directional_glyph = observation['glyphs'][tuple(start + np.array(offset))]
-    except IndexError: #sometimes we are on the edge of the map
-        return None
-    except TypeError:
-        if environment.env.debug: pdb.set_trace()
-        pass
-
-    return directional_glyph
-
-
-def is_walkable_glyph(glyph):
-    WALL_GLYPHS = range(2360, 2366)
-    # WALL_GLPYHS = 2360, 2361 = vertical + horizontal
-    # 2362, 2363, 2364, 2365 corners
-
-    if not glyph or glyph in WALL_GLYPHS or glyph == 0:
-        return False
-    else:
-        return True
-
-def is_walkable_direction(observation, player_location, a):
-    '''a is a cardinal direction action, this function returns True if the square in that direction does not contain a wall (or someday is walkable more generally)'''
-    return is_walkable_glyph(glyph_in_direction(observation, player_location, a))
-
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
 
@@ -293,7 +303,7 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval)
             return retval
 
-        travel_probability = 0.02
+        travel_probability = 0.00
         if random.random() < travel_probability: # randomly try to travel to the downstairs sometimes
             retval = nethack.ACTIONS.index(nethack.actions.Command.TRAVEL)
 
@@ -308,21 +318,9 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval)
             return retval
 
-        compass_directions = list(nethack.actions.CompassDirection)
-        long_compass_directions = list(nethack.actions.CompassDirectionLonger)
 
-        player_loc = find_player_location(observation)
-
-        long_compass_probability_in_hallway = 0.15
-        hallway_glyph = 2380
-
-        if glyph_in_direction(observation, player_loc, compass_directions[0]) == hallway_glyph:
-            #if environment.env.debug: pdb.set_trace()
-            pass
-
-        possible_actions = [long_compass_directions[i] if glyph_in_direction(observation, player_loc, a) == hallway_glyph and random.random() < long_compass_probability_in_hallway else a for i, a in enumerate(compass_directions)]
-        possible_actions = [a for a in possible_actions if is_walkable_direction(observation, player_loc, a)]
-        #print(possible_actions)
+        neighborhood = Neighborhood(observation)
+        possible_actions = neighborhood.walkable_directions()
 
         if BLStats(observation['blstats']).get('hunger_state') > 2:
             try:
@@ -340,6 +338,13 @@ class CustomAgent(BatchedAgent):
                     "smells like": keypress_action(ord('y')),
                     "Rotten food!": keypress_action(ord(' ')),
                     "Eat it?": keypress_action(ord('y')),
+                })
+                run_state.set_menu_plan(menu_plan)
+            else:
+                #if environment.env.debug: pdb.set_trace()
+                possible_actions = [nethack.actions.Command.PRAY]
+                menu_plan = MenuPlan("pray", {
+                    "Are you sure you want to pray?": keypress_action(ord('y')),
                 })
                 run_state.set_menu_plan(menu_plan)
 
