@@ -1,12 +1,14 @@
 import random
 
 import numpy as np
-import pdb
 
 from nle import nethack
 from agents.base import BatchedAgent
 
 import environment
+
+if environment.env.debug:
+    import pdb
 
 # Config variable that are screwing with me
 # pile_limit
@@ -52,6 +54,8 @@ class Message():
         "Other things that you feel here:",
         "Hello Agent, welcome to NetHack!  You are a neutral female gnomish", # see issue_report_1
         "There is a fountain here.",
+        "There is a grave here.",
+        # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
     def __init__(self, message, tty_chars):
         self.raw_message = message
@@ -70,6 +74,7 @@ class Message():
             self.message = potential_message
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
+        # Bad conflict with "They say that shopkeepers often remember things that you might forget."
         if "--More--" in ascii_top_lines or "hings that" in ascii_top_lines:
             # NLE doesn't pass through the --More-- in its observation
             # ascii_message = bytes(observation['message']).decode('ascii')
@@ -168,7 +173,7 @@ def print_stats(run_state, blstats):
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
 
-    def __init__(self, num_envs, num_actions, debug_envs):
+    def __init__(self, num_envs, num_actions, debug_envs=None):
         """Set up and load you model here"""
         super().__init__(num_envs, num_actions, debug_envs)
         self.run_states = [RunState()] * num_envs
