@@ -109,6 +109,7 @@ class MenuPlan():
 BackgroundMenuPlan = MenuPlan({
     '"Hello stranger, who are you?" - ': keypress_action(ord('\r')),
     "Call a ": keypress_action(ord('\r')),
+    "Call an ": keypress_action(ord('\r')),
 })
 
 class RunState():
