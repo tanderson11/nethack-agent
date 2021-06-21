@@ -288,7 +288,7 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         if "staircase down here" in message.message: # the staircase down here message only appears if there's also an object on the square, so this isn't really what I want
-            if environment.env.debug: pdb.set_trace()
+            #if environment.env.debug: pdb.set_trace()
             retval = nethack.ACTIONS.index(nethack.actions.MiscDirection.DOWN)
             run_state.log_action(retval)
             return retval
@@ -313,11 +313,16 @@ class CustomAgent(BatchedAgent):
 
         player_loc = find_player_location(observation)
 
-        long_compass_probability_in_hallway = 0.7
-        hallway_glyph = 2371
+        long_compass_probability_in_hallway = 0.15
+        hallway_glyph = 2380
+
+        if glyph_in_direction(observation, player_loc, compass_directions[0]) == hallway_glyph:
+            #if environment.env.debug: pdb.set_trace()
+            pass
 
         possible_actions = [long_compass_directions[i] if glyph_in_direction(observation, player_loc, a) == hallway_glyph and random.random() < long_compass_probability_in_hallway else a for i, a in enumerate(compass_directions)]
         possible_actions = [a for a in possible_actions if is_walkable_direction(observation, player_loc, a)]
+        #print(possible_actions)
 
         if BLStats(observation['blstats']).get('hunger_state') > 2:
             try:
