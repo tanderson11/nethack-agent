@@ -57,6 +57,8 @@ class Message():
         "Hello Agent, welcome to NetHack!  You are a neutral female gnomish", # see issue_report_1
         "There is a fountain here.",
         "There is a grave here.",
+        "There is a broken door here.",
+        "There is a sink here.",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
     def __init__(self, message, tty_chars):
@@ -124,21 +126,34 @@ class Neighborhood():
         7: (-1,-1),
     }
 
+    action_grid = np.array([
+        nethack.actions.CompassDirection.NW,
+        nethack.actions.CompassDirection.N,
+        nethack.actions.CompassDirection.NE,
+        nethack.actions.CompassDirection.W,
+        nethack.actions.MiscDirection.WAIT, # maybe this should be None so we can catch unexpected behavior?
+        nethack.actions.CompassDirection.E,
+        nethack.actions.CompassDirection.SW,
+        nethack.actions.CompassDirection.S,
+        nethack.actions.CompassDirection.SE,
+    ]).reshape(3,3)
+
     def __init__(self, player_location, observation, novelty_map):
         self.player_location = player_location
-        self.player_y, self.player_x = self.player_location
+        self.player_row, self.player_col = self.player_location
 
-        x_lim = observation['glyphs'].shape[1]
-        y_lim = observation['glyphs'].shape[0]
+        col_lim = observation['glyphs'].shape[1]
+        row_lim = observation['glyphs'].shape[0]
 
-        y_slice = slice(max(self.player_y-1, 0),min(self.player_y+2, y_lim+1)) # +2 because non inclusive on upper end
-        x_slice = slice(max(self.player_x-1, 0),min(self.player_x+2, x_lim+1))
-        self.glyphs = observation['glyphs'][y_slice, x_slice]
-        self.visits = novelty_map.map[y_slice, x_slice]
+        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim+1)) # +2 because non inclusive on upper end
+        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim+1))
+        self.glyphs = observation['glyphs'][row_slice, col_slice]
+        self.visits = novelty_map.map[row_slice, col_slice]
 
         directions = list(nethack.actions.CompassDirection)
         self.directions_to_glyphs = {a:self.cardinal_access(a, self.glyphs) for a in directions} # mapping of CompassDirection actions to the glyphs on those spaces
         self.directions_to_visits = {a:self.cardinal_access(a, self.visits) for a in directions}
+
 
     def cardinal_access(self, a, target):
         action_index = nethack.ACTIONS.index(a)
@@ -148,13 +163,23 @@ class Neighborhood():
 
         offset = self.__class__.cardinal_action_index_to_offsets[action_index]
         try:
-            y_offset, x_offset = offset
-            directional_target = target[1+y_offset, 1+x_offset]
+            row_offset, col_offset = offset
+            directional_target = target[1+row_offset, 1+col_offset]
             
         except IndexError: #sometimes we are on the edge of the map
             return None
 
         return directional_target
+
+    def glyph_set_to_directions(self, glyph_set):
+        matches = np.isin(self.glyphs, glyph_set)
+        directions = self.__class__.action_grid[matches]
+
+        if directions.any():
+            return directions
+
+        return None
+
 
     def walkable_directions(self):
         #if environment.env.debug: pdb.set_trace()
@@ -235,7 +260,7 @@ class RunState():
         self.time = new_time
         self.tty = observation['tty_chars']
 
-        self.glyphs = observation['glyphs']
+        self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -283,10 +308,11 @@ class CustomAgent(BatchedAgent):
 
         blstats = BLStats(observation['blstats'])
 
-        player_location = gd.find_player_location(observation)
+        player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
         try:
             previous_glyph_on_player = run_state.glyphs[player_location]
-        except AttributeError:
+            #if environment.env.debug: pdb.set_trace()
+        except TypeError:
             previous_glyph_on_player = None
 
         # run_state stuff: Currently only for logging
@@ -322,7 +348,9 @@ class CustomAgent(BatchedAgent):
         neighborhood = Neighborhood(player_location, observation, run_state.novelty_map)
 
         if "staircase down here" in message.message or previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH: # the staircase down here message only appears if there's also an object on the square, so this isn't really what I want
-            #if environment.env.debug: pdb.set_trace()
+            if previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH:
+                #if environment.env.debug: pdb.set_trace()
+                pass
             retval = nethack.ACTIONS.index(nethack.actions.MiscDirection.DOWN)
             run_state.log_action(retval)
             return retval
@@ -332,7 +360,7 @@ class CustomAgent(BatchedAgent):
         total_visits = np.sum(neighborhood.visits) - neighborhood.visits[1,1] # visits to squares other than center
 
         if total_visits > 0:
-            weighted_visits = (1 - (0.9*neighborhood.visits / total_visits)) # such that if you've only visited one adjacent, it's given a 90% discount
+            weighted_visits = (1 - (0.99*neighborhood.visits / total_visits)) # such that if you've only visited one adjacent, it's given a 99% discount
             action_weights = np.array([neighborhood.cardinal_access(a, weighted_visits) for a in possible_actions])
             if action_weights is None and environment.debug: pdb.set_trace()
             action_weights = action_weights / sum(action_weights)
@@ -340,6 +368,21 @@ class CustomAgent(BatchedAgent):
             action_weights = [1/len(possible_actions) for a in possible_actions]
 
         
+        if "This door is locked" in message.message:
+            possible_actions = [nethack.actions.Command.KICK]
+            action_weights = [1.]
+            door_directions = neighborhood.glyph_set_to_directions(gd.DOOR_GLYPHS)
+            if len(door_directions) > 0:
+                a = random.choice(door_directions)
+            else: # we got the locked door message but didn't find a door
+                a = None
+                if environment.env.debug: pdb.set_trace()
+                pass
+            menu_plan = MenuPlan("kick", {
+                "In what direction?": nethack.ACTIONS.index(a),
+            })
+            run_state.set_menu_plan(menu_plan)
+
         if blstats.get('hunger_state') > 2:
             try:
                 FOOD_CLASS = 7
