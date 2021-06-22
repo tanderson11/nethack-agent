@@ -250,13 +250,14 @@ class RunState():
         self.active_menu_plan = menu_plan
 
     def run_menu_plan(self, message):
-        if not self.active_menu_plan:
-            return None
         retval = self.active_menu_plan.interact(message)
 
-        if self.active_menu_plan.end_flag or retval is None:
-            #if environment.env.debug and self.active_menu_plan.end_flag: pdb.set_trace()
-            self.active_menu_plan = BackgroundMenuPlan
+        if self.active_menu_plan != BackgroundMenuPlan:
+            if self.active_menu_plan.end_flag or retval is None:
+                #if environment.env.debug and self.active_menu_plan.end_flag: pdb.set_trace()
+                self.active_menu_plan = BackgroundMenuPlan
+                retval = self.active_menu_plan.interact(message)
+
         return retval
 
     def log_message(self, message):
