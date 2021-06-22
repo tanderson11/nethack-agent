@@ -96,21 +96,9 @@ class Message():
     def __bool__(self):
         return bool(self.message)
 
-
-
-
-def is_walkable_glyph(glyph):
-    WALL_GLYPHS = range(2360, 2366)
-
-    if not glyph or glyph in WALL_GLYPHS or glyph == 0:
-        return False
-    else:
-        return True
-
 class NoveltyMap():
     def __init__(self, dlevel, glyphs, initial_player_location):
 
-        print(initial_player_location)
         self.dlevel = dlevel
         self.map = np.zeros_like(glyphs)
 
@@ -229,6 +217,7 @@ class RunState():
 
         # for mapping purposes
         self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
+        self.glyphs = None
 
     def update(self, done, reward, observation):
         self.done = done
@@ -245,6 +234,8 @@ class RunState():
             pass
         self.time = new_time
         self.tty = observation['tty_chars']
+
+        self.glyphs = observation['glyphs']
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -291,6 +282,12 @@ class CustomAgent(BatchedAgent):
 
         blstats = BLStats(observation['blstats'])
 
+        player_location = gd.find_player_location(observation)
+        try:
+            previous_glyph_on_player = run_state.glyphs[player_location]
+        except AttributeError:
+            previous_glyph_on_player = None
+
         # run_state stuff: Currently only for logging
         run_state.update(done, reward, observation)
         if done:
@@ -299,8 +296,6 @@ class CustomAgent(BatchedAgent):
 
         if run_state.step_count % 1000 == 0:
             print_stats(run_state, blstats)
-
-
 
         message = Message(observation['message'], observation['tty_chars'])
         run_state.log_message(message.message)
@@ -316,31 +311,29 @@ class CustomAgent(BatchedAgent):
                 run_state.log_action(retval)
                 return retval
 
-        if "staircase down here" in message.message: # the staircase down here message only appears if there's also an object on the square, so this isn't really what I want
-            #if environment.env.debug: pdb.set_trace()
-            retval = nethack.ACTIONS.index(nethack.actions.MiscDirection.DOWN)
-            run_state.log_action(retval)
-            return retval
-
         # mapping
-        player_location = gd.find_player_location(observation)
-
         dlevel = blstats.get('level_number')
         if run_state.novelty_map.dlevel != dlevel:
             run_state.novelty_map = NoveltyMap(dlevel, observation['glyphs'], player_location)
         else:
             run_state.novelty_map.update(player_location)
 
-
         neighborhood = Neighborhood(player_location, observation, run_state.novelty_map)
+
+        if "staircase down here" in message.message or previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH: # the staircase down here message only appears if there's also an object on the square, so this isn't really what I want
+            #if environment.env.debug: pdb.set_trace()
+            retval = nethack.ACTIONS.index(nethack.actions.MiscDirection.DOWN)
+            run_state.log_action(retval)
+            return retval
+
         possible_actions = neighborhood.walkable_directions()
 
         total_visits = np.sum(neighborhood.visits) - neighborhood.visits[1,1] # visits to squares other than center
 
         if total_visits > 0:
-            #pdb.set_trace()
             weighted_visits = (1 - (0.9*neighborhood.visits / total_visits)) # such that if you've only visited one adjacent, it's given a 90% discount
             action_weights = np.array([neighborhood.cardinal_access(a, weighted_visits) for a in possible_actions])
+            if action_weights is None and environment.debug: pdb.set_trace()
             action_weights = action_weights / sum(action_weights)
         else:
             action_weights = [1/len(possible_actions) for a in possible_actions]
