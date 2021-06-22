@@ -170,7 +170,7 @@ class Neighborhood():
 
     def walkable_directions(self):
         #if environment.env.debug: pdb.set_trace()
-        return [a for a,g in self.directions_to_glyphs.items() if gd.is_walkable_glyph(g)]
+        return [a for a,g in self.directions_to_glyphs.items() if g and gd.is_walkable_glyph(g)]
 
 class MenuPlan():
     def __init__(self, name, match_to_keypress, queue_final=None, handles_bad_messages=None):
