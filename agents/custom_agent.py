@@ -97,14 +97,7 @@ class Message():
         return bool(self.message)
 
 
-def find_player_location(observation):
-    PLAYER_GLYPHS = range(327, 342)
-    player_location = np.array(np.where(np.isin(observation['glyphs'], PLAYER_GLYPHS))).squeeze()
 
-    if not player_location.any(): # if we didn't locate the player (possibly because our player glyph range isn't wide enough)
-        if environment.env.debug: pdb.set_trace()
-        pass
-    return player_location
 
 def is_walkable_glyph(glyph):
     WALL_GLYPHS = range(2360, 2366)
@@ -113,6 +106,23 @@ def is_walkable_glyph(glyph):
         return False
     else:
         return True
+
+class NoveltyMap():
+    def __init__(self, dlevel, glyphs, initial_player_location):
+
+        print(initial_player_location)
+        self.dlevel = dlevel
+        self.map = np.zeros_like(glyphs)
+
+        self.map[initial_player_location] += 1
+
+    def update(self, player_location):
+        self.map[player_location] += 1
+
+class Square():
+    def __init__(self, glyph, visits):
+        self.glyph = glyph
+        self.visits = visits
 
 class Neighborhood():
     cardinal_action_index_to_offsets = {
@@ -125,39 +135,41 @@ class Neighborhood():
         6: (1,-1),
         7: (-1,-1),
     }
-    
-    def __init__(self, observation):
-        self.player_location = find_player_location(observation)
+
+    def __init__(self, player_location, observation, novelty_map):
+        self.player_location = player_location
         self.player_y, self.player_x = self.player_location
 
         x_lim = observation['glyphs'].shape[1]
         y_lim = observation['glyphs'].shape[0]
 
-        y_slice = slice(max(self.player_y-1, 0),min(self.player_y+2, y_lim+1))
+        y_slice = slice(max(self.player_y-1, 0),min(self.player_y+2, y_lim+1)) # +2 because non inclusive on upper end
         x_slice = slice(max(self.player_x-1, 0),min(self.player_x+2, x_lim+1))
-        self.glyphs = observation['glyphs'][y_slice, x_slice] # +2 because non inclusive on upper end
+        self.glyphs = observation['glyphs'][y_slice, x_slice]
+        self.visits = novelty_map.map[y_slice, x_slice]
 
         directions = list(nethack.actions.CompassDirection)
-        self.directions_to_glyphs = {a:self.cardinal_to_glyph(a) for a in directions}
+        self.directions_to_glyphs = {a:self.cardinal_access(a, self.glyphs) for a in directions} # mapping of CompassDirection actions to the glyphs on those spaces
+        self.directions_to_visits = {a:self.cardinal_access(a, self.visits) for a in directions}
 
-    def cardinal_to_glyph(self, cardinal_action):
-        action_index = nethack.ACTIONS.index(cardinal_action)
-        assert action_index in range(0, 16), "action should be a CompassDirection or CompassDirectionLonger. It is {}, {}".format(cardinal_action.name, cardinal_action.value) # compass direction and compasss direction longer
+    def cardinal_access(self, a, target):
+        action_index = nethack.ACTIONS.index(a)
+        assert action_index in range(0, 16), "action should be a CompassDirection or CompassDirectionLonger. It is {}, {}".format(a.name, a.value) # compass direction and compasss direction longer
         if action_index > 7:
             action_index = action_index % 8 # CompassDirectionLonger -> CompassDirection
 
         offset = self.__class__.cardinal_action_index_to_offsets[action_index]
-
         try:
             y_offset, x_offset = offset
-            directional_glyph = self.glyphs[1+y_offset, 1+x_offset]
+            directional_target = target[1+y_offset, 1+x_offset]
             
         except IndexError: #sometimes we are on the edge of the map
             return None
 
-        return directional_glyph
+        return directional_target
 
     def walkable_directions(self):
+        #if environment.env.debug: pdb.set_trace()
         return [a for a,g in self.directions_to_glyphs.items() if gd.is_walkable_glyph(g)]
 
 class MenuPlan():
@@ -195,8 +207,8 @@ BackgroundMenuPlan = MenuPlan("background",{
     '"Hello stranger, who are you?" - ': keypress_action(ord('\r')),
     "Call a ": keypress_action(ord('\r')),
     "Call an ": keypress_action(ord('\r')),
-    "Really attack": keypress_action(ord('n')),
-    "Shall I remove": keypress_action(ord('n')),
+    "Really attack": nethack.ACTIONS.index(nethack.actions.Command.ESC),
+    "Shall I remove": nethack.ACTIONS.index(nethack.actions.Command.ESC),
 })
 
 class RunState():
@@ -214,6 +226,9 @@ class RunState():
         self.message_log = []
         self.action_log = []
         self.time_hung = 0
+
+        # for mapping purposes
+        self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
 
     def update(self, done, reward, observation):
         self.done = done
@@ -274,14 +289,18 @@ class CustomAgent(BatchedAgent):
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
 
+        blstats = BLStats(observation['blstats'])
+
         # run_state stuff: Currently only for logging
         run_state.update(done, reward, observation)
         if done:
-            print_stats(run_state, BLStats(observation['blstats']))
+            print_stats(run_state, blstats)
             run_state.reset()
 
         if run_state.step_count % 1000 == 0:
-            print_stats(run_state, BLStats(observation['blstats']))
+            print_stats(run_state, blstats)
+
+
 
         message = Message(observation['message'], observation['tty_chars'])
         run_state.log_message(message.message)
@@ -303,26 +322,31 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval)
             return retval
 
-        travel_probability = 0.00
-        if random.random() < travel_probability: # randomly try to travel to the downstairs sometimes
-            retval = nethack.ACTIONS.index(nethack.actions.Command.TRAVEL)
+        # mapping
+        player_location = gd.find_player_location(observation)
 
-            menu_plan = MenuPlan("travel down", {
-                "Where do you want to travel to?": keypress_action(ord('>')),
-                "Can't find dungeon feature": nethack.ACTIONS.index(nethack.actions.Command.ESC)
-                },
-                handles_bad_messages=True,
-                queue_final=keypress_action(ord('.')))
-            run_state.set_menu_plan(menu_plan)
-
-            run_state.log_action(retval)
-            return retval
+        dlevel = blstats.get('level_number')
+        if run_state.novelty_map.dlevel != dlevel:
+            run_state.novelty_map = NoveltyMap(dlevel, observation['glyphs'], player_location)
+        else:
+            run_state.novelty_map.update(player_location)
 
 
-        neighborhood = Neighborhood(observation)
+        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map)
         possible_actions = neighborhood.walkable_directions()
 
-        if BLStats(observation['blstats']).get('hunger_state') > 2:
+        total_visits = np.sum(neighborhood.visits) - neighborhood.visits[1,1] # visits to squares other than center
+
+        if total_visits > 0:
+            #pdb.set_trace()
+            weighted_visits = (1 - (0.9*neighborhood.visits / total_visits)) # such that if you've only visited one adjacent, it's given a 90% discount
+            action_weights = np.array([neighborhood.cardinal_access(a, weighted_visits) for a in possible_actions])
+            action_weights = action_weights / sum(action_weights)
+        else:
+            action_weights = [1/len(possible_actions) for a in possible_actions]
+
+        
+        if blstats.get('hunger_state') > 2:
             try:
                 FOOD_CLASS = 7
                 food_index = observation['inv_oclasses'].tolist().index(FOOD_CLASS)
@@ -331,6 +355,7 @@ class CustomAgent(BatchedAgent):
             if food_index:
                 letter = observation['inv_letters'][food_index]
                 possible_actions = [nethack.actions.Command.EAT]
+                action_weights = [1.]
                 menu_plan = MenuPlan("eat", {
                     "here; eat": keypress_action(ord('n')),
                     "want to eat?": keypress_action(letter),
@@ -343,12 +368,13 @@ class CustomAgent(BatchedAgent):
             else:
                 #if environment.env.debug: pdb.set_trace()
                 possible_actions = [nethack.actions.Command.PRAY]
+                action_weights = [1.]
                 menu_plan = MenuPlan("pray", {
                     "Are you sure you want to pray?": keypress_action(ord('y')),
                 })
                 run_state.set_menu_plan(menu_plan)
 
-        action = random.choice(possible_actions)
+        action = np.random.choice(possible_actions, p=action_weights)
 
         retval = nethack.ACTIONS.index(action)
         run_state.log_action(retval)

@@ -1,4 +1,5 @@
 import numpy as np
+import environment
 
 # all the ones I've found so far
 PLAYER_GLYPHS = range(327, 342)
@@ -13,3 +14,11 @@ def is_player_glyph(glyph):
 def is_walkable_glyph(glyph):
 	return glyph not in WALL_GLYPHS and glyph != 0
 #is_walkable_glyph = np.vectorize(is_walkable_glyph)
+
+def find_player_location(observation):
+    player_location = np.array(np.where(np.isin(observation['glyphs'], PLAYER_GLYPHS))).squeeze()
+
+    if not player_location.any(): # if we didn't locate the player (possibly because our player glyph range isn't wide enough)
+        if environment.env.debug: pdb.set_trace()
+        pass
+    return tuple(player_location)
