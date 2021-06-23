@@ -255,7 +255,7 @@ class CustomAgent(BatchedAgent):
     def __init__(self, num_envs, num_actions, debug_envs=None):
         """Set up and load you model here"""
         super().__init__(num_envs, num_actions, debug_envs)
-        self.run_states = [RunState()] * num_envs
+        self.run_states = [RunState() for i in range(0, num_actions)]
         if self.debug_envs:
             for i, env in enumerate(self.debug_envs):
                 self.run_states[i].debug_env = env
