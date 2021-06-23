@@ -128,6 +128,8 @@ class Neighborhood():
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
 
+
+
     def __init__(self, player_location, observation, novelty_map):
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
@@ -149,11 +151,10 @@ class Neighborhood():
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.glyphs, glyph_set)
         directions = self.action_grid[matches]
-
+        
         return directions # might need the below code, but I think this should work fine
         #if directions.any():
         #    return directions
-
         #return None
 
 class MenuPlan():
@@ -328,6 +329,7 @@ class CustomAgent(BatchedAgent):
         visits = neighborhood.visits[neighborhood.walkable]
 
         total_visits = np.sum(visits)
+
 
         if total_visits > 0:
             action_weights = (1 - (0.99*visits / total_visits)) # such that if you've only visited one adjacent, it's given a 99% discount
