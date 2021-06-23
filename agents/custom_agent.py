@@ -73,10 +73,7 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                if ARS.rs.active_menu_plan.handles_bad_messages: # if our active menu plan handles bad messages, assume that this unparsed message is going to be handled by the plan
-                    pass
-                else:
-                    if environment.env.debug: pdb.set_trace()
+                if environment.env.debug: pdb.set_trace()
             self.message = potential_message
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
@@ -151,22 +148,17 @@ class Neighborhood():
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.glyphs, glyph_set)
         directions = self.action_grid[matches]
-        
+
         return directions # might need the below code, but I think this should work fine
         #if directions.any():
         #    return directions
         #return None
 
 class MenuPlan():
-    def __init__(self, name, match_to_keypress, queue_final=None, handles_bad_messages=None):
+    def __init__(self, name, match_to_keypress):
         self.name = name
         self.match_to_keypress = match_to_keypress
         self.keypress_count = 0
-
-        self.handles_bad_messages = handles_bad_messages
-        self.queue_final = queue_final
-
-        self.end_flag = False
 
     def interact(self, message_obj):
         for k, v in self.match_to_keypress.items():
@@ -177,12 +169,7 @@ class MenuPlan():
         if self.keypress_count == 0:
             pass
 
-        if self.queue_final and not self.end_flag:
-            #if environment.env.debug: pdb.set_trace()
-            self.end_flag = True
-            return self.queue_final
-        else:
-            return None
+        return None
 
     def __repr__(self):
         return self.name
@@ -240,8 +227,7 @@ class RunState():
         retval = self.active_menu_plan.interact(message)
 
         if self.active_menu_plan != BackgroundMenuPlan:
-            if self.active_menu_plan.end_flag or retval is None:
-                #if environment.env.debug and self.active_menu_plan.end_flag: pdb.set_trace()
+            if  retval is None:
                 self.active_menu_plan = BackgroundMenuPlan
                 retval = self.active_menu_plan.interact(message)
 
