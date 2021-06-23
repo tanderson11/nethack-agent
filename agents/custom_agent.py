@@ -115,16 +115,6 @@ class Square():
         self.visits = visits
 
 class Neighborhood():
-    cardinal_action_index_to_offsets = {
-        0: (-1,0),
-        1: (0,1),
-        2: (1,0),
-        3: (0,-1),
-        4: (-1,1),
-        5: (1,1),
-        6: (1,-1),
-        7: (-1,-1),
-    }
 
     action_grid = np.array([
         nethack.actions.CompassDirection.NW,
@@ -138,6 +128,8 @@ class Neighborhood():
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
 
+
+
     def __init__(self, player_location, observation, novelty_map):
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
@@ -145,45 +137,26 @@ class Neighborhood():
         col_lim = observation['glyphs'].shape[1]
         row_lim = observation['glyphs'].shape[0]
 
-        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim+1)) # +2 because non inclusive on upper end
-        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim+1))
+        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim)) # +2 because non inclusive on upper end
+        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim)) # don't actually need to min the upper end because slices automatically stop at an upper boundary, but it's useful in restricting the action grid
+
+        self.action_grid = self.__class__.action_grid[1+(row_slice.start-self.player_row):1+(row_slice.stop-self.player_row), 1+(col_slice.start-self.player_col):1+(col_slice.stop-self.player_col)] # this highly deranged syntax selects a window in the action_grid equivlanet to the window into the glyphs (ie: if we're at the edge of the map, we select the relevant part of the action grid)
+
+
         self.glyphs = observation['glyphs'][row_slice, col_slice]
         self.visits = novelty_map.map[row_slice, col_slice]
 
-        directions = list(nethack.actions.CompassDirection)
-        self.directions_to_glyphs = {a:self.cardinal_access(a, self.glyphs) for a in directions} # mapping of CompassDirection actions to the glyphs on those spaces
-        self.directions_to_visits = {a:self.cardinal_access(a, self.visits) for a in directions}
-
-
-    def cardinal_access(self, a, target):
-        action_index = nethack.ACTIONS.index(a)
-        assert action_index in range(0, 16), "action should be a CompassDirection or CompassDirectionLonger. It is {}, {}".format(a.name, a.value) # compass direction and compasss direction longer
-        if action_index > 7:
-            action_index = action_index % 8 # CompassDirectionLonger -> CompassDirection
-
-        offset = self.__class__.cardinal_action_index_to_offsets[action_index]
-        try:
-            row_offset, col_offset = offset
-            directional_target = target[1+row_offset, 1+col_offset]
-            
-        except IndexError: #sometimes we are on the edge of the map
-            return None
-
-        return directional_target
+        self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
 
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.glyphs, glyph_set)
-        directions = self.__class__.action_grid[matches]
+        directions = self.action_grid[matches]
 
-        if directions.any():
-            return directions
+        return directions # might need the below code, but I think this should work fine
+        #if directions.any():
+        #    return directions
 
-        return None
-
-
-    def walkable_directions(self):
-        #if environment.env.debug: pdb.set_trace()
-        return [a for a,g in self.directions_to_glyphs.items() if g and gd.is_walkable_glyph(g)]
+        #return None
 
 class MenuPlan():
     def __init__(self, name, match_to_keypress, queue_final=None, handles_bad_messages=None):
@@ -201,7 +174,6 @@ class MenuPlan():
             if k in message_obj.message:
                 self.keypress_count += 1
                 return v
-
 
         if self.keypress_count == 0:
             pass
@@ -310,8 +282,7 @@ class CustomAgent(BatchedAgent):
 
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
         try:
-            previous_glyph_on_player = run_state.glyphs[player_location]
-            #if environment.env.debug: pdb.set_trace()
+            previous_glyph_on_player = run_state.glyphs[player_location] # we're itentionally using the un-updated run_state here to get a little memory
         except TypeError:
             previous_glyph_on_player = None
 
@@ -355,13 +326,17 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval)
             return retval
 
-        possible_actions = neighborhood.walkable_directions()
+        try:
+            possible_actions = neighborhood.action_grid[neighborhood.walkable]
+            visits = neighborhood.visits[neighborhood.walkable]
+        except IndexError:
+            if environment.env.debug: pdb.set_trace()
+            pass
 
-        total_visits = np.sum(neighborhood.visits) - neighborhood.visits[1,1] # visits to squares other than center
+        total_visits = np.sum(visits) #- visits[1,1] # does this always work?
 
         if total_visits > 0:
-            weighted_visits = (1 - (0.99*neighborhood.visits / total_visits)) # such that if you've only visited one adjacent, it's given a 99% discount
-            action_weights = np.array([neighborhood.cardinal_access(a, weighted_visits) for a in possible_actions])
+            action_weights = (1 - (0.99*visits / total_visits)) # such that if you've only visited one adjacent, it's given a 99% discount
             if action_weights is None and environment.debug: pdb.set_trace()
             action_weights = action_weights / sum(action_weights)
         else:
