@@ -6,6 +6,9 @@ import itertools
 from nle import nethack
 from agents.base import BatchedAgent
 
+import advisors as advs
+import menuplan
+import utilities
 import glyphs as gd
 import environment
 
@@ -15,11 +18,7 @@ if environment.env.debug:
 # Config variable that are screwing with me
 # pile_limit
 
-def keypress_action(ascii_ord):
-    action = nethack.ACTIONS.index(ascii_ord)
-    if action is None:
-        raise Exception("Bad keypress")
-    return action
+
 
 class ActiveRunState():
     def __init__(self):
@@ -125,9 +124,7 @@ class Neighborhood():
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
 
-
-
-    def __init__(self, player_location, observation, novelty_map):
+    def __init__(self, player_location, observation, novelty_map, previous_glyph_on_player):
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
 
@@ -145,6 +142,8 @@ class Neighborhood():
 
         self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
 
+        self.previous_glyph_on_player = previous_glyph_on_player
+
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.glyphs, glyph_set)
         directions = self.action_grid[matches]
@@ -154,30 +153,10 @@ class Neighborhood():
         #    return directions
         #return None
 
-class MenuPlan():
-    def __init__(self, name, match_to_keypress):
-        self.name = name
-        self.match_to_keypress = match_to_keypress
-        self.keypress_count = 0
-
-    def interact(self, message_obj):
-        for k, v in self.match_to_keypress.items():
-            if k in message_obj.message:
-                self.keypress_count += 1
-                return v
-
-        if self.keypress_count == 0:
-            pass
-
-        return None
-
-    def __repr__(self):
-        return self.name
-
-BackgroundMenuPlan = MenuPlan("background",{
-    '"Hello stranger, who are you?" - ': keypress_action(ord('\r')),
-    "Call a ": keypress_action(ord('\r')),
-    "Call an ": keypress_action(ord('\r')),
+BackgroundMenuPlan = menuplan.MenuPlan("background",{
+    '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
+    "Call a ": utilities.keypress_action(ord('\r')),
+    "Call an ": utilities.keypress_action(ord('\r')),
     "Really attack": nethack.ACTIONS.index(nethack.actions.Command.ESC),
     "Shall I remove": nethack.ACTIONS.index(nethack.actions.Command.ESC),
 })
@@ -249,6 +228,9 @@ def print_stats(run_state, blstats):
         f"time {blstats.get('time')}"
     )
 
+
+advisors = [advs.eat_from_inv_when_weak, advs.pray_when_weak, advs.go_downstairs, advs.kick_locked_doors, advs.move_randomly] #advs.move_to_most_novel_square, breaks on diagonal doorways
+
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
 
@@ -264,10 +246,12 @@ class CustomAgent(BatchedAgent):
         ARS.set_active(run_state)
 
         blstats = BLStats(observation['blstats'])
-
+        inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
+        #inventory = observation[...] ### somehow get inv
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
+
         try:
-            previous_glyph_on_player = run_state.glyphs[player_location] # we're itentionally using the un-updated run_state here to get a little memory
+            previous_glyph_on_player = run_state.glyphs[player_location] # we're intentionally using the un-updated run_state here to get a little memory of previous glyphs
         except TypeError:
             previous_glyph_on_player = None
 
@@ -301,77 +285,28 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.novelty_map.update(player_location)
 
-        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map)
+        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
 
-        if "staircase down here" in message.message or previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH: # the staircase down here message only appears if there's also an object on the square, so this isn't really what I want
-            if previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH:
-                #if environment.env.debug: pdb.set_trace()
-                pass
-            retval = nethack.ACTIONS.index(nethack.actions.MiscDirection.DOWN)
-            run_state.log_action(retval)
-            return retval
+        #if environment.env.debug: pdb.set_trace()
+        possible_actions, menu_plans = zip(*[advisor.give_advice(blstats, inventory, neighborhood, message) for advisor in advisors])
+        possible_actions = np.array(possible_actions)
+        menu_plans = np.array(menu_plans)
 
-        possible_actions = neighborhood.action_grid[neighborhood.walkable]
-        visits = neighborhood.visits[neighborhood.walkable]
+        # somehow choose the action cleverly
+        # for now we'll just choose first non none action by priority
+        for i,a in enumerate(possible_actions):
+            if a is not None:
+                action = a
+                menu_plan = menu_plans[i]
+                break
 
-        total_visits = np.sum(visits)
-
-
-        if total_visits > 0:
-            action_weights = (1 - (0.99*visits / total_visits)) # such that if you've only visited one adjacent, it's given a 99% discount
-            if action_weights is None and environment.debug: pdb.set_trace()
-            action_weights = action_weights / sum(action_weights)
-        else:
-            action_weights = [1/len(possible_actions) for a in possible_actions]
-
-        
-        if "This door is locked" in message.message:
-            possible_actions = [nethack.actions.Command.KICK]
-            action_weights = [1.]
-            door_directions = neighborhood.glyph_set_to_directions(gd.DOOR_GLYPHS)
-            if len(door_directions) > 0:
-                a = random.choice(door_directions)
-            else: # we got the locked door message but didn't find a door
-                a = None
-                if environment.env.debug: pdb.set_trace()
-                pass
-            menu_plan = MenuPlan("kick", {
-                "In what direction?": nethack.ACTIONS.index(a),
-            })
-            run_state.set_menu_plan(menu_plan)
-
-        if blstats.get('hunger_state') > 2:
-            try:
-                FOOD_CLASS = 7
-                food_index = observation['inv_oclasses'].tolist().index(FOOD_CLASS)
-            except ValueError:
-                food_index = None
-            if food_index:
-                letter = observation['inv_letters'][food_index]
-                possible_actions = [nethack.actions.Command.EAT]
-                action_weights = [1.]
-                menu_plan = MenuPlan("eat", {
-                    "here; eat": keypress_action(ord('n')),
-                    "want to eat?": keypress_action(letter),
-                    "You succeed in opening the tin.": keypress_action(ord(' ')),
-                    "smells like": keypress_action(ord('y')),
-                    "Rotten food!": keypress_action(ord(' ')),
-                    "Eat it?": keypress_action(ord('y')),
-                })
-                run_state.set_menu_plan(menu_plan)
-            else:
-                #if environment.env.debug: pdb.set_trace()
-                possible_actions = [nethack.actions.Command.PRAY]
-                action_weights = [1.]
-                menu_plan = MenuPlan("pray", {
-                    "Are you sure you want to pray?": keypress_action(ord('y')),
-                })
-                run_state.set_menu_plan(menu_plan)
-
-        action = np.random.choice(possible_actions, p=action_weights)
 
         retval = nethack.ACTIONS.index(action)
         run_state.log_action(retval)
+
+        if menu_plan is not None:
+            run_state.set_menu_plan(menu_plan)
+
         return retval
 
     def batched_step(self, observations, rewards, dones, infos):
