@@ -194,6 +194,9 @@ class CMapGlyph(Glyph):
     def is_trap(self):
         return self.offset > 41 and self.offset < 65
 
+    def is_downstairs(self):
+        return self.offset == 24 or self.offset == 26
+
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
         OFFSET = offset

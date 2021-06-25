@@ -18,7 +18,21 @@ import abc
 class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
         self.am_weak = blstats.get('hunger_state') > 2
-        self.on_downstairs = "staircase down here" in message.message or neighborhood.previous_glyph_on_player == gd.DOWNSTAIRS_GLYPH
+
+        # downstairs
+        if  "staircase down here" in message.message:
+            self.on_downstairs = True
+        else:
+            previous_glyph = neighborhood.previous_glyph_on_player
+            if previous_glyph is not None:
+                try:
+                    self.on_downstairs = gd.GLYPH_LOOKUP[previous_glyph].is_downstairs()
+                except AttributeError:
+                    self.on_downstairs = False
+            else:
+                self.on_downstairs = False
+
+
         self.bumped_into_locked_door = "This door is locked" in message.message
         self.can_move = True
 
@@ -81,7 +95,6 @@ class KickLockedDoorAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("kick locked door", {
             "In what direction?": nethack.ACTIONS.index(a),
         })
-
         return kick, menu_plan
 
 class EatTopInventoryAdvisor(Advisor):
@@ -130,6 +143,7 @@ advisors = [
     EatWhenWeakAdvisor(),
     PrayWhenWeakAdvisor(),
     MoveDownstairsAdvisor(),
+    KickLockedDoorAdvisor(),
     #NovelMoveAdvisor(),
     RandomMoveAdvisor()
 ]

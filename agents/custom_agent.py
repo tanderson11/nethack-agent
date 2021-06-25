@@ -126,7 +126,7 @@ class Neighborhood():
         row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim)) # +2 because non inclusive on upper end
         col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim)) # don't actually need to min the upper end because slices automatically stop at an upper boundary, but it's useful in restricting the action grid
 
-        self.action_grid = self.__class__.action_grid[1+(row_slice.start-self.player_row):1+(row_slice.stop-self.player_row), 1+(col_slice.start-self.player_col):1+(col_slice.stop-self.player_col)] # this highly deranged syntax selects a window in the action_grid equivlanet to the window into the glyphs (ie: if we're at the edge of the map, we select the relevant part of the action grid)
+        self.action_grid = self.__class__.action_grid[1+(row_slice.start-self.player_row):1+(row_slice.stop-self.player_row), 1+(col_slice.start-self.player_col):1+(col_slice.stop-self.player_col)] # this highly deranged syntax selects a window in the action_grid equivalent to the window into the glyphs (ie: if we're at the edge of the map, we select the relevant part of the action grid)
 
 
         self.glyphs = observation['glyphs'][row_slice, col_slice]
@@ -140,10 +140,7 @@ class Neighborhood():
         matches = np.isin(self.glyphs, glyph_set)
         directions = self.action_grid[matches]
 
-        return directions # might need the below code, but I think this should work fine
-        #if directions.any():
-        #    return directions
-        #return None
+        return directions
 
 BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
@@ -219,7 +216,6 @@ def print_stats(run_state, blstats):
         f"elevel {blstats.get('experience_level')}, " + \
         f"time {blstats.get('time')}"
     )
-
 
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
