@@ -3,6 +3,7 @@ import glyphs as gd
 import nle.nethack as nethack
 import menuplan
 import utilities
+import abc
 
 # Advisors
 # act on the cleaned up state (message obj, neighborhood obj, blstats)
@@ -13,6 +14,24 @@ import utilities
 # query all advisors and get a list of advice tagged to advisors
 # choose among advisors (can make a ranked list of advisors by priority and deterministically or weighted-randomly choose between them;
 # can eventually plug the weighting into NN)
+
+class Flags():
+    def __init__(self):
+        self.flags = np.array()
+
+class Advisor(abc.ABC):
+    def __init__(self, predicate_flags):
+        pass
+
+    def check_flags(self, state_flags):
+        return state_flags[predicate_flags].all()
+
+    @abstractmethod
+    def give_advice(self, blstats, inventory, neighborhood, message):
+        pass
+
+
+
 
 class Advisor():
     def __init__(self, predicate, advice_function):
