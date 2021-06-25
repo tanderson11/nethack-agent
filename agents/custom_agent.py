@@ -18,8 +18,6 @@ if environment.env.debug:
 # Config variable that are screwing with me
 # pile_limit
 
-
-
 class ActiveRunState():
     def __init__(self):
         rs = None
@@ -105,13 +103,7 @@ class NoveltyMap():
     def update(self, player_location):
         self.map[player_location] += 1
 
-class Square():
-    def __init__(self, glyph, visits):
-        self.glyph = glyph
-        self.visits = visits
-
 class Neighborhood():
-
     action_grid = np.array([
         nethack.actions.CompassDirection.NW,
         nethack.actions.CompassDirection.N,
@@ -229,8 +221,6 @@ def print_stats(run_state, blstats):
     )
 
 
-advisors = [advs.eat_from_inv_when_weak, advs.pray_when_weak, advs.go_downstairs, advs.kick_locked_doors, advs.move_randomly] #advs.move_to_most_novel_square, breaks on diagonal doorways
-
 class CustomAgent(BatchedAgent):
     """A example agent... that simple acts randomly. Adapt to your needs!"""
 
@@ -247,7 +237,6 @@ class CustomAgent(BatchedAgent):
 
         blstats = BLStats(observation['blstats'])
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
-        #inventory = observation[...] ### somehow get inv
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         try:
@@ -287,8 +276,10 @@ class CustomAgent(BatchedAgent):
 
         neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
 
+        flags = advs.Flags(blstats, inventory, neighborhood, message)
+
         #if environment.env.debug: pdb.set_trace()
-        possible_actions, menu_plans = zip(*[advisor.give_advice(blstats, inventory, neighborhood, message) for advisor in advisors])
+        possible_actions, menu_plans = zip(*[advisor.give_advice(flags, blstats, inventory, neighborhood, message) for advisor in advs.advisors])
         possible_actions = np.array(possible_actions)
         menu_plans = np.array(menu_plans)
 
