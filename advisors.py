@@ -1,4 +1,3 @@
-import random
 import glyphs as gd
 import nle.nethack as nethack
 import menuplan
@@ -74,12 +73,12 @@ class Advisor(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def advice(self, blstats, inventory, neighborhood, message): # returns action, MenuPlan
+    def advice(self, rng, blstats, inventory, neighborhood, message): # returns action, MenuPlan
         pass
 
-    def give_advice(self, flags, blstats, inventory, neighborhood, message):
+    def give_advice(self, rng, flags, blstats, inventory, neighborhood, message):
         if self.check_conditions(flags):
-            return self.advice(blstats, inventory, neighborhood, message)
+            return self.advice(rng, blstats, inventory, neighborhood, message)
         else:
             return None, None
 
@@ -88,48 +87,49 @@ class MoveAdvisor(Advisor):
         return flags.can_move and flags.have_walkable_squares
 
 class RandomMoveAdvisor(MoveAdvisor): 
-    def advice(self, blstats, inventory, neighborhood, message):
+    def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
         if not possible_actions.any():
             return None, None
-        return random.choice(possible_actions), None
+        return rng.choice(possible_actions), None
 
 class MostNovelMoveAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
         return flags.can_move and flags.have_walkable_squares and not flags.cant_move_that_way_message
 
-    def advice(self, blstats, inventory, neighborhood, message):
+    def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
         visits = neighborhood.visits[neighborhood.walkable]
         most_novel = possible_actions[visits == visits.min()]
 
-        return random.choice(most_novel), None
+        return rng.choice(most_novel), None
 
 class VisitUnvisitedSquareAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
         return flags.can_move and flags.adjacent_univisited_square and not flags.cant_move_that_way_message
-    def advice(self, blstats, inventory, neighborhood, message):
+
+    def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[(neighborhood.visits == 0) & neighborhood.walkable]
 
-        return random.choice(possible_actions), None
+        return rng.choice(possible_actions), None
 
 
 class MoveDownstairsAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
         return flags.can_move and flags.on_downstairs
 
-    def advice(self, _1, _2, _3, _4):
+    def advice(self, _0, _1, _2, _3, _4):
         return nethack.actions.MiscDirection.DOWN, None
 
 class KickLockedDoorAdvisor(Advisor):
     def check_conditions(self, flags):
         return flags.bumped_into_locked_door
 
-    def advice(self, _, __, neighborhood, ___):
+    def advice(self, rng, _, __, neighborhood, ___):
         kick = nethack.actions.Command.KICK
         door_directions = neighborhood.action_grid[np.vectorize(lambda g: getattr(g, 'is_closed_door', False))(neighborhood.glyphs)]
         if len(door_directions) > 0:
-            a = random.choice(door_directions)
+            a = rng.choice(door_directions)
         else: # we got the locked door message but didn't find a door
             a = None
             if environment.env.debug: pdb.set_trace()
@@ -152,7 +152,7 @@ class EatTopInventoryAdvisor(Advisor):
         })
         return menu_plan
 
-    def advice(self, _, inventory, __, ___):
+    def advice(self, _0, _1, inventory, _3, _4):
         eat = nethack.actions.Command.EAT
         try:
             FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
@@ -171,7 +171,7 @@ class EatWhenWeakAdvisor(EatTopInventoryAdvisor):
         return flags.am_weak
 
 class PrayerAdvisor(Advisor):
-    def advice(self, _, __, ___, ____):
+    def advice(self, _0, _1, _2, _3, _4):
         pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", {
             "Are you sure you want to pray?": utilities.keypress_action(ord('y')),
@@ -198,7 +198,7 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
     def check_conditions(self, flags):
         return flags.am_critically_injured
 
-    def advice(self, _, inventory, __, ___):
+    def advice(self, _0, _1, inventory, _3, _4):
         is_healing = np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'is_identified_healing_object', lambda: False)())(inventory['inv_glyphs'])
         quaff = nethack.actions.Command.QUAFF
 
@@ -221,7 +221,7 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
 
 
 class SearchAdvisor(Advisor):
-    def advice(self, _, __, ___, ____):
+    def advice(self, _0, _1, _2, _3, _4):
         return nethack.actions.Command.SEARCH, None
 
 class FallbackSearchAdvisor(SearchAdvisor):
@@ -236,13 +236,14 @@ class AttackAdvisor(Advisor):
     def check_conditions(self, flags):
         return flags.near_monster
 
-    def advice(self, blstats, inventory, neighborhood, message):
+    def advice(self, rng, blstats, inventory, neighborhood, message):
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
         
         is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
         monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask & ~is_giant_ant_lol]
 
-        return random.choice(monster_directions), None
+        return rng.choice(monster_directions), None
+
 
 # Thinking outloud ...
 # Repair major, escape, attack, repair minor, descend, explore
