@@ -11,7 +11,7 @@ def main():
 
     # This allows us to limit the features of the environment 
     # that we don't want participants to use during the submission
-    env = aicrowd_gym.make("NetHackChallenge-v0") 
+    env = aicrowd_gym.make("NetHackChallenge-v0", savedir='')
 
     env.reset()
     done = False
