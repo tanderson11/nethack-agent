@@ -136,7 +136,7 @@ class KickLockedDoorAdvisor(Advisor):
             if environment.env.debug: pdb.set_trace()
             pass
         menu_plan = menuplan.MenuPlan("kick locked door", {
-            "In what direction?": nethack.ACTIONS.index(a),
+            "In what direction?": utilities.ACTION_LOOKUP[a],
         })
         #if environment.env.debug: pdb.set_trace()
         return kick, menu_plan

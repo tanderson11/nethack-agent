@@ -17,6 +17,7 @@ torch = "^1.9.0"
 einops = "^0.3.0"
 hydra-core = "^1.1.0"
 hydra-colorlog = "^1.1.0"
+flameprof = "^0.4"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

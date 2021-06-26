@@ -34,6 +34,7 @@ class MonsterGlyph(Glyph):
         # 'ac', 'cnutrit', 'cwt', 'geno', 'mcolor', 'mconveys', 'mflags1', 'mflags2', 'mflags3',
         # 'mlet', 'mlevel', 'mmove', 'mname', 'mr', 'mresists', 'msize', 'msound'
         self.name = monster.mname
+        self.walkable = False
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
