@@ -4,6 +4,9 @@ import nle.nethack as nethack
 import menuplan
 import utilities
 import abc
+import environment
+import pdb
+import numpy as np
 
 # Advisors
 # act on the cleaned up state (message obj, neighborhood obj, blstats)
@@ -20,21 +23,33 @@ class Flags():
         self.am_weak = blstats.get('hunger_state') > 2
 
         # downstairs
-        if  "staircase down here" in message.message:
-            self.on_downstairs = True
+        previous_glyph = neighborhood.previous_glyph_on_player
+        if previous_glyph is not None: # on the first frame there was no previous glyph
+            previous_is_downstairs = getattr(previous_glyph, 'is_downstairs', False)
         else:
-            previous_glyph = neighborhood.previous_glyph_on_player
-            if previous_glyph is not None:
-                try:
-                    self.on_downstairs = gd.GLYPH_LOOKUP[previous_glyph].is_downstairs()
-                except AttributeError:
-                    self.on_downstairs = False
-            else:
-                self.on_downstairs = False
+            previous_is_downstairs = False
 
+        self.on_downstairs = "staircase down here" in message.message or previous_is_downstairs
 
         self.bumped_into_locked_door = "This door is locked" in message.message
-        self.can_move = True
+        self.have_walkable_squares = neighborhood.action_grid[neighborhood.walkable].any() # at least one square is walkable
+        self.can_move = True # someday, Held, Handspan etc.
+
+        self.adjacent_univisited_square = (neighborhood.visits[neighborhood.walkable] == 0).any()
+
+        # --- Spooky messages ---
+        diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+        diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+        boulder_in_vain_message = "boulder, but in vain." in message.message
+        boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
+        carrying_too_much_message = "You are carrying too much to get through." in message.message
+
+        self.cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message
+        # ---
+
+        is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
+        is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
+        self.near_monster = np.sum(is_monster & ~is_giant_ant_lol & ~neighborhood.players_square_mask) > 0
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -57,20 +72,34 @@ class Advisor(abc.ABC):
 ### ------------ Approach 1 ------------
 class MoveAdvisor(Advisor):
     def check_conditions(self, flags):
-        return flags.can_move
+        return flags.can_move and flags.have_walkable_squares
 
 class RandomMoveAdvisor(MoveAdvisor): 
     def advice(self, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
+        if not possible_actions.any():
+            return None, None
         return random.choice(possible_actions), None
 
-class NovelMoveAdvisor(MoveAdvisor):
+class MostNovelMoveAdvisor(MoveAdvisor):
+    def check_conditions(self, flags):
+        return flags.can_move and flags.have_walkable_squares and not flags.cant_move_that_way_message
+
     def advice(self, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
         visits = neighborhood.visits[neighborhood.walkable]
         most_novel = possible_actions[visits == visits.min()]
 
         return random.choice(most_novel), None
+
+class VisitUnvisitedSquareAdvisor(MoveAdvisor):
+    def check_conditions(self, flags):
+        return flags.can_move and flags.adjacent_univisited_square and not flags.cant_move_that_way_message
+    def advice(self, blstats, inventory, neighborhood, message):
+        possible_actions = neighborhood.action_grid[(neighborhood.visits == 0) & neighborhood.walkable]
+
+        return random.choice(possible_actions), None
+
 
 class MoveDownstairsAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
@@ -85,7 +114,7 @@ class KickLockedDoorAdvisor(Advisor):
 
     def advice(self, _, __, neighborhood, ___):
         kick = nethack.actions.Command.KICK
-        door_directions = neighborhood.glyph_set_to_directions(gd.DOOR_GLYPHS)
+        door_directions = neighborhood.action_grid[np.vectorize(lambda g: getattr(g, 'is_closed_door', False))(neighborhood.glyphs)]
         if len(door_directions) > 0:
             a = random.choice(door_directions)
         else: # we got the locked door message but didn't find a door
@@ -95,6 +124,7 @@ class KickLockedDoorAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("kick locked door", {
             "In what direction?": nethack.ACTIONS.index(a),
         })
+        #if environment.env.debug: pdb.set_trace()
         return kick, menu_plan
 
 class EatTopInventoryAdvisor(Advisor):
@@ -139,11 +169,34 @@ class PrayWhenWeakAdvisor(Advisor):
 
         return pray, menu_plan
 
+class SearchAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return True # this action is always possible and a good waiting action
+
+    def advice(self, _, __, ___, ____):
+        return nethack.ACTIONS.index(nethack.actions.Command.SEARCH), None
+
+class AttackAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return flags.near_monster
+
+    def advice(self, blstats, inventory, neighborhood, message):
+        is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
+        
+        is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
+        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask & ~is_giant_ant_lol]
+
+        return random.choice(monster_directions), None
+
+
+
 advisors = [
     EatWhenWeakAdvisor(),
     PrayWhenWeakAdvisor(),
     MoveDownstairsAdvisor(),
+    AttackAdvisor(),
     KickLockedDoorAdvisor(),
-    #NovelMoveAdvisor(),
-    RandomMoveAdvisor()
+    VisitUnvisitedSquareAdvisor(),
+    RandomMoveAdvisor(),
+    SearchAdvisor(),
 ]

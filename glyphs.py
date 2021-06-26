@@ -19,6 +19,9 @@ class Glyph():
 
         return mapping
 
+    def __repr__(self):
+        return "{} named {}".format(self.__class__, getattr(self, 'name', 'NO NAME DEFINED'))
+
 class MonsterGlyph(Glyph):
     OFFSET = nethack.GLYPH_MON_OFF
     COUNT = nethack.NUMMONS
@@ -69,6 +72,8 @@ class ObjectGlyph(Glyph):
         self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
         self.name = nethack.OBJ_NAME(obj)
         self.shuffled = (obj.oc_descr_idx != obj.oc_name_idx)
+
+        self.walkable = True
 
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
@@ -178,24 +183,15 @@ class CMapGlyph(Glyph):
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = self.__class__.NAMES[numeral - self.__class__.OFFSET]
 
-    def is_wall(self):
-        return self.offset < 12
-
-    def is_open_door(self):
-        return self.offset > 12 and self.offset < 15
-
-    def is_closed_door(self):
-        return self.offset == 15 or self.offset == 16
-
-    def walkable(self):
-        # Open doors are also walkable, ofc, but from different directions
-        return self.offset > 18 and self.offset < 32
-
-    def is_trap(self):
-        return self.offset > 41 and self.offset < 65
-
-    def is_downstairs(self):
-        return self.offset == 24 or self.offset == 26
+        ## Thayer: could also do this with static methods, but either way I think we want these as static attributes to play nicely with getattr
+        self.is_wall = self.offset < 12
+        self.is_open_door = self.offset > 11 and self.offset < 15
+        self.is_closed_door = self.offset == 15 or self.offset == 16
+        self.is_downstairs = self.offset == 24 or self.offset == 26
+        self.is_upstairs = self.offset == 23 or self.offset == 25
+        self.walkable = (self.offset > 18 and self.offset < 32) or self.is_open_door or self.is_closed_door or self.is_downstairs or self.is_upstairs
+        self.is_trap = self.offset > 41 and self.offset < 65
+        
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -208,9 +204,17 @@ class PetGlyph(MonsterGlyph):
     OFFSET = nethack.GLYPH_PET_OFF
     COUNT = nethack.NUMMONS
 
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.walkable = True
+
 class InvisibleGlyph(Glyph):
     OFFSET = nethack.GLYPH_INVIS_OFF
     COUNT = 1
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.walkable = True # TK this is so we attack invisible glyphs
 
 class DetectGlyph(MonsterGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
@@ -219,6 +223,10 @@ class DetectGlyph(MonsterGlyph):
 class CorpseGlyph(Glyph):
     OFFSET = nethack.GLYPH_BODY_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.walkable = True
 
 class RiddenGlyph(MonsterGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF
@@ -243,6 +251,10 @@ class WarningGlyph(Glyph):
 class StatueGlyph(Glyph):
     OFFSET = nethack.GLYPH_STATUE_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.walkable = True
 
 klasses = [
     MonsterGlyph,

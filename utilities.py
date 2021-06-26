@@ -1,4 +1,5 @@
 import nle.nethack as nethack
+import glyphs as gd
 
 def keypress_action(ascii_ord):
     action = nethack.ACTIONS.index(ascii_ord)

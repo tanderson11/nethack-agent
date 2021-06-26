@@ -128,16 +128,32 @@ class Neighborhood():
 
         self.action_grid = self.__class__.action_grid[1+(row_slice.start-self.player_row):1+(row_slice.stop-self.player_row), 1+(col_slice.start-self.player_col):1+(col_slice.stop-self.player_col)] # this highly deranged syntax selects a window in the action_grid equivalent to the window into the glyphs (ie: if we're at the edge of the map, we select the relevant part of the action grid)
 
+        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_LOOKUP.get(g))
+        self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
+        self.glyphs = vectorized_lookup(self.raw_glyphs)
 
-        self.glyphs = observation['glyphs'][row_slice, col_slice]
         self.visits = novelty_map.map[row_slice, col_slice]
+        self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
-        self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
+        #self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
+
+        walkable_tile = np.vectorize(lambda g: getattr(g, 'walkable', False))(self.glyphs)
+        diagonal_tile = np.vectorize(lambda g: nethack.ACTIONS.index(g) > 3 and nethack.ACTIONS.index(g) < 8)(self.action_grid)
+        open_door = np.vectorize(lambda g: getattr(g, 'is_open_door', False))(self.glyphs)
+        if previous_glyph_on_player is not None:
+            on_doorway = getattr(previous_glyph_on_player, 'is_open_door', False)
+        else:
+            on_doorway = False
+
+        try:
+            self.walkable = walkable_tile & ~(diagonal_tile & open_door) & ~(diagonal_tile & on_doorway) # don't move diagonally into open doors
+        except TypeError:
+            if environment.env.debug: pdb.set_trace()
 
         self.previous_glyph_on_player = previous_glyph_on_player
 
     def glyph_set_to_directions(self, glyph_set):
-        matches = np.isin(self.glyphs, glyph_set)
+        matches = np.isin(self.raw_glyphs, glyph_set)
         directions = self.action_grid[matches]
 
         return directions
@@ -146,8 +162,9 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
     "Call a ": utilities.keypress_action(ord('\r')),
     "Call an ": utilities.keypress_action(ord('\r')),
-    "Really attack": nethack.ACTIONS.index(nethack.actions.Command.ESC),
+    "Really attack": utilities.keypress_action(ord('y')),#nethack.ACTIONS.index(nethack.actions.Command.ESC), # Attacking because don't know about peaceful monsters yet
     "Shall I remove": nethack.ACTIONS.index(nethack.actions.Command.ESC),
+    "Would you wear it for me?": nethack.ACTIONS.index(nethack.actions.Command.ESC),
 })
 
 class RunState():
@@ -236,7 +253,7 @@ class CustomAgent(BatchedAgent):
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         try:
-            previous_glyph_on_player = run_state.glyphs[player_location] # we're intentionally using the un-updated run_state here to get a little memory of previous glyphs
+            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]] # we're intentionally using the un-updated run_state here to get a little memory of previous glyphs
         except TypeError:
             previous_glyph_on_player = None
 
@@ -251,6 +268,7 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'])
         run_state.log_message(message.message)
+
 
         if message.has_more:
             retval = nethack.ACTIONS.index(nethack.actions.TextCharacters.SPACE)
@@ -270,8 +288,10 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.novelty_map.update(player_location)
 
-        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
+        if "solid stone" in message.message:
+            if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
+        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
         flags = advs.Flags(blstats, inventory, neighborhood, message)
 
         #if environment.env.debug: pdb.set_trace()
