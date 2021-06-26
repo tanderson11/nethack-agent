@@ -127,6 +127,11 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
+# Profiling results
+
+*.prof
+*.svg
+
 # Project specific
 
 nle_data/
