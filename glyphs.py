@@ -70,9 +70,7 @@ class ObjectGlyph(Glyph):
         self.object_class_numeral = ord(obj.oc_class)
         self.object_class_name = self.__class__.OBJECT_CLASSES[self.object_class_numeral]
         self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
-        self.name = nethack.OBJ_NAME(obj)
-        self.shuffled = (obj.oc_descr_idx != obj.oc_name_idx)
-
+        self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
         self.walkable = True
 
 class CMapGlyph(Glyph):
