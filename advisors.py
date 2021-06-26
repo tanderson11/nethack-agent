@@ -83,7 +83,6 @@ class Advisor(abc.ABC):
         else:
             return None, None
 
-### ------------ Approach 1 ------------
 class MoveAdvisor(Advisor):
     def check_conditions(self, flags):
         return flags.can_move and flags.have_walkable_squares
@@ -213,7 +212,7 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
 
         if potion_index is not None:
             #if environment.env.debug: pdb.set_trace()
-
+            print(np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'name', False))(inventory['inv_glyphs'])[potion_index])
             letter = inventory['inv_letters'][potion_index]
             menu_plan = self.make_menu_plan(letter)
             return quaff, menu_plan
