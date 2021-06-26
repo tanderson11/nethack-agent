@@ -60,6 +60,9 @@ class Flags():
 
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
         is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
+
+        self.adjacent_secret_door_possibility = (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)) | is_giant_ant_lol # BUG
+
         self.near_monster = (is_monster & ~is_giant_ant_lol & ~neighborhood.players_square_mask).any()
 
 class Advisor(abc.ABC):
@@ -200,7 +203,6 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
         is_healing = np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'is_identified_healing_object', lambda: False)())(inventory['inv_glyphs'])
         quaff = nethack.actions.Command.QUAFF
 
-
         try:
             POTION_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS')
             is_potion = inventory['inv_oclasses'] == POTION_CLASS
@@ -220,11 +222,16 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
 
 
 class SearchAdvisor(Advisor):
+    def advice(self, _, __, ___, ____):
+        return nethack.actions.Command.SEARCH, None
+
+class FallbackSearchAdvisor(SearchAdvisor):
     def check_conditions(self, flags):
         return True # this action is always possible and a good waiting action
 
-    def advice(self, _, __, ___, ____):
-        return nethack.ACTIONS.index(nethack.actions.Command.SEARCH), None
+class NoUnexploredSearchAdvisor(SearchAdvisor):
+    def check_conditions(self, flags):
+        return (not flags.adjacent_univisited_square) and flags.adjacent_secret_door_possibility.any()
 
 class AttackAdvisor(Advisor):
     def check_conditions(self, flags):
@@ -254,7 +261,9 @@ advisors = [
     MoveDownstairsAdvisor(),],
 
     [MostNovelMoveAdvisor(),
-    RandomMoveAdvisor(),],
+    NoUnexploredSearchAdvisor(),
+    RandomMoveAdvisor(),
+    ],
 
-    [SearchAdvisor()]
+    [FallbackSearchAdvisor()]
 ]

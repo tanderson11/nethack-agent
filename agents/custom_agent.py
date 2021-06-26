@@ -319,6 +319,7 @@ class CustomAgent(BatchedAgent):
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
 
+        #print(retval)
         return retval
 
     def batched_step(self, observations, rewards, dones, infos):
