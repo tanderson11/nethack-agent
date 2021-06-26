@@ -22,6 +22,16 @@ class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
         self.am_weak = blstats.get('hunger_state') > 2
 
+        max_hp_fraction_thresholds = {
+            1: 1/5,
+            6: 1/6,
+            14: 1/7,
+            22: 1/8,
+            30: 1/9
+        }
+        fraction_index = [k for k in list(max_hp_fraction_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
+        self.am_critically_injured = blstats.get('hitpoints') < max_hp_fraction_thresholds[fraction_index] or blstats.get('hitpoints') < 6
+
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
         if previous_glyph is not None: # on the first frame there was no previous glyph
@@ -143,11 +153,11 @@ class EatTopInventoryAdvisor(Advisor):
     def advice(self, _, inventory, __, ___):
         eat = nethack.actions.Command.EAT
         try:
-            FOOD_CLASS = 7
+            FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
             food_index = inventory['inv_oclasses'].tolist().index(FOOD_CLASS)
         except ValueError:
             food_index = None
-        if food_index:
+        if food_index is not None:
             letter = inventory['inv_letters'][food_index]
             menu_plan = self.make_menu_plan(letter)
             return eat, menu_plan
@@ -158,10 +168,7 @@ class EatWhenWeakAdvisor(EatTopInventoryAdvisor):
     def check_conditions(self, flags):
         return flags.am_weak
 
-class PrayWhenWeakAdvisor(Advisor):
-    def check_conditions(self, flags):
-        return flags.am_weak
-
+class PrayerAdvisor(Advisor):
     def advice(self, _, __, ___, ____):
         pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", {
@@ -169,6 +176,48 @@ class PrayWhenWeakAdvisor(Advisor):
         })
 
         return pray, menu_plan
+
+class PrayWhenWeakAdvisor(PrayerAdvisor):
+    def check_conditions(self, flags):
+        return flags.am_weak
+
+class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
+    def check_conditions(self, flags):
+        return flags.am_critically_injured
+
+class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only quaff
+    def make_menu_plan(self, letter):
+        menu_plan = menuplan.MenuPlan("quaff from inventory", {
+        "Drink from the fountain?": utilities.keypress_action(ord('n')),
+        "want to drink?": utilities.keypress_action(letter),
+        })
+        return menu_plan
+
+    def check_conditions(self, flags):
+        return flags.am_critically_injured
+
+    def advice(self, _, inventory, __, ___):
+        is_healing = np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'is_identified_healing_object', lambda: False)())(inventory['inv_glyphs'])
+        quaff = nethack.actions.Command.QUAFF
+
+
+        try:
+            POTION_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS')
+            is_potion = inventory['inv_oclasses'] == POTION_CLASS
+            #if environment.env.debug: pdb.set_trace()
+            potion_index = (is_potion & is_healing).tolist().index(True) #stops at first True but borked if all False (quaffs 0th potion even though it's not healing)
+        except ValueError:
+            potion_index = None
+
+        if potion_index is not None:
+            #if environment.env.debug: pdb.set_trace()
+
+            letter = inventory['inv_letters'][potion_index]
+            menu_plan = self.make_menu_plan(letter)
+            return quaff, menu_plan
+        else:
+            return None, None
+
 
 class SearchAdvisor(Advisor):
     def check_conditions(self, flags):
@@ -189,16 +238,23 @@ class AttackAdvisor(Advisor):
 
         return random.choice(monster_directions), None
 
-
+# Thinking outloud ...
+# Repair major, escape, attack, repair minor, descend, explore
 
 advisors = [
-    EatWhenWeakAdvisor(),
-    PrayWhenWeakAdvisor(),
-    MoveDownstairsAdvisor(),
-    AttackAdvisor(),
-    KickLockedDoorAdvisor(),
-    MostNovelMoveAdvisor(),
-    #VisitUnvisitedSquareAdvisor(),
-    RandomMoveAdvisor(),
-    SearchAdvisor(),
+    [UseHealingItemWhenCriticallyInjuredAdvisor(),
+    EatWhenWeakAdvisor()],
+
+    [PrayWhenCriticallyInjuredAdvisor(),
+    PrayWhenWeakAdvisor(),],
+
+    [AttackAdvisor(),],
+
+    [KickLockedDoorAdvisor(),
+    MoveDownstairsAdvisor(),],
+
+    [MostNovelMoveAdvisor(),
+    RandomMoveAdvisor(),],
+
+    [SearchAdvisor()]
 ]

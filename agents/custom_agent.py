@@ -253,7 +253,7 @@ class CustomAgent(BatchedAgent):
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         try:
-            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]] # we're intentionally using the un-updated run_state here to get a little memory of previous glyphs
+            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]] # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         except TypeError:
             previous_glyph_on_player = None
 
@@ -288,23 +288,28 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.novelty_map.update(player_location)
 
-        if "solid stone" in message.message:
+        if "solid stone" in message.message or "It's a wall" in message.message:
             if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
         flags = advs.Flags(blstats, inventory, neighborhood, message)
 
         #if environment.env.debug: pdb.set_trace()
-        possible_actions, menu_plans = zip(*[advisor.give_advice(flags, blstats, inventory, neighborhood, message) for advisor in advs.advisors])
-        possible_actions = np.array(possible_actions)
-        menu_plans = np.array(menu_plans)
+        for advisor_level in advs.advisors:
 
-        # somehow choose the action cleverly
-        # for now we'll just choose first non none action by priority
-        for i,a in enumerate(possible_actions):
-            if a is not None:
-                action = a
-                menu_plan = menu_plans[i]
+            advised_actions, menu_plans = zip(*[advisor.give_advice(flags, blstats, inventory, neighborhood, message) for advisor in advisor_level])
+            advised_actions = np.array(advised_actions)
+            menu_plans = np.array(menu_plans)
+
+            possible_actions = advised_actions[advised_actions != np.array(None)]
+            menu_plans = menu_plans[advised_actions != np.array(None)] # select with advised_actions because menu_plan can be None if there's no plan
+
+            if possible_actions.any():
+                chosen_index = random.choice(range(0, len(possible_actions)))
+
+
+                action = possible_actions[chosen_index]
+                menu_plan = menu_plans[chosen_index]
                 break
 
 

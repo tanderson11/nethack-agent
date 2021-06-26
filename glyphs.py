@@ -73,6 +73,12 @@ class ObjectGlyph(Glyph):
         self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
         self.walkable = True
 
+    def is_identified_healing_object(self):
+        if self.name is not None:
+            return "healing" in self.name
+        else:
+            return False
+
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
     COUNT = nethack.MAXPCHARS
@@ -278,6 +284,7 @@ for klass in klasses:
 if not len(GLYPH_LOOKUP.keys()) == 5_976:
     raise Exception("Surprising number of glyphs")
 
+GLYPH_LOOKUP[5976] = None # Weird and bad thing in the inventory
 
 # WALL_GLPYHS = 2360, 2361 = vertical + horizontal
 # 2362, 2363, 2364, 2365 corners
