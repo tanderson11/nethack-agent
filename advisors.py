@@ -43,13 +43,14 @@ class Flags():
         boulder_in_vain_message = "boulder, but in vain." in message.message
         boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
         carrying_too_much_message = "You are carrying too much to get through." in message.message
+        no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
 
-        self.cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message
+        self.cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
         # ---
 
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
         is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
-        self.near_monster = np.sum(is_monster & ~is_giant_ant_lol & ~neighborhood.players_square_mask) > 0
+        self.near_monster = (is_monster & ~is_giant_ant_lol & ~neighborhood.players_square_mask).any()
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -196,7 +197,8 @@ advisors = [
     MoveDownstairsAdvisor(),
     AttackAdvisor(),
     KickLockedDoorAdvisor(),
-    VisitUnvisitedSquareAdvisor(),
+    MostNovelMoveAdvisor(),
+    #VisitUnvisitedSquareAdvisor(),
     RandomMoveAdvisor(),
     SearchAdvisor(),
 ]
