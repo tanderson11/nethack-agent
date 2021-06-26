@@ -46,6 +46,11 @@ class Flags():
 
         self.adjacent_univisited_square = (neighborhood.visits[neighborhood.walkable] == 0).any()
 
+        if previous_glyph is not None:
+            self.desirable_object = isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS"
+        else:
+            self.desirable_object = False
+
         # --- Spooky messages ---
         diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
         diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
@@ -245,6 +250,14 @@ class AttackAdvisor(Advisor):
 
         return rng.choice(monster_directions), None
 
+class PickupAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return (not flags.near_monster) and flags.desirable_object
+
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        print("Pickup")
+        return nethack.actions.Command.PICKUP, None
+
 
 # Thinking outloud ...
 # Repair major, escape, attack, repair minor, descend, explore
@@ -257,6 +270,8 @@ advisors = [
     PrayWhenWeakAdvisor(),],
 
     [AttackAdvisor(),],
+
+    [PickupAdvisor(),],
 
     [KickLockedDoorAdvisor(),
     MoveDownstairsAdvisor(),],
