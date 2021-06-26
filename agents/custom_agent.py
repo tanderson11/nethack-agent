@@ -1,4 +1,6 @@
-import random
+from pdb import run
+import base64
+import os
 
 import numpy as np
 import itertools
@@ -182,10 +184,17 @@ class RunState():
         self.message_log = []
         self.action_log = []
         self.time_hung = 0
+        self.rng = self.make_seeded_rng()
 
         # for mapping purposes
         self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
         self.glyphs = None
+
+    def make_seeded_rng(self):
+        import random
+        seed = base64.b64encode(os.urandom(4))
+        print(f"Seeding Agent's RNG {seed}")
+        return random.Random(seed)
 
     def update(self, done, reward, observation):
         self.done = done
@@ -240,7 +249,7 @@ class CustomAgent(BatchedAgent):
     def __init__(self, num_envs, num_actions, debug_envs=None):
         """Set up and load you model here"""
         super().__init__(num_envs, num_actions, debug_envs)
-        self.run_states = [RunState() for i in range(0, num_actions)]
+        self.run_states = [RunState() for i in range(0, num_envs)]
         if self.debug_envs:
             for i, env in enumerate(self.debug_envs):
                 self.run_states[i].debug_env = env
@@ -297,7 +306,7 @@ class CustomAgent(BatchedAgent):
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advs.advisors:
 
-            advised_actions, menu_plans = zip(*[advisor.give_advice(flags, blstats, inventory, neighborhood, message) for advisor in advisor_level])
+            advised_actions, menu_plans = zip(*[advisor.give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisor_level])
             advised_actions = np.array(advised_actions)
             menu_plans = np.array(menu_plans)
 
@@ -305,7 +314,7 @@ class CustomAgent(BatchedAgent):
             menu_plans = menu_plans[advised_actions != np.array(None)] # select with advised_actions because menu_plan can be None if there's no plan
 
             if possible_actions.any():
-                chosen_index = random.choice(range(0, len(possible_actions)))
+                chosen_index = run_state.rng.choice(range(0, len(possible_actions)))
 
 
                 action = possible_actions[chosen_index]
