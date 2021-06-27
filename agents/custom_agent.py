@@ -64,7 +64,8 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                if environment.env.debug: pdb.set_trace()
+                if not ARS.rs.active_menu_plan.expects_strange_messages:
+                    if environment.env.debug: pdb.set_trace()
             self.message = potential_message
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
@@ -221,8 +222,13 @@ class RunState():
     def run_menu_plan(self, message):
         retval = self.active_menu_plan.interact(message)
 
+        if retval is None and self.active_menu_plan.fallback:
+            retval = self.active_menu_plan.fallback
+            self.active_menu_plan = BackgroundMenuPlan
+            return retval
+
         if self.active_menu_plan != BackgroundMenuPlan:
-            if  retval is None:
+            if retval is None:
                 self.active_menu_plan = BackgroundMenuPlan
                 retval = self.active_menu_plan.interact(message)
 

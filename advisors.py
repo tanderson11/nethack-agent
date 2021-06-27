@@ -275,6 +275,22 @@ class PickupAdvisor(Advisor):
         print("Pickup")
         return Advice(self.__class__, nethack.actions.Command.PICKUP, None)
 
+class TravelToDownstairsAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return flags.willing_to_descend
+
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        travel = nethack.actions.Command.TRAVEL
+
+        menu_plan = menuplan.MenuPlan("travel down", {
+            "Where do you want to travel to?": utilities.keypress_action(ord('>')),
+            "Can't find dungeon feature": nethack.ACTIONS.index(nethack.actions.Command.ESC)
+            },
+            expects_strange_messages=True,
+            fallback=utilities.keypress_action(ord('.')))
+ 
+        return Advice(self.__class__, travel, menu_plan)
+
 
 # Thinking outloud ...
 # Repair major, escape, attack, repair minor, descend, explore
@@ -301,6 +317,7 @@ advisors = [
     {
         MostNovelMoveAdvisor: 20,
         NoUnexploredSearchAdvisor: 20,
+        TravelToDownstairsAdvisor: 1,
         RandomMoveAdvisor: 1,
     },
     {
