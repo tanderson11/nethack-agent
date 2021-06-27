@@ -198,7 +198,7 @@ class RunState():
 
         self.menu_plan_log = []
         self.last_nonmenu_action = None
-        self.was_bad_action = False
+        self.last_nonmenu_action_failed = False
 
         # for mapping purposes
         self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
@@ -246,10 +246,12 @@ class RunState():
 
         return retval
 
-    def log_message(self, message, was_bad_action=False):
+    def log_message(self, message, last_nonmenu_action_failed=False):
         if len(self.menu_plan_log) > 0:
-            if self.menu_plan_log[-1] is None: # if the action wasn't a menu plan action, we want to report if it was bad, otherwise we don't want to update
-                self.was_bad_action = was_bad_action
+            if last_nonmenu_action_failed is True: # if we are explicitly given True, we want to trust that our last nonmenu action was bad
+                self.last_nonmenu_action_failed = True
+            elif last_nonmenu_action_failed is False and self.menu_plan_log[-1] is None: # otherwise, we only want to update (to False) if our last action didn't come during a menu plan
+                self.last_nonmenu_action_failed = False
 
         self.message_log.append(message)
 
@@ -316,13 +318,14 @@ class CustomAgent(BatchedAgent):
         carrying_too_much_message = "You are carrying too much to get through." in message.message
         no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
         solid_stone_message = "solid stone" in message.message # hopefully only happens when there's a tricky glyph; we drop into debugger later
+        nevermind = "Never mind." in message.message
 
         cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message or solid_stone_message
         peaceful_monster_message = "Really attack" in message.message
         # ---
-        was_bad_action = peaceful_monster_message or cant_move_that_way_message
+        last_nonmenu_action_failed = peaceful_monster_message or cant_move_that_way_message or nevermind
 
-        run_state.log_message(message.message, was_bad_action=was_bad_action)
+        run_state.log_message(message.message, last_nonmenu_action_failed=last_nonmenu_action_failed)
 
         if message.has_interactive_menu:
             if not run_state.live_interactive_menu:
@@ -358,7 +361,7 @@ class CustomAgent(BatchedAgent):
         for advisor_level in advs.advisors:
             advisors = advisor_level.keys()
             all_advice = [advisor().give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisors]
-            all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.was_bad_action)]
+            all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.last_nonmenu_action_failed)]
             if all_advice:
                 chosen_advice = run_state.rng.choices(
                     all_advice,

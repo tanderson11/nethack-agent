@@ -306,7 +306,7 @@ class TravelToDownstairsAdvisor(Advisor):
 advisors = [
     {
         #UseHealingItemWhenCriticallyInjuredAdvisor: 1,
-        #DrinkHealingPotionWhenCriticallyInjuredAdvisor: 1,
+        DrinkHealingPotionWhenCriticallyInjuredAdvisor: 1,
         EatWhenWeakAdvisor: 1,
     },
     {
