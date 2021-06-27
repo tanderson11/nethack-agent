@@ -365,6 +365,9 @@ class CustomAgent(BatchedAgent):
                     weights=map(lambda x: advisor_level[x.advisor], all_advice)
                 )[0]
                 action = chosen_advice.action
+
+                if action == nethack.actions.Command.QUAFF: print("quaffing!")
+
                 menu_plan = chosen_advice.menu_plan
                 break
 

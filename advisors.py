@@ -200,6 +200,15 @@ class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
     def check_conditions(self, flags):
         return flags.am_critically_injured
 
+class DrinkHealingPotionWhenCriticallyInjuredAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return flags.am_critically_injured and flags.have_potion
+
+    def advice(self, _0, _1, inventory, _3, _4):
+        quaff = nethack.actions.Command.QUAFF
+        menu_plan = menuplan.MenuPlan("drink healing potion", {"What do you want to drink?": utilities.keypress_action(ord('*'))}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance), expects_strange_messages=True)
+        return Advice(self.__class__, quaff, menu_plan)
+
 class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only quaff
     def make_menu_plan(self, letter):
         menu_plan = menuplan.MenuPlan("quaff from inventory", {
@@ -264,7 +273,7 @@ class PickupAdvisor(Advisor):
         return (not flags.near_monster) and flags.desirable_object
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
-        menu_plan = menuplan.MenuPlan("pick up comestibles", {}, menu_item_selector=lambda x: x.category == "Comestibles")
+        menu_plan = menuplan.MenuPlan("pick up comestibles", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
         print("Pickup")
         return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
 
@@ -290,7 +299,8 @@ class TravelToDownstairsAdvisor(Advisor):
 
 advisors = [
     {
-        UseHealingItemWhenCriticallyInjuredAdvisor: 1,
+        #UseHealingItemWhenCriticallyInjuredAdvisor: 1,
+        #DrinkHealingPotionWhenCriticallyInjuredAdvisor: 1,
         EatWhenWeakAdvisor: 1,
     },
     {

@@ -8,19 +8,21 @@ import utilities
 from utilities import ARS
 
 class MenuPlan():
-    def __init__(self, name, match_to_keypress, menu_item_selector=None, expects_strange_messages=False, fallback=None):
+    def __init__(self, name, match_to_keypress, interactive_menu_header_rows=None, menu_item_selector=None, expects_strange_messages=False, fallback=None):
         self.name = name
         self.match_to_keypress = match_to_keypress
         self.keypress_count = 0
 
-        self.menu_item_selector = None
+        self.menu_item_selector = menu_item_selector
+        self.interactive_menu_header_rows = interactive_menu_header_rows
         self.expects_strange_messages = expects_strange_messages
         self.fallback = fallback
 
     def interact(self, message_obj, live_interactive_menu):
         if message_obj.has_interactive_menu:
+            #if environment.env.debug: pdb.set_trace()
             if self.menu_item_selector:
-                selected_item = live_interactive_menu.add_rows(message_obj.tty_chars, self.menu_item_selector)
+                selected_item = live_interactive_menu.add_rows(message_obj.tty_chars, self.interactive_menu_header_rows, self.menu_item_selector)
                 if selected_item is not None:
                     return utilities.keypress_action(ord(selected_item.character))
             return utilities.keypress_action(ord('\r'))
@@ -39,47 +41,71 @@ class MenuPlan():
 
 class InteractiveMenu():
     class MenuItem:
-        singular_pattern = re.compile("(a|an) (.+)$")
-        plural_pattern = re.compile("([0-9]+) (.+)s$")
+        #quantity BUC erosion_status enhancement_sign enhancement class appearance (inquiver/whatever)
+        #weapon_pattern = re.compile("(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *(\+|\-)([0-9]+) ([a-zA-Z ]+[a-zA-Z]) *\((.+)\)*$")
+        #plural_weapon_pattern = re.compile("([0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *(\+|\-)([0-9]+) ([a-zA-Z ]+[a-zA-Z]) *\((.+)\)*")
+
+        #pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *(spellbook|scroll|potion|wand of)* *((\+|\-)[0-9]+)* *([a-zA-Z ]+[a-zA-Z]) *(\(.+\))*$")
+        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *((\+|\-)[0-9]+)* *([a-zA-Z -]+[a-zA-Z]) *(\(.+\))*$")
+
+        #singular_pattern = re.compile("(a|an) ((\+|\-)[0-9]+)* (.+)( \(.+\))*$") # a/an +/-N appearance/name (in quiver/whatever)
+        #plural_pattern = re.compile("([0-9]+) (\+|\-.+)* (.+)s (\(.+\))*$")
         def __init__(self, category, character, selected, item_text):
             print(item_text)
             self.category = category
             self.character = character
             self.selected = selected
             self.item_name = None
-            self.item_apperance = None
-            match = re.match(self.singular_pattern, item_text)
+            self.item_appearance = None
+
+            match = re.match(self.pattern, item_text)
+            #pdb.set_trace()
             if match:
-                self.quantity = 1
-                item_description = match[2]
+                if match[1] == "a" or match[1] == "an":
+                    self.quantity = 1
+                else:
+                    self.quantity = int(match[1])
+
+                item_description = match[6]
             else:
-                match = re.match(self.plural_pattern, item_text)
+                pdb.set_trace()
+                #match = re.match(self.plural_weapon_pattern, item_text)
                 self.quantity = int(match[1])
-                item_description = match[2]
+                item_description = match[6]
 
             if item_description in gd.ALL_OBJECT_NAMES:
                 self.item_name = item_description
+                self.item_appearance = item_description # choosing to trample appearance with identified appearance
             else:
+
+                # doesn't always work: item description is like "blessed +1 orcish dagger (weapon in hand)"
                 if not item_description in gd.ALL_OBJECT_APPEARANCES:
-                    if environment.env.debug: pdb.set_trace()
-                self.item_apperance = item_description
+                    #if environment.env.debug: pdb.set_trace()
+                    pass
+
+                self.item_appearance = item_description
+                self.item_name = '' # slightly questionable but it lets us check `in` on item names that aren't defined
+                #if environment.env.debug: pdb.set_trace()
+
+            print(self.item_name, self.item_appearance)
 
     menu_item_pattern = re.compile("([a-zA-z]) (-|\+) (.+)$")
 
     def __init__(self):
+        #if environment.env.debug: pdb.set_trace()
+
         self.rendered_rows = []
         self.category_count = 0
         self.active_category = None
         self.offset = None
 
-    def add_rows(self, tty_chars, item_selector=None):
+    def add_rows(self, tty_chars, menu_header_rows, item_selector=None):
         text_rows = [bytes(row).decode('ascii') for row in tty_chars]
         if not self.offset:
             self.offset = re.search("[^ ]", text_rows[0]).start()
-            if text_rows[1].rstrip(' '):
-                if environment.env.debug: pdb.set_trace()
+            #if text_rows[1].rstrip(' '): if environment.env.debug: pdb.set_trace()
         # Skip 2 header rows plus ones already parsed
-        for row in text_rows[(len(self.rendered_rows) + 2 + self.category_count):]:
+        for row in text_rows[(len(self.rendered_rows) + menu_header_rows + self.category_count):]:
             potential_menu = row[self.offset:].rstrip(' ')
             if potential_menu == '(end)':
                 break
