@@ -144,10 +144,7 @@ class Neighborhood():
 
         walkable_tile = np.vectorize(lambda g: g.walkable)(self.glyphs)
         open_door = np.vectorize(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door)(self.glyphs)
-        if previous_glyph_on_player is not None:
-            on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
-        else:
-            on_doorway = False
+        on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
 
         try:
             self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
@@ -268,10 +265,13 @@ class CustomAgent(BatchedAgent):
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
-        try:
-            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]] # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
-        except TypeError:
-            previous_glyph_on_player = None
+        # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
+        if run_state.glyphs is not None:
+            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
+            # Don't forget dungeon features just because we're now standing on them
+            if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
+                run_state.glyph_under_player = previous_glyph_on_player
+        previous_glyph_on_player = run_state.glyph_under_player
 
         # run_state stuff: Currently only for logging
         run_state.update(done, reward, observation)
