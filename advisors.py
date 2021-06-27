@@ -86,6 +86,8 @@ class Flags():
 
         self.have_potion = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS') in inventory['inv_oclasses']
 
+        self.feverish = "You feel feverish." in message.message
+
 class Advisor(abc.ABC):
     def __init__(self):
         pass
@@ -192,6 +194,10 @@ class PrayerAdvisor(Advisor):
         })
         return Advice(self.__class__, pray, menu_plan)
 
+class PrayWhenMajorTroubleAdvisor(PrayerAdvisor):
+    def check_conditions(self, flags):
+        return flags.feverish
+
 class PrayWhenWeakAdvisor(PrayerAdvisor):
     def check_conditions(self, flags):
         return flags.am_weak
@@ -296,6 +302,7 @@ advisors = [
     {
         PrayWhenCriticallyInjuredAdvisor: 1,
         PrayWhenWeakAdvisor: 1,
+        PrayWhenMajorTroubleAdvisor: 1,
     },
     {
         AttackAdvisor: 1,
