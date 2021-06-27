@@ -39,6 +39,25 @@ class Flags():
         fraction_index = [k for k in list(max_hp_fraction_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
         self.am_critically_injured = blstats.get('hitpoints') < max_hp_fraction_thresholds[fraction_index] or blstats.get('hitpoints') < 6
 
+        exp_lvl_to_max_mazes_lvl = {
+            1: 1,
+            2: 1,
+            3: 2,
+            4: 3,
+            5: 4,
+            6: 5,
+            7: 6,
+            8: 8,
+            9: 10,
+            10: 12,
+            11: 16,
+            12: 20,
+            13: 20,
+            14: 60,
+        }
+
+        self.willing_to_descend = exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
         if previous_glyph is not None: # on the first frame there was no previous glyph
@@ -125,7 +144,7 @@ class VisitUnvisitedSquareAdvisor(MoveAdvisor):
 
 class MoveDownstairsAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
-        return flags.can_move and flags.on_downstairs
+        return flags.can_move and flags.on_downstairs and flags.willing_to_descend
 
     def advice(self, _0, _1, _2, _3, _4):
         return Advice(self.__class__, nethack.actions.MiscDirection.DOWN, None)
