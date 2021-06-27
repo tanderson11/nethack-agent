@@ -348,7 +348,7 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.novelty_map.update(player_location)
 
-        if "solid stone" in message.message or "It's a wall" in message.message:
+        if "It's a wall" in message.message:
             if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
