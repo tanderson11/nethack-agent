@@ -7,6 +7,8 @@ import environment
 import pdb
 import numpy as np
 
+from utilities import ARS
+
 # Advisors
 # act on the cleaned up state (message obj, neighborhood obj, blstats)
 # -> check if condition is satisfied (eg on the downstairs, near locked door)
@@ -16,6 +18,12 @@ import numpy as np
 # query all advisors and get a list of advice tagged to advisors
 # choose among advisors (can make a ranked list of advisors by priority and deterministically or weighted-randomly choose between them;
 # can eventually plug the weighting into NN)
+
+class Advice():
+    def __init__(self, advisor, action, menu_plan):
+        self.advisor = advisor
+        self.action = action
+        self.menu_plan = menu_plan
 
 class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
@@ -84,8 +92,6 @@ class Advisor(abc.ABC):
     def give_advice(self, rng, flags, blstats, inventory, neighborhood, message):
         if self.check_conditions(flags):
             return self.advice(rng, blstats, inventory, neighborhood, message)
-        else:
-            return None, None
 
 ### ------------ Approach 1 ------------
 class MoveAdvisor(Advisor):
@@ -95,9 +101,8 @@ class MoveAdvisor(Advisor):
 class RandomMoveAdvisor(MoveAdvisor): 
     def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
-        if not possible_actions.any():
-            return None, None
-        return rng.choice(possible_actions), None
+        if possible_actions.any():
+            return Advice(self.__class__, rng.choice(possible_actions), None)
 
 class MostNovelMoveAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
@@ -107,8 +112,7 @@ class MostNovelMoveAdvisor(MoveAdvisor):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
         visits = neighborhood.visits[neighborhood.walkable]
         most_novel = possible_actions[visits == visits.min()]
-
-        return rng.choice(most_novel), None
+        return Advice(self.__class__, rng.choice(most_novel), None)
 
 class VisitUnvisitedSquareAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
@@ -116,8 +120,7 @@ class VisitUnvisitedSquareAdvisor(MoveAdvisor):
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[(neighborhood.visits == 0) & neighborhood.walkable]
-
-        return rng.choice(possible_actions), None
+        return Advice(self.__class__, rng.choice(possible_actions), None)
 
 
 class MoveDownstairsAdvisor(MoveAdvisor):
@@ -125,7 +128,7 @@ class MoveDownstairsAdvisor(MoveAdvisor):
         return flags.can_move and flags.on_downstairs
 
     def advice(self, _0, _1, _2, _3, _4):
-        return nethack.actions.MiscDirection.DOWN, None
+        return Advice(self.__class__, nethack.actions.MiscDirection.DOWN, None)
 
 class KickLockedDoorAdvisor(Advisor):
     def check_conditions(self, flags):
@@ -144,7 +147,7 @@ class KickLockedDoorAdvisor(Advisor):
             "In what direction?": utilities.ACTION_LOOKUP[a],
         })
         #if environment.env.debug: pdb.set_trace()
-        return kick, menu_plan
+        return Advice(self.__class__, kick, menu_plan)
 
 class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):
@@ -168,9 +171,7 @@ class EatTopInventoryAdvisor(Advisor):
         if food_index is not None:
             letter = inventory['inv_letters'][food_index]
             menu_plan = self.make_menu_plan(letter)
-            return eat, menu_plan
-        else:
-            return None, None
+            return Advice(self.__class__, eat, menu_plan)
 
 class EatWhenWeakAdvisor(EatTopInventoryAdvisor):
     def check_conditions(self, flags):
@@ -182,8 +183,7 @@ class PrayerAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("yes pray", {
             "Are you sure you want to pray?": utilities.keypress_action(ord('y')),
         })
-
-        return pray, menu_plan
+        return Advice(self.__class__, pray, menu_plan)
 
 class PrayWhenWeakAdvisor(PrayerAdvisor):
     def check_conditions(self, flags):
@@ -221,14 +221,12 @@ class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only q
 
             letter = inventory['inv_letters'][potion_index]
             menu_plan = self.make_menu_plan(letter)
-            return quaff, menu_plan
-        else:
-            return None, None
+            return Advice(self.__class__, quaff, menu_plan)
 
 
 class SearchAdvisor(Advisor):
     def advice(self, _0, _1, _2, _3, _4):
-        return nethack.actions.Command.SEARCH, None
+        return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
 
 class FallbackSearchAdvisor(SearchAdvisor):
     def check_conditions(self, flags):
@@ -248,7 +246,7 @@ class AttackAdvisor(Advisor):
         is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
         monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask & ~is_giant_ant_lol]
 
-        return rng.choice(monster_directions), None
+        return Advice(self.__class__, rng.choice(monster_directions), None)
 
 class PickupAdvisor(Advisor):
     def check_conditions(self, flags):
@@ -256,7 +254,7 @@ class PickupAdvisor(Advisor):
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
         print("Pickup")
-        return nethack.actions.Command.PICKUP, None
+        return Advice(self.__class__, nethack.actions.Command.PICKUP, None)
 
 
 # Thinking outloud ...

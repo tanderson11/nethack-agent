@@ -1,6 +1,15 @@
 import nle.nethack as nethack
 import glyphs as gd
 
+class ActiveRunState():
+    def __init__(self):
+        rs = None
+
+    def set_active(self, run_state):
+        self.rs = run_state
+
+ARS = ActiveRunState()
+
 ACTION_LOOKUP = {}
 
 for i, action in enumerate(nethack.ACTIONS):

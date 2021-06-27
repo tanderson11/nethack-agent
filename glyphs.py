@@ -22,10 +22,7 @@ class Glyph():
     def __repr__(self):
         return "{} named {}".format(self.__class__, getattr(self, 'name', 'NO NAME DEFINED'))
 
-class MonsterGlyph(Glyph):
-    OFFSET = nethack.GLYPH_MON_OFF
-    COUNT = nethack.NUMMONS
-
+class MonsterAlikeGlyph(Glyph):
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
@@ -35,6 +32,10 @@ class MonsterGlyph(Glyph):
         # 'mlet', 'mlevel', 'mmove', 'mname', 'mr', 'mresists', 'msize', 'msound'
         self.name = monster.mname
         self.walkable = False
+
+class MonsterGlyph(MonsterAlikeGlyph):
+    OFFSET = nethack.GLYPH_MON_OFF
+    COUNT = nethack.NUMMONS
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
@@ -206,7 +207,7 @@ def make_glyph_class(base_klass, offset, count):
 
     return Klass
 
-class PetGlyph(MonsterGlyph):
+class PetGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_PET_OFF
     COUNT = nethack.NUMMONS
 
@@ -222,7 +223,7 @@ class InvisibleGlyph(Glyph):
         super().__init__(numeral)
         self.walkable = True # TK this is so we attack invisible glyphs
 
-class DetectGlyph(MonsterGlyph):
+class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
     COUNT = nethack.NUMMONS
 
@@ -234,7 +235,7 @@ class CorpseGlyph(Glyph):
         super().__init__(numeral)
         self.walkable = True
 
-class RiddenGlyph(MonsterGlyph):
+class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF
     COUNT = nethack.NUMMONS
 

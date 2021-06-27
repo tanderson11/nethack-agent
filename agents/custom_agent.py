@@ -11,6 +11,7 @@ from agents.base import BatchedAgent
 import advisors as advs
 import menuplan
 import utilities
+from utilities import ARS
 import glyphs as gd
 import environment
 
@@ -19,15 +20,6 @@ if environment.env.debug:
 
 # Config variable that are screwing with me
 # pile_limit
-
-class ActiveRunState():
-    def __init__(self):
-        rs = None
-
-    def set_active(self, run_state):
-        self.rs = run_state
-
-ARS = ActiveRunState()
 
 class BLStats():
     bl_meaning = [
@@ -317,21 +309,13 @@ class CustomAgent(BatchedAgent):
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advs.advisors:
 
-            advised_actions, menu_plans = zip(*[advisor.give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisor_level])
-            advised_actions = np.array(advised_actions)
-            menu_plans = np.array(menu_plans)
-
-            possible_actions = advised_actions[advised_actions != np.array(None)]
-            menu_plans = menu_plans[advised_actions != np.array(None)] # select with advised_actions because menu_plan can be None if there's no plan
-
-            if possible_actions.any():
-                chosen_index = run_state.rng.choice(range(0, len(possible_actions)))
-
-
-                action = possible_actions[chosen_index]
-                menu_plan = menu_plans[chosen_index]
+            all_advice = [advisor.give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisor_level]
+            all_advice = [advice for advice in all_advice if advice]
+            if all_advice:
+                chosen_advice = run_state.rng.choice(all_advice)
+                action = chosen_advice.action
+                menu_plan = chosen_advice.menu_plan
                 break
-
 
         retval = utilities.ACTION_LOOKUP[action]
         run_state.log_action(retval)
