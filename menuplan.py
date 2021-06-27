@@ -47,7 +47,7 @@ class InteractiveMenu():
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status)
         # breaks on `a corroded +1 long sword (weapon in hand)`
-        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *((\+|\-)[0-9]+)* *([a-zA-Z -]+[a-zA-Z]) *(\(.+\))*$")
+        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?(burnt|rusty)? ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
 
         def __init__(self, category, character, selected, item_text):
             #print(item_text)
