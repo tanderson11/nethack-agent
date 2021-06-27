@@ -50,12 +50,15 @@ class Message():
         "There is a grave here.",
         "There is a broken door here.",
         "There is a sink here.",
+        "Pick up what?",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
-    def __init__(self, message, tty_chars):
+    def __init__(self, message, tty_chars, misc_observation):
         self.raw_message = message
+        self.tty_chars = tty_chars
         self.message = ''
         self.has_more = False
+        self.has_interactive_menu = False
 
         if np.count_nonzero(message) > 0:
             self.message = bytes(message).decode('ascii').rstrip('\x00')
@@ -68,6 +71,8 @@ class Message():
                     if environment.env.debug: pdb.set_trace()
             self.message = potential_message
 
+        self.has_interactive_menu = "Pick up what?" in self.message
+
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
         # Bad conflict with "They say that shopkeepers often remember things that you might forget."
         if "--More--" in ascii_top_lines or "hings that" in ascii_top_lines:
@@ -78,9 +83,9 @@ class Message():
             # # np.count_nonzero(observation['message']) > 0
             self.has_more = True
 
-        truly_has_more = "--More--" in bytes(tty_chars).decode('ascii')
+        truly_has_more = (misc_observation[2] == 1)
 
-        if truly_has_more != self.has_more:
+        if truly_has_more != self.has_more and not self.has_interactive_menu:
             if environment.env.debug: pdb.set_trace()
             self.has_more = truly_has_more
 
@@ -184,6 +189,8 @@ class RunState():
         self.action_log = []
         self.time_hung = 0
         self.rng = self.make_seeded_rng()
+        self.glyph_under_player = None
+        self.live_interactive_menu = None
 
         # for mapping purposes
         self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
@@ -217,7 +224,7 @@ class RunState():
         self.active_menu_plan = menu_plan
 
     def run_menu_plan(self, message):
-        retval = self.active_menu_plan.interact(message)
+        retval = self.active_menu_plan.interact(message, self.live_interactive_menu)
 
         if retval is None and self.active_menu_plan.fallback:
             retval = self.active_menu_plan.fallback
@@ -227,7 +234,7 @@ class RunState():
         if self.active_menu_plan != BackgroundMenuPlan:
             if retval is None:
                 self.active_menu_plan = BackgroundMenuPlan
-                retval = self.active_menu_plan.interact(message)
+                retval = self.active_menu_plan.interact(message, self.live_interactive_menu)
 
         return retval
 
@@ -282,9 +289,14 @@ class CustomAgent(BatchedAgent):
         if run_state.step_count % 1000 == 0:
             print_stats(run_state, blstats)
 
-        message = Message(observation['message'], observation['tty_chars'])
+        message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.log_message(message.message)
 
+        if message.has_interactive_menu:
+            if not run_state.live_interactive_menu:
+                run_state.live_interactive_menu = menuplan.InteractiveMenu()
+        else:
+            run_state.live_interactive_menu = None
 
         if message.has_more:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]

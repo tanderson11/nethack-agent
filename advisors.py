@@ -272,8 +272,9 @@ class PickupAdvisor(Advisor):
         return (not flags.near_monster) and flags.desirable_object
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
+        menu_plan = menuplan.MenuPlan("pick up comestibles", {}, menu_item_selector=lambda x: x.category == "Comestibles")
         print("Pickup")
-        return Advice(self.__class__, nethack.actions.Command.PICKUP, None)
+        return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
 
 class TravelToDownstairsAdvisor(Advisor):
     def check_conditions(self, flags):

@@ -86,6 +86,22 @@ class ObjectGlyph(Glyph):
         else:
             return False
 
+    @classmethod
+    def names(cls):
+        names = set()
+        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
+            # print(f"{cls} {numeral}")
+            names.add(cls(numeral).name)
+        return names
+
+    @classmethod
+    def appearances(cls):
+        appearances = set()
+        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
+            # print(f"{cls} {numeral}")
+            appearances.add(cls(numeral).appearance)
+        return appearances
+
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
     COUNT = nethack.MAXPCHARS
@@ -293,6 +309,10 @@ if not len(GLYPH_LOOKUP.keys()) == 5_976:
     raise Exception("Surprising number of glyphs")
 
 GLYPH_LOOKUP[5976] = None # Weird and bad thing in the inventory
+
+ALL_OBJECT_NAMES = ObjectGlyph.names()
+
+ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances()
 
 # WALL_GLPYHS = 2360, 2361 = vertical + horizontal
 # 2362, 2363, 2364, 2365 corners
