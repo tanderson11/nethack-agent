@@ -308,11 +308,14 @@ class CustomAgent(BatchedAgent):
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advs.advisors:
-
-            all_advice = [advisor.give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisor_level]
+            advisors = advisor_level.keys()
+            all_advice = [advisor().give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisors]
             all_advice = [advice for advice in all_advice if advice]
             if all_advice:
-                chosen_advice = run_state.rng.choice(all_advice)
+                chosen_advice = run_state.rng.choices(
+                    all_advice,
+                    weights=map(lambda x: advisor_level[x.advisor], all_advice)
+                )[0]
                 action = chosen_advice.action
                 menu_plan = chosen_advice.menu_plan
                 break

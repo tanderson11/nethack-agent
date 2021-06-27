@@ -280,23 +280,30 @@ class PickupAdvisor(Advisor):
 # Repair major, escape, attack, repair minor, descend, explore
 
 advisors = [
-    [UseHealingItemWhenCriticallyInjuredAdvisor(),
-    EatWhenWeakAdvisor()],
-
-    [PrayWhenCriticallyInjuredAdvisor(),
-    PrayWhenWeakAdvisor(),],
-
-    [AttackAdvisor(),],
-
-    [PickupAdvisor(),],
-
-    [KickLockedDoorAdvisor(),
-    MoveDownstairsAdvisor(),],
-
-    [MostNovelMoveAdvisor(),
-    NoUnexploredSearchAdvisor(),
-    RandomMoveAdvisor(),
-    ],
-
-    [FallbackSearchAdvisor()]
+    {
+        UseHealingItemWhenCriticallyInjuredAdvisor: 1,
+        EatWhenWeakAdvisor: 1,
+    },
+    {
+        PrayWhenCriticallyInjuredAdvisor: 1,
+        PrayWhenWeakAdvisor: 1,
+    },
+    {
+        AttackAdvisor: 1,
+    },
+    {
+        PickupAdvisor: 1,
+    },
+    {
+        KickLockedDoorAdvisor: 1,
+        MoveDownstairsAdvisor: 1
+    },
+    {
+        MostNovelMoveAdvisor: 20,
+        NoUnexploredSearchAdvisor: 20,
+        RandomMoveAdvisor: 1,
+    },
+    {
+        FallbackSearchAdvisor: 1
+    }
 ]
