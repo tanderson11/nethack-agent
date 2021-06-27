@@ -38,6 +38,10 @@ class MonsterGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_MON_OFF
     COUNT = nethack.NUMMONS
 
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.never_melee = self.offset == 28 # floating eye
+
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
     COUNT = nethack.NUM_OBJECTS

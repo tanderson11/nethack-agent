@@ -260,10 +260,13 @@ class AttackAdvisor(Advisor):
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
-        
-        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask]
 
-        return Advice(self.__class__, rng.choice(monster_directions), None)
+        never_melee_mask = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph) and g.never_melee)(neighborhood.glyphs)
+        
+        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask & ~never_melee_mask]
+
+        if monster_directions.any():
+            return Advice(self.__class__, rng.choice(monster_directions), None)
 
 class PickupAdvisor(Advisor):
     def check_conditions(self, flags):
