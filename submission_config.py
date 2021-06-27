@@ -22,7 +22,7 @@ class SubmissionConfig:
     ## Change the NUM_ENVIRONMENTS as you need
     ## for example reduce it if your GPU doesn't fit
     ## Increasing above 32 is not advisable for the Nethack Challenge 2021
-    NUM_ENVIRONMENTS = environment.env.num_environments or 32
+    NUM_ENVIRONMENTS = environment.env.num_environments or 1
 
 
     ## Add a function that creates your nethack env

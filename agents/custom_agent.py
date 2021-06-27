@@ -11,6 +11,7 @@ from agents.base import BatchedAgent
 import advisors as advs
 import menuplan
 import utilities
+from utilities import ARS
 import glyphs as gd
 import environment
 
@@ -19,15 +20,6 @@ if environment.env.debug:
 
 # Config variable that are screwing with me
 # pile_limit
-
-class ActiveRunState():
-    def __init__(self):
-        rs = None
-
-    def set_active(self, run_state):
-        self.rs = run_state
-
-ARS = ActiveRunState()
 
 class BLStats():
     bl_meaning = [
@@ -118,6 +110,8 @@ class Neighborhood():
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
 
+    diagonal_moves = np.vectorize(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8)(action_grid)
+
     def __init__(self, player_location, observation, novelty_map, previous_glyph_on_player):
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
@@ -125,10 +119,20 @@ class Neighborhood():
         col_lim = observation['glyphs'].shape[1]
         row_lim = observation['glyphs'].shape[0]
 
-        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim)) # +2 because non inclusive on upper end
-        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim)) # don't actually need to min the upper end because slices automatically stop at an upper boundary, but it's useful in restricting the action grid
+        # +2 because non inclusive on upper end
+        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim))
+        # don't actually need to min the upper end because slices automatically stop
+        # at an upper boundary, but it's useful in restricting the action grid 
+        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim))
 
-        self.action_grid = self.__class__.action_grid[1+(row_slice.start-self.player_row):1+(row_slice.stop-self.player_row), 1+(col_slice.start-self.player_col):1+(col_slice.stop-self.player_col)] # this highly deranged syntax selects a window in the action_grid equivalent to the window into the glyphs (ie: if we're at the edge of the map, we select the relevant part of the action grid)
+        # this highly deranged syntax selects a window in the action_grid equivalent
+        # to the window into the glyphs (ie: if we're at the edge of the map,
+        # we select the relevant part of the action grid)
+        action_grid_row_slice = slice(1+(row_slice.start-self.player_row), 1+(row_slice.stop-self.player_row))
+        action_grid_column_slice = slice(1+(col_slice.start-self.player_col), 1+(col_slice.stop-self.player_col))
+
+        self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_column_slice]
+        diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_column_slice]
 
         vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_LOOKUP.get(g))
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
@@ -137,18 +141,15 @@ class Neighborhood():
         self.visits = novelty_map.map[row_slice, col_slice]
         self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
-        #self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
-
-        walkable_tile = np.vectorize(lambda g: getattr(g, 'walkable', False))(self.glyphs)
-        diagonal_tile = np.vectorize(lambda g: nethack.ACTIONS.index(g) > 3 and nethack.ACTIONS.index(g) < 8)(self.action_grid)
-        open_door = np.vectorize(lambda g: getattr(g, 'is_open_door', False))(self.glyphs)
+        walkable_tile = np.vectorize(lambda g: g.walkable)(self.glyphs)
+        open_door = np.vectorize(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door)(self.glyphs)
         if previous_glyph_on_player is not None:
-            on_doorway = getattr(previous_glyph_on_player, 'is_open_door', False)
+            on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
         else:
             on_doorway = False
 
         try:
-            self.walkable = walkable_tile & ~(diagonal_tile & open_door) & ~(diagonal_tile & on_doorway) # don't move diagonally into open doors
+            self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
         except TypeError:
             if environment.env.debug: pdb.set_trace()
 
@@ -164,9 +165,9 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
     "Call a ": utilities.keypress_action(ord('\r')),
     "Call an ": utilities.keypress_action(ord('\r')),
-    "Really attack": utilities.keypress_action(ord('y')),#nethack.ACTIONS.index(nethack.actions.Command.ESC), # Attacking because don't know about peaceful monsters yet
-    "Shall I remove": nethack.ACTIONS.index(nethack.actions.Command.ESC),
-    "Would you wear it for me?": nethack.ACTIONS.index(nethack.actions.Command.ESC),
+    "Really attack": utilities.keypress_action(ord('y')), # Attacking because don't know about peaceful monsters yet
+    "Shall I remove": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
+    "Would you wear it for me?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
 
 class RunState():
@@ -280,7 +281,7 @@ class CustomAgent(BatchedAgent):
 
 
         if message.has_more:
-            retval = nethack.ACTIONS.index(nethack.actions.TextCharacters.SPACE)
+            retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
             run_state.log_action(retval)
             return retval
 
@@ -305,24 +306,19 @@ class CustomAgent(BatchedAgent):
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advs.advisors:
-
-            advised_actions, menu_plans = zip(*[advisor.give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisor_level])
-            advised_actions = np.array(advised_actions)
-            menu_plans = np.array(menu_plans)
-
-            possible_actions = advised_actions[advised_actions != np.array(None)]
-            menu_plans = menu_plans[advised_actions != np.array(None)] # select with advised_actions because menu_plan can be None if there's no plan
-
-            if possible_actions.any():
-                chosen_index = run_state.rng.choice(range(0, len(possible_actions)))
-
-
-                action = possible_actions[chosen_index]
-                menu_plan = menu_plans[chosen_index]
+            advisors = advisor_level.keys()
+            all_advice = [advisor().give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisors]
+            all_advice = [advice for advice in all_advice if advice]
+            if all_advice:
+                chosen_advice = run_state.rng.choices(
+                    all_advice,
+                    weights=map(lambda x: advisor_level[x.advisor], all_advice)
+                )[0]
+                action = chosen_advice.action
+                menu_plan = chosen_advice.menu_plan
                 break
 
-
-        retval = nethack.ACTIONS.index(action)
+        retval = utilities.ACTION_LOOKUP[action]
         run_state.log_action(retval)
 
         if menu_plan is not None:
