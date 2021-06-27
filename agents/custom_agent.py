@@ -168,7 +168,7 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
     "Call a ": utilities.keypress_action(ord('\r')),
     "Call an ": utilities.keypress_action(ord('\r')),
-    "Really attack": utilities.keypress_action(ord('y')), # Attacking because don't know about peaceful monsters yet
+    "Really attack": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC], # Attacking because don't know about peaceful monsters yet
     "Shall I remove": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
     "Would you wear it for me?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
@@ -187,10 +187,15 @@ class RunState():
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
         self.action_log = []
+        
         self.time_hung = 0
         self.rng = self.make_seeded_rng()
         self.glyph_under_player = None
         self.live_interactive_menu = None
+
+        self.menu_plan_log = []
+        self.last_nonmenu_action = None
+        self.was_bad_action = False
 
         # for mapping purposes
         self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
@@ -238,11 +243,20 @@ class RunState():
 
         return retval
 
-    def log_message(self, message):
+    def log_message(self, message, was_bad_action=False):
+        if len(self.menu_plan_log) > 0:
+            if self.menu_plan_log[-1] is None: # if the action wasn't a menu plan action, we want to report if it was bad, otherwise we don't want to update
+                self.was_bad_action = was_bad_action
+
         self.message_log.append(message)
 
-    def log_action(self, action):
+    def log_action(self, action, menu_plan=None):
+        self.menu_plan_log.append(menu_plan)
         self.action_log.append(action)
+
+        if menu_plan is None:
+            self.last_nonmenu_action = action
+
 
 def print_stats(run_state, blstats):
     print(
@@ -290,7 +304,21 @@ class CustomAgent(BatchedAgent):
             print_stats(run_state, blstats)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
-        run_state.log_message(message.message)
+
+        # --- Spooky messages ---
+        diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+        diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+        boulder_in_vain_message = "boulder, but in vain." in message.message
+        boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
+        carrying_too_much_message = "You are carrying too much to get through." in message.message
+        no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
+
+        cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
+        peaceful_monster_message = "Really attack" in message.message
+        # ---
+        was_bad_action = peaceful_monster_message or cant_move_that_way_message
+
+        run_state.log_message(message.message, was_bad_action=was_bad_action)
 
         if message.has_interactive_menu:
             if not run_state.live_interactive_menu:
@@ -306,7 +334,7 @@ class CustomAgent(BatchedAgent):
         if message:
             retval = run_state.run_menu_plan(message)
             if retval is not None:
-                run_state.log_action(retval)
+                run_state.log_action(retval, menu_plan=run_state.active_menu_plan)
                 return retval
 
         # mapping
@@ -326,7 +354,7 @@ class CustomAgent(BatchedAgent):
         for advisor_level in advs.advisors:
             advisors = advisor_level.keys()
             all_advice = [advisor().give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisors]
-            all_advice = [advice for advice in all_advice if advice]
+            all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.was_bad_action)]
             if all_advice:
                 chosen_advice = run_state.rng.choices(
                     all_advice,

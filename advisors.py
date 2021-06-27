@@ -29,15 +29,15 @@ class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
         self.am_weak = blstats.get('hunger_state') > 2
 
-        max_hp_fraction_thresholds = {
+        exp_lvl_to_prayer_hp_thresholds = {
             1: 1/5,
             6: 1/6,
             14: 1/7,
             22: 1/8,
             30: 1/9
         }
-        fraction_index = [k for k in list(max_hp_fraction_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
-        self.am_critically_injured = blstats.get('hitpoints') < max_hp_fraction_thresholds[fraction_index] or blstats.get('hitpoints') < 6
+        fraction_index = [k for k in list(exp_lvl_to_prayer_hp_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
+        self.am_critically_injured = blstats.get('hitpoints') < exp_lvl_to_prayer_hp_thresholds[fraction_index] or blstats.get('hitpoints') < 6
 
         exp_lvl_to_max_mazes_lvl = {
             1: 1,
@@ -69,7 +69,7 @@ class Flags():
 
         self.bumped_into_locked_door = "This door is locked" in message.message
         self.have_walkable_squares = neighborhood.action_grid[neighborhood.walkable].any() # at least one square is walkable
-        self.can_move = True # someday, Held, Handspan etc.
+        self.can_move = True # someday Held, Handspan etc.
 
         self.adjacent_univisited_square = (neighborhood.visits[neighborhood.walkable] == 0).any()
 
@@ -77,17 +77,6 @@ class Flags():
             self.desirable_object = isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS"
         else:
             self.desirable_object = False
-
-        # --- Spooky messages ---
-        diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
-        diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
-        boulder_in_vain_message = "boulder, but in vain." in message.message
-        boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
-        carrying_too_much_message = "You are carrying too much to get through." in message.message
-        no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
-
-        self.cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
-        # ---
 
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
 
@@ -123,8 +112,7 @@ class RandomMoveAdvisor(MoveAdvisor):
 
 class MostNovelMoveAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
-        return flags.can_move and flags.have_walkable_squares and not flags.cant_move_that_way_message
-
+        return flags.can_move and flags.have_walkable_squares
     def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[neighborhood.walkable]
         visits = neighborhood.visits[neighborhood.walkable]
@@ -133,7 +121,7 @@ class MostNovelMoveAdvisor(MoveAdvisor):
 
 class VisitUnvisitedSquareAdvisor(MoveAdvisor):
     def check_conditions(self, flags):
-        return flags.can_move and flags.adjacent_univisited_square and not flags.cant_move_that_way_message
+        return flags.can_move and flags.adjacent_univisited_square
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
         possible_actions = neighborhood.action_grid[(neighborhood.visits == 0) & neighborhood.walkable]
@@ -266,6 +254,8 @@ class AttackAdvisor(Advisor):
 
         if monster_directions.any():
             return Advice(self.__class__, rng.choice(monster_directions), None)
+
+        return None
 
 class PickupAdvisor(Advisor):
     def check_conditions(self, flags):
