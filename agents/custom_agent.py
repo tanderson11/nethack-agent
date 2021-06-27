@@ -141,8 +141,6 @@ class Neighborhood():
         self.visits = novelty_map.map[row_slice, col_slice]
         self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
-        #self.walkable = ~np.isin(self.glyphs, gd.WALL_GLYPHS)
-
         walkable_tile = np.vectorize(lambda g: g.walkable)(self.glyphs)
         open_door = np.vectorize(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door)(self.glyphs)
         if previous_glyph_on_player is not None:

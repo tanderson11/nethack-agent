@@ -90,11 +90,10 @@ class Flags():
         # ---
 
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
-        is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
 
-        self.adjacent_secret_door_possibility = (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)) | is_giant_ant_lol # BUG
+        self.adjacent_secret_door_possibility = (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs))
 
-        self.near_monster = (is_monster & ~is_giant_ant_lol & ~neighborhood.players_square_mask).any()
+        self.near_monster = (is_monster & ~neighborhood.players_square_mask).any()
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -262,8 +261,7 @@ class AttackAdvisor(Advisor):
     def advice(self, rng, blstats, inventory, neighborhood, message):
         is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
         
-        is_giant_ant_lol = neighborhood.raw_glyphs == 0 # Unfortunate edge casing due to bug
-        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask & ~is_giant_ant_lol]
+        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask]
 
         return Advice(self.__class__, rng.choice(monster_directions), None)
 
