@@ -58,7 +58,7 @@ class Message():
         self.tty_chars = tty_chars
         self.message = ''
         self.has_more = False
-        self.has_interactive_menu = False
+        self.interactive_menu_class = None
 
         if np.count_nonzero(message) > 0:
             self.message = bytes(message).decode('ascii').rstrip('\x00')
@@ -71,7 +71,14 @@ class Message():
                     if environment.env.debug: pdb.set_trace()
             self.message = potential_message
 
-        self.has_interactive_menu = "Pick up what?" in self.message or (self.message in gd.ObjectGlyph.OBJECT_CLASS_LABEL_IN_INVENTORY)
+        self.interactive_menu_class = None
+        if "Pick up what?" in self.message or (self.message in gd.ObjectGlyph.OBJECT_CLASS_LABEL_IN_INVENTORY):
+            self.interactive_menu_class = menuplan.InteractiveInventoryMenu
+        elif "Pick a skill to advance:" in self.message:
+            self.interactive_menu_class = menuplan.InteractiveEnhanceSkillsMenu
+            
+
+
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
         # Bad conflict with "They say that shopkeepers often remember things that you might forget."
@@ -85,7 +92,7 @@ class Message():
 
         truly_has_more = (misc_observation[2] == 1)
 
-        if truly_has_more != self.has_more and not self.has_interactive_menu:
+        if truly_has_more != self.has_more and self.interactive_menu_class is None:
             if environment.env.debug: pdb.set_trace()
             self.has_more = truly_has_more
 
@@ -165,7 +172,7 @@ class Neighborhood():
         return directions
 
     def is_monster(self):
-        return np.vectorize(lambda g: (isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph)))(self.glyphs)
+        return np.vectorize(lambda g: (isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph)))(self.glyphs)
 
 BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
@@ -174,6 +181,7 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     "Really attack": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC], # Attacking because don't know about peaceful monsters yet
     "Shall I remove": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
     "Would you wear it for me?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
+    "zorkmids worth of damage!": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
 
 class RunState():
@@ -288,15 +296,20 @@ class CustomAgent(BatchedAgent):
         ARS.set_active(run_state)
 
         blstats = BLStats(observation['blstats'])
+        dlevel = blstats.get('level_number')
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
-            previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
-            # Don't forget dungeon features just because we're now standing on them
-            if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
-                run_state.glyph_under_player = previous_glyph_on_player
+            if dlevel != run_state.novelty_map.dlevel: # if we jumped dungeon levels, we don't know the glyph
+                run_state.glyph_under_player = None
+            else:
+                previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
+
+                # Don't forget dungeon features just because we're now standing on them
+                if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
+                    run_state.glyph_under_player = previous_glyph_on_player
         previous_glyph_on_player = run_state.glyph_under_player
 
         # run_state stuff: Currently only for logging
@@ -327,9 +340,9 @@ class CustomAgent(BatchedAgent):
 
         run_state.log_message(message.message, last_nonmenu_action_failed=last_nonmenu_action_failed)
 
-        if message.has_interactive_menu:
+        if message.interactive_menu_class is not None:
             if not run_state.live_interactive_menu:
-                run_state.live_interactive_menu = menuplan.InteractiveMenu()
+                run_state.live_interactive_menu = message.interactive_menu_class()
         else:
             run_state.live_interactive_menu = None
 
@@ -345,7 +358,6 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         # mapping
-        dlevel = blstats.get('level_number')
         if run_state.novelty_map.dlevel != dlevel:
             run_state.novelty_map = NoveltyMap(dlevel, observation['glyphs'], player_location)
         else:

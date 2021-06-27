@@ -21,7 +21,7 @@ class MenuPlan():
         self.fallback = fallback
 
     def interact(self, message_obj, live_interactive_menu):
-        if message_obj.has_interactive_menu:
+        if message_obj.interactive_menu_class is not None:
             #if environment.env.debug: pdb.set_trace()
             if self.menu_item_selector:
                 selected_item = live_interactive_menu.add_rows(message_obj.tty_chars, self.interactive_menu_header_rows, self.menu_item_selector)
@@ -44,10 +44,62 @@ class MenuPlan():
         return self.name
 
 class InteractiveMenu():
+    menu_item_pattern = re.compile("([a-zA-z]) (-|\+) (.+)$")
+    def __init__(self):
+        #if environment.env.debug: pdb.set_trace()
+
+        self.rendered_rows = []
+        self.category_count = 0
+        self.active_category = None
+        self.offset = None
+
+    def add_rows(self, tty_chars, menu_header_rows, item_selector=None):
+        text_rows = [bytes(row).decode('ascii') for row in tty_chars]
+        if not self.offset:
+            self.offset = re.search("[^ ]", text_rows[0]).start()
+            #if text_rows[1].rstrip(' '): if environment.env.debug: pdb.set_trace()
+        # Skip 2 header rows plus ones already parsed
+        for row in text_rows[(len(self.rendered_rows) + menu_header_rows + self.category_count):]:
+            potential_menu = row[self.offset:].rstrip(' ')
+            if potential_menu == '(end)': # Probably need to handle 1 of 2 pages and such
+                break
+
+            if isinstance(self,InteractiveEnhanceSkillsMenu):
+                pass #pdb.set_trace()
+
+            item_match = re.match(self.menu_item_pattern, potential_menu)
+            if item_match:
+                if not self.active_category:
+                    if environment.env.debug: pdb.set_trace()
+                next_item = self.MenuItem(self.active_category, item_match[1], item_match[2] == "+", item_match[3])
+                self.rendered_rows.append(next_item)
+                if not next_item.selected and item_selector and item_selector(next_item):
+                    return next_item
+            else:
+                self.active_category = potential_menu
+                self.category_count += 1
+
+class InteractiveEnhanceSkillsMenu(InteractiveMenu):
+    
     class MenuItem:
-        #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status)
-        # breaks on `a corroded +1 long sword (weapon in hand)`
-        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty)* *((\+|\-)[0-9]+)* *([a-zA-Z -]+[a-zA-Z]) *(\(.+\))*$")
+        pattern = re.compile("")
+
+        def __init__(self, category, character, selected, line_text):
+            self.category = category
+            self.character = character
+            self.selected = selected
+            self.line_text = line_text
+
+class InteractiveInventoryMenu(InteractiveMenu):
+    class MenuItem:
+        #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
+        # breaks on 'a corroded +1 long sword (weapon in hand)''
+        # 'a scroll labeled NR 9'
+        # 'a very corroded +1 long sword (weapon in hand)'
+        # 'an uncursed rustproof +0 splint mail (being worn)'
+        # 'a corroded +0 katana (weapon in hand)'
+
+        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)* *(burnt|rusty|corroded|rustproof|rotted)* *((\+|\-)[0-9]+)* *([a-zA-Z -]+[a-zA-Z]) *(\(.+\))*$")
 
         def __init__(self, category, character, selected, item_text):
             #print(item_text)
@@ -83,36 +135,4 @@ class InteractiveMenu():
                 self.item_name = '' # slightly questionable but it lets us check `in` on item names that aren't defined
                 #if environment.env.debug: pdb.set_trace()
 
-            print(self.item_name, self.item_appearance)
-
-    menu_item_pattern = re.compile("([a-zA-z]) (-|\+) (.+)$")
-
-    def __init__(self):
-        #if environment.env.debug: pdb.set_trace()
-
-        self.rendered_rows = []
-        self.category_count = 0
-        self.active_category = None
-        self.offset = None
-
-    def add_rows(self, tty_chars, menu_header_rows, item_selector=None):
-        text_rows = [bytes(row).decode('ascii') for row in tty_chars]
-        if not self.offset:
-            self.offset = re.search("[^ ]", text_rows[0]).start()
-            #if text_rows[1].rstrip(' '): if environment.env.debug: pdb.set_trace()
-        # Skip 2 header rows plus ones already parsed
-        for row in text_rows[(len(self.rendered_rows) + menu_header_rows + self.category_count):]:
-            potential_menu = row[self.offset:].rstrip(' ')
-            if potential_menu == '(end)': # Probably need to handle 1 of 2 pages and such
-                break
-            item_match = re.match(self.menu_item_pattern, potential_menu)
-            if item_match:
-                if not self.active_category:
-                    if environment.env.debug: pdb.set_trace()
-                next_item = self.MenuItem(self.active_category, item_match[1], item_match[2] == "+", item_match[3])
-                self.rendered_rows.append(next_item)
-                if not next_item.selected and item_selector and item_selector(next_item):
-                    return next_item
-            else:
-                self.active_category = potential_menu
-                self.category_count += 1
+            #print(self.item_name, self.item_appearance)

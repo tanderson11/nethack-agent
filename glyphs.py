@@ -263,7 +263,7 @@ class InvisibleGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.walkable = True # TK this is so we attack invisible glyphs
+        self.walkable = False
 
 class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF

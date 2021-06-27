@@ -27,6 +27,11 @@ class Advice():
 
 class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
+        self.blstats = blstats
+        self.inventory = inventory
+        self.neighborhood = neighborhood
+        self.message = message
+
         self.am_weak = blstats.get('hunger_state') > 2
 
         exp_lvl_to_prayer_hp_thresholds = {
@@ -56,8 +61,28 @@ class Flags():
             14: 60,
         }
 
-        self.willing_to_descend = exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+        exp_lvl_to_max_mazes_lvl_no_food = {
+            1:1,
+            2:2,
+            3:3,
+            4:4,
+            5:5,
+            6:6,
+            7:9,
+            8:9,
+            9:10,
+            10: 12,
+            11: 16,
+            12: 20,
+            13: 20,
+            14: 60,
+        }
 
+        self.willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
+        if have_item_oclass(inventory, "FOOD_CLASS"):
+            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+        else:
+            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
 
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
@@ -74,7 +99,7 @@ class Flags():
 
         self.adjacent_univisited_square = (neighborhood.visits[neighborhood.walkable] == 0).any()
 
-        if previous_glyph is not None:
+        if previous_glyph is not None and "for sale" not in message.message: # hopefully this will help us not pick up food in shops
             self.desirable_object = isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS"
         else:
             self.desirable_object = False
@@ -83,10 +108,11 @@ class Flags():
 
         self.adjacent_secret_door_possibility = (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs))
         self.near_monster = (is_monster & ~neighborhood.players_square_mask).any()
-
-        self.have_potion = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS') in inventory['inv_oclasses']
-
         self.feverish = "You feel feverish." in message.message
+
+        self.can_enhance = "You feel more confident" in message.message or "could be more dangerous" in message.message
+        if self.can_enhance:
+            print(message.message)
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -206,45 +232,39 @@ class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
     def check_conditions(self, flags):
         return flags.am_critically_injured
 
-class DrinkHealingPotionWhenCriticallyInjuredAdvisor(Advisor):
-    def check_conditions(self, flags):
-        return flags.am_critically_injured and flags.have_potion
-
-    def advice(self, _0, _1, inventory, _3, _4):
-        quaff = nethack.actions.Command.QUAFF
-        menu_plan = menuplan.MenuPlan("drink healing potion", {"What do you want to drink?": utilities.keypress_action(ord('*'))}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance), expects_strange_messages=True)
-        return Advice(self.__class__, quaff, menu_plan)
-
-class UseHealingItemWhenCriticallyInjuredAdvisor(Advisor): # right now we only quaff
-    def make_menu_plan(self, letter):
-        menu_plan = menuplan.MenuPlan("quaff from inventory", {
-        "Drink from the fountain?": utilities.keypress_action(ord('n')),
-        "want to drink?": utilities.keypress_action(letter),
-        })
-        return menu_plan
-
+class CriticallyInjuredAdvisor(Advisor):
     def check_conditions(self, flags):
         return flags.am_critically_injured
 
+def have_item_oclass(inventory, oclass):
+    return gd.ObjectGlyph.OBJECT_CLASSES.index(oclass) in inventory['inv_oclasses']
+
+class ReadTeleportWhenCriticallyInjuredAdvisor(CriticallyInjuredAdvisor):
     def advice(self, _0, _1, inventory, _3, _4):
-        is_healing = np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'is_identified_healing_object', lambda: False)())(inventory['inv_glyphs'])
+        read = nethack.actions.Command.READ
+        have_scroll = have_item_oclass(inventory, 'SCROLL_CLASS')
+        if have_scroll:
+            menu_plan = menuplan.MenuPlan("read teleportation scroll", {"What do you want to read?": utilities.keypress_action(ord('*'))}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Scrolls") & ("teleporation" in x.item_appearance), expects_strange_messages=True)
+            return Advice(self.__class__, read, menu_plan)
+        return None
+
+class ZapTeleportWhenCriticallyInjuredAdvisor(CriticallyInjuredAdvisor):
+    def advice(self, _0, _1, inventory, _3, _4):
+        zap = nethack.actions.Command.ZAP
+        have_wand = have_item_oclass(inventory, 'WAND_CLASS')
+        if have_wand:
+            menu_plan = menuplan.MenuPlan("zap teleportation wand", {"What do you want to zap?": utilities.keypress_action(ord('*'))}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Wands") & ("teleporation" in x.item_appearance), expects_strange_messages=True)
+            return Advice(self.__class__, zap, menu_plan)
+        return None
+
+class DrinkHealingPotionWhenCriticallyInjuredAdvisor(CriticallyInjuredAdvisor):
+    def advice(self, _0, _1, inventory, _3, _4):
+        have_potion = have_item_oclass(inventory, 'POTION_CLASS')
         quaff = nethack.actions.Command.QUAFF
-
-        try:
-            POTION_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS')
-            is_potion = inventory['inv_oclasses'] == POTION_CLASS
-            #if environment.env.debug: pdb.set_trace()
-            potion_index = (is_potion & is_healing).tolist().index(True) #stops at first True but borked if all False (quaffs 0th potion even though it's not healing)
-        except ValueError:
-            potion_index = None
-
-        if potion_index is not None:
-            #if environment.env.debug: pdb.set_trace()
-            print(np.vectorize(lambda g: getattr(gd.GLYPH_LOOKUP[g], 'name', False))(inventory['inv_glyphs'])[potion_index])
-            letter = inventory['inv_letters'][potion_index]
-            menu_plan = self.make_menu_plan(letter)
+        if have_potion:
+            menu_plan = menuplan.MenuPlan("drink healing potion", {"What do you want to drink?": utilities.keypress_action(ord('*')), "Drink from fountain?": nethack.ACTIONS.index(nethack.actions.Command.ESC)}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance), expects_strange_messages=True)
             return Advice(self.__class__, quaff, menu_plan)
-
+        return None
 
 class SearchAdvisor(Advisor):
     def advice(self, _0, _1, _2, _3, _4):
@@ -299,18 +319,32 @@ class TravelToDownstairsAdvisor(Advisor):
  
         return Advice(self.__class__, travel, menu_plan)
 
+class EnhanceSkillsAdvisor(Advisor):
+    def check_conditions(self, flags):
+        return flags.can_enhance
+
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        enhance = nethack.actions.Command.ENHANCE
+        menu_plan = menuplan.MenuPlan("enhance skills", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: True, expects_strange_messages=True)
+
+        return Advice(self.__class__, enhance, menu_plan)
 
 # Thinking outloud ...
-# Repair major, escape, attack, repair minor, descend, explore
+# Free/scheduled (eg enhance), Repair major, escape, attack, repair minor, improve/identify, descend, explore
 
 advisors = [
     {
+        EnhanceSkillsAdvisor: 1,
+    },
+    {
         #UseHealingItemWhenCriticallyInjuredAdvisor: 1,
-        DrinkHealingPotionWhenCriticallyInjuredAdvisor: 1,
+        DrinkHealingPotionWhenCriticallyInjuredAdvisor: 3,
         EatWhenWeakAdvisor: 1,
     },
     {
         PrayWhenCriticallyInjuredAdvisor: 1,
+        ZapTeleportWhenCriticallyInjuredAdvisor: 1,
+        ReadTeleportWhenCriticallyInjuredAdvisor: 1,
         PrayWhenWeakAdvisor: 1,
         PrayWhenMajorTroubleAdvisor: 1,
     },
