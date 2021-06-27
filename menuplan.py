@@ -5,6 +5,8 @@ import environment
 import glyphs as gd
 import utilities
 
+from utilities import ARS
+
 class MenuPlan():
     def __init__(self, name, match_to_keypress, menu_item_selector=None, expects_strange_messages=False, fallback=None):
         self.name = name

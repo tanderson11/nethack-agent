@@ -71,7 +71,7 @@ class Message():
                     if environment.env.debug: pdb.set_trace()
             self.message = potential_message
 
-        self.has_interactive_menu = "Pick up what?" in self.message
+        self.has_interactive_menu = "Pick up what?" in self.message or (self.message in gd.ObjectGlyph.OBJECT_CLASS_LABEL_IN_INVENTORY)
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
         # Bad conflict with "They say that shopkeepers often remember things that you might forget."
@@ -163,6 +163,9 @@ class Neighborhood():
         directions = self.action_grid[matches]
 
         return directions
+
+    def is_monster(self):
+        return np.vectorize(lambda g: (isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph)))(self.glyphs)
 
 BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
@@ -312,8 +315,9 @@ class CustomAgent(BatchedAgent):
         boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
         carrying_too_much_message = "You are carrying too much to get through." in message.message
         no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
+        solid_stone_message = "solid stone" in message.message # hopefully only happens when there's a tricky glyph; we drop into debugger later
 
-        cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
+        cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message or solid_stone_message
         peaceful_monster_message = "Really attack" in message.message
         # ---
         was_bad_action = peaceful_monster_message or cant_move_that_way_message

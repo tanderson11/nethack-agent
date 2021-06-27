@@ -67,6 +67,27 @@ class ObjectGlyph(Glyph):
         'VENOM_CLASS', # 17
     ]
 
+    OBJECT_CLASS_LABEL_IN_INVENTORY = [
+        'RANDOM_CLASS', # 0
+        'ILLOBJ_CLASS', # 1
+        'Weapons', # 2
+        'Armor', # 3
+        'Rings', # 4
+        'Amulets', # 5
+        'Tools', # 6
+        'Comestibles', # 7
+        'Potions', # 8
+        'Scrolls', # 9
+        'Spellbooks', # 10
+        'Wands', # 11
+        'Coins', # 12
+        'Gems/Stones', # 13
+        'Gems/Stones', # 14
+        'BALL_CLASS', # 15
+        'CHAIN_CLASS', # 16
+        'VENOM_CLASS', # 17
+    ]
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET

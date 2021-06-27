@@ -37,14 +37,14 @@ class Flags():
             30: 1/9
         }
         fraction_index = [k for k in list(exp_lvl_to_prayer_hp_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
-        self.am_critically_injured = blstats.get('hitpoints') < exp_lvl_to_prayer_hp_thresholds[fraction_index] or blstats.get('hitpoints') < 6
+        self.am_critically_injured = blstats.get('hitpoints') < blstats.get('max_hitpoints') and (blstats.get('hitpoints') < exp_lvl_to_prayer_hp_thresholds[fraction_index] or blstats.get('hitpoints') < 6)
 
         exp_lvl_to_max_mazes_lvl = {
             1: 1,
             2: 1,
             3: 2,
-            4: 3,
-            5: 4,
+            4: 2,
+            5: 3,
             6: 5,
             7: 6,
             8: 8,
@@ -57,6 +57,7 @@ class Flags():
         }
 
         self.willing_to_descend = exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+
 
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
@@ -78,11 +79,12 @@ class Flags():
         else:
             self.desirable_object = False
 
-        is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
+        is_monster = neighborhood.is_monster()
 
         self.adjacent_secret_door_possibility = (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs))
-
         self.near_monster = (is_monster & ~neighborhood.players_square_mask).any()
+
+        self.have_potion = gd.ObjectGlyph.OBJECT_CLASSES.index('POTION_CLASS') in inventory['inv_oclasses']
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -246,7 +248,7 @@ class AttackAdvisor(Advisor):
         return flags.near_monster
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
-        is_monster = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph))(neighborhood.glyphs)
+        is_monster = neighborhood.is_monster()
 
         never_melee_mask = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph) and g.never_melee)(neighborhood.glyphs)
         
