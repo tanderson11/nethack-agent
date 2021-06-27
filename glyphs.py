@@ -9,6 +9,7 @@ class Glyph():
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
+        self.walkable = False
 
     @classmethod
     def mapping(cls):
