@@ -184,7 +184,7 @@ class EatTopInventoryAdvisor(Advisor):
 
 class EatWhenWeakAdvisor(EatTopInventoryAdvisor):
     def check_conditions(self, flags):
-        return flags.am_weak
+        return flags.am_weak and not flags.near_monster
 
 class PrayerAdvisor(Advisor):
     def advice(self, _0, _1, _2, _3, _4):
