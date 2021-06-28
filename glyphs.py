@@ -101,6 +101,9 @@ class ObjectGlyph(Glyph):
         self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
         self.walkable = True
 
+        if self.object_class_name == "FOOD_CLASS":
+            self.safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance and "tripe" not in self.appearance)
+
     def is_identified_healing_object(self):
         if self.name is not None:
             return "healing" in self.name
@@ -276,6 +279,9 @@ class CorpseGlyph(Glyph):
     def __init__(self, numeral):
         super().__init__(numeral)
         self.walkable = True
+
+        self.safe_non_perishable = (self.offset in [155, 156, 159])
+
 
 class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF

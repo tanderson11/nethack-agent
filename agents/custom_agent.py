@@ -278,6 +278,7 @@ def print_stats(run_state, blstats):
         f"After step {run_state.step_count}: " + \
         f"reward {run_state.reward}, " + \
         f"dlevel {blstats.get('level_number')}, " + \
+        f"depth {blstats.get('depth')}, " + \
         f"elevel {blstats.get('experience_level')}, " + \
         f"time {blstats.get('time')}"
     )
@@ -297,7 +298,7 @@ class CustomAgent(BatchedAgent):
         ARS.set_active(run_state)
 
         blstats = BLStats(observation['blstats'])
-        dlevel = blstats.get('level_number')
+        dlevel = blstats.get('depth') # TK check this change
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 

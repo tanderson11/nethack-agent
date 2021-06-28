@@ -80,9 +80,9 @@ class Flags():
 
         self.willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
         if have_item_oclass(inventory, "FOOD_CLASS"):
-            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         else:
-            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('level_number')
+            self.willing_to_descend = self.willing_to_descend and exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
 
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
@@ -100,7 +100,8 @@ class Flags():
         self.adjacent_univisited_square = (neighborhood.visits[neighborhood.walkable] == 0).any()
 
         if previous_glyph is not None and "for sale" not in message.message: # hopefully this will help us not pick up food in shops
-            self.desirable_object = isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS"
+            self.desirable_object = (isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS") or isinstance(previous_glyph, gd.CorpseGlyph)
+            self.desirable_object = self.desirable_object  and previous_glyph.safe_non_perishable
         else:
             self.desirable_object = False
 
@@ -341,7 +342,7 @@ class PickupAdvisor(Advisor):
         return (not flags.near_monster) and flags.desirable_object
 
     def advice(self, rng, blstats, inventory, neighborhood, message):
-        menu_plan = menuplan.MenuPlan("pick up comestibles", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
+        menu_plan = menuplan.MenuPlan("pick up comestibles and safe corpses", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
         print("Pickup")
         return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
 
