@@ -262,7 +262,12 @@ class DrinkHealingPotionWhenCriticallyInjuredAdvisor(CriticallyInjuredAdvisor):
         have_potion = have_item_oclass(inventory, 'POTION_CLASS')
         quaff = nethack.actions.Command.QUAFF
         if have_potion:
-            menu_plan = menuplan.MenuPlan("drink healing potion", {"What do you want to drink?": utilities.keypress_action(ord('*')), "Drink from fountain?": nethack.ACTIONS.index(nethack.actions.Command.ESC)}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance), expects_strange_messages=True)
+            menu_plan = menuplan.MenuPlan("drink healing potion", {
+                "What do you want to drink?": utilities.keypress_action(ord('*')),
+                "Drink from the fountain?": nethack.ACTIONS.index(nethack.actions.Command.ESC)
+                }, interactive_menu_header_rows=0,
+                menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance),
+                expects_strange_messages=True)
             return Advice(self.__class__, quaff, menu_plan)
         return None
 
@@ -282,6 +287,7 @@ class AttackAdvisor(Advisor):
     def check_conditions(self, flags):
         return flags.near_monster
 
+class MeleeAttackAdvisor(AttackAdvisor):
     def advice(self, rng, blstats, inventory, neighborhood, message):
         is_monster = neighborhood.is_monster()
 
@@ -293,6 +299,31 @@ class AttackAdvisor(Advisor):
             return Advice(self.__class__, rng.choice(monster_directions), None)
 
         return None
+
+class RangedAttackAdvisor(AttackAdvisor):
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        is_monster = neighborhood.is_monster()
+        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask]
+
+        if monster_directions.any():
+            fire = nethack.actions.Command.FIRE
+            attack_direction = rng.choice(monster_directions)
+
+            WEAPON_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('WEAPON_CLASS')
+            is_weapon = [c == WEAPON_CLASS for c in inventory['inv_oclasses'].tolist()]
+            extra_weapon = sum(is_weapon) > 1
+
+            if extra_weapon:
+                menu_plan = menuplan.MenuPlan("ranged attack", {
+                    "In what direction?": nethack.ACTIONS.index(attack_direction),
+                    "What do you want to throw?": utilities.keypress_action(ord('*')), # note throw: means we didn't have anything quivered
+                    }, interactive_menu_header_rows=0,
+                    expects_strange_messages=True,
+                    menu_item_selector=lambda x: (x.category == "Weapons") & ("weapon in hand" not in x.item_equipped_status)
+                    )
+                return Advice(self.__class__, fire, menu_plan)
+
+            return None
 
 class PickupAdvisor(Advisor):
     def check_conditions(self, flags):
@@ -349,7 +380,10 @@ advisors = [
         PrayWhenMajorTroubleAdvisor: 1,
     },
     {
-        AttackAdvisor: 1,
+        MeleeAttackAdvisor: 1,
+    },
+    {
+        RangedAttackAdvisor: 1,
     },
     {
         PickupAdvisor: 1,
@@ -359,10 +393,10 @@ advisors = [
         MoveDownstairsAdvisor: 1
     },
     {
-        MostNovelMoveAdvisor: 20,
-        NoUnexploredSearchAdvisor: 20,
+        MostNovelMoveAdvisor: 200,
+        NoUnexploredSearchAdvisor: 200,
         TravelToDownstairsAdvisor: 1,
-        RandomMoveAdvisor: 1,
+        RandomMoveAdvisor: 10,
     },
     {
         FallbackSearchAdvisor: 1

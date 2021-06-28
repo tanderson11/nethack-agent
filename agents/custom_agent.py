@@ -51,6 +51,7 @@ class Message():
         "There is a broken door here.",
         "There is a sink here.",
         "Pick up what?",
+        "paperback book",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
     def __init__(self, message, tty_chars, misc_observation):
@@ -348,7 +349,7 @@ class CustomAgent(BatchedAgent):
 
         if message.has_more:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
-            run_state.log_action(retval)
+            run_state.log_action(retval, menu_plan=True)
             return retval
 
         if message:
@@ -382,6 +383,7 @@ class CustomAgent(BatchedAgent):
                 action = chosen_advice.action
 
                 if action == nethack.actions.Command.QUAFF: print("quaffing!")
+                if action == nethack.actions.Command.FIRE: print("firing!");
 
                 menu_plan = chosen_advice.menu_plan
                 break

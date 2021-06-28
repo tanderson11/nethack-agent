@@ -93,6 +93,8 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 class InteractiveInventoryMenu(InteractiveMenu):
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
+        # 'a rusty corroded +1 long sword (weapon in hand)'
+        # 'an uncursed very rusty +0 ring mail (being worn)'
         pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?(burnt|rusty|corroded|rustproof|rotted)? ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
 
         def __init__(self, category, character, selected, item_text):
@@ -102,6 +104,7 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.selected = selected
             self.item_name = None
             self.item_appearance = None
+            self.item_equipped_status = ''
 
             match = re.match(self.pattern, item_text)
             #pdb.set_trace()
@@ -112,6 +115,8 @@ class InteractiveInventoryMenu(InteractiveMenu):
                     self.quantity = int(match[1])
 
                 item_description = match[6]
+                if match[7] is not None:
+                    self.item_equipped_status = match[7]
             else:
                 if environment.env.debug: pdb.set_trace()
 
