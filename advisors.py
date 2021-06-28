@@ -300,6 +300,17 @@ class MeleeAttackAdvisor(AttackAdvisor):
 
         return None
 
+class MeleeEvenNastyAdvisor(AttackAdvisor):
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        is_monster = neighborhood.is_monster()
+        
+        monster_directions = neighborhood.action_grid[is_monster & ~neighborhood.players_square_mask]
+
+        if monster_directions.any():
+            return Advice(self.__class__, rng.choice(monster_directions), None)
+
+        return None
+
 class RangedAttackAdvisor(AttackAdvisor):
     def advice(self, rng, blstats, inventory, neighborhood, message):
         is_monster = neighborhood.is_monster()
@@ -360,6 +371,16 @@ class EnhanceSkillsAdvisor(Advisor):
 
         return Advice(self.__class__, enhance, menu_plan)
 
+class SearchWhenLowHpAdvisor(Advisor):
+    def check_conditions(self,flags):
+        return True # abuse
+
+    def advice(self, rng, blstats, inventory, neighborhood, message):
+        if blstats.get('hitpoints') <= blstats.get('max_hitpoints') * 2/5:
+            return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
+
+        return None
+
 # Thinking outloud ...
 # Free/scheduled (eg enhance), Repair major, escape, attack, repair minor, improve/identify, descend, explore
 
@@ -389,6 +410,9 @@ advisors = [
         PickupAdvisor: 1,
     },
     {
+        SearchWhenLowHpAdvisor: 1,
+    },
+    {
         KickLockedDoorAdvisor: 1,
         MoveDownstairsAdvisor: 1
     },
@@ -396,6 +420,7 @@ advisors = [
         MostNovelMoveAdvisor: 200,
         NoUnexploredSearchAdvisor: 200,
         TravelToDownstairsAdvisor: 1,
+        MeleeEvenNastyAdvisor: 1,
         RandomMoveAdvisor: 10,
     },
     {

@@ -95,7 +95,7 @@ class InteractiveInventoryMenu(InteractiveMenu):
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
-        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?(burnt|rusty|corroded|rustproof|rotted)? ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
+        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned)? ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
 
         def __init__(self, category, character, selected, item_text):
             #print(item_text)

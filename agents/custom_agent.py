@@ -51,7 +51,7 @@ class Message():
         "There is a broken door here.",
         "There is a sink here.",
         "Pick up what?",
-        "paperback book",
+        "paperback book named",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
     def __init__(self, message, tty_chars, misc_observation):

@@ -40,7 +40,7 @@ class MonsterGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.never_melee = self.offset == 28 # floating eye
+        self.never_melee = self.offset in [6, 28, 55, 56, 57, 158] # acid blobs, floating eye, jellies, green molds, 
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
