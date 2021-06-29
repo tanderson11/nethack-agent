@@ -425,6 +425,7 @@ advisors = [
         FallbackSearchAdvisor: 1,
         RandomUnthreatenedMoveAdvisor: 1,
         }),
+    AdvisorLevel({PickupAdvisor: 1,}),
     AdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({
