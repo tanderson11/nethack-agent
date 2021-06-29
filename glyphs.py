@@ -40,6 +40,7 @@ class MonsterGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
+        self.has_melee = True # someday know about melee (probably in the monster data)
         self.never_melee = self.offset in [6, 28, 55, 56, 57, 158] # acid blobs, floating eye, jellies, green molds, 
 
 class ObjectGlyph(Glyph):

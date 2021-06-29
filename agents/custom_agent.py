@@ -77,9 +77,6 @@ class Message():
             self.interactive_menu_class = menuplan.InteractiveInventoryMenu
         elif "Pick a skill to advance:" in self.message:
             self.interactive_menu_class = menuplan.InteractiveEnhanceSkillsMenu
-            
-
-
 
         ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
         # Bad conflict with "They say that shopkeepers often remember things that you might forget."
@@ -100,16 +97,16 @@ class Message():
     def __bool__(self):
         return bool(self.message)
 
-class NoveltyMap():
-    def __init__(self, dlevel, glyphs, initial_player_location):
+class DMap():
+    def __init__(self, dungeon_number, level_number, glyphs, initial_player_location):
+        self.dungeon_number = dungeon_number
+        self.level_number = level_number
 
-        self.dlevel = dlevel
-        self.map = np.zeros_like(glyphs)
-
-        self.map[initial_player_location] += 1
-
+        self.visits_map = np.zeros_like(glyphs)
+        self.visits_map[initial_player_location] += 1
+    
     def update(self, player_location):
-        self.map[player_location] += 1
+        self.visits_map[player_location] += 1
 
 class Neighborhood():
     action_grid = np.array([
@@ -126,24 +123,60 @@ class Neighborhood():
 
     diagonal_moves = np.vectorize(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8)(action_grid)
 
-    def __init__(self, player_location, observation, novelty_map, previous_glyph_on_player):
+    @staticmethod
+    def centered_slices_bounded_on_array(start, radii, target_array):
+        row_slice_radius, col_slice_radius = radii
+        col_lim = target_array.shape[1]
+        row_lim = target_array.shape[0]
+
+        row_start, col_start = start
+
+        row_slice = slice(max(row_start-row_slice_radius, 0), min(row_start+row_slice_radius+1, row_lim)) # +1 because non-inclusive on upper end
+        col_slice = slice(max(col_start-col_slice_radius, 0), min(col_start+col_slice_radius+1, col_lim))
+
+        return row_slice, col_slice
+
+    @staticmethod
+    def move_slice_center(old_center, new_center, slices): # we have a slice (4,7) with a center of (5) that implies we want the slice
+        old_center_row, old_center_col = old_center
+        new_center_row, new_center_col = new_center
+
+        row_translate = old_center_row - new_center_row
+        col_translate = old_center_col - new_center_col
+
+        row_slice, col_slice = slices
+
+        relative_row_slice = slice(row_slice.start-row_translate,row_slice.stop-row_translate)
+        relative_col_slice = slice(col_slice.start-col_translate,col_slice.stop-col_translate)
+
+        #pdb.set_trace()
+        return relative_row_slice, relative_col_slice
+
+    def calculate_threat(self, glyph_grid, player_location_in_glyph_grid):
+        threat_map = np.zeros_like(glyph_grid)
+
+        it = np.nditer(glyph_grid, flags=['multi_index'])
+        for g in it:
+            glyph = gd.GLYPH_LOOKUP[int(g)]
+            if it.multi_index != player_location_in_glyph_grid and isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee:
+                row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
+                threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
+
+        return threat_map
+
+    def __init__(self, player_location, observation, dmap, previous_glyph_on_player):
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
 
         col_lim = observation['glyphs'].shape[1]
         row_lim = observation['glyphs'].shape[0]
 
-        # +2 because non inclusive on upper end
-        row_slice = slice(max(self.player_row-1, 0),min(self.player_row+2, row_lim))
-        # don't actually need to min the upper end because slices automatically stop
-        # at an upper boundary, but it's useful in restricting the action grid 
-        col_slice = slice(max(self.player_col-1, 0),min(self.player_col+2, col_lim))
+        window_size = 1
 
-        # this highly deranged syntax selects a window in the action_grid equivalent
-        # to the window into the glyphs (ie: if we're at the edge of the map,
-        # we select the relevant part of the action grid)
-        action_grid_row_slice = slice(1+(row_slice.start-self.player_row), 1+(row_slice.stop-self.player_row))
-        action_grid_column_slice = slice(1+(col_slice.start-self.player_col), 1+(col_slice.stop-self.player_col))
+        row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(player_location, (window_size, window_size), observation['glyphs'])
+
+        # a window into the action grid of the size size and shape as our window into the glyph grid (ie: don't include actions out of bounds on the map)
+        action_grid_row_slice, action_grid_column_slice = Neighborhood.move_slice_center(player_location, (1,1), (row_slice,col_slice)) # move center to (1,1) (action grid center)
 
         self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_column_slice]
         diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_column_slice]
@@ -152,7 +185,7 @@ class Neighborhood():
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
         self.glyphs = vectorized_lookup(self.raw_glyphs)
 
-        self.visits = novelty_map.map[row_slice, col_slice]
+        self.visits = dmap.visits_map[row_slice, col_slice]
         self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
         walkable_tile = np.vectorize(lambda g: g.walkable)(self.glyphs)
@@ -165,6 +198,14 @@ class Neighborhood():
             if environment.env.debug: pdb.set_trace()
 
         self.previous_glyph_on_player = previous_glyph_on_player
+
+        large_row_window, large_col_window = Neighborhood.centered_slices_bounded_on_array(player_location, (window_size+1, window_size+1), observation['glyphs'])
+        player_location_in_glyph_grid = (self.player_row-large_row_window.start, self.player_col-large_col_window.start)
+        threat_row_slice, threat_col_slice = Neighborhood.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
+        self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
+        self.threatened = self.threat > 0
+        if self.threatened.any(): pass#pdb.set_trace()
+        #pdb.set_trace()
 
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.raw_glyphs, glyph_set)
@@ -210,7 +251,7 @@ class RunState():
         self.last_nonmenu_action_failed = False
 
         # for mapping purposes
-        self.novelty_map = type('NoveltyMap', (), {"dlevel":0})()
+        self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
         self.glyphs = None
 
     def make_seeded_rng(self):
@@ -298,13 +339,14 @@ class CustomAgent(BatchedAgent):
         ARS.set_active(run_state)
 
         blstats = BLStats(observation['blstats'])
-        dlevel = blstats.get('depth') # TK check this change
+        level_changed = blstats.get("level_number") != run_state.dmap.level_number or blstats.get("dungeon_number") != run_state.dmap.dungeon_number or done
+
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
-            if dlevel != run_state.novelty_map.dlevel: # if we jumped dungeon levels, we don't know the glyph
+            if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
                 run_state.glyph_under_player = None
             else:
                 previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
@@ -322,6 +364,15 @@ class CustomAgent(BatchedAgent):
 
         if run_state.step_count % 1000 == 0:
             print_stats(run_state, blstats)
+
+        # mapping
+        if level_changed:
+            run_state.dmap = DMap(blstats.get("dungeon_number"), blstats.get("level_number"), observation['glyphs'], player_location)
+        else:
+            try:
+                run_state.dmap.update(player_location)
+            except:
+                pdb.set_trace()
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
 
@@ -359,35 +410,35 @@ class CustomAgent(BatchedAgent):
                 run_state.log_action(retval, menu_plan=run_state.active_menu_plan)
                 return retval
 
-        # mapping
-        if run_state.novelty_map.dlevel != dlevel:
-            run_state.novelty_map = NoveltyMap(dlevel, observation['glyphs'], player_location)
-        else:
-            run_state.novelty_map.update(player_location)
-
         if "It's a wall" in message.message:
             if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
-        neighborhood = Neighborhood(player_location, observation, run_state.novelty_map, previous_glyph_on_player)
+        neighborhood = Neighborhood(player_location, observation, run_state.dmap, previous_glyph_on_player)
         flags = advs.Flags(blstats, inventory, neighborhood, message)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advs.advisors:
-            advisors = advisor_level.keys()
-            all_advice = [advisor().give_advice(run_state.rng, flags, blstats, inventory, neighborhood, message) for advisor in advisors]
-            all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.last_nonmenu_action_failed)]
-            if all_advice:
-                chosen_advice = run_state.rng.choices(
-                    all_advice,
-                    weights=map(lambda x: advisor_level[x.advisor], all_advice)
-                )[0]
-                action = chosen_advice.action
+            if advisor_level.check_flags(flags):
+                #print(advisor_level, advisor_level.advisors)
+                advisors = advisor_level.advisors.keys()
+                all_advice = [advisor().advice(run_state.rng, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
+                #print(all_advice)
+                try:
+                    all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.last_nonmenu_action_failed)]
+                except TypeError:
+                    if environment.env.debug: pdb.set_trace()
+                if all_advice:
+                    chosen_advice = run_state.rng.choices(
+                        all_advice,
+                        weights=map(lambda x: advisor_level.advisors[x.advisor], all_advice)
+                    )[0]
+                    action = chosen_advice.action
 
-                if action == nethack.actions.Command.QUAFF: print("quaffing!")
-                if action == nethack.actions.Command.FIRE: print("firing!");
+                    #if action == nethack.actions.Command.QUAFF: print("quaffing!")
+                    if action == nethack.actions.Command.FIRE: print("firing!");
 
-                menu_plan = chosen_advice.menu_plan
-                break
+                    menu_plan = chosen_advice.menu_plan
+                    break
 
         retval = utilities.ACTION_LOOKUP[action]
         run_state.log_action(retval)
