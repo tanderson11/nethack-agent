@@ -393,6 +393,9 @@ class CustomAgent(BatchedAgent):
 
         run_state.log_message(message.message, last_nonmenu_action_failed=last_nonmenu_action_failed)
 
+        if "lichen corpse tastes" in message.message:
+            print(message.message)
+
         if message.interactive_menu_class is not None:
             if not run_state.live_interactive_menu:
                 run_state.live_interactive_menu = message.interactive_menu_class()

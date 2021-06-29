@@ -40,8 +40,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.has_melee = True # someday know about melee (probably in the monster data)
+        
         self.never_melee = self.offset in [6, 28, 55, 56, 57, 158] # acid blobs, floating eye, jellies, green molds, 
+        self.has_melee = self.offset not in [6, 28, 55, 56, 57, 158] # someday know about melee (probably in the monster data)
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
@@ -105,11 +106,8 @@ class ObjectGlyph(Glyph):
         if self.object_class_name == "FOOD_CLASS":
             self.safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance and "tripe" not in self.appearance)
 
-    def is_identified_healing_object(self):
-        if self.name is not None:
-            return "healing" in self.name
-        else:
-            return False
+    def desirable_object(self):
+        return self.object_class_name == "FOOD_CLASS" and self.safe_non_perishable
 
     @classmethod
     def names(cls):
@@ -283,6 +281,8 @@ class CorpseGlyph(Glyph):
 
         self.safe_non_perishable = (self.offset in [155, 156, 159])
 
+    def desirable_object(self):
+        return self.safe_non_perishable
 
 class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF

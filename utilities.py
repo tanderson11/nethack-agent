@@ -20,3 +20,8 @@ def keypress_action(ascii_ord):
     if action is None:
         raise Exception("Bad keypress")
     return action
+
+def have_item_oclasses(oclasses, inventory):
+    for oclass in oclasses:
+        if gd.ObjectGlyph.OBJECT_CLASSES.index(oclass) in inventory['inv_oclasses']: return True
+    return False

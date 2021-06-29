@@ -58,10 +58,9 @@ class Flags():
         self.can_move = True # someday Held, Handspan etc.
 
         if previous_glyph is not None and "for sale" not in message.message: # hopefully this will help us not pick up food in shops
-            self.desirable_object = (isinstance(previous_glyph, gd.ObjectGlyph) and previous_glyph.object_class_name == "FOOD_CLASS") or isinstance(previous_glyph, gd.CorpseGlyph)
-            self.desirable_object = self.desirable_object  and previous_glyph.safe_non_perishable
+            self.desirable_object_on_space = (isinstance(previous_glyph, gd.ObjectGlyph) or isinstance(previous_glyph, gd.CorpseGlyph)) and previous_glyph.desirable_object()
         else:
-            self.desirable_object = False
+            self.desirable_object_on_space = False
 
         is_monster = neighborhood.is_monster()
 
@@ -152,6 +151,10 @@ class MostNovelMoveAdvisor(MoveAdvisor):
         visits = neighborhood.visits[agreeable_move_mask]
         most_novel = possible_actions[visits == visits.min()]
         return Advice(self.__class__, rng.choice(most_novel), None)
+
+class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+        return neighborhood.walkable & np.vectorize(lambda g: getattr(g, 'desirable_object', lambda: False)())(neighborhood.glyphs) # desirable objects
 
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -372,7 +375,7 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
 
 class PickupAdvisor(Advisor):
     def advice(self, rng, blstats, inventory, neighborhood, message, flags):
-        if flags.desirable_object:
+        if flags.desirable_object_on_space:
             menu_plan = menuplan.MenuPlan("pick up comestibles and safe corpses", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
             print("Pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
@@ -429,11 +432,12 @@ advisors = [
     AdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({
-            FallbackSearchAdvisor: 50,
-            RandomMoveAdvisor: 10,
+            FallbackSearchAdvisor: 100,
+            RandomMoveAdvisor: 50,
             RandomAttackAdvisor: 1, # even nasty
         }),
     UnthreatenedMovesAdvisorLevel({
+        DesirableObjectMoveAdvisor: 1500,
         MostNovelUnthreatenedMoveAdvisor: 300,
         NoUnexploredSearchAdvisor: 300,
         RandomUnthreatenedMoveAdvisor: 15,
