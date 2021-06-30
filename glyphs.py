@@ -279,7 +279,7 @@ class CorpseGlyph(Glyph):
         super().__init__(numeral)
         self.walkable = True
 
-        self.safe_non_perishable = (self.offset in [155, 156, 159])
+        self.safe_non_perishable = (self.offset in [155])
 
     def desirable_object(self):
         return self.safe_non_perishable
