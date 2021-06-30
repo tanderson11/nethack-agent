@@ -43,7 +43,7 @@ class Flags():
         }
         fraction_index = [k for k in list(exp_lvl_to_prayer_hp_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
         self.am_critically_injured = blstats.get('hitpoints') < blstats.get('max_hitpoints') and (blstats.get('hitpoints') < exp_lvl_to_prayer_hp_thresholds[fraction_index] or blstats.get('hitpoints') < 6)
-        self.low_hp = self.am_critically_injured or blstats.get('hitpoints') <= blstats.get('max_hitpoints') * 2/5
+        self.low_hp = self.am_critically_injured or blstats.get('hitpoints') <= blstats.get('max_hitpoints') * 7/10
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
         if previous_glyph is not None: # on the first frame there was no previous glyph
@@ -322,7 +322,7 @@ class FallbackSearchAdvisor(Advisor):
 
 class NoUnexploredSearchAdvisor(Advisor):
     def advice(self, rng, blstats, inventory, neighborhood, message, flags):
-        if (neighborhood.visits[neighborhood.walkable] == 0).any() and (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)).any():
+        if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)).any():
             return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
         return None
 
@@ -412,10 +412,8 @@ advisors = [
     FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
     CriticallyInjuredAdvisorLevel({
             DrinkHealingPotionAdvisor: 15,
-            ZapTeleportOnSelfAdvisor: 10,
-            ReadTeleportAdvisor: 10,
-            PrayerAdvisor: 1,
-            RandomAttackAdvisor: 1,
+            #ZapTeleportOnSelfAdvisor: 10,
+            #ReadTeleportAdvisor: 10,
         }),
     CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
