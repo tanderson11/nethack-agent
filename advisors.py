@@ -78,6 +78,10 @@ class AdvisorLevel():
     def check_flags(self, flags):
         return True
 
+class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.neighborhood.threat[flags.neighborhood.players_square_mask] > 1
+
 class MajorTroubleAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.feverish
@@ -149,8 +153,12 @@ class MostNovelMoveAdvisor(MoveAdvisor):
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
         possible_actions = neighborhood.action_grid[agreeable_move_mask]
         visits = neighborhood.visits[agreeable_move_mask]
-        most_novel = possible_actions[visits == visits.min()]
-        return Advice(self.__class__, rng.choice(most_novel), None)
+
+        if visits.any():
+            most_novel = possible_actions[visits == visits.min()]
+            return Advice(self.__class__, rng.choice(most_novel), None)
+        else:
+            return None
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -417,21 +425,28 @@ advisors = [
         }),
     CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
-    AdjacentToMonsterAdvisorLevel({RandomSafeMeleeAttack: 1,}),
+    ThreatenedMoreThanOnceAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
+    AdjacentToMonsterAdvisorLevel({
+        RandomSafeMeleeAttack: 5,
+        RandomUnthreatenedMoveAdvisor: 2,
+        }),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
-    AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
+    AdjacentToMonsterAdvisorLevel({
+        RandomRangedAttackAdvisor: 1,
+        MostNovelUnthreatenedMoveAdvisor: 2,
+        }),
     LowHPAdvisorLevel({ # safe actions to do when we're at low hp
-        PickupAdvisor: 1,
-        FallbackSearchAdvisor: 1,
+        PickupAdvisor: 5,
+        FallbackSearchAdvisor: 30,
         RandomUnthreatenedMoveAdvisor: 1,
         }),
     AdvisorLevel({PickupAdvisor: 1,}),
     AdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({
-            FallbackSearchAdvisor: 100,
-            RandomMoveAdvisor: 50,
+            FallbackSearchAdvisor: 50,
+            RandomMoveAdvisor: 25,
             RandomAttackAdvisor: 1, # even nasty
         }),
     UnthreatenedMovesAdvisorLevel({

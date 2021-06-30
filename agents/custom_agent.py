@@ -205,6 +205,7 @@ class Neighborhood():
         self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
         self.threatened = self.threat > 0
         if self.threatened.any(): pass#pdb.set_trace()
+        
         #pdb.set_trace()
 
     def glyph_set_to_directions(self, glyph_set):
@@ -224,6 +225,7 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     "Shall I remove": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
     "Would you wear it for me?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
     "zorkmids worth of damage!": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
+    "little trouble lifting": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
 
 class RunState():
@@ -240,15 +242,19 @@ class RunState():
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
         self.action_log = []
+        self.actions_without_consequence = []
+
+        self.last_non_menu_action = None
         
         self.time_hung = 0
         self.rng = self.make_seeded_rng()
         self.glyph_under_player = None
         self.live_interactive_menu = None
+        self.time_did_advance = True
+
+        self.neighborhood = None
 
         self.menu_plan_log = []
-        self.last_nonmenu_action = None
-        self.last_nonmenu_action_failed = False
 
         # for mapping purposes
         self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
@@ -264,13 +270,19 @@ class RunState():
         self.done = done
         self.step_count += 1
         self.reward += reward
+
+        # we want to track when we are taking game actions that are progressing the game
+        # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
+        # our metric for time advanced: true if game time advanced or if neighborhood changed
+        # neighborhood equality assessed by glyphs and player location
+
         # Potentially useful for checking stalls
         new_time = BLStats(observation['blstats']).get('time')
         if self.time == new_time:
             self.time_hung += 1
         else:
             self.time_hung = 0
-        if self.time_hung > 1_000:
+        if self.time_hung > 2_000:
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
@@ -296,21 +308,33 @@ class RunState():
 
         return retval
 
-    def log_message(self, message, last_nonmenu_action_failed=False):
-        if len(self.menu_plan_log) > 0:
-            if last_nonmenu_action_failed is True: # if we are explicitly given True, we want to trust that our last nonmenu action was bad
-                self.last_nonmenu_action_failed = True
-            elif last_nonmenu_action_failed is False and self.menu_plan_log[-1] is None: # otherwise, we only want to update (to False) if our last action didn't come during a menu plan
-                self.last_nonmenu_action_failed = False
+    def update_neighborhood(self, neighborhood):
+        self.neighborhood = neighborhood
 
+    def log_message(self, message):
         self.message_log.append(message)
 
     def log_action(self, action, menu_plan=None):
         self.menu_plan_log.append(menu_plan)
         self.action_log.append(action)
 
-        if menu_plan is None:
-            self.last_nonmenu_action = action
+        if menu_plan == None:
+            self.last_non_menu_action = action
+
+    def check_gamestate_advancement(self, neighborhood):
+        game_did_advance = True
+        if self.time_hung > 0:
+            neighborhood_diverged = self.neighborhood.player_location != neighborhood.player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
+            #pdb.set_trace()
+            if not neighborhood_diverged:
+                game_did_advance = False
+
+        if game_did_advance: # we advanced the game state, forget the list of attempted actions
+            self.actions_without_consequence = []
+        else:
+            self.actions_without_consequence.append(self.last_non_menu_action)
+
+        return game_did_advance
 
 
 def print_stats(run_state, blstats):
@@ -369,31 +393,31 @@ class CustomAgent(BatchedAgent):
         if level_changed:
             run_state.dmap = DMap(blstats.get("dungeon_number"), blstats.get("level_number"), observation['glyphs'], player_location)
         else:
-            try:
-                run_state.dmap.update(player_location)
-            except:
-                pdb.set_trace()
+            run_state.dmap.update(player_location)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
 
         # --- Spooky messages ---
-        diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
-        diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
-        boulder_in_vain_message = "boulder, but in vain." in message.message
-        boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
-        carrying_too_much_message = "You are carrying too much to get through." in message.message
-        no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
-        solid_stone_message = "solid stone" in message.message # hopefully only happens when there's a tricky glyph; we drop into debugger later
-        nevermind = "Never mind." in message.message
+        #diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+        #diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+        #boulder_in_vain_message = "boulder, but in vain." in message.message
+        #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
+        #carrying_too_much_message = "You are carrying too much to get through." in message.message
+        #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
+        #solid_stone_message = "solid stone" in message.message # hopefully only happens when there's a tricky glyph; we drop into debugger later
+        #nevermind = "Never mind." in message.message
 
-        cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message or solid_stone_message
-        peaceful_monster_message = "Really attack" in message.message
+        #cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message or solid_stone_message
+        #peaceful_monster_message = "Really attack" in message.message
         # ---
-        last_nonmenu_action_failed = peaceful_monster_message or cant_move_that_way_message or nevermind
 
-        run_state.log_message(message.message, last_nonmenu_action_failed=last_nonmenu_action_failed)
+        #if cant_move_that_way_message or peaceful_monster_message: # if we failed to move, tell the neighborhood so it treats that square as unwalkable
 
-        if "lichen corpse tastes" in message.message:
+        #last_nonmenu_action_failed = peaceful_monster_message or cant_move_that_way_message or nevermind
+
+        run_state.log_message(message.message)
+
+        if "corpse tastes" in message.message:
             print(message.message)
 
         if message.interactive_menu_class is not None:
@@ -417,6 +441,9 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         neighborhood = Neighborhood(player_location, observation, run_state.dmap, previous_glyph_on_player)
+        game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+        run_state.update_neighborhood(neighborhood)
+
         flags = advs.Flags(blstats, inventory, neighborhood, message)
 
         #if environment.env.debug: pdb.set_trace()
@@ -427,7 +454,7 @@ class CustomAgent(BatchedAgent):
                 all_advice = [advisor().advice(run_state.rng, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
-                    all_advice = [advice for advice in all_advice if advice and not (utilities.ACTION_LOOKUP[advice.action] == run_state.last_nonmenu_action and run_state.last_nonmenu_action_failed)]
+                    all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
                 except TypeError:
                     if environment.env.debug: pdb.set_trace()
                 if all_advice:
@@ -443,13 +470,18 @@ class CustomAgent(BatchedAgent):
                     menu_plan = chosen_advice.menu_plan
                     break
 
-        retval = utilities.ACTION_LOOKUP[action]
+        try:
+            retval = utilities.ACTION_LOOKUP[action]
+        except UnboundLocalError:
+            print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time")
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]
+            menu_plan = None
+            #if environment.env.debug: pdb.set_trace()
         run_state.log_action(retval)
 
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
 
-        #print(retval)
         return retval
 
     def batched_step(self, observations, rewards, dones, infos):
