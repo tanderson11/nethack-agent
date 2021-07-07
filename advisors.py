@@ -102,6 +102,12 @@ class CriticallyInjuredAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_critically_injured
 
+
+class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.am_critically_injured and flags.neighborhood.threat[flags.neighborhood.players_square_mask] == 0
+
+
 #class NoMovesAdvisor(AdvisorLevel):
 #    def check_flags(self, flags):
 #        return True
@@ -418,23 +424,29 @@ class EnhanceSkillsAdvisor(Advisor):
 
 advisors = [
     FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
+    CriticallyInjuredAndUnthreatenedAdvisorLevel({ # let's try to pray less in the early game by not praying if unthreatened
+            RandomUnthreatenedMoveAdvisor: 3,
+            FallbackSearchAdvisor: 7,
+            DrinkHealingPotionAdvisor: 1
+        }),
     CriticallyInjuredAdvisorLevel({
             DrinkHealingPotionAdvisor: 15,
-            #ZapTeleportOnSelfAdvisor: 10,
-            #ReadTeleportAdvisor: 10,
+            ZapTeleportOnSelfAdvisor: 1,
+            ReadTeleportAdvisor: 10,
         }),
     CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
-    ThreatenedMoreThanOnceAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
+    ThreatenedMoreThanOnceAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({
-        RandomSafeMeleeAttack: 5,
-        RandomUnthreatenedMoveAdvisor: 2,
+        RandomSafeMeleeAttack: 30,
+        RandomUnthreatenedMoveAdvisor: 10,
+        RandomLeastThreatenedMoveAdvisor: 1,
         }),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
-    AdjacentToMonsterAdvisorLevel({
+    AdjacentToMonsterAdvisorLevel({ # should only reach if we have no safe melee
         RandomRangedAttackAdvisor: 1,
-        MostNovelUnthreatenedMoveAdvisor: 2,
+        MostNovelUnthreatenedMoveAdvisor: 3,
         }),
     LowHPAdvisorLevel({ # safe actions to do when we're at low hp
         PickupAdvisor: 5,
@@ -450,11 +462,12 @@ advisors = [
             RandomAttackAdvisor: 1, # even nasty
         }),
     UnthreatenedMovesAdvisorLevel({
-        DesirableObjectMoveAdvisor: 1500,
-        MostNovelUnthreatenedMoveAdvisor: 300,
-        NoUnexploredSearchAdvisor: 300,
-        RandomUnthreatenedMoveAdvisor: 15,
-        TravelToDownstairsAdvisor: 3,
+        DesirableObjectMoveAdvisor: 500,
+        MostNovelUnthreatenedMoveAdvisor: 100,
+        NoUnexploredSearchAdvisor: 100,
+        RandomUnthreatenedMoveAdvisor: 5,
+        MostNovelMoveAdvisor: 1,
+        TravelToDownstairsAdvisor: 1,
         }),
     AdvisorLevel({FallbackSearchAdvisor: 1,}),
 ]

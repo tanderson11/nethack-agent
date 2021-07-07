@@ -62,7 +62,10 @@ class Message():
         self.interactive_menu_class = None
 
         if np.count_nonzero(message) > 0:
-            self.message = bytes(message).decode('ascii').rstrip('\x00')
+            try:
+                self.message = bytes(message).decode('ascii').rstrip('\x00')
+            except UnicodeDecodeError:
+                if environment.env.debug: pdb.set_trace()
 
         ascii_top_line = bytes(tty_chars[0]).decode('ascii')
         potential_message = ascii_top_line.strip(' ')
@@ -158,7 +161,7 @@ class Neighborhood():
         it = np.nditer(glyph_grid, flags=['multi_index'])
         for g in it:
             glyph = gd.GLYPH_LOOKUP[int(g)]
-            if it.multi_index != player_location_in_glyph_grid and isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee:
+            if it.multi_index != player_location_in_glyph_grid and (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph,gd.SwallowGlyph)):
                 row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
                 threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
 
@@ -238,6 +241,7 @@ class RunState():
         self.reward = 0
         self.done = False
         self.time = None
+
         self.tty = None
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
@@ -245,6 +249,7 @@ class RunState():
         self.actions_without_consequence = []
 
         self.last_non_menu_action = None
+        self.last_non_menu_action_timestamp = None
         
         self.time_hung = 0
         self.rng = self.make_seeded_rng()
@@ -320,14 +325,16 @@ class RunState():
 
         if menu_plan == None:
             self.last_non_menu_action = action
+            self.last_non_menu_action_timestamp = self.time
 
     def check_gamestate_advancement(self, neighborhood):
         game_did_advance = True
-        if self.time_hung > 0:
-            neighborhood_diverged = self.neighborhood.player_location != neighborhood.player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
-            #pdb.set_trace()
-            if not neighborhood_diverged:
-                game_did_advance = False
+        if self.time is not None and self.last_non_menu_action_timestamp is not None:
+            if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
+                neighborhood_diverged = self.neighborhood.player_location != neighborhood.player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
+                #pdb.set_trace()
+                if not neighborhood_diverged:
+                    game_did_advance = False
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
             self.actions_without_consequence = []
@@ -473,8 +480,8 @@ class CustomAgent(BatchedAgent):
         try:
             retval = utilities.ACTION_LOOKUP[action]
         except UnboundLocalError:
-            print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time")
-            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]
+            print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time due to intrinsic speed.")
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH] 
             menu_plan = None
             #if environment.env.debug: pdb.set_trace()
         run_state.log_action(retval)
