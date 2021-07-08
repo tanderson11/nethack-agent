@@ -44,6 +44,13 @@ class MonsterGlyph(MonsterAlikeGlyph):
         self.never_melee = self.offset in [6, 27, 28, 55, 56, 57, 158] # acid blobs, gas spores, floating eye, jellies, green molds, 
         self.has_melee = self.offset not in [6, 28, 55, 56, 57, 158] # someday know about melee (probably in the monster data)
 
+    @classmethod
+    def names(cls):
+        names = set()
+        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
+            names.add(cls(numeral).name)
+        return names
+
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
     COUNT = nethack.NUM_OBJECTS
@@ -341,6 +348,8 @@ GLYPH_LOOKUP[5976] = None # Weird and bad thing in the inventory
 ALL_OBJECT_NAMES = ObjectGlyph.names()
 
 ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances()
+
+ALL_MONSTER_NAMES = MonsterGlyph.names()
 
 # WALL_GLPYHS = 2360, 2361 = vertical + horizontal
 # 2362, 2363, 2364, 2365 corners

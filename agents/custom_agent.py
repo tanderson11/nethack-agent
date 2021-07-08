@@ -1,6 +1,7 @@
 from pdb import run
 import base64
 import os
+import re
 
 import numpy as np
 import itertools
@@ -34,6 +35,25 @@ class BLStats():
 
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
+
+class RecordedMonsterDeath():
+    def __init__(self, square, time, monster_name):
+        self.square = square
+        self.time = time
+        self.monster_name = monster_name
+
+    death_log_line = re.compile("^You kill the (.*)!$")
+
+    @classmethod
+    def generate_from_message(cls, square, time, message):
+        # "You kill the lichen!" is an example message
+        match = re.match(cls.death_log_line, message)
+        if match is None:
+            return None
+        monster_name = match[1]
+        if not monster_name in gd.ALL_MONSTER_NAMES:
+            if environment.env.debug: pdb.set_trace()
+        return cls(square, time, monster_name)
 
 class Message():
     known_lost_messages = set([
@@ -258,6 +278,7 @@ class RunState():
         self.time_did_advance = True
 
         self.neighborhood = None
+        self.latest_monster_death = None
 
         self.menu_plan_log = []
 
