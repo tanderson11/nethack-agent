@@ -108,6 +108,11 @@ class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
         return flags.am_critically_injured and flags.neighborhood.threat[flags.neighborhood.players_square_mask] == 0
 
 
+class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.blstats.get('dungeon_number') == 0
+
+
 #class NoMovesAdvisor(AdvisorLevel):
 #    def check_flags(self, flags):
 #        return True
@@ -166,13 +171,36 @@ class MostNovelMoveAdvisor(MoveAdvisor):
         else:
             return None
 
-class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
+class LeastNovelMoveAdvisor(MoveAdvisor):
+    def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
+        possible_actions = neighborhood.action_grid[agreeable_move_mask]
+        visits = neighborhood.visits[agreeable_move_mask]
+
+        if visits.any():
+            least_novel = possible_actions[visits == visits.max()]
+            return Advice(self.__class__, rng.choice(least_novel), None)
+        else:
+            return None
+
+class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & np.vectorize(lambda g: getattr(g, 'desirable_object', lambda: False)())(neighborhood.glyphs) # desirable objects
+        return neighborhood.walkable & ~neighborhood.threatened
+
+class LeastNovelNonObjectGlyphMoveAdvisor(LeastNovelMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+        return neighborhood.walkable & ~neighborhood.threatened & np.vectorize(lambda g: not isinstance(g, gd.ObjectGlyph))(neighborhood.glyphs)
 
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
         return neighborhood.walkable & ~neighborhood.threatened
+
+class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+        return neighborhood.walkable & np.vectorize(lambda g: getattr(g, 'desirable_object', lambda: False)())(neighborhood.glyphs) # desirable objects
+
+class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+        return neighborhood.walkable & (neighborhood.threat == neighborhood.threat.min())
 
 class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -328,6 +356,7 @@ class DrinkHealingPotionAdvisor(ItemUseAdvisor):
             }, interactive_menu_header_rows=0,
             menu_item_selector=lambda x: (x.category == "Potions") & ("healing" in x.item_appearance),
             expects_strange_messages=True)
+        #pdb.set_trace()
         return Advice(self.__class__, quaff, menu_plan)
 
 class FallbackSearchAdvisor(Advisor):
@@ -425,7 +454,7 @@ class EnhanceSkillsAdvisor(Advisor):
 advisors = [
     FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
     CriticallyInjuredAndUnthreatenedAdvisorLevel({ # let's try to pray less in the early game by not praying if unthreatened
-            RandomUnthreatenedMoveAdvisor: 3,
+            LeastNovelNonObjectGlyphMoveAdvisor: 3, # try not to step on traps by only moving to areas that are floor glyphs
             FallbackSearchAdvisor: 7,
             DrinkHealingPotionAdvisor: 1
         }),
@@ -436,7 +465,7 @@ advisors = [
         }),
     CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
-    ThreatenedMoreThanOnceAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1,}),
+    ThreatenedMoreThanOnceAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({
         RandomSafeMeleeAttack: 30,
         RandomUnthreatenedMoveAdvisor: 10,
@@ -454,7 +483,7 @@ advisors = [
         RandomUnthreatenedMoveAdvisor: 1,
         }),
     AdvisorLevel({PickupAdvisor: 1,}),
-    AdvisorLevel({KickLockedDoorAdvisor: 1,}),
+    DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({
             FallbackSearchAdvisor: 50,
