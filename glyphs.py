@@ -235,6 +235,9 @@ class CMapGlyph(Glyph):
 
         ## Thayer: could also do this with static methods, but either way I think we want these as static attributes to play nicely with getattr
         self.possible_secret_door = self.offset < 3
+        
+        self.is_floor = self.offset >= 19 and self.offset <= 31
+
         self.is_wall = self.offset < 12
         self.is_open_door = self.offset > 11 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
