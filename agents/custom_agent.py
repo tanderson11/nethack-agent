@@ -41,6 +41,7 @@ class RecordedMonsterDeath():
         self.square = square
         self.time = time
         self.monster_name = monster_name
+        self.monster_glyph = gd.get_by_name(gd.MonsterGlyph, self.monster_name)
 
     death_log_line = re.compile("^You kill the (.*)!$")
 
@@ -51,8 +52,6 @@ class RecordedMonsterDeath():
         if match is None:
             return None
         monster_name = match[1]
-        if not monster_name in gd.ALL_MONSTER_NAMES:
-            if environment.env.debug: pdb.set_trace()
         return cls(square, time, monster_name)
 
 class Message():
@@ -180,7 +179,7 @@ class Neighborhood():
 
         it = np.nditer(glyph_grid, flags=['multi_index'])
         for g in it:
-            glyph = gd.GLYPH_LOOKUP[int(g)]
+            glyph = gd.GLYPH_NUMERAL_LOOKUP[int(g)]
             if it.multi_index != player_location_in_glyph_grid and (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph,gd.SwallowGlyph)):
                 row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
                 threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
@@ -204,7 +203,7 @@ class Neighborhood():
         self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_column_slice]
         diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_column_slice]
 
-        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_LOOKUP.get(g))
+        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g))
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
         self.glyphs = vectorized_lookup(self.raw_glyphs)
 
@@ -401,7 +400,7 @@ class CustomAgent(BatchedAgent):
             if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
                 run_state.glyph_under_player = None
             else:
-                previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
+                previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
 
                 # Don't forget dungeon features just because we're now standing on them
                 if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):

@@ -9,3 +9,4 @@ scipy
 nle
 tqdm
 wandb
+pandas
