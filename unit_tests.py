@@ -37,8 +37,13 @@ class TestAttributeScreen(unittest.TestCase):
         run_state = agents.custom_agent.RunState()
         run_state.reading_base_attributes = True
         run_state.update_base_attributes(screen_content)
+        self.assertEqual("Barbarian", run_state.base_class)
         self.assertEqual("human", run_state.base_race)
         self.assertEqual("female", run_state.base_sex)
+        self.assertEqual("neutral", run_state.base_alignment)
+        self.assertEqual("Crom", run_state.gods_by_alignment['neutral'])
+        self.assertEqual("Mitra", run_state.gods_by_alignment['lawful'])
+        self.assertEqual("Set", run_state.gods_by_alignment['chaotic'])
 
     def test_gendered_class(self):
         screen_content = """
@@ -50,6 +55,27 @@ class TestAttributeScreen(unittest.TestCase):
         run_state.update_base_attributes(screen_content)
         self.assertEqual("dwarf", run_state.base_race)
         self.assertEqual("female", run_state.base_sex)
+        self.assertEqual("Cavewoman", run_state.base_class)
+        self.assertEqual("lawful", run_state.base_alignment)
+        self.assertEqual("Ishtar", run_state.gods_by_alignment['neutral'])
+        self.assertEqual("Anu", run_state.gods_by_alignment['lawful'])
+        self.assertEqual("Anshar", run_state.gods_by_alignment['chaotic'])
+
+    def test_complicated_gods(self):
+        screen_content = """
+                          You are a Rambler, a level 1 male human Tourist.      
+                          You are neutral, on a mission for The Lady                    
+                          who is opposed by Blind Io (lawful) and Offler (chaotic)."""
+        run_state = agents.custom_agent.RunState()
+        run_state.reading_base_attributes = True
+        run_state.update_base_attributes(screen_content)
+        self.assertEqual("human", run_state.base_race)
+        self.assertEqual("male", run_state.base_sex)
+        self.assertEqual("Tourist", run_state.base_class)
+        self.assertEqual("neutral", run_state.base_alignment)
+        self.assertEqual("The Lady", run_state.gods_by_alignment['neutral'])
+        self.assertEqual("Blind Io", run_state.gods_by_alignment['lawful'])
+        self.assertEqual("Offler", run_state.gods_by_alignment['chaotic'])
 
 if __name__ == '__main__':
     unittest.main()

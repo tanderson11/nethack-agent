@@ -297,6 +297,7 @@ class RunState():
         'Cavewoman': 'female',
         'Priest': 'male',
         'Priestess': 'female',
+        'Valkyrie': 'female',
     }
 
     def update_base_attributes(self, raw_screen_content):
@@ -305,8 +306,6 @@ class RunState():
         attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
         attribute_match_2 = re.search(self.attribute_pattern_2, raw_screen_content)
         attribute_match_3 = re.search(self.attribute_pattern_3, raw_screen_content)
-        if attribute_match_1 is None or attribute_match_2 is None or attribute_match_3 is None:
-            pdb.set_trace()
         if attribute_match_1[1] is None:
             self.base_sex = self.class_to_sex_mapping[attribute_match_1[3]]
         else:
