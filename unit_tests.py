@@ -1,6 +1,7 @@
 import unittest
 
 import menuplan
+import agents.custom_agent
 
 class TestItemRegex(unittest.TestCase):
     test_values = {
@@ -12,11 +13,20 @@ class TestItemRegex(unittest.TestCase):
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
         "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
-        "a rusty corroded +1 long sword (weapon in hand)",
+        "a rusty corroded +1 long sword (weapon in hand)": "long sword",
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
             self.assertEqual(value, menuplan.InteractiveInventoryMenu.MenuItem("foo", "a", False, key).item_appearance)
+
+class TestMonsterKill(unittest.TestCase):
+    test_values = {
+        "You kill the lichen!": "lichen",
+    }
+
+    def test_all_test_values(self):
+        for key, value in self.test_values.items():
+            self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath.generate_from_message(None, None, key).monster_name)
 
 if __name__ == '__main__':
     unittest.main()
