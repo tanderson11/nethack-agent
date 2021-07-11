@@ -41,7 +41,7 @@ class RecordedMonsterDeath():
         self.square = square
         self.time = time
         self.monster_name = monster_name
-        self.monster_glyph = gd.get_by_name(gd.MonsterGlyph, self.monster_name)
+        self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
 
     death_log_line = re.compile("^You kill the (.*)!$")
 
