@@ -22,11 +22,16 @@ class TestItemRegex(unittest.TestCase):
 class TestMonsterKill(unittest.TestCase):
     test_values = {
         "You kill the lichen!": "lichen",
+        "You feel more confident in your weapon skills.  You kill the kobold!": "kobold",
+        "You kill the newt!  The grid bug bites!  You get zapped!": "newt",
+        "You kill the poor little dog!": "little dog",
+        "You kill the incubus of Kos!": "incubus",
     }
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath.generate_from_message(None, None, key).monster_name)
+            monster_name = agents.custom_agent.RecordedMonsterDeath.killed_monster(key)
+            self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath(None, None, monster_name).monster_name)
 
 class TestAttributeScreen(unittest.TestCase):
     def test_easy_case(self):

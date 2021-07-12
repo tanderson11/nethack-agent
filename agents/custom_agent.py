@@ -43,16 +43,15 @@ class RecordedMonsterDeath():
         self.monster_name = monster_name
         self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
 
-    death_log_line = re.compile("^You kill the (.*)!$")
+    death_log_line = re.compile("You kill the (poor )?(.+?)( of .+?)?!")
 
     @classmethod
-    def generate_from_message(cls, square, time, message):
-        # "You kill the lichen!" is an example message
-        match = re.match(cls.death_log_line, message)
+    def killed_monster(cls, message):
+        match = re.search(cls.death_log_line, message)
         if match is None:
             return None
-        monster_name = match[1]
-        return cls(square, time, monster_name)
+        monster_name = match[2]
+        return monster_name
 
 class Message():
     known_lost_messages = set([
@@ -126,6 +125,17 @@ class Neighborhood():
         nethack.actions.CompassDirection.S,
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
+
+    action_to_delta = {
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.NW]: (-1, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.N]: (-1, 0),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.NE]: (-1, 1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.W]: (0, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.E]: (0, 1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SW]: (1, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.S]: (1, 0),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SE]: (1, 1),
+    }
 
     diagonal_moves = np.vectorize(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8)(action_grid)
 
@@ -457,6 +467,19 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.log_message(message.message)
+
+
+        killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
+        if killed_monster_name:
+            # TODO need to get better at knowing the square where the monster dies
+            # currently bad at ranged attacks, confusion, and more
+            if not run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.FIRE]:
+                delta = Neighborhood.action_to_delta[run_state.last_non_menu_action]
+                run_state.latest_monster_death = RecordedMonsterDeath(
+                    (player_location[0] + delta[0], player_location[1] + delta[1]),
+                    blstats.get('time'),
+                    killed_monster_name
+                )
 
         if "corpse tastes" in message.message:
             print(message.message)
