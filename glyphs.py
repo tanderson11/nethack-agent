@@ -1,6 +1,47 @@
+import csv
+import os
 import pdb
+from typing import NamedTuple
 
 from nle import nethack
+import pandas as pd
+
+import environment
+from utilities import ARS
+
+class CorpseSpoiler(NamedTuple):
+    name: str
+    nutrition: int
+    vegetarian: bool
+    vegan: bool
+    race_for_cannibalism: str
+    acidic: bool
+    poisonous: bool
+    aggravate: bool
+    slime: bool
+    petrify: bool
+    instadeath: bool
+    stun: bool
+    polymorph: bool
+    hallucination: bool
+    lycanthropy: bool
+    teleportitis: bool
+    invisibility: bool
+    speed_toggle: bool
+
+    _field_mapping = {}
+
+CORPSES_BY_NAME = {}
+
+corpse_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "corpses.csv"))
+for field in CorpseSpoiler._fields:
+    CorpseSpoiler._field_mapping[field] = field.capitalize().replace("_", " ")
+for _, row in corpse_df.iterrows():
+    normalized_dict = {}
+    for tupleversion, csvversion in CorpseSpoiler._field_mapping.items():
+        normalized_dict[tupleversion] = row[csvversion]
+    normalized = CorpseSpoiler(**normalized_dict)
+    CORPSES_BY_NAME[normalized.name] = normalized
 
 class Glyph():
     OFFSET = 0
@@ -9,10 +50,11 @@ class Glyph():
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
+        self.name = None
         self.walkable = False
 
     @classmethod
-    def mapping(cls):
+    def numeral_mapping(cls):
         mapping = {}
         for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
             # print(f"{cls} {numeral}")
@@ -21,9 +63,20 @@ class Glyph():
         return mapping
 
     def __repr__(self):
-        return "{} named {}".format(self.__class__, getattr(self, 'name', 'NO NAME DEFINED'))
+        return "{} named {}".format(self.__class__, self.name or 'NO NAME DEFINED')
 
 class MonsterAlikeGlyph(Glyph):
+    NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
+
+    @classmethod
+    def name_of_animated_dead(cls, name):
+        if 'mummy' in name:
+            return True
+        if 'zombie' in name:
+            return True
+        if 'vampire' in name:
+            return True
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
@@ -32,7 +85,11 @@ class MonsterAlikeGlyph(Glyph):
         # 'ac', 'cnutrit', 'cwt', 'geno', 'mcolor', 'mconveys', 'mflags1', 'mflags2', 'mflags3',
         # 'mlet', 'mlevel', 'mmove', 'mname', 'mr', 'mresists', 'msize', 'msound'
         self.name = monster.mname
+        self.animated_dead = self.__class__.name_of_animated_dead(self.name)
         self.walkable = False
+        self.corpse_spoiler = None
+        if not self.name in self.NEVER_CORPSE and not self.animated_dead and self.name != 'long worm tail':
+            self.corpse_spoiler = CORPSES_BY_NAME[self.name]
 
 class MonsterGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_MON_OFF
@@ -338,24 +395,30 @@ klasses = [
     StatueGlyph,
 ]
 
-GLYPH_LOOKUP = {}
+GLYPH_NUMERAL_LOOKUP = {}
 
 for klass in klasses:
-    GLYPH_LOOKUP.update(klass.mapping())
+    GLYPH_NUMERAL_LOOKUP.update(klass.numeral_mapping())
 
-if not len(GLYPH_LOOKUP.keys()) == 5_976:
+if not len(GLYPH_NUMERAL_LOOKUP.keys()) == 5_976:
     raise Exception("Surprising number of glyphs")
 
-GLYPH_LOOKUP[5976] = None # Weird and bad thing in the inventory
+GLYPH_NAME_LOOKUP = {}
+for glyph in GLYPH_NUMERAL_LOOKUP.values():
+    if not glyph.name:
+        continue
+    GLYPH_NAME_LOOKUP[glyph.name] = glyph
+
+GLYPH_NUMERAL_LOOKUP[5976] = None # Weird and bad thing in the inventory
 
 ALL_OBJECT_NAMES = ObjectGlyph.names()
 
 ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances()
 
-ALL_MONSTER_NAMES = MonsterGlyph.names()
-
-# WALL_GLPYHS = 2360, 2361 = vertical + horizontal
-# 2362, 2363, 2364, 2365 corners
-WALL_GLYPHS = list(range(2360, 2366)) + [0]
-DOWNSTAIRS_GLYPH = 2383
-DOOR_GLYPHS = range(2374, 2376)
+def get_by_name(klass, name):
+    glyph = GLYPH_NAME_LOOKUP.get(name, None)
+    if not isinstance(glyph, klass):
+        if environment.env.debug:
+            pdb.set_trace()
+        raise Exception("Bad glyph name")
+    return glyph

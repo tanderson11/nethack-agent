@@ -2,6 +2,7 @@ from pdb import run
 import base64
 import os
 import re
+from typing import NamedTuple
 
 import numpy as np
 import itertools
@@ -22,6 +23,8 @@ if environment.env.debug:
 # Config variable that are screwing with me
 # pile_limit
 
+ACCEPTABLE_CORPSE_AGE = 40
+
 class BLStats():
     bl_meaning = [
         'hero_col', 'hero_row', 'strength_pct', 'strength', 'dexterity', 'constitution',
@@ -41,19 +44,18 @@ class RecordedMonsterDeath():
         self.square = square
         self.time = time
         self.monster_name = monster_name
+        self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
+        self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
-    death_log_line = re.compile("^You kill the (.*)!$")
+    death_log_line = re.compile("You kill the (poor )?(invisible )?(.+?)( of .+?)?!")
 
     @classmethod
-    def generate_from_message(cls, square, time, message):
-        # "You kill the lichen!" is an example message
-        match = re.match(cls.death_log_line, message)
+    def killed_monster(cls, message):
+        match = re.search(cls.death_log_line, message)
         if match is None:
             return None
-        monster_name = match[1]
-        if not monster_name in gd.ALL_MONSTER_NAMES:
-            if environment.env.debug: pdb.set_trace()
-        return cls(square, time, monster_name)
+        monster_name = match[3]
+        return monster_name
 
 class Message():
     known_lost_messages = set([
@@ -78,7 +80,7 @@ class Message():
         self.raw_message = message
         self.tty_chars = tty_chars
         self.message = ''
-        self.has_more = False
+        self.has_more = (misc_observation[2] == 1)
         self.interactive_menu_class = None
 
         if np.count_nonzero(message) > 0:
@@ -90,7 +92,7 @@ class Message():
         ascii_top_line = bytes(tty_chars[0]).decode('ascii')
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
-            if not (potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
+            if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
                 if not ARS.rs.active_menu_plan.expects_strange_messages:
                     if environment.env.debug: pdb.set_trace()
             self.message = potential_message
@@ -100,22 +102,6 @@ class Message():
             self.interactive_menu_class = menuplan.InteractiveInventoryMenu
         elif "Pick a skill to advance:" in self.message:
             self.interactive_menu_class = menuplan.InteractiveEnhanceSkillsMenu
-
-        ascii_top_lines = ascii_top_line + bytes(tty_chars[1:3]).decode('ascii')
-        # Bad conflict with "They say that shopkeepers often remember things that you might forget."
-        if "--More--" in ascii_top_lines or "hings that" in ascii_top_lines:
-            # NLE doesn't pass through the --More-- in its observation
-            # ascii_message = bytes(observation['message']).decode('ascii')
-            # So let's go look for it
-            # With pile_limit > 1, we can get a --More-- without a message
-            # # np.count_nonzero(observation['message']) > 0
-            self.has_more = True
-
-        truly_has_more = (misc_observation[2] == 1)
-
-        if truly_has_more != self.has_more and self.interactive_menu_class is None:
-            if environment.env.debug: pdb.set_trace()
-            self.has_more = truly_has_more
 
     def __bool__(self):
         return bool(self.message)
@@ -143,6 +129,17 @@ class Neighborhood():
         nethack.actions.CompassDirection.S,
         nethack.actions.CompassDirection.SE,
     ]).reshape(3,3)
+
+    action_to_delta = {
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.NW]: (-1, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.N]: (-1, 0),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.NE]: (-1, 1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.W]: (0, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.E]: (0, 1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SW]: (1, -1),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.S]: (1, 0),
+        utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SE]: (1, 1),
+    }
 
     diagonal_moves = np.vectorize(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8)(action_grid)
 
@@ -180,19 +177,17 @@ class Neighborhood():
 
         it = np.nditer(glyph_grid, flags=['multi_index'])
         for g in it:
-            glyph = gd.GLYPH_LOOKUP[int(g)]
+            glyph = gd.GLYPH_NUMERAL_LOOKUP[int(g)]
             if it.multi_index != player_location_in_glyph_grid and (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph,gd.SwallowGlyph)):
                 row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
                 threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
 
         return threat_map
 
-    def __init__(self, player_location, observation, dmap, previous_glyph_on_player):
+    def __init__(self, player_location, observation, dmap, previous_glyph_on_player, latest_monster_death):
+        blstats = BLStats(observation['blstats'])
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
-
-        col_lim = observation['glyphs'].shape[1]
-        row_lim = observation['glyphs'].shape[0]
 
         window_size = 1
 
@@ -204,7 +199,7 @@ class Neighborhood():
         self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_column_slice]
         diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_column_slice]
 
-        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_LOOKUP.get(g))
+        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g))
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
         self.glyphs = vectorized_lookup(self.raw_glyphs)
 
@@ -227,9 +222,10 @@ class Neighborhood():
         threat_row_slice, threat_col_slice = Neighborhood.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
         self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
         self.threatened = self.threat > 0
-        if self.threatened.any(): pass#pdb.set_trace()
-        
-        #pdb.set_trace()
+
+        self.fresh_corpse_on_square_glyph = None
+        if latest_monster_death and latest_monster_death.can_corpse and (player_location == latest_monster_death.square) and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+            self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.raw_glyphs, glyph_set)
@@ -251,18 +247,33 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     "little trouble lifting": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
 
+class Character(NamedTuple):
+    base_race: str
+    base_class: str
+    base_sex: str
+    base_alignment: str
+
+    def can_cannibalize(self):
+        if self.base_race == 'orc':
+            return False
+        if self.base_class == 'Caveman' or self.base_class == 'Cavewoman':
+            return False
+        return True
+
 class RunState():
     def __init__(self):
         self.reset()
         self.debug_env = None
 
     def reset(self):
+        self.reading_base_attributes = False
+        self.character = None
+        self.gods_by_alignment = {}
+
         self.step_count = 0
         self.reward = 0
-        self.done = False
         self.time = None
 
-        self.tty = None
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
         self.action_log = []
@@ -293,11 +304,53 @@ class RunState():
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
-    def update(self, done, reward, observation):
-        self.done = done
+    attribute_pattern_1 = re.compile("You are an? [A-Z][a-z]+, a level 1 (female|male)? ?([a-z]+) ([A-Z][a-z]+).")
+    attribute_pattern_2 = re.compile("You are (neutral|lawful|chaotic), on a mission for (.+?)  ")
+    attribute_pattern_3 = re.compile("who is opposed by (.+?) \((neutral|lawful|chaotic)\) and (.+?) \((neutral|lawful|chaotic)\)")
+
+    base_race_mapping = {
+        'dwarven': 'dwarf',
+        'human': 'human',
+        'gnomish': 'gnome',
+        'orcish': 'orc',
+        'elven': 'elf',
+    }
+
+    class_to_sex_mapping = {
+        'Caveman': 'male',
+        'Cavewoman': 'female',
+        'Priest': 'male',
+        'Priestess': 'female',
+        'Valkyrie': 'female',
+    }
+
+    def update_base_attributes(self, raw_screen_content):
+        if not self.reading_base_attributes:
+            raise Exception("Shouldn't be doing this")
+        attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
+        attribute_match_2 = re.search(self.attribute_pattern_2, raw_screen_content)
+        attribute_match_3 = re.search(self.attribute_pattern_3, raw_screen_content)
+        if attribute_match_1[1] is None:
+            base_sex = self.class_to_sex_mapping[attribute_match_1[3]]
+        else:
+            base_sex = attribute_match_1[1]
+        character = Character(
+            base_sex=base_sex,
+            base_race = self.base_race_mapping[attribute_match_1[2]],
+            base_class = attribute_match_1[3],
+            base_alignment = attribute_match_2[1],
+        )
+        self.character = character
+        self.gods_by_alignment[character.base_alignment] = attribute_match_2[2]
+        self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
+        self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
+        self.reading_base_attributes = False
+
+    def update_reward(self, reward):
         self.step_count += 1
         self.reward += reward
 
+    def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
         # our metric for time advanced: true if game time advanced or if neighborhood changed
@@ -313,8 +366,6 @@ class RunState():
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
-        self.tty = observation['tty_chars']
-
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
 
     def set_menu_plan(self, menu_plan):
@@ -366,9 +417,9 @@ class RunState():
         return game_did_advance
 
 
-def print_stats(run_state, blstats):
+def print_stats(done, run_state, blstats):
     print(
-        ("[Done] " if run_state.done else "") +
+        ("[Done] " if done else "") +
         f"After step {run_state.step_count}: " + \
         f"reward {run_state.reward}, " + \
         f"dlevel {blstats.get('level_number')}, " + \
@@ -390,9 +441,23 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+        run_state.update_reward(reward)
 
         blstats = BLStats(observation['blstats'])
-        level_changed = blstats.get("level_number") != run_state.dmap.level_number or blstats.get("dungeon_number") != run_state.dmap.dungeon_number or done
+
+        # Our previous run finished, we are now at the start of a new run
+        if done:
+            print_stats(done, run_state, blstats)
+            run_state.reset()
+            level_changed = True
+        else:
+            level_changed = blstats.get("level_number") != run_state.dmap.level_number or blstats.get("dungeon_number") != run_state.dmap.dungeon_number
+
+        if run_state.reading_base_attributes:
+            raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
+            run_state.update_base_attributes(raw_screen_content)
+
+        run_state.update_observation(observation)
 
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
@@ -402,21 +467,15 @@ class CustomAgent(BatchedAgent):
             if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
                 run_state.glyph_under_player = None
             else:
-                previous_glyph_on_player = gd.GLYPH_LOOKUP[run_state.glyphs[player_location]]
+                previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
 
                 # Don't forget dungeon features just because we're now standing on them
                 if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
                     run_state.glyph_under_player = previous_glyph_on_player
         previous_glyph_on_player = run_state.glyph_under_player
 
-        # run_state stuff: Currently only for logging
-        run_state.update(done, reward, observation)
-        if done:
-            print_stats(run_state, blstats)
-            run_state.reset()
-
         if run_state.step_count % 1000 == 0:
-            print_stats(run_state, blstats)
+            print_stats(done, run_state, blstats)
 
         # mapping
         if level_changed:
@@ -425,29 +484,28 @@ class CustomAgent(BatchedAgent):
             run_state.dmap.update(player_location)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
-
-        # --- Spooky messages ---
-        #diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
-        #diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
-        #boulder_in_vain_message = "boulder, but in vain." in message.message
-        #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
-        #carrying_too_much_message = "You are carrying too much to get through." in message.message
-        #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
-        #solid_stone_message = "solid stone" in message.message # hopefully only happens when there's a tricky glyph; we drop into debugger later
-        #nevermind = "Never mind." in message.message
-
-        #cant_move_that_way_message = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message or solid_stone_message
-        #peaceful_monster_message = "Really attack" in message.message
-        # ---
-
-        #if cant_move_that_way_message or peaceful_monster_message: # if we failed to move, tell the neighborhood so it treats that square as unwalkable
-
-        #last_nonmenu_action_failed = peaceful_monster_message or cant_move_that_way_message or nevermind
-
         run_state.log_message(message.message)
+
+
+        killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
+        if killed_monster_name:
+            # TODO need to get better at knowing the square where the monster dies
+            # currently bad at ranged attacks, confusion, and more
+            if not run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.FIRE]:
+                delta = Neighborhood.action_to_delta[run_state.last_non_menu_action]
+                recorded_death = RecordedMonsterDeath(
+                    (player_location[0] + delta[0], player_location[1] + delta[1]),
+                    blstats.get('time'),
+                    killed_monster_name
+                )
+                if recorded_death.can_corpse:
+                    run_state.latest_monster_death = recorded_death
 
         if "corpse tastes" in message.message:
             print(message.message)
+
+        if "It's a wall" in message.message and environment.env.debug:
+            pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         if message.interactive_menu_class is not None:
             if not run_state.live_interactive_menu:
@@ -455,8 +513,18 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.live_interactive_menu = None
 
-        if message.has_more:
+        ###################################################
+        # We are done observing and ready to start acting #
+        ###################################################
+
+        if message.has_more and message.interactive_menu_class is None:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
+            run_state.log_action(retval, menu_plan=True)
+            return retval
+
+        if not run_state.character:
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
+            run_state.reading_base_attributes = True
             run_state.log_action(retval, menu_plan=True)
             return retval
 
@@ -466,10 +534,8 @@ class CustomAgent(BatchedAgent):
                 run_state.log_action(retval, menu_plan=run_state.active_menu_plan)
                 return retval
 
-        if "It's a wall" in message.message:
-            if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
-
-        neighborhood = Neighborhood(player_location, observation, run_state.dmap, previous_glyph_on_player)
+        neighborhood = Neighborhood(
+            player_location, observation, run_state.dmap, previous_glyph_on_player, run_state.latest_monster_death)
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 
@@ -480,7 +546,7 @@ class CustomAgent(BatchedAgent):
             if advisor_level.check_flags(flags):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state.rng, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
@@ -494,7 +560,7 @@ class CustomAgent(BatchedAgent):
                     action = chosen_advice.action
 
                     #if action == nethack.actions.Command.QUAFF: print("quaffing!")
-                    if action == nethack.actions.Command.FIRE: print("firing!");
+                    if action == nethack.actions.Command.FIRE: print("firing!")
 
                     menu_plan = chosen_advice.menu_plan
                     break
