@@ -183,17 +183,70 @@ class Neighborhood():
 
         return relative_row_slice, relative_col_slice
 
+    @classmethod
+    def raytrace_threat(cls, glyph_grid, source):
+        row_lim = glyph_grid.shape[0]
+        col_lim = glyph_grid.shape[1]
+
+        ray_offsets = cls.action_to_delta.values()
+
+        masks = []
+        for offset in ray_offsets:
+            ray_mask = np.full_like(glyph_grid, False, dtype='bool')
+
+            current = source
+            current = (current[0]+2*offset[0], current[1]+2*offset[1]) # initial bump so that ranged attacks don't threaten adjacent squares
+            while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
+                try:
+                    glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_grid[current]]
+                    if isinstance(glyph, gd.CMapGlyph) and glyph.is_wall: # is this the full extent of what blocks projectiles/rays?
+                        break # should we do anything with bouncing
+
+                    ray_mask[current] = True
+
+                except IndexError: # we just stepped over the boundary this move
+                    pass#pdb.set_trace()
+
+                current = (current[0]+offset[0], current[1]+offset[1])
+
+
+            masks.append(ray_mask)
+
+        can_hit_mask = np.logical_or.reduce(masks)
+        #pdb.set_trace()
+        return can_hit_mask
+
     def calculate_threat(self, glyph_grid, player_location_in_glyph_grid):
-        threat_map = np.zeros_like(glyph_grid)
+        INVISIBLE_DAMAGE_THREAT = 5 # gotta do something lol
+
+        n_threat_map = np.zeros_like(glyph_grid)
+        damage_threat_map = np.zeros_like(glyph_grid)
 
         it = np.nditer(glyph_grid, flags=['multi_index'])
         for g in it:
             glyph = gd.GLYPH_NUMERAL_LOOKUP[int(g)]
-            if it.multi_index != player_location_in_glyph_grid and (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph,gd.SwallowGlyph)):
-                row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
-                threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
+            if it.multi_index != player_location_in_glyph_grid:
+                if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph, gd.SwallowGlyph)):
+                    row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
+                    n_threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
 
-        return threat_map
+                    if isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee:
+                        damage_threat_map[row_slice, col_slice] += glyph.monster_spoiler.melee_attack_bundle.max_damage
+
+                    if isinstance(glyph, gd.InvisibleGlyph):
+                        damage_threat_map[row_slice, col_slice] += INVISIBLE_DAMAGE_THREAT# how should we imagine the threat of invisible monsters
+
+                    if isinstance(glyph,gd.SwallowGlyph):
+                        damage_threat_map[row_slice, col_slice] += gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage/8 # stomachs do approx 1/8 of the monster damage 
+
+                if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_ranged):
+                    # TK TK ray trace threat
+                    can_hit_mask = self.__class__.raytrace_threat(glyph_grid, it.multi_index)
+                    n_threat_map[can_hit_mask] += 1
+                    damage_threat_map[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
+
+
+        return (n_threat_map, damage_threat_map)
 
     def __init__(self, player_location, observation, dmap, previous_glyph_on_player, latest_monster_death):
         blstats = BLStats(observation['blstats'])
@@ -228,8 +281,11 @@ class Neighborhood():
         large_row_window, large_col_window = Neighborhood.centered_slices_bounded_on_array(player_location, (window_size+1, window_size+1), observation['glyphs'])
         player_location_in_glyph_grid = (self.player_row-large_row_window.start, self.player_col-large_col_window.start)
         threat_row_slice, threat_col_slice = Neighborhood.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
-        self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
-        self.threatened = self.threat > 0
+
+        raw_n_threat, raw_damage_threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)
+        self.n_threat = raw_n_threat[threat_row_slice,threat_col_slice]
+        self.damage_threat = raw_damage_threat[threat_row_slice,threat_col_slice]
+        self.threatened = self.n_threat > 0
 
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')

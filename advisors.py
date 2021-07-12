@@ -85,7 +85,11 @@ class AdvisorLevel():
 
 class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
-        return flags.neighborhood.threat[flags.neighborhood.players_square_mask] > 1
+        return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] > 1
+
+class AmUnthreatenedAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
 
 class MajorTroubleAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
@@ -109,7 +113,7 @@ class CriticallyInjuredAdvisorLevel(AdvisorLevel):
 
 class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
-        return flags.am_critically_injured and flags.neighborhood.threat[flags.neighborhood.players_square_mask] == 0
+        return flags.am_critically_injured and flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
 
 class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
@@ -207,7 +211,7 @@ class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & (neighborhood.threat == neighborhood.threat.min())
+        return neighborhood.walkable & (neighborhood.n_threat == neighborhood.n_threat.min())
 
 class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -528,7 +532,7 @@ advisors = [
         FallbackSearchAdvisor: 30,
         RandomUnthreatenedMoveAdvisor: 1,
         }),
-    AdvisorLevel({
+    AmUnthreatenedAdvisorLevel({
         PickupAdvisor: 1,
         EatCorpseAdvisor: 1,
     }),
