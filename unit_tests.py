@@ -26,6 +26,7 @@ class TestMonsterKill(unittest.TestCase):
         "You kill the newt!  The grid bug bites!  You get zapped!": "newt",
         "You kill the poor little dog!": "little dog",
         "You kill the incubus of Kos!": "incubus",
+        "You kill the invisible hill orc!": "hill orc",
     }
 
     def test_all_test_values(self):
