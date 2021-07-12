@@ -47,14 +47,14 @@ class RecordedMonsterDeath():
         self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
         self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
-    death_log_line = re.compile("You kill the (poor )?(invisible )?(.+?)( of .+?)?!")
+    death_log_line = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
 
     @classmethod
     def killed_monster(cls, message):
         match = re.search(cls.death_log_line, message)
         if match is None:
             return None
-        monster_name = match[3]
+        monster_name = match[4]
         return monster_name
 
 class Message():

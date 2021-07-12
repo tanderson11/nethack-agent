@@ -27,6 +27,7 @@ class TestMonsterKill(unittest.TestCase):
         "You kill the poor little dog!": "little dog",
         "You kill the incubus of Kos!": "incubus",
         "You kill the invisible hill orc!": "hill orc",
+        "You kill the saddled pony!": "pony",
     }
 
     def test_all_test_values(self):
