@@ -205,10 +205,10 @@ class Neighborhood():
         row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(player_location, (window_size, window_size), observation['glyphs'])
 
         # a window into the action grid of the size size and shape as our window into the glyph grid (ie: don't include actions out of bounds on the map)
-        action_grid_row_slice, action_grid_column_slice = Neighborhood.move_slice_center(player_location, (1,1), (row_slice,col_slice)) # move center to (1,1) (action grid center)
+        action_grid_row_slice, action_grid_col_slice = Neighborhood.move_slice_center(player_location, (1,1), (row_slice,col_slice)) # move center to (1,1) (action grid center)
 
-        self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_column_slice]
-        diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_column_slice]
+        self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_col_slice]
+        diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_col_slice]
 
         vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g))
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
@@ -234,8 +234,8 @@ class Neighborhood():
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
         if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
-            absolute_row_offsets = self.__class__.row_offset_grid[action_grid_row_slice, action_grid_column_slice] + self.player_location[0]
-            absolute_col_offsets = self.__class__.col_offset_grid[action_grid_row_slice, action_grid_column_slice] + self.player_location[1]
+            absolute_row_offsets = self.__class__.row_offset_grid[action_grid_row_slice, action_grid_col_slice] + self.player_location[0]
+            absolute_col_offsets = self.__class__.col_offset_grid[action_grid_row_slice, action_grid_col_slice] + self.player_location[1]
 
             self.has_fresh_corpse = (absolute_row_offsets == latest_monster_death.square[0]) & (absolute_col_offsets == latest_monster_death.square[1])
 
