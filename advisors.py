@@ -1,12 +1,14 @@
+import abc
+from collections import OrderedDict
+import pdb
+
 import glyphs as gd
 import nle.nethack as nethack
-import menuplan
-import utilities
-import abc
-import environment
-import pdb
 import numpy as np
 
+import environment
+import menuplan
+import utilities
 from utilities import ARS
 
 # Advisors
@@ -33,6 +35,7 @@ class Flags():
         self.message = message
 
         self.am_weak = blstats.get('hunger_state') > 2
+        self.am_satiated = blstats.get('hunger_state') == 0
 
         exp_lvl_to_prayer_hp_thresholds = {
             1: 1/5,
@@ -70,6 +73,8 @@ class Flags():
         self.can_enhance = "You feel more confident" in message.message or "could be more dangerous" in message.message
         if self.can_enhance:
             print(message.message)
+
+        self.fresh_corpse_on_square = (neighborhood.fresh_corpse_on_square_glyph is not None)
 
 class AdvisorLevel():
     def __init__(self, advisors):
@@ -134,11 +139,11 @@ class Advisor(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags): # returns action, MenuPlan
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags): # returns action, MenuPlan
         pass
 
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.have_walkable_squares:
             agreeable_move_mask = self.find_agreeable_moves(rng, blstats, inventory, neighborhood, message)
             return self.get_move(rng, blstats, inventory, neighborhood, message, agreeable_move_mask)
@@ -207,7 +212,7 @@ class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class PrayerAdvisor(Advisor):
-    def advice(self, _0, _1, _2, _3, _4, _5):
+    def advice(self, rng, character, _1, _2, _3, _4, _5):
         pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", {
             "Are you sure you want to pray?": utilities.keypress_action(ord('y')),
@@ -259,12 +264,12 @@ class DownstairsAdvisor(Advisor):
 
         return willing_to_descend
 
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         pass
 
 
 class TakeDownstairsAdvisor(DownstairsAdvisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.on_downstairs:
             willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory)
             if willing_to_descend:
@@ -273,7 +278,7 @@ class TakeDownstairsAdvisor(DownstairsAdvisor):
         return None
 
 class KickLockedDoorAdvisor(Advisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flag):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flag):
         if "This door is locked" in message.message:
             kick = nethack.actions.Command.KICK
             door_directions = neighborhood.action_grid[np.vectorize(lambda g: getattr(g, 'is_closed_door', False))(neighborhood.glyphs)]
@@ -295,7 +300,7 @@ class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__cla
     def have_item_oclass(self, inventory):
         return utilities.have_item_oclasses(self.__class__.oclasses_used, inventory)
 
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if self.have_item_oclass(inventory):
             return self.use_item(rng, blstats, inventory, neighborhood, message, flags)
         return None
@@ -314,7 +319,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
         })
         return menu_plan
 
-    def use_item(self, _0, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, _1, inventory, _3, _4, flags):
         eat = nethack.actions.Command.EAT
         FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
         food_index = inventory['inv_oclasses'].tolist().index(FOOD_CLASS)
@@ -326,7 +331,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
 class ReadTeleportAdvisor(ItemUseAdvisor):
     oclasses_used = ['SCROLL_CLASS']
 
-    def use_item(self, _0, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, _1, inventory, _3, _4, flags):
         read = nethack.actions.Command.READ
         menu_plan = menuplan.MenuPlan("read teleportation scroll", {
             "What do you want to read?": utilities.keypress_action(ord('*'))
@@ -340,7 +345,7 @@ class ReadTeleportAdvisor(ItemUseAdvisor):
 class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
     oclasses_used = ['WAND_CLASS']
 
-    def use_item(self, _0, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, _1, inventory, _3, _4, flags):
         zap = nethack.actions.Command.ZAP
 
         menu_plan = menuplan.MenuPlan("zap teleportation wand", {"What do you want to zap?": utilities.keypress_action(ord('*'))}, interactive_menu_header_rows=0, menu_item_selector=lambda x: (x.category == "Wands") & ("teleporation" in x.item_appearance), expects_strange_messages=True)
@@ -348,7 +353,7 @@ class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
 
 class DrinkHealingPotionAdvisor(ItemUseAdvisor):
     oclasses_used = ['POTION_CLASS']
-    def use_item(self, _0, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, _1, inventory, _3, _4, flags):
         quaff = nethack.actions.Command.QUAFF
         menu_plan = menuplan.MenuPlan("drink healing potion", {
             "What do you want to drink?": utilities.keypress_action(ord('*')),
@@ -360,11 +365,11 @@ class DrinkHealingPotionAdvisor(ItemUseAdvisor):
         return Advice(self.__class__, quaff, menu_plan)
 
 class FallbackSearchAdvisor(Advisor):
-    def advice(self, _0, _1, _2, _3, _4, _5):
+    def advice(self, rng, character, _1, _2, _3, _4, _5):
         return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
 
 class NoUnexploredSearchAdvisor(Advisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)).any():
             return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
         return None
@@ -374,7 +379,7 @@ class RandomAttackAdvisor(Advisor):
         targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask
         return targeted_monster_mask
 
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
         monster_directions = neighborhood.action_grid[targeted_monster_mask]
         if monster_directions.any():
@@ -389,7 +394,7 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
         return targeted_monster_mask
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         is_monster = neighborhood.is_monster()
         targeted_monster_mask = self.get_target_monsters(neighborhood)
 
@@ -417,15 +422,53 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
         return None
 
 class PickupAdvisor(Advisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.desirable_object_on_space:
             menu_plan = menuplan.MenuPlan("pick up comestibles and safe corpses", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
             print("Pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 
+class EatCorpseAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if not flags.fresh_corpse_on_square:
+            return None
+        if flags.am_satiated:
+            return None
+        corpse_spoiler = neighborhood.fresh_corpse_on_square_glyph.corpse_spoiler
+        if not corpse_spoiler:
+            return None
+        if corpse_spoiler.slime or corpse_spoiler.petrify or corpse_spoiler.instadeath:
+            return None
+
+        # For these remaining checks, maybe skip them if I'm hungry enough
+        if character.can_cannibalize() and (corpse_spoiler.race_for_cannibalism == character.base_race):
+            return None
+        if character.can_cannibalize() and corpse_spoiler.aggravate:
+            return None
+        if any([
+            corpse_spoiler.acidic,
+            corpse_spoiler.poisonous,
+            corpse_spoiler.stun,
+            corpse_spoiler.polymorph,
+            corpse_spoiler.hallucination,
+            corpse_spoiler.lycanthropy,
+            corpse_spoiler.teleportitis,
+            corpse_spoiler.invisibility,
+            corpse_spoiler.speed_toggle
+        ]):
+            return None
+        menu_plan = menuplan.MenuPlan(
+            "eat corpse on square",
+            OrderedDict([
+                (f"{neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat", utilities.keypress_action(ord('y'))),
+                ("here; eat", utilities.keypress_action(ord('n'))),
+                ("want to eat?", utilities.ACTION_LOOKUP[nethack.actions.Command.ESC]),
+            ]))
+        return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)
+
 class TravelToDownstairsAdvisor(DownstairsAdvisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory)
         
         if willing_to_descend:
@@ -442,7 +485,7 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
         return None
 
 class EnhanceSkillsAdvisor(Advisor):
-    def advice(self, rng, blstats, inventory, neighborhood, message, flags):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         enhance = nethack.actions.Command.ENHANCE
         menu_plan = menuplan.MenuPlan("enhance skills", {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: True, expects_strange_messages=True)
 
@@ -482,7 +525,10 @@ advisors = [
         FallbackSearchAdvisor: 30,
         RandomUnthreatenedMoveAdvisor: 1,
         }),
-    AdvisorLevel({PickupAdvisor: 1,}),
+    AdvisorLevel({
+        PickupAdvisor: 1,
+        EatCorpseAdvisor: 1,
+    }),
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({

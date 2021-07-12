@@ -7,6 +7,7 @@ from nle import nethack
 import pandas as pd
 
 import environment
+from utilities import ARS
 
 class CorpseSpoiler(NamedTuple):
     name: str

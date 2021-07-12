@@ -2,6 +2,7 @@ from pdb import run
 import base64
 import os
 import re
+from typing import NamedTuple
 
 import numpy as np
 import itertools
@@ -21,6 +22,8 @@ if environment.env.debug:
 
 # Config variable that are screwing with me
 # pile_limit
+
+ACCEPTABLE_CORPSE_AGE = 40
 
 class BLStats():
     bl_meaning = [
@@ -42,6 +45,7 @@ class RecordedMonsterDeath():
         self.time = time
         self.monster_name = monster_name
         self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
+        self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
     death_log_line = re.compile("You kill the (poor )?(.+?)( of .+?)?!")
 
@@ -180,12 +184,10 @@ class Neighborhood():
 
         return threat_map
 
-    def __init__(self, player_location, observation, dmap, previous_glyph_on_player):
+    def __init__(self, player_location, observation, dmap, previous_glyph_on_player, latest_monster_death):
+        blstats = BLStats(observation['blstats'])
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
-
-        col_lim = observation['glyphs'].shape[1]
-        row_lim = observation['glyphs'].shape[0]
 
         window_size = 1
 
@@ -220,9 +222,10 @@ class Neighborhood():
         threat_row_slice, threat_col_slice = Neighborhood.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
         self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
         self.threatened = self.threat > 0
-        if self.threatened.any(): pass#pdb.set_trace()
-        
-        #pdb.set_trace()
+
+        self.fresh_corpse_on_square_glyph = None
+        if latest_monster_death and latest_monster_death.can_corpse and (player_location == latest_monster_death.square) and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+            self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
     def glyph_set_to_directions(self, glyph_set):
         matches = np.isin(self.raw_glyphs, glyph_set)
@@ -244,6 +247,19 @@ BackgroundMenuPlan = menuplan.MenuPlan("background",{
     "little trouble lifting": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
 })
 
+class Character(NamedTuple):
+    base_race: str
+    base_class: str
+    base_sex: str
+    base_alignment: str
+
+    def can_cannibalize(self):
+        if self.base_race == 'orc':
+            return False
+        if self.base_class == 'Caveman' or self.base_class == 'Cavewoman':
+            return False
+        return True
+
 class RunState():
     def __init__(self):
         self.reset()
@@ -251,10 +267,7 @@ class RunState():
 
     def reset(self):
         self.reading_base_attributes = False
-        self.base_race = None
-        self.base_class = None
-        self.base_sex = None
-        self.base_alignment = None
+        self.character = None
         self.gods_by_alignment = {}
 
         self.step_count = 0
@@ -317,13 +330,17 @@ class RunState():
         attribute_match_2 = re.search(self.attribute_pattern_2, raw_screen_content)
         attribute_match_3 = re.search(self.attribute_pattern_3, raw_screen_content)
         if attribute_match_1[1] is None:
-            self.base_sex = self.class_to_sex_mapping[attribute_match_1[3]]
+            base_sex = self.class_to_sex_mapping[attribute_match_1[3]]
         else:
-            self.base_sex = attribute_match_1[1]
-        self.base_race = self.base_race_mapping[attribute_match_1[2]]
-        self.base_class = attribute_match_1[3]
-        self.base_alignment = attribute_match_2[1]
-        self.gods_by_alignment[self.base_alignment] = attribute_match_2[2]
+            base_sex = attribute_match_1[1]
+        character = Character(
+            base_sex=base_sex,
+            base_race = self.base_race_mapping[attribute_match_1[2]],
+            base_class = attribute_match_1[3],
+            base_alignment = attribute_match_2[1],
+        )
+        self.character = character
+        self.gods_by_alignment[character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
         self.reading_base_attributes = False
@@ -475,11 +492,13 @@ class CustomAgent(BatchedAgent):
             # currently bad at ranged attacks, confusion, and more
             if not run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.FIRE]:
                 delta = Neighborhood.action_to_delta[run_state.last_non_menu_action]
-                run_state.latest_monster_death = RecordedMonsterDeath(
+                recorded_death = RecordedMonsterDeath(
                     (player_location[0] + delta[0], player_location[1] + delta[1]),
                     blstats.get('time'),
                     killed_monster_name
                 )
+                if recorded_death.can_corpse:
+                    run_state.latest_monster_death = recorded_death
 
         if "corpse tastes" in message.message:
             print(message.message)
@@ -502,7 +521,7 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval, menu_plan=True)
             return retval
 
-        if not run_state.base_race:
+        if not run_state.character:
             retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
             run_state.reading_base_attributes = True
             run_state.log_action(retval, menu_plan=True)
@@ -514,7 +533,8 @@ class CustomAgent(BatchedAgent):
                 run_state.log_action(retval, menu_plan=run_state.active_menu_plan)
                 return retval
 
-        neighborhood = Neighborhood(player_location, observation, run_state.dmap, previous_glyph_on_player)
+        neighborhood = Neighborhood(
+            player_location, observation, run_state.dmap, previous_glyph_on_player, run_state.latest_monster_death)
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 
@@ -525,7 +545,7 @@ class CustomAgent(BatchedAgent):
             if advisor_level.check_flags(flags):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state.rng, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
