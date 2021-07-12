@@ -457,8 +457,6 @@ class CustomAgent(BatchedAgent):
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
-        run_state.update_observation(observation)
-
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
@@ -473,6 +471,8 @@ class CustomAgent(BatchedAgent):
                 if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
                     run_state.glyph_under_player = previous_glyph_on_player
         previous_glyph_on_player = run_state.glyph_under_player
+
+        run_state.update_observation(observation) # moved after previous glyph futzing
 
         if run_state.step_count % 1000 == 0:
             print_stats(done, run_state, blstats)

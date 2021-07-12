@@ -237,6 +237,7 @@ class DownstairsAdvisor(Advisor):
         14: 60,
     }
 
+    # deprecating this now that we eat corpses
     exp_lvl_to_max_mazes_lvl_no_food = {
         1:1,
         2:2,
@@ -257,16 +258,16 @@ class DownstairsAdvisor(Advisor):
     @classmethod
     def check_willingness_to_descend(cls, blstats, inventory):
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        else:
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-
+        #if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
+        #    willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        #else:
+        #    willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        
+        willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         return willing_to_descend
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         pass
-
 
 class TakeDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
@@ -509,13 +510,13 @@ advisors = [
     CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
     ThreatenedMoreThanOnceAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1,}),
+    WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
+    WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({
         RandomSafeMeleeAttack: 30,
         RandomUnthreatenedMoveAdvisor: 10,
         RandomLeastThreatenedMoveAdvisor: 1,
         }),
-    WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
-    WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({ # should only reach if we have no safe melee
         RandomRangedAttackAdvisor: 1,
         MostNovelUnthreatenedMoveAdvisor: 3,
