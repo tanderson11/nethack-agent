@@ -392,8 +392,8 @@ class RandomAttackAdvisor(Advisor):
 
 class RandomSafeMeleeAttack(RandomAttackAdvisor):
     def get_target_monsters(self, neighborhood):
-        never_melee_mask = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph) and g.never_melee)(neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~never_melee_mask
+        has_passive_mask = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive)(neighborhood.glyphs)
+        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask
         return targeted_monster_mask
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):

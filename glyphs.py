@@ -8,6 +8,7 @@ import pandas as pd
 
 import environment
 from utilities import ARS
+from spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
 
 class CorpseSpoiler(NamedTuple):
     name: str
@@ -34,6 +35,7 @@ class CorpseSpoiler(NamedTuple):
 CORPSES_BY_NAME = {}
 
 corpse_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "corpses.csv"))
+
 for field in CorpseSpoiler._fields:
     CorpseSpoiler._field_mapping[field] = field.capitalize().replace("_", " ")
 for _, row in corpse_df.iterrows():
@@ -91,6 +93,10 @@ class MonsterAlikeGlyph(Glyph):
         if not self.name in self.NEVER_CORPSE and not self.animated_dead and self.name != 'long worm tail':
             self.corpse_spoiler = CORPSES_BY_NAME[self.name]
 
+        self.monster_spoiler = None
+        if self.name != 'long worm tail':
+            self.monster_spoiler = MONSTERS_BY_NAME[self.name] 
+
 class MonsterGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_MON_OFF
     COUNT = nethack.NUMMONS
@@ -98,8 +104,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
     def __init__(self, numeral):
         super().__init__(numeral)
         
-        self.never_melee = self.offset in [6, 27, 28, 55, 56, 57, 158] # acid blobs, gas spores, floating eye, jellies, green molds, 
-        self.has_melee = self.offset not in [6, 28, 55, 56, 57, 158] # someday know about melee (probably in the monster data)
+        if self.monster_spoiler is not None:
+            self.has_passive = self.monster_spoiler.passive_attack_bundle.num_attacks > 0
+            self.has_melee = self.monster_spoiler.melee_attack_bundle.num_attacks > 0
 
     @classmethod
     def names(cls):
