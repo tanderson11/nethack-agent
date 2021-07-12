@@ -141,6 +141,18 @@ class Neighborhood():
         utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SE]: (1, 1),
     }
 
+    row_offset_grid = np.array([
+        [-1, -1, -1,],
+        [0, 0, 0,],
+        [1, 1, 1,],
+    ])
+
+    col_offset_grid = np.array([
+        [-1, 0, 1,],
+        [-1, 0, 1,],
+        [-1, 0, 1,],
+    ])
+
     diagonal_moves = np.vectorize(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8)(action_grid)
 
     @staticmethod
@@ -157,7 +169,7 @@ class Neighborhood():
         return row_slice, col_slice
 
     @staticmethod
-    def move_slice_center(old_center, new_center, slices): # we have a slice (4,7) with a center of (5) that implies we want the slice
+    def move_slice_center(old_center, new_center, slices):
         old_center_row, old_center_col = old_center
         new_center_row, new_center_col = new_center
 
@@ -169,7 +181,6 @@ class Neighborhood():
         relative_row_slice = slice(row_slice.start-row_translate,row_slice.stop-row_translate)
         relative_col_slice = slice(col_slice.start-col_translate,col_slice.stop-col_translate)
 
-        #pdb.set_trace()
         return relative_row_slice, relative_col_slice
 
     def calculate_threat(self, glyph_grid, player_location_in_glyph_grid):
@@ -210,10 +221,7 @@ class Neighborhood():
         open_door = np.vectorize(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door)(self.glyphs)
         on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
 
-        try:
-            self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
-        except TypeError:
-            if environment.env.debug: pdb.set_trace()
+        self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
 
         self.previous_glyph_on_player = previous_glyph_on_player
 
@@ -222,6 +230,14 @@ class Neighborhood():
         threat_row_slice, threat_col_slice = Neighborhood.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
         self.threat = self.calculate_threat(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)[threat_row_slice,threat_col_slice]
         self.threatened = self.threat > 0
+
+        
+        self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
+        if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+            absolute_row_offsets = self.__class__.row_offset_grid[action_grid_row_slice, action_grid_column_slice] + self.player_location[0]
+            absolute_col_offsets = self.__class__.col_offset_grid[action_grid_row_slice, action_grid_column_slice] + self.player_location[1]
+
+            self.has_fresh_corpse = (absolute_row_offsets == latest_monster_death.square[0]) & (absolute_col_offsets == latest_monster_death.square[1])
 
         self.fresh_corpse_on_square_glyph = None
         if latest_monster_death and latest_monster_death.can_corpse and (player_location == latest_monster_death.square) and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
@@ -234,7 +250,8 @@ class Neighborhood():
         return directions
 
     def is_monster(self):
-        return np.vectorize(lambda g: (isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph)))(self.glyphs)
+        mons = np.array([isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) for g in np.ravel(self.glyphs)]).reshape(self.glyphs.shape)
+        return mons
 
 BackgroundMenuPlan = menuplan.MenuPlan("background",{
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),

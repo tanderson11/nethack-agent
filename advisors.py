@@ -107,16 +107,13 @@ class CriticallyInjuredAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_critically_injured
 
-
 class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_critically_injured and flags.neighborhood.threat[flags.neighborhood.players_square_mask] == 0
 
-
 class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.blstats.get('dungeon_number') == 0
-
 
 #class NoMovesAdvisor(AdvisorLevel):
 #    def check_flags(self, flags):
@@ -157,6 +154,7 @@ class RandomMoveAdvisor(MoveAdvisor):
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
         possible_actions = neighborhood.action_grid[agreeable_move_mask]
 
+        #print(possible_actions)
         if possible_actions.any():
             return Advice(self.__class__, rng.choice(possible_actions), None)
         else:
@@ -198,6 +196,10 @@ class LeastNovelNonObjectGlyphMoveAdvisor(LeastNovelMoveAdvisor):
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
         return neighborhood.walkable & ~neighborhood.threatened
+
+class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+        return neighborhood.walkable & neighborhood.has_fresh_corpse
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -538,6 +540,7 @@ advisors = [
             RandomAttackAdvisor: 1, # even nasty
         }),
     UnthreatenedMovesAdvisorLevel({
+        FreshCorpseMoveAdvisor: 1500,
         DesirableObjectMoveAdvisor: 500,
         MostNovelUnthreatenedMoveAdvisor: 100,
         NoUnexploredSearchAdvisor: 100,
