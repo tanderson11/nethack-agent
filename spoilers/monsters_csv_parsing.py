@@ -21,7 +21,7 @@ class MonsterSpoiler():
 		self.passive_attack_bundle = passive_attack_bundle
 
 class AttackBundle():
-	always_matches = False
+	matches_no_prefix = False
 	prefix_set = set()
 	dice_pattern = re.compile('([0-9]+)d([0-9]+)')
 	digit_pattern = re.compile('[0-9]')
@@ -110,14 +110,14 @@ class AttackBundle():
 
 	def __init__(self, attack_strs):
 		self.num_attacks = 0
-		
+
 		self.min_damage = 0
 		self.expected_damage = 0
 		self.max_damage = 0
 
 		damage_types = []
 		for a in attack_strs:
-			if a[0] in self.__class__.prefix_set or self.__class__.always_matches: # we care about this kind of attack
+			if a[0] in self.__class__.prefix_set or (re.match(self.__class__.digit_pattern, a[0]) and self.__class__.matches_no_prefix): # we care about this kind of attack
 				self.num_attacks += 1
 				suffix_match = re.search(self.__class__.suffix_pattern, a)	
 				if suffix_match:
@@ -154,8 +154,9 @@ class DeathAttackBundle(AttackBundle):
 	prefix_set = set(['['])
 
 class MeleeAttackBundle(AttackBundle):
-	#prefix_set = set('W', 'H', 'X', 'E') # what attacks should match both melee and ranged? TK
-	always_matches = True
+	#prefix_set = set(['B', 'E', 'G', 'H', 'M', 'S', 'W', 'X']) # what attacks should match both melee and ranged? TK
+	prefix_set = set(['E', 'G', 'H', 'M', 'W', 'X'])
+	matches_no_prefix = True
 
 class PassiveAttackBundle(AttackBundle):
 	prefix_set = set(['('])

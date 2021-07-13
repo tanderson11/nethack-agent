@@ -536,11 +536,11 @@ advisors = [
         PickupAdvisor: 1,
         EatCorpseAdvisor: 1,
     }),
-    DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
+    DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}), # don't kick doors in other branches bc minetown
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AllMovesThreatenedAdvisorLevel({
             FallbackSearchAdvisor: 50,
-            RandomMoveAdvisor: 25,
+            RandomMoveAdvisor: 15,
             RandomAttackAdvisor: 1, # even nasty
         }),
     UnthreatenedMovesAdvisorLevel({
@@ -550,7 +550,7 @@ advisors = [
         NoUnexploredSearchAdvisor: 100,
         RandomUnthreatenedMoveAdvisor: 5,
         MostNovelMoveAdvisor: 1,
-        TravelToDownstairsAdvisor: 1,
+        TravelToDownstairsAdvisor: 5,
         }),
     AdvisorLevel({FallbackSearchAdvisor: 1,}),
 ]

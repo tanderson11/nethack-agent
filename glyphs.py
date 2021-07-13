@@ -107,6 +107,7 @@ class MonsterGlyph(MonsterAlikeGlyph):
         if self.monster_spoiler is not None:
             self.has_passive = self.monster_spoiler.passive_attack_bundle.num_attacks > 0
             self.has_melee = self.monster_spoiler.melee_attack_bundle.num_attacks > 0
+            self.has_ranged = self.monster_spoiler.ranged_attack_bundle.num_attacks > 0
 
     @classmethod
     def names(cls):
@@ -353,7 +354,7 @@ class CorpseGlyph(Glyph):
         super().__init__(numeral)
         self.walkable = True
 
-        self.safe_non_perishable = (self.offset in [155])
+        self.safe_non_perishable = (self.offset in [155, 322]) # lichens and lizards!
 
     def desirable_object(self):
         return self.safe_non_perishable
@@ -373,6 +374,11 @@ class ZapGlyph(Glyph):
 class SwallowGlyph(Glyph):
     OFFSET = nethack.GLYPH_SWALLOW_OFF
     COUNT = nethack.NUMMONS * 8
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+
+        self.swallowing_monster_offset = (self.offset - self.offset % 8)/8 + MonsterGlyph.OFFSET
 
 class WarningGlyph(Glyph):
     OFFSET = nethack.GLYPH_WARNING_OFF
