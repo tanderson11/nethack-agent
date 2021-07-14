@@ -1,5 +1,6 @@
 import nle.nethack as nethack
 import glyphs as gd
+import numpy as np
 
 class ActiveRunState():
     def __init__(self):
@@ -25,3 +26,6 @@ def have_item_oclasses(oclasses, inventory):
     for oclass in oclasses:
         if gd.ObjectGlyph.OBJECT_CLASSES.index(oclass) in inventory['inv_oclasses']: return True
     return False
+
+def vectorized_map(f, nd_array):
+    return np.array(list(map(f, nd_array.ravel()))).reshape(nd_array.shape)
