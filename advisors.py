@@ -195,7 +195,7 @@ class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
 
 class LeastNovelNonObjectGlyphMoveAdvisor(LeastNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & ~neighborhood.threatened & np.vectorize(lambda g: not isinstance(g, gd.ObjectGlyph))(neighborhood.glyphs)
+        return neighborhood.walkable & ~neighborhood.threatened & utilities.vectorized_map(lambda g: not isinstance(g, gd.ObjectGlyph), neighborhood.glyphs)
 
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -207,7 +207,7 @@ class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & np.vectorize(lambda g: getattr(g, 'desirable_object', lambda: False)())(neighborhood.glyphs) # desirable objects
+        return neighborhood.walkable & utilities.vectorized_map(lambda g: getattr(g, 'desirable_object', lambda: False)(), neighborhood.glyphs)
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -288,7 +288,7 @@ class KickLockedDoorAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flag):
         if "This door is locked" in message.message:
             kick = nethack.actions.Command.KICK
-            door_directions = neighborhood.action_grid[np.vectorize(lambda g: getattr(g, 'is_closed_door', False))(neighborhood.glyphs)]
+            door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: getattr(g, 'is_closed_door', False), neighborhood.glyphs)]
             if len(door_directions) > 0:
                 a = rng.choice(door_directions)
             else: # we got the locked door message but didn't find a door
@@ -377,7 +377,7 @@ class FallbackSearchAdvisor(Advisor):
 
 class NoUnexploredSearchAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (np.vectorize(lambda g: getattr(g, 'possible_secret_door', False))(neighborhood.glyphs)).any():
+        if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (utilities.vectorized_map(lambda g: getattr(g, 'possible_secret_door', False), neighborhood.glyphs)).any():
             return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
         return None
 
@@ -396,7 +396,7 @@ class RandomAttackAdvisor(Advisor):
 
 class RandomSafeMeleeAttack(RandomAttackAdvisor):
     def get_target_monsters(self, neighborhood):
-        has_passive_mask = np.vectorize(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive)(neighborhood.glyphs)
+        has_passive_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive, neighborhood.glyphs)
         targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask
         return targeted_monster_mask
 
@@ -440,6 +440,7 @@ class EatCorpseAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if not flags.fresh_corpse_on_square:
             return None
+
         if flags.am_satiated:
             return None
         corpse_spoiler = neighborhood.fresh_corpse_on_square_glyph.corpse_spoiler

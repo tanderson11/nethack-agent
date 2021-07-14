@@ -199,7 +199,7 @@ class Neighborhood():
             while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
                 glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_grid[current]]
                 if isinstance(glyph, gd.CMapGlyph) and glyph.is_wall: # is this the full extent of what blocks projectiles/rays?
-                    break # should we do anything with bouncing
+                    break # should we do anything with bouncing rays
 
                 ray_mask[current] = True
 
@@ -209,7 +209,6 @@ class Neighborhood():
             masks.append(ray_mask)
 
         can_hit_mask = np.logical_or.reduce(masks)
-        #pdb.set_trace()
         return can_hit_mask
 
     def calculate_threat(self, glyph_grid, player_location_in_glyph_grid):
@@ -230,7 +229,7 @@ class Neighborhood():
                         damage_threat_map[row_slice, col_slice] += glyph.monster_spoiler.melee_attack_bundle.max_damage
 
                     if isinstance(glyph, gd.InvisibleGlyph):
-                        damage_threat_map[row_slice, col_slice] += INVISIBLE_DAMAGE_THREAT# how should we imagine the threat of invisible monsters
+                        damage_threat_map[row_slice, col_slice] += INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
 
                     if isinstance(glyph,gd.SwallowGlyph):
                         damage_threat_map[row_slice, col_slice] += gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage/8 # stomachs do approx 1/8 of the monster damage 
@@ -258,15 +257,17 @@ class Neighborhood():
         self.action_grid = self.__class__.action_grid[action_grid_row_slice, action_grid_col_slice]
         diagonal_moves = self.__class__.diagonal_moves[action_grid_row_slice, action_grid_col_slice]
 
-        vectorized_lookup = np.vectorize(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g))
         self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
-        self.glyphs = vectorized_lookup(self.raw_glyphs)
+        self.glyphs = utilities.vectorized_map(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g), self.raw_glyphs)
 
         self.visits = dmap.visits_map[row_slice, col_slice]
         self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
-        walkable_tile = np.vectorize(lambda g: g.walkable)(self.glyphs)
-        open_door = np.vectorize(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door)(self.glyphs)
+        #self.player_location_in_neighborhood = 
+
+
+        walkable_tile = utilities.vectorized_map(lambda g: g.walkable, self.glyphs)
+        open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
         on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
 
         self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
@@ -301,7 +302,7 @@ class Neighborhood():
         return directions
 
     def is_monster(self):
-        mons = np.array([isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) for g in np.ravel(self.glyphs)]).reshape(self.glyphs.shape)
+        mons = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph), self.glyphs)
         return mons
 
 BackgroundMenuPlan = menuplan.MenuPlan("background",{
@@ -638,7 +639,7 @@ class CustomAgent(BatchedAgent):
             retval = utilities.ACTION_LOOKUP[action]
         except UnboundLocalError:
             print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time due to intrinsic speed.")
-            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH] 
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]
             menu_plan = None
             #if environment.env.debug: pdb.set_trace()
         run_state.log_action(retval)
