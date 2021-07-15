@@ -273,8 +273,9 @@ class Neighborhood():
     def is_monster(self):
         mons = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph), self.glyphs)
         return mons
-
-BackgroundMenuPlan = menuplan.MenuPlan("background",{
+ 
+background_advisor = advs.BackgroundActionsAdvisor()
+BackgroundMenuPlan = menuplan.MenuPlan("background", background_advisor, {
     '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
     "Call a ": utilities.keypress_action(ord('\r')),
     "Call an ": utilities.keypress_action(ord('\r')),
@@ -368,8 +369,8 @@ class RunState():
 
     def make_seeded_rng(self):
         import random
-        seed = base64.b64encode(os.urandom(4))
-        #seed = b'REl78g=='
+        #seed = base64.b64encode(os.urandom(4))
+        seed = b'g4kEfA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -597,13 +598,15 @@ class CustomAgent(BatchedAgent):
 
         if message.has_more and message.interactive_menu_class is None:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
-            run_state.log_action(retval, menu_plan=True)
+            dummy_menu_plan = type('MenuPlan', (), {"name":"hit space if more", "advisor":background_advisor})()
+            run_state.log_action(retval, menu_plan=dummy_menu_plan)
             return retval
 
         if not run_state.character:
             retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
             run_state.reading_base_attributes = True
-            run_state.log_action(retval, menu_plan=True)
+            dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
+            run_state.log_action(retval, menu_plan="dummy_menu_plan")
             return retval
 
         if message:

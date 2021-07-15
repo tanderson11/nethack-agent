@@ -10,8 +10,9 @@ import nle.nethack as nethack
 from utilities import ARS
 
 class MenuPlan():
-    def __init__(self, name, match_to_keypress, interactive_menu_header_rows=None, menu_item_selector=None, expects_strange_messages=False, fallback=None):
+    def __init__(self, name, advisor, match_to_keypress, interactive_menu_header_rows=None, menu_item_selector=None, expects_strange_messages=False, fallback=None):
         self.name = name
+        self.advisor = advisor
         self.match_to_keypress = match_to_keypress
         self.keypress_count = 0
 
@@ -107,7 +108,6 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.item_equipped_status = ''
 
             match = re.match(self.pattern, item_text)
-            #pdb.set_trace()
             if match:
                 if match[1] == "a" or match[1] == "an":
                     self.quantity = 1
