@@ -104,6 +104,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
     def __init__(self, numeral):
         super().__init__(numeral)
         
+        #self.has_passive = False
+        #self.has_melee = False
+        #self.has_ranged = False
         if self.monster_spoiler is not None:
             self.has_passive = self.monster_spoiler.passive_attack_bundle.num_attacks > 0
             self.has_melee = self.monster_spoiler.melee_attack_bundle.num_attacks > 0

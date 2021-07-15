@@ -40,7 +40,7 @@ class AttackBundle():
 	digit_pattern = re.compile('[0-9]')
 	suffix_pattern = re.compile('([^0-9\)\]]+)(?:\)|\])?$')
 
-	class DamageTypes(NamedTuple): # some day we should disambiguate damage qualities and damage quantitie
+	class DamageTypes(NamedTuple): # some day we should disambiguate damage qualities and damage quantities
 		acid: bool
 		cold: bool
 		disintegration: bool

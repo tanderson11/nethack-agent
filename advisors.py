@@ -243,7 +243,7 @@ class DownstairsAdvisor(Advisor):
         14: 60,
     }
 
-    # deprecating this now that we eat corpses
+    # getting slightly less aggressive now that we eat corpses
     exp_lvl_to_max_mazes_lvl_no_food = {
         1:1,
         2:2,
@@ -251,25 +251,25 @@ class DownstairsAdvisor(Advisor):
         4:4,
         5:5,
         6:6,
-        7:9,
-        8:9,
+        7:6,
+        8:8,
         9:10,
-        10: 12,
-        11: 16,
-        12: 20,
-        13: 20,
-        14: 60,
+        10:12,
+        11:16,
+        12:20,
+        13:20,
+        14:60,
     }
 
     @classmethod
     def check_willingness_to_descend(cls, blstats, inventory):
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        #if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
-        #    willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        #else:
-        #    willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
+            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        else:
+            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         
-        willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        #willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         return willing_to_descend
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
