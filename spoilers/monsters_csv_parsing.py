@@ -5,20 +5,33 @@ from typing import NamedTuple
 import re
 import numpy as np
 
-resist_mapping = {'F': 'fire', 'C': 'cold', 'S': 'sleep', 'D': 'disintegration', 'E': 'electric', 'P': 'poison', 'A': 'acid', '*': 'stoning'}
-
-#resist_mapping = pd.read_csv(os.path.join(os.path.dirname(__file__), "monster_attack_suffixes.csv"))
-#resist_mapping['clean'] = resist_mapping['inflicts'].str.lower().str.split(' ').str[0]
-#resist_mapping = resist_mapping.drop(['inflicts', 'Unnamed: 0'], axis=1).set_index('suffix').squeeze().to_dict()
-
 class MonsterSpoiler():
-	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle):
+	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists):
 		self.name = ''
 		self.melee_attack_bundle = melee_attack_bundle
 		self.ranged_attack_bundle = ranged_attack_bundle
 		self.death_attack_bundle = death_attack_bundle
 		self.engulf_attack_bundle = engulf_attack_bundle
 		self.passive_attack_bundle = passive_attack_bundle
+
+		self.level = level
+		self.AC = AC
+		self.speed = speed
+		self.MR = MR
+
+		self.resists = resists
+
+class Resists(NamedTuple):
+	fire: bool
+	cold: bool
+	sleep: bool
+	disintegration: bool
+	electric: bool
+	poison: bool
+	acid: bool
+	stoning: bool
+
+	resist_mapping = {'F': 'fire', 'C': 'cold', 'S': 'sleep', 'D': 'disintegration', 'E': 'electric', 'P': 'poison', 'A': 'acid', '*': 'stoning'}
 
 class AttackBundle():
 	matches_no_prefix = False
@@ -144,7 +157,6 @@ class AttackBundle():
 		for t in damage_types:
 			damage_type_dict[self.__class__.DamageTypes.suffix_mapping[t][0]] = True
 
-		#print(damage_type_dict)
 		self.damage_types = self.__class__.DamageTypes(**damage_type_dict)
 
 class RangedAttackBundle(AttackBundle):
@@ -165,22 +177,11 @@ class EngulfAttackBundle(AttackBundle):
 	prefix_set = set(['E'])
 
 monster_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "monsters.csv"))
-#monster_df.loc[monster_df['SPECIES'] == 'golden naga hatchlin', 'SPECIES'] = "golden naga hatchling"
-#monster_df.loc[monster_df['SPECIES'] == 'guardian naga hatchl', 'SPECIES'] = "guardian naga hatchling"
 
 monster_df=monster_df.set_index('SPECIES')
 
-#monster_df.loc[monster_df.index == 'mind flayer', 'ATTACKS'] = "W1d4 2d1!I 2d1!I 2d1!I"
-#monster_df.loc[monster_df.index == 'master mind flayer', 'ATTACKS'] = "W1d8 2d1!I 2d1!I 2d1!I 2d1!I 2d1!I"
-#import pdb; pdb.set_trace()
-#monster_df
-
 #with open(os.path.join(os.path.dirname(__file__), "monsters_new.csv"), 'w') as f:
 #	monster_df.to_csv(f)
-
-
-# some special cases that I really should save into the csv
-#monster_df[]
 
 MONSTERS_BY_NAME = {}
 for _, row in monster_df.iterrows():
@@ -196,7 +197,20 @@ for _, row in monster_df.iterrows():
 	engulf_bundle = EngulfAttackBundle(attack_strs)
 	death_bundle = DeathAttackBundle(attack_strs)
 
-	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle)
+	level = row['LVL']
+	AC = row['AC']
+	speed = row['SPD']
+	MR = row['MR']
+
+	resists_dict = {r: False for r in Resists._fields}
+
+	if row['RESISTS'] is not np.nan:
+		for c in row['RESISTS'].upper():
+			resists_dict[Resists.resist_mapping[c]] = True
+
+	resists = Resists(**resists_dict)
+
+	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists)
 	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage)
 	#print(name, {k:v for k,v in zip(melee_bundle.damage_types._fields, melee_bundle.damage_types) if v==True})
 	MONSTERS_BY_NAME[name] = spoiler
