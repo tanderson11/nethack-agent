@@ -45,7 +45,12 @@ class RecordedMonsterDeath():
         self.square = square
         self.time = time
         self.monster_name = monster_name
-        self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
+        try:
+            self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
+        except BadGlyphName:
+            # might happen when hallucinating
+            raise('BadGlyphName')
+
         self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
     death_log_line = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
@@ -336,7 +341,7 @@ class Character(NamedTuple):
         return True
 
 class RunState():
-    def __init__(self, debug_env):
+    def __init__(self, debug_env=None):
         self.reset()
         self.debug_env = debug_env
         self.log_path = None
@@ -403,7 +408,7 @@ class RunState():
 
     def make_seeded_rng(self):
         import random
-        #seed = base64.b64encode(os.urandom(4))
+        seed = base64.b64encode(os.urandom(4))
         #seed = b'REl78g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
