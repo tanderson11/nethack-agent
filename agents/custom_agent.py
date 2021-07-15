@@ -1,5 +1,6 @@
 from pdb import run
 import base64
+import csv
 import os
 import re
 from typing import NamedTuple
@@ -335,9 +336,38 @@ class Character(NamedTuple):
         return True
 
 class RunState():
-    def __init__(self):
+    def __init__(self, debug_env):
         self.reset()
-        self.debug_env = None
+        self.debug_env = debug_env
+        self.log_path = None
+        if environment.env.debug:
+            self.log_path = os.path.join(debug_env.savedir, "log.csv")
+            with open(self.log_path, 'w') as log_file:
+                writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
+                writer.writeheader()
+
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'hunger', 'message_log', 'action_log', 'score']
+
+    def log(self):
+        if not self.log_path:
+            return
+        with open(self.log_path, 'a') as log_file:
+            writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
+            writer.writerow({
+                'race': self.character.base_race,
+                'class': self.character.base_class,
+                'level': self.blstats.get('experience_level'),
+                'depth': self.blstats.get('depth'),
+                'branch': self.blstats.get('dungeon_number'),
+                'branch_level': self.blstats.get('level_number'),
+                'time': self.blstats.get('time'),
+                'hp': self.blstats.get('hitpoints'),
+                'max_hp': self.blstats.get('max_hitpoints'),
+                'hunger': self.blstats.get('hunger_state'),
+                'message_log': "||".join(self.message_log[-10:]),
+                'action_log': "||".join([nethack.ACTIONS[num].name for num in self.action_log[-10:]]),
+                'score': self.reward,
+            })
 
     def reset(self):
         self.reading_base_attributes = False
@@ -430,8 +460,10 @@ class RunState():
         # our metric for time advanced: true if game time advanced or if neighborhood changed
         # neighborhood equality assessed by glyphs and player location
 
+        blstats = BLStats(observation['blstats'].copy())
+
         # Potentially useful for checking stalls
-        new_time = BLStats(observation['blstats']).get('time')
+        new_time = blstats.get('time')
         if self.time == new_time:
             self.time_hung += 1
         else:
@@ -441,6 +473,8 @@ class RunState():
             pass
         self.time = new_time
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
+        self.blstats = blstats
+
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -508,10 +542,10 @@ class CustomAgent(BatchedAgent):
     def __init__(self, num_envs, num_actions, debug_envs=None):
         """Set up and load you model here"""
         super().__init__(num_envs, num_actions, debug_envs)
-        self.run_states = [RunState() for i in range(0, num_envs)]
         if self.debug_envs:
-            for i, env in enumerate(self.debug_envs):
-                self.run_states[i].debug_env = env
+            self.run_states = [RunState(self.debug_envs[i]) for i in range(0, num_envs)]
+        else:
+            self.run_states = [RunState() for i in range(0, num_envs)]
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
@@ -522,6 +556,7 @@ class CustomAgent(BatchedAgent):
         # Our previous run finished, we are now at the start of a new run
         if done:
             print_stats(done, run_state, blstats)
+            run_state.log()
             run_state.reset()
             level_changed = True
         else:
