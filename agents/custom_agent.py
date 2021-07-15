@@ -221,6 +221,11 @@ class Neighborhood():
         for g in it:
             glyph = gd.GLYPH_NUMERAL_LOOKUP[int(g)]
             if it.multi_index != player_location_in_glyph_grid:
+                try:
+                    isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee
+                except AttributeError:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+
                 if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph, gd.SwallowGlyph)):
                     row_slice, col_slice = Neighborhood.centered_slices_bounded_on_array(it.multi_index, (1, 1), glyph_grid) # radius one box around the location of g
                     n_threat_map[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
@@ -263,8 +268,8 @@ class Neighborhood():
         self.visits = dmap.visits_map[row_slice, col_slice]
         self.players_square_mask = self.action_grid == self.__class__.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
-        #self.player_location_in_neighborhood = 
-
+        x,y = np.where(self.players_square_mask)
+        self.player_location_in_neighborhood = list(zip(x,y))[0]
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable, self.glyphs)
         open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
@@ -368,8 +373,8 @@ class RunState():
 
     def make_seeded_rng(self):
         import random
-        seed = base64.b64encode(os.urandom(4))
-        #seed = b'lry4tg=='
+        #seed = base64.b64encode(os.urandom(4))
+        #seed = b'REl78g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
