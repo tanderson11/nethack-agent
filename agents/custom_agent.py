@@ -127,11 +127,21 @@ class DMap():
 
 class ThreatMap():
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
-    def __init__(self, glyph_grid, player_location_in_glyph_grid):
-        self.glyph_grid = glyph_grid
+
+    def __init__(self, all_glyphs, player_location, neighborhood_row_slice, neighborhood_col_slice, vision):
+        # take the section of the observed glyphs that is relevant
+        large_row_window, large_col_window = utilities.centered_slices_bounded_on_array(player_location, (vision, vision), all_glyphs)
+        player_location_in_glyph_grid = (player_location[0]-large_row_window.start, player_location[1]-large_col_window.start)
+        translated_row_slice, translated_col_slice = utilities.move_slice_center(player_location, player_location_in_glyph_grid, (neighborhood_row_slice, neighborhood_col_slice))
+        
+
+        self.neighborhood_view = (translated_row_slice, translated_col_slice)
+
+        self.glyph_grid = all_glyphs[large_row_window,large_col_window]
         self.player_location_in_glyph_grid = player_location_in_glyph_grid
 
         self.calculate_threat()
+        #self.calculate_implied_threat()
 
     def calculate_threat(self):
         melee_n_threat = np.zeros_like(self.glyph_grid)
@@ -243,14 +253,10 @@ class Neighborhood():
 
         self.previous_glyph_on_player = previous_glyph_on_player
 
-
-        large_row_window, large_col_window = utilities.centered_slices_bounded_on_array(self.player_location, (window_size+1, window_size+1), observation['glyphs'])
-        player_location_in_glyph_grid = (self.player_row-large_row_window.start, self.player_col-large_col_window.start)
-        threat_row_slice, threat_col_slice = utilities.move_slice_center(self.player_location, player_location_in_glyph_grid, (row_slice, col_slice))
-
-        threat_map = ThreatMap(observation['glyphs'][large_row_window,large_col_window], player_location_in_glyph_grid)
-        self.n_threat = threat_map.melee_n_threat[threat_row_slice,threat_col_slice]
-        self.damage_threat = threat_map.melee_damage_threat[threat_row_slice,threat_col_slice]
+        vision = 2
+        self.threat_map = ThreatMap(observation['glyphs'], self.player_location, row_slice, col_slice, vision)
+        self.n_threat = self.threat_map.melee_n_threat[self.threat_map.neighborhood_view]
+        self.damage_threat = self.threat_map.melee_damage_threat[self.threat_map.neighborhood_view]
         self.threatened = self.n_threat > 0
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
