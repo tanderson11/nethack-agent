@@ -114,6 +114,10 @@ class MonsterGlyph(MonsterAlikeGlyph):
             self.has_melee = self.monster_spoiler.melee_attack_bundle.num_attacks > 0
             self.has_ranged = self.monster_spoiler.ranged_attack_bundle.num_attacks > 0
 
+        self.always_peaceful = False
+        if self.offset == 267: # shopkeeper
+            self.always_peaceful = True
+
     @classmethod
     def names(cls):
         names = set()

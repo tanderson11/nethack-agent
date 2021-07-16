@@ -396,7 +396,8 @@ class NoUnexploredSearchAdvisor(Advisor):
 
 class RandomAttackAdvisor(Advisor):
     def get_target_monsters(self, neighborhood):
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask
+        always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
+        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~always_peaceful
         return targeted_monster_mask
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
@@ -409,13 +410,13 @@ class RandomAttackAdvisor(Advisor):
 
 class RandomSafeMeleeAttack(RandomAttackAdvisor):
     def get_target_monsters(self, neighborhood):
+        always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
         has_passive_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask
+        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask & ~always_peaceful
         return targeted_monster_mask
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        is_monster = neighborhood.is_monster()
         targeted_monster_mask = self.get_target_monsters(neighborhood)
 
         monster_directions = neighborhood.action_grid[targeted_monster_mask]

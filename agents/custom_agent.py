@@ -97,6 +97,7 @@ class Message():
             
             #"Can't find dungeon feature"
             self.failed_move = self.diagonal_out_of_doorway_message or self.diagonal_into_doorway_message or self.collapse_message
+            self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
 
     def __init__(self, message, tty_chars, misc_observation):
@@ -583,7 +584,7 @@ class RunState():
     def log_message(self, message):
         self.message_log.append(message.message)
 
-        if message.feedback.nevermind:
+        if message.feedback.nevermind or message.feedback.nothing_to_eat:
             eat_corpse_flag = False
             if self.advice_log[-1] is None:
                 if isinstance(self.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor):

@@ -2,6 +2,10 @@ from advisors import *
 
 small_advisors = [
     FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
+    CriticallyInjuredAndUnthreatenedAdvisorLevel({ # let's try to pray less in the early game by not praying if unthreatened
+        LeastNovelNonObjectGlyphMoveAdvisor: 5, # try not to step on traps by only moving to areas that are floor glyphs
+        FallbackSearchAdvisor: 5,
+    }),
     CriticallyInjuredAndUnthreatenedAdvisorLevel({FallbackSearchAdvisor: 1,}),
     CriticallyInjuredAdvisorLevel({
         DrinkHealingPotionAdvisor: 1,
@@ -12,9 +16,14 @@ small_advisors = [
     MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
-    AdjacentToMonsterAndLowHpAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1}),
+    AdjacentToMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
     AdjacentToMonsterAdvisorLevel({RandomSafeMeleeAttack: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
+    AdjacentToMonsterAdvisorLevel({MostNovelMoveAdvisor: 1,}), # we can't ranged attack, can we at least try to move past?
+    AdjacentToMonsterAdvisorLevel({
+        RandomAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged or move
+        FallbackSearchAdvisor: 40,
+        }),
     AmUnthreatenedAdvisorLevel({
         PickupAdvisor: 1,
         EatCorpseAdvisor: 1,
@@ -28,7 +37,6 @@ small_advisors = [
         RandomUnthreatenedMoveAdvisor: 2,
         DesirableObjectMoveAdvisor: 2,
         TravelToDownstairsAdvisor: 1,
-        RandomAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged
     }),
     AdvisorLevel({FallbackSearchAdvisor: 1,}),
 ]
@@ -51,10 +59,9 @@ large_advisors = [
     ThreatenedMoreThanOnceAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
+    AdjacentToMonsterAndLowHpAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1}),
     AdjacentToMonsterAdvisorLevel({
-        RandomSafeMeleeAttack: 30,
-        RandomUnthreatenedMoveAdvisor: 10,
-        RandomLeastThreatenedMoveAdvisor: 1,
+        RandomSafeMeleeAttack: 1,
         }),
     AdjacentToMonsterAdvisorLevel({ # should only reach if we have no safe melee
         RandomRangedAttackAdvisor: 1,

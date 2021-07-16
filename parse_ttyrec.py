@@ -149,6 +149,7 @@ def parse_dir(dr, outpath=None):
 
     df = pd.DataFrame(rows)
     df = df.sort_values('replay_number')
+    df = df.set_index('replay_number')
     #import pdb; pdb.set_trace()
 
     print('Killers')
