@@ -5,6 +5,13 @@ logs/
 *.pyc
 .idea
 
+# Sublime stuff
+*.sublime-*
+
+# Mac stuff
+.DS_Store
+wheel.sh
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -33,6 +40,7 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.whl
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
