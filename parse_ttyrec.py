@@ -136,19 +136,20 @@ def parse_dir(dr, outpath=None):
     #os.chdir(dr)
 
     files = [os.path.join(dr,f) for f in sorted(os.listdir(dr)) if os.path.isfile(os.path.join(dr,f)) and f.endswith('.ttyrec.bz2')]
-    replay_numbers = [int(re.search('([0-9]+)\.ttyrec\.bz2$', f)[1]) for f in files]
 
     rows = []
-    for file, replay_number in tqdm.tqdm(zip(files, replay_numbers)):
+    for file in tqdm.tqdm(files):
         path = os.path.join(dr, file)
 
         with bz2.BZ2File(path) as f:
             row = ttyrec_parse(f, path)
+            replay_number = int(re.search('([0-9]+)\.ttyrec\.bz2$', file)[1])
             row['replay_number'] = replay_number
             rows.append(row)
 
     df = pd.DataFrame(rows)
     df = df.sort_values('replay_number')
+    #import pdb; pdb.set_trace()
 
     print('Killers')
     print(df.groupby("killer").count().sort_values("score", ascending=False))
