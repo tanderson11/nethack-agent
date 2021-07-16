@@ -436,5 +436,5 @@ def get_by_name(klass, name):
     if not isinstance(glyph, klass):
         if environment.env.debug:
             pdb.set_trace()
-        raise Exception("Bad glyph name")
+        raise Exception("BadGlyphName")
     return glyph

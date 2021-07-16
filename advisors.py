@@ -28,7 +28,7 @@ class Advice():
         self.menu_plan = menu_plan
 
     def __repr__(self):
-        return "Advice: action={}, advisor={}, menu_plan={}".format(self.action, self.advisor, self.menu_plan)
+        return "Advice: action={}; advisor={}; menu_plan={}".format(self.action, self.advisor, self.menu_plan)
 
 class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
