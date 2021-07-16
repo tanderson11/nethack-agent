@@ -84,6 +84,19 @@ class Message():
         "paperback book named",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
+
+    class Feedback():
+        def __init__(self, message):
+            #diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+            #diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+            #boulder_in_vain_message = "boulder, but in vain." in message.message
+            #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
+            #carrying_too_much_message = "You are carrying too much to get through." in message.message
+            #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
+
+            #self.failed_move = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
+            self.nevermind = "Never mind." in message.message
+
     def __init__(self, message, tty_chars, misc_observation):
         self.raw_message = message
         self.tty_chars = tty_chars
@@ -111,6 +124,8 @@ class Message():
         elif "Pick a skill to advance:" in self.message:
             self.interactive_menu_class = menuplan.InteractiveEnhanceSkillsMenu
 
+        self.feedback = self.__class__.Feedback(self)
+
     def __bool__(self):
         return bool(self.message)
 
@@ -134,7 +149,7 @@ class ThreatMap():
         player_location_in_glyph_grid = (player_location[0]-large_row_window.start, player_location[1]-large_col_window.start)
         translated_row_slice, translated_col_slice = utilities.move_slice_center(player_location, player_location_in_glyph_grid, (neighborhood_row_slice, neighborhood_col_slice))
         
-
+        # a way for people to view that's equivalent to neighborhood: ie. threat_map.melee_threat[threat_map.neighborhood_view].shape == neighborhood.glyphs.shape
         self.neighborhood_view = (translated_row_slice, translated_col_slice)
 
         self.glyph_grid = all_glyphs[large_row_window,large_col_window]
@@ -170,7 +185,7 @@ class ThreatMap():
                         melee_damage_threat[row_slice, col_slice] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
 
                     if isinstance(glyph,gd.SwallowGlyph):
-                        melee_damage_threat[row_slice, col_slice] = gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage # while we're swallowed, all threat should be homogeneous
+                        melee_damage_threat[row_slice, col_slice] = gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage # while we're swallowed, all threat can be homogeneous
 
                 if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_ranged):
                     can_hit_mask = self.raytrace_threat(it.multi_index)
@@ -577,7 +592,7 @@ class CustomAgent(BatchedAgent):
                 try:
                     delta = physics.action_to_delta[run_state.last_non_menu_action]
                 except:
-                    import pdb; pdb.set_trace()
+                    if environment.env.debug: import pdb; pdb.set_trace()
                 recorded_death = RecordedMonsterDeath(
                     (player_location[0] + delta[0], player_location[1] + delta[1]),
                     blstats.get('time'),
@@ -590,13 +605,27 @@ class CustomAgent(BatchedAgent):
             print(message.message)
 
         if "It's a wall" in message.message and environment.env.debug:
-            pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+            if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         if message.interactive_menu_class is not None:
             if not run_state.live_interactive_menu:
                 run_state.live_interactive_menu = message.interactive_menu_class()
         else:
             run_state.live_interactive_menu = None
+
+        if message.feedback.nevermind:
+            eat_corpse_flag = False
+            if run_state.advice_log[-1] is None:
+                if isinstance(run_state.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor):
+                    eat_corpse_flag = True
+            elif isinstance(run_state.advice_log[-1].advisor, advs.EatCorpseAdvisor):
+                eat_corpse_flag = True
+
+            if eat_corpse_flag:
+                print("Deleting record")
+                run_state.latest_monster_death = None
+
+        #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state)
 
         ###################################################
         # We are done observing and ready to start acting #
@@ -657,8 +686,10 @@ class CustomAgent(BatchedAgent):
             retval = utilities.ACTION_LOOKUP[action]
         except UnboundLocalError:
             print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time due to intrinsic speed.")
-            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]
-            menu_plan = None
+
+            chosen_advice = advs.Advice(None, utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH], None)
+            retval = chosen_advice.action
+            menu_plan = chosen_advice.menu_plan
             #if environment.env.debug: pdb.set_trace()
 
         run_state.log_action(retval, advice=chosen_advice)
