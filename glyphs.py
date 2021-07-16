@@ -53,7 +53,9 @@ class Glyph():
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = None
-        self.walkable = False
+
+    def walkable(self, character):
+        return False
 
     @classmethod
     def numeral_mapping(cls):
@@ -63,6 +65,7 @@ class Glyph():
             mapping[numeral] = cls(numeral)
 
         return mapping
+
 
     def __repr__(self):
         return "{} named {}".format(self.__class__, self.name or 'NO NAME DEFINED')
@@ -88,7 +91,6 @@ class MonsterAlikeGlyph(Glyph):
         # 'mlet', 'mlevel', 'mmove', 'mname', 'mr', 'mresists', 'msize', 'msound'
         self.name = monster.mname
         self.animated_dead = self.__class__.name_of_animated_dead(self.name)
-        self.walkable = False
         self.corpse_spoiler = None
         if not self.name in self.NEVER_CORPSE and not self.animated_dead and self.name != 'long worm tail':
             self.corpse_spoiler = CORPSES_BY_NAME[self.name]
@@ -176,10 +178,12 @@ class ObjectGlyph(Glyph):
         self.object_class_name = self.__class__.OBJECT_CLASSES[self.object_class_numeral]
         self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
         self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
-        self.walkable = True
 
         if self.object_class_name == "FOOD_CLASS":
             self.safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance and "tripe" not in self.appearance)
+
+    def walkable(self, character):
+        return True
 
     def desirable_object(self):
         return self.object_class_name == "FOOD_CLASS" and self.safe_non_perishable
@@ -318,9 +322,10 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
         self.is_downstairs = self.offset == 24 or self.offset == 26
         self.is_upstairs = self.offset == 23 or self.offset == 25
-        self.walkable = (self.offset > 18 and self.offset < 32) or self.is_open_door or self.is_closed_door or self.is_downstairs or self.is_upstairs
         self.is_trap = self.offset > 41 and self.offset < 65
         
+    def walkable(self, character):
+        return (self.offset > 18 and self.offset < 32) or self.is_open_door or self.is_closed_door or self.is_downstairs or self.is_upstairs
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -335,7 +340,9 @@ class PetGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.walkable = True
+    
+    def walkable(self, character):
+        return True
 
 class InvisibleGlyph(Glyph):
     OFFSET = nethack.GLYPH_INVIS_OFF
@@ -343,7 +350,6 @@ class InvisibleGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.walkable = False
 
 class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
@@ -355,9 +361,11 @@ class CorpseGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.walkable = True
 
         self.safe_non_perishable = (self.offset in [155, 322]) # lichens and lizards!
+
+    def walkable(self, character):
+        return True
 
     def desirable_object(self):
         return self.safe_non_perishable
@@ -393,7 +401,9 @@ class StatueGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-        self.walkable = True
+    
+    def walkable(self, character):
+        return True
 
 klasses = [
     MonsterGlyph,
@@ -431,10 +441,12 @@ ALL_OBJECT_NAMES = ObjectGlyph.names()
 
 ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances()
 
+
+
 def get_by_name(klass, name):
     glyph = GLYPH_NAME_LOOKUP.get(name, None)
     if not isinstance(glyph, klass):
         if environment.env.debug:
             pdb.set_trace()
-        raise Exception("BadGlyphName")
+        raise Exception("bad glyph name")
     return glyph

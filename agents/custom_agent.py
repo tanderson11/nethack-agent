@@ -12,6 +12,8 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
+import advisor_sets
+
 import menuplan
 import utilities
 import physics
@@ -47,11 +49,9 @@ class RecordedMonsterDeath():
         self.square = square
         self.time = time
         self.monster_name = monster_name
-        try:
-            self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
-        except BadGlyphName:
-            # might happen when hallucinating, what should we do?
-            raise('BadGlyphName')
+
+        self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
+
 
         self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
@@ -87,14 +87,16 @@ class Message():
 
     class Feedback():
         def __init__(self, message):
-            #diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
-            #diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+            self.diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+            self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
+            self.collapse_message = "You collapse under your load" in message.message
             #boulder_in_vain_message = "boulder, but in vain." in message.message
             #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
             #carrying_too_much_message = "You are carrying too much to get through." in message.message
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
-
-            #self.failed_move = diagonal_out_of_doorway_message or diagonal_into_doorway_message or boulder_in_vain_message or boulder_blocked_message or carrying_too_much_message or no_hands_door_message
+            
+            #"Can't find dungeon feature"
+            self.failed_move = self.diagonal_out_of_doorway_message or self.diagonal_into_doorway_message or self.collapse_message
             self.nevermind = "Never mind." in message.message
 
     def __init__(self, message, tty_chars, misc_observation):
@@ -149,14 +151,67 @@ class ThreatMap():
         player_location_in_glyph_grid = (player_location[0]-large_row_window.start, player_location[1]-large_col_window.start)
         translated_row_slice, translated_col_slice = utilities.move_slice_center(player_location, player_location_in_glyph_grid, (neighborhood_row_slice, neighborhood_col_slice))
         
-        # a way for people to view that's equivalent to neighborhood: ie. threat_map.melee_threat[threat_map.neighborhood_view].shape == neighborhood.glyphs.shape
+        # a way for people to view map that's equivalent to neighborhood: ie. threat_map.melee_threat[threat_map.neighborhood_view].shape == neighborhood.glyphs.shape
         self.neighborhood_view = (translated_row_slice, translated_col_slice)
 
-        self.glyph_grid = all_glyphs[large_row_window,large_col_window]
+        self.raw_glyph_grid = all_glyphs[large_row_window,large_col_window]
+        self.glyph_grid = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], self.raw_glyph_grid) 
         self.player_location_in_glyph_grid = player_location_in_glyph_grid
 
         self.calculate_threat()
         #self.calculate_implied_threat()
+
+    @staticmethod
+    def flood_one_level_from_mask(mask):
+        flooded_mask = np.full_like(mask, False, dtype='bool')
+
+        # for every square
+        it = np.nditer(mask, flags=['multi_index'])
+        for b in it: 
+            # if we occupy it
+            if b: 
+                # take a radius one box around it
+                row_slice, col_slice = utilities.centered_slices_bounded_on_array(it.multi_index, (1, 1), flooded_mask)
+                # and flood all those squares
+                flooded_mask[row_slice, col_slice] = True
+
+        return flooded_mask
+
+    @classmethod
+    def calculate_can_occupy(cls, monster, start, glyph_grid):
+        #print(monster)
+        if isinstance(monster, gd.MonsterGlyph):
+            free_moves = np.ceil(monster.monster_spoiler.speed / monster.monster_spoiler.__class__.NORMAL_SPEED) - 1 # -1 because we are interested in move+hit turns not just move turns
+            #print("speed, free_moves:", monster.monster_spoiler.speed, free_moves)
+        elif isinstance(monster, gd.InvisibleGlyph):
+            free_moves = 0
+        
+        mons_square_mask = np.full_like(glyph_grid, False, dtype='bool')
+        mons_square_mask[start] = True
+        can_occupy_mask = mons_square_mask
+
+        if free_moves > 0: # if we can move+attack, we need to know where we can move
+            walkable = utilities.vectorized_map(lambda g: g.walkable(monster), glyph_grid)
+            already_checked_mask = np.full_like(glyph_grid, False, dtype='bool')
+
+        while free_moves > 0:
+            # flood from newly identified squares that we can occupy
+            flooded_mask = cls.flood_one_level_from_mask(can_occupy_mask & ~already_checked_mask)
+            # remember where we've already looked (for efficiency, not correctness)
+            already_checked_mask = can_occupy_mask
+            # add new squares that are also walkable to places we can occupy
+            can_occupy_mask = can_occupy_mask | (flooded_mask & walkable)
+            # use up a move
+            free_moves -= 1
+            #pdb.set_trace()
+
+        return can_occupy_mask  
+
+    @classmethod
+    def calculate_melee_can_hit(cls, can_occupy_mask):
+        can_hit_mask = cls.flood_one_level_from_mask(can_occupy_mask)
+
+        return can_hit_mask
 
     def calculate_threat(self):
         melee_n_threat = np.zeros_like(self.glyph_grid)
@@ -165,32 +220,47 @@ class ThreatMap():
         ranged_n_threat = np.zeros_like(self.glyph_grid)
         ranged_damage_threat = np.zeros_like(self.glyph_grid)
 
-        it = np.nditer(self.glyph_grid, flags=['multi_index'])
-        for g in it:
-            glyph = gd.GLYPH_NUMERAL_LOOKUP[int(g)]
+        it = np.nditer(self.raw_glyph_grid, flags=['multi_index'])
+        for g in it: # iterate over glyph grid
+            glyph = self.glyph_grid[it.multi_index]
             if it.multi_index != self.player_location_in_glyph_grid:
                 try:
                     isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee
                 except AttributeError:
-                    if environment.env.debug: import pdb; pdb.set_trace()
+                    if environment.env.debug: import pdb; pdb.set_trace() # probably a long worm tail lol
 
-                if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee) or isinstance(glyph, gd.InvisibleGlyph or isinstance(glyph, gd.SwallowGlyph)):
-                    row_slice, col_slice = utilities.centered_slices_bounded_on_array(it.multi_index, (1, 1), self.glyph_grid) # radius one box around the location of g
-                    melee_n_threat[row_slice, col_slice] += 1 # monsters threaten their own squares in this implementation OK? TK 
+                if isinstance(glyph, gd.SwallowGlyph):
+                    melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
+                    melee_n_threat.fill(1) # we're only ever threatened once while swallowed
 
-                    if isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee:
-                        melee_damage_threat[row_slice, col_slice] += glyph.monster_spoiler.melee_attack_bundle.max_damage
+                is_invis = isinstance(glyph, gd.InvisibleGlyph)
+                if isinstance(glyph, gd.MonsterGlyph) or is_invis:
+                    ### SHARED ###
+                    can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
+                    ###
 
-                    if isinstance(glyph, gd.InvisibleGlyph):
-                        melee_damage_threat[row_slice, col_slice] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
+                    ### MELEE ###
+                    if is_invis or glyph.has_melee:
+                        can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
 
-                    if isinstance(glyph,gd.SwallowGlyph):
-                        melee_damage_threat[row_slice, col_slice] = gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage # while we're swallowed, all threat can be homogeneous
+                        melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
+                    
+                        if isinstance(glyph, gd.MonsterGlyph):
+                            melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
 
-                if (isinstance(glyph, gd.MonsterGlyph) and glyph.has_ranged):
-                    can_hit_mask = self.raytrace_threat(it.multi_index)
-                    ranged_n_threat[can_hit_mask] += 1
-                    ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
+                        if is_invis:
+                            melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?                
+                    ###
+
+                    ### RANGED ###
+                    if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
+                        can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
+                        ranged_n_threat[can_hit_mask] += 1
+                        if is_invis:
+                            ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
+                        else:
+                            ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
+                    ###
 
         self.melee_n_threat = melee_n_threat
         self.melee_damage_threat = melee_damage_threat
@@ -198,20 +268,31 @@ class ThreatMap():
         self.ranged_n_threat = ranged_n_threat
         self.ranged_damage_threat = ranged_damage_threat
 
-    def raytrace_threat(self, source):
-        row_lim = self.glyph_grid.shape[0]
-        col_lim = self.glyph_grid.shape[1]
+    @classmethod
+    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid):
+        it = np.nditer(can_occupy_mask, flags=['multi_index'])
+        masks = []
+        for b in it: 
+            if b:
+                can_hit_from_loc = cls.raytrace_threat(it.multi_index, glyph_grid)
+                masks.append(can_hit_from_loc)
+        return np.logical_or.reduce(masks)
+
+    @staticmethod
+    def raytrace_threat(source, glyph_grid):
+        row_lim = glyph_grid.shape[0]
+        col_lim = glyph_grid.shape[1]
 
         ray_offsets = physics.action_deltas
 
         masks = []
         for offset in ray_offsets:
-            ray_mask = np.full_like(self.glyph_grid, False, dtype='bool')
+            ray_mask = np.full_like(glyph_grid, False, dtype='bool')
 
             current = source
             current = (current[0]+2*offset[0], current[1]+2*offset[1]) # initial bump so that ranged attacks don't threaten adjacent squares
             while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
-                glyph = gd.GLYPH_NUMERAL_LOOKUP[self.glyph_grid[current]]
+                glyph = glyph_grid[current]
                 if isinstance(glyph, gd.CMapGlyph) and glyph.is_wall: # is this the full extent of what blocks projectiles/rays?
                     break # should we do anything with bouncing rays
                 ray_mask[current] = True
@@ -236,14 +317,14 @@ class Neighborhood():
         [-1, 0, 1,],
     ])
 
-    def __init__(self, player_location, observation, dmap, previous_glyph_on_player, latest_monster_death):
+    def __init__(self, player_location, observation, dmap, character, previous_glyph_on_player, latest_monster_death, feedback):
         blstats = BLStats(observation['blstats'])
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
 
-        window_size = 1
+        neighborhood_size = 1
 
-        row_slice, col_slice = utilities.centered_slices_bounded_on_array(player_location, (window_size, window_size), observation['glyphs'])
+        row_slice, col_slice = utilities.centered_slices_bounded_on_array(player_location, (neighborhood_size, neighborhood_size), observation['glyphs'])
 
         # a window into the action grid of the size size and shape as our window into the glyph grid (ie: don't include actions out of bounds on the map)
         action_grid_row_slice, action_grid_col_slice = utilities.move_slice_center(player_location, (1,1), (row_slice,col_slice)) # move center to (1,1) (action grid center)
@@ -260,9 +341,9 @@ class Neighborhood():
         x,y = np.where(self.players_square_mask)
         self.player_location_in_neighborhood = list(zip(x,y))[0]
 
-        walkable_tile = utilities.vectorized_map(lambda g: g.walkable, self.glyphs)
+        walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
         open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
-        on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door
+        on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
         self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
 
@@ -374,6 +455,7 @@ class RunState():
         self.last_non_menu_action_timestamp = None
         
         self.time_hung = 0
+        self.time_stuck = 0
         self.rng = self.make_seeded_rng()
         self.glyph_under_player = None
         self.live_interactive_menu = None
@@ -482,10 +564,39 @@ class RunState():
         return retval
 
     def update_neighborhood(self, neighborhood):
+        if self.neighborhood is not None:
+            old_loc = self.neighborhood.player_location
+        else:
+            old_loc = None
+        
         self.neighborhood = neighborhood
 
+        if self.neighborhood is not None and old_loc == self.neighborhood.player_location:
+            self.time_stuck += 1
+        else:
+            self.time_stuck = 0
+
+        if self.time_stuck > 200:
+            pass
+            #if environment.env.debug: import pdb; pdb.set_trace()
+
     def log_message(self, message):
-        self.message_log.append(message)
+        self.message_log.append(message.message)
+
+        if message.feedback.nevermind:
+            eat_corpse_flag = False
+            if self.advice_log[-1] is None:
+                if isinstance(self.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor):
+                    eat_corpse_flag = True
+            elif isinstance(self.advice_log[-1].advisor, advs.EatCorpseAdvisor):
+                eat_corpse_flag = True
+
+            if eat_corpse_flag:
+                print("Deleting record")
+                self.latest_monster_death = None
+
+        #if message.feedback.failed_move:
+        #    self.failed_move_advisors.append(self.advice_log[-1].action)
 
     def log_action(self, action, menu_plan=None, advice=None):
         self.menu_plan_log.append(menu_plan)
@@ -581,7 +692,7 @@ class CustomAgent(BatchedAgent):
             run_state.dmap.update(player_location)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
-        run_state.log_message(message.message)
+        run_state.log_message(message)
 
 
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
@@ -593,13 +704,17 @@ class CustomAgent(BatchedAgent):
                     delta = physics.action_to_delta[run_state.last_non_menu_action]
                 except:
                     if environment.env.debug: import pdb; pdb.set_trace()
-                recorded_death = RecordedMonsterDeath(
-                    (player_location[0] + delta[0], player_location[1] + delta[1]),
-                    blstats.get('time'),
-                    killed_monster_name
-                )
-                if recorded_death.can_corpse:
-                    run_state.latest_monster_death = recorded_death
+
+                try:
+                    recorded_death = RecordedMonsterDeath(
+                        (player_location[0] + delta[0], player_location[1] + delta[1]),
+                        blstats.get('time'),
+                        killed_monster_name
+                    )
+                    if recorded_death.can_corpse:
+                        run_state.latest_monster_death = recorded_death
+                except Exception as e:
+                    print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
 
         if "corpse tastes" in message.message:
             print(message.message)
@@ -613,19 +728,7 @@ class CustomAgent(BatchedAgent):
         else:
             run_state.live_interactive_menu = None
 
-        if message.feedback.nevermind:
-            eat_corpse_flag = False
-            if run_state.advice_log[-1] is None:
-                if isinstance(run_state.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor):
-                    eat_corpse_flag = True
-            elif isinstance(run_state.advice_log[-1].advisor, advs.EatCorpseAdvisor):
-                eat_corpse_flag = True
-
-            if eat_corpse_flag:
-                print("Deleting record")
-                run_state.latest_monster_death = None
-
-        #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state)
+        #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state) # maybe we want something more like this?
 
         ###################################################
         # We are done observing and ready to start acting #
@@ -651,14 +754,14 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         neighborhood = Neighborhood(
-            player_location, observation, run_state.dmap, previous_glyph_on_player, run_state.latest_monster_death)
+            player_location, observation, run_state.dmap, run_state.character, previous_glyph_on_player, run_state.latest_monster_death, message.feedback)
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 
         flags = advs.Flags(blstats, inventory, neighborhood, message)
 
         #if environment.env.debug: pdb.set_trace()
-        for advisor_level in advs.advisors:
+        for advisor_level in advisor_sets.small_advisors:
             if advisor_level.check_flags(flags):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
@@ -685,7 +788,7 @@ class CustomAgent(BatchedAgent):
         try:
             retval = utilities.ACTION_LOOKUP[action]
         except UnboundLocalError:
-            print("WARNING: somehow fell all the way out of advisors. Usually means search failed to advance game time due to intrinsic speed.")
+            print("WARNING: somehow fell all the way out of advisors. Could mean fallbacks failed to advance game time due to intrinsic speed.")
 
             chosen_advice = advs.Advice(None, utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH], None)
             retval = chosen_advice.action
@@ -696,6 +799,9 @@ class CustomAgent(BatchedAgent):
 
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
+
+        if retval == nethack.actions.MiscDirection.WAIT:
+            if environment.env.debug: pdb.set_trace()
 
         return retval
 

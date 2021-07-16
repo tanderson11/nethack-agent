@@ -28,7 +28,7 @@ class Advice():
         self.menu_plan = menu_plan
 
     def __repr__(self):
-        return "Advice: action={}; advisor={}; menu_plan={}".format(self.action, self.advisor, self.menu_plan)
+        return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action, self.advisor, self.menu_plan)
 
 class Flags():
     def __init__(self, blstats, inventory, neighborhood, message):
@@ -49,7 +49,7 @@ class Flags():
         }
         fraction_index = [k for k in list(exp_lvl_to_prayer_hp_thresholds.keys()) if k <= blstats.get('experience_level')][-1]
         self.am_critically_injured = blstats.get('hitpoints') < blstats.get('max_hitpoints') and (blstats.get('hitpoints') < exp_lvl_to_prayer_hp_thresholds[fraction_index] or blstats.get('hitpoints') < 6)
-        self.low_hp = self.am_critically_injured or blstats.get('hitpoints') <= blstats.get('max_hitpoints') * 7/10
+        self.low_hp = self.am_critically_injured or blstats.get('hitpoints') <= blstats.get('max_hitpoints') * 6/10
         # downstairs
         previous_glyph = neighborhood.previous_glyph_on_player
         if previous_glyph is not None: # on the first frame there was no previous glyph
@@ -61,7 +61,9 @@ class Flags():
 
         self.have_walkable_squares = neighborhood.action_grid[neighborhood.walkable].any() # at least one square is walkable
         self.have_unthreatened_walkable_squares = neighborhood.action_grid[neighborhood.walkable & ~neighborhood.threatened].any()
-        self.can_move = True # someday Held, Handspan etc.
+
+        #self.can_move = True # someday Held, Handspan etc.
+        self.can_move = not message.feedback.collapse_message
 
         if previous_glyph is not None and "for sale" not in message.message: # hopefully this will help us not pick up food in shops
             self.desirable_object_on_space = (isinstance(previous_glyph, gd.ObjectGlyph) or isinstance(previous_glyph, gd.CorpseGlyph)) and previous_glyph.desirable_object()
@@ -138,6 +140,10 @@ class LowHPAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.low_hp   
 
+class AdjacentToMonsterAndLowHpAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.near_monster and flags.low_hp
+
 class Advisor(abc.ABC):
     def __init__(self):
         pass
@@ -195,10 +201,6 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
             return Advice(self.__class__, rng.choice(least_novel), None)
         else:
             return None
-
-class LeastNovelMuchLessThreatenedMoveAdvisor(LeastNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & ~neighborhood.threatened
 
 class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
@@ -512,57 +514,3 @@ class EnhanceSkillsAdvisor(Advisor):
 
 # Thinking outloud ...
 # Free/scheduled (eg enhance), Repair major, escape, attack, repair minor, improve/identify, descend, explore
-
-advisors = [
-    FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
-    CriticallyInjuredAndUnthreatenedAdvisorLevel({ # let's try to pray less in the early game by not praying if unthreatened
-            LeastNovelNonObjectGlyphMoveAdvisor: 3, # try not to step on traps by only moving to areas that are floor glyphs
-            FallbackSearchAdvisor: 7,
-            DrinkHealingPotionAdvisor: 1
-        }),
-    CriticallyInjuredAdvisorLevel({
-            DrinkHealingPotionAdvisor: 15,
-            ZapTeleportOnSelfAdvisor: 1,
-            ReadTeleportAdvisor: 10,
-        }),
-    CriticallyInjuredAdvisorLevel({PrayerAdvisor: 1,}),
-    MajorTroubleAdvisorLevel({PrayerAdvisor: 1,}),
-    ThreatenedMoreThanOnceAdvisorLevel({LeastNovelUnthreatenedMoveAdvisor: 1,}),
-    WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
-    WeakWithHungerAdvisorLevel({PrayerAdvisor: 1,}),
-    AdjacentToMonsterAdvisorLevel({
-        RandomSafeMeleeAttack: 30,
-        RandomUnthreatenedMoveAdvisor: 10,
-        RandomLeastThreatenedMoveAdvisor: 1,
-        }),
-    AdjacentToMonsterAdvisorLevel({ # should only reach if we have no safe melee
-        RandomRangedAttackAdvisor: 1,
-        MostNovelUnthreatenedMoveAdvisor: 3,
-        }),
-    LowHPAdvisorLevel({ # safe actions to do when we're at low hp
-        PickupAdvisor: 5,
-        FallbackSearchAdvisor: 30,
-        RandomUnthreatenedMoveAdvisor: 1,
-        }),
-    AmUnthreatenedAdvisorLevel({
-        PickupAdvisor: 1,
-        EatCorpseAdvisor: 1,
-    }),
-    DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}), # don't kick doors in other branches bc minetown
-    AdvisorLevel({TakeDownstairsAdvisor: 1,}),
-    AllMovesThreatenedAdvisorLevel({
-            FallbackSearchAdvisor: 50,
-            RandomMoveAdvisor: 15,
-            RandomAttackAdvisor: 1, # even nasty
-        }),
-    UnthreatenedMovesAdvisorLevel({
-        FreshCorpseMoveAdvisor: 1500,
-        DesirableObjectMoveAdvisor: 500,
-        MostNovelUnthreatenedMoveAdvisor: 100,
-        NoUnexploredSearchAdvisor: 100,
-        RandomUnthreatenedMoveAdvisor: 5,
-        MostNovelMoveAdvisor: 1,
-        TravelToDownstairsAdvisor: 5,
-        }),
-    AdvisorLevel({FallbackSearchAdvisor: 1,}),
-]

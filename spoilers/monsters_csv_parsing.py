@@ -6,6 +6,7 @@ import re
 import numpy as np
 
 class MonsterSpoiler():
+	NORMAL_SPEED = 12
 	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists):
 		self.name = ''
 		self.melee_attack_bundle = melee_attack_bundle
