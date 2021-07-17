@@ -97,7 +97,35 @@ class MonsterAlikeGlyph(Glyph):
 
         self.monster_spoiler = None
         if self.name != 'long worm tail':
-            self.monster_spoiler = MONSTERS_BY_NAME[self.name] 
+            self.monster_spoiler = MONSTERS_BY_NAME[self.name]
+
+    def safe_to_eat(self, character):
+        if not self.corpse_spoiler:
+            return False
+        if self.corpse_spoiler.slime or self.corpse_spoiler.petrify or self.corpse_spoiler.instadeath:
+            return False
+
+        # For these remaining checks, maybe skip them if I'm hungry enough
+        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race):
+            return False
+        if character.can_cannibalize() and self.corpse_spoiler.aggravate:
+            return False
+
+        if any([
+            self.corpse_spoiler.acidic,
+            self.corpse_spoiler.poisonous,
+            self.corpse_spoiler.stun,
+            self.corpse_spoiler.polymorph,
+            self.corpse_spoiler.hallucination,
+            self.corpse_spoiler.lycanthropy,
+            self.corpse_spoiler.teleportitis,
+            self.corpse_spoiler.invisibility,
+            self.corpse_spoiler.speed_toggle
+        ]):
+            return False
+
+        return True
+
 
 class MonsterGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_MON_OFF
@@ -183,14 +211,23 @@ class ObjectGlyph(Glyph):
         self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
         self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
 
-        if self.object_class_name == "FOOD_CLASS":
-            self.safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance and "tripe" not in self.appearance)
-
     def walkable(self, character):
         return True
 
-    def desirable_object(self):
-        return self.object_class_name == "FOOD_CLASS" and self.safe_non_perishable
+    def safe_non_perishable(self, character):
+        assert self.object_class_name == "FOOD_CLASS"
+
+        if character.sick_from_tripe() and  "tripe" in self.appearance:
+            return False
+
+        safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance)
+        return safe_non_perishable
+
+    def desirable_object(self, character):
+        safe_food = self.object_class_name == "FOOD_CLASS" and self.safe_non_perishable(character)
+        good_armor = self.object_class_name == "ARMOR_CLASS" # add some logic here at some point
+        desirable = safe_food or good_armor
+        return desirable
 
     @classmethod
     def names(cls):
@@ -366,13 +403,13 @@ class CorpseGlyph(Glyph):
     def __init__(self, numeral):
         super().__init__(numeral)
 
-        self.safe_non_perishable = (self.offset in [155, 322]) # lichens and lizards!
+        self.always_safe_non_perishable = (self.offset in [155, 322]) # lichens and lizards!
 
     def walkable(self, character):
         return True
 
-    def desirable_object(self):
-        return self.safe_non_perishable
+    def desirable_object(self, character):
+        return self.always_safe_non_perishable
 
 class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF

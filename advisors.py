@@ -30,11 +30,12 @@ class Flags():
         30: 1/9
     }
 
-    def __init__(self, blstats, inventory, neighborhood, message):
+    def __init__(self, blstats, inventory, neighborhood, message, character):
         self.blstats = blstats
         self.inventory = inventory
         self.neighborhood = neighborhood
         self.message = message
+        self.character = character
 
         self.computed_values = {}
 
@@ -113,7 +114,7 @@ class Flags():
             return self.computed_values['desirable_object_on_space']
         except KeyError:
             prev_glyph = self.neighborhood.previous_glyph_on_player
-            desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object()
+            desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.character)
 
             self.computed_values['desirable_object_on_space'] = desirable_object_on_space
             return desirable_object_on_space
@@ -232,13 +233,13 @@ class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move() and flags.have_moves():
-            agreeable_move_mask = self.find_agreeable_moves(rng, blstats, inventory, neighborhood, message)
+            agreeable_move_mask = self.find_agreeable_moves(rng, blstats, inventory, neighborhood, message, character)
             return self.get_move(rng, blstats, inventory, neighborhood, message, agreeable_move_mask)
         else:
             return None
 
 class RandomMoveAdvisor(MoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable
 
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
@@ -251,7 +252,7 @@ class RandomMoveAdvisor(MoveAdvisor):
             return None
 
 class MostNovelMoveAdvisor(MoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable
 
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
@@ -276,31 +277,31 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
             return None
 
 class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class LeastNovelNonObjectGlyphMoveAdvisor(LeastNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened & utilities.vectorized_map(lambda g: not isinstance(g, gd.ObjectGlyph), neighborhood.glyphs)
 
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & neighborhood.has_fresh_corpse
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
-        return neighborhood.walkable & utilities.vectorized_map(lambda g: getattr(g, 'desirable_object', lambda: False)(), neighborhood.glyphs)
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character), neighborhood.glyphs)
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & (neighborhood.n_threat == neighborhood.n_threat.min())
 
 class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor): 
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class PrayerAdvisor(Advisor):
@@ -515,11 +516,19 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
             return None
         return None
 
-class PickupAdvisor(Advisor):
+class PickupFoodAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.desirable_object_on_space():
             menu_plan = menuplan.MenuPlan("pick up comestibles and safe corpses", self, {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Comestibles")
-            print("Pickup")
+            print("Food pickup")
+            return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
+        return None
+
+class PickupArmorAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.desirable_object_on_space():
+            menu_plan = menuplan.MenuPlan("pick up armor", self, {}, interactive_menu_header_rows=2, menu_item_selector=lambda x: x.category == "Armor")
+            print("Armor pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 
@@ -530,29 +539,10 @@ class EatCorpseAdvisor(Advisor):
 
         if flags.am_satiated():
             return None
-        corpse_spoiler = neighborhood.fresh_corpse_on_square_glyph.corpse_spoiler
-        if not corpse_spoiler:
-            return None
-        if corpse_spoiler.slime or corpse_spoiler.petrify or corpse_spoiler.instadeath:
+
+        if not neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
             return None
 
-        # For these remaining checks, maybe skip them if I'm hungry enough
-        if character.can_cannibalize() and (corpse_spoiler.race_for_cannibalism == character.base_race):
-            return None
-        if character.can_cannibalize() and corpse_spoiler.aggravate:
-            return None
-        if any([
-            corpse_spoiler.acidic,
-            corpse_spoiler.poisonous,
-            corpse_spoiler.stun,
-            corpse_spoiler.polymorph,
-            corpse_spoiler.hallucination,
-            corpse_spoiler.lycanthropy,
-            corpse_spoiler.teleportitis,
-            corpse_spoiler.invisibility,
-            corpse_spoiler.speed_toggle
-        ]):
-            return None
         menu_plan = menuplan.MenuPlan(
             "eat corpse on square", self,
             OrderedDict([

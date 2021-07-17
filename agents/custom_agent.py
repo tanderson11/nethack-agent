@@ -52,7 +52,6 @@ class RecordedMonsterDeath():
 
         self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
 
-
         self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
     death_log_line = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
@@ -403,6 +402,11 @@ class Character(NamedTuple):
             return False
         return True
 
+    def sick_from_tripe(self):
+        if self.base_class == 'Caveman' or self.base_class == 'Cavewoman':
+            return False
+        return True
+
 class RunState():
     def __init__(self, debug_env=None):
         self.reset()
@@ -587,9 +591,9 @@ class RunState():
         if message.feedback.nevermind or message.feedback.nothing_to_eat:
             eat_corpse_flag = False
             if self.advice_log[-1] is None:
-                if isinstance(self.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor):
+                if isinstance(self.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor): # why is this an instance and not a class?
                     eat_corpse_flag = True
-            elif isinstance(self.advice_log[-1].advisor, advs.EatCorpseAdvisor):
+            elif self.advice_log[-1].advisor == advs.EatCorpseAdvisor: # have to do this weird thing because we usually handle classes and not instances
                 eat_corpse_flag = True
 
             if eat_corpse_flag:
@@ -759,7 +763,7 @@ class CustomAgent(BatchedAgent):
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 
-        flags = advs.Flags(blstats, inventory, neighborhood, message)
+        flags = advs.Flags(blstats, inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
