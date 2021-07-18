@@ -19,8 +19,6 @@ class MenuPlan():
         self.in_interactive_menu = False
 
     def interact(self, message_obj):
-        if message_obj.message == "W - 2 scrolls labeled GHOTI":
-            pdb.set_trace()
         if message_obj.message is None:
             raise Exception("That's not right")
         if self.interactive_menu and self.interactive_menu.trigger_phrase == message_obj.message:
