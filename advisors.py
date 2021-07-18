@@ -410,6 +410,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
         "smells like": utilities.keypress_action(ord('y')),
         "Rotten food!": utilities.keypress_action(ord(' ')),
         "Eat it?": utilities.keypress_action(ord('y')),
+        "Continue eating": utilities.keypress_action(ord('n')),
         })
         return menu_plan
 
@@ -567,6 +568,7 @@ class EatCorpseAdvisor(Advisor):
                 (f"{neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat", utilities.keypress_action(ord('y'))),
                 ("here; eat", utilities.keypress_action(ord('n'))),
                 ("want to eat?", utilities.ACTION_LOOKUP[nethack.actions.Command.ESC]),
+                ("Continue eating", utilities.keypress_action(ord('n'))),
             ]))
         return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)
 
