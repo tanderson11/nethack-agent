@@ -104,7 +104,6 @@ class Message():
         self.tty_chars = tty_chars
         self.message = ''
         self.has_more = (misc_observation[2] == 1)
-        self.interactive_menu_class = None
 
         if np.count_nonzero(message) > 0:
             try:
@@ -116,15 +115,8 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                if not ARS.rs.active_menu_plan.expects_strange_messages:
-                    if environment.env.debug: pdb.set_trace()
+                print(f"NLE missed this message: {potential_message}")
             self.message = potential_message
-
-        self.interactive_menu_class = None
-        if "Pick up what?" in self.message or (self.message in gd.ObjectGlyph.OBJECT_CLASS_LABEL_IN_INVENTORY):
-            self.interactive_menu_class = menuplan.InteractiveInventoryMenu
-        elif "Pick a skill to advance:" in self.message:
-            self.interactive_menu_class = menuplan.InteractiveEnhanceSkillsMenu
 
         self.feedback = self.__class__.Feedback(self)
 
@@ -418,6 +410,9 @@ class RunState():
                 writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
                 writer.writeheader()
 
+    def print_action_log(self, num):
+        return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
+
     LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'hunger', 'message_log', 'action_log', 'score']
 
     def log(self):
@@ -437,7 +432,7 @@ class RunState():
                 'max_hp': self.blstats.get('max_hitpoints'),
                 'hunger': self.blstats.get('hunger_state'),
                 'message_log': "||".join(self.message_log[-10:]),
-                'action_log': "||".join([nethack.ACTIONS[num].name for num in self.action_log[-10:]]),
+                'action_log': self.print_action_log(10),
                 'score': self.reward,
             })
 
@@ -463,7 +458,6 @@ class RunState():
         self.time_stuck = 0
         self.rng = self.make_seeded_rng()
         self.glyph_under_player = None
-        self.live_interactive_menu = None
         self.time_did_advance = True
 
         self.neighborhood = None
@@ -542,7 +536,7 @@ class RunState():
             self.time_hung += 1
         else:
             self.time_hung = 0
-        if self.time_hung > 2_000:
+        if self.time_hung > 50:
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
@@ -554,7 +548,7 @@ class RunState():
         self.active_menu_plan = menu_plan
 
     def run_menu_plan(self, message):
-        retval = self.active_menu_plan.interact(message, self.live_interactive_menu)
+        retval = self.active_menu_plan.interact(message)
 
         if retval is None and self.active_menu_plan.fallback:
             retval = self.active_menu_plan.fallback
@@ -564,7 +558,7 @@ class RunState():
         if self.active_menu_plan != BackgroundMenuPlan:
             if retval is None:
                 self.active_menu_plan = BackgroundMenuPlan
-                retval = self.active_menu_plan.interact(message, self.live_interactive_menu)
+                retval = self.active_menu_plan.interact(message)
 
         return retval
 
@@ -727,19 +721,13 @@ class CustomAgent(BatchedAgent):
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
-        if message.interactive_menu_class is not None:
-            if not run_state.live_interactive_menu:
-                run_state.live_interactive_menu = message.interactive_menu_class()
-        else:
-            run_state.live_interactive_menu = None
-
         #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state) # maybe we want something more like this?
 
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################
 
-        if message.has_more and message.interactive_menu_class is None:
+        if message.has_more and not run_state.active_menu_plan.in_interactive_menu:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
             dummy_menu_plan = type('MenuPlan', (), {"name":"hit space if more", "advisor":background_advisor})()
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
@@ -749,7 +737,7 @@ class CustomAgent(BatchedAgent):
             retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
             run_state.reading_base_attributes = True
             dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
-            run_state.log_action(retval, menu_plan="dummy_menu_plan")
+            run_state.log_action(retval, menu_plan=dummy_menu_plan)
             return retval
 
         if message:
