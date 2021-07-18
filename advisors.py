@@ -316,6 +316,27 @@ class PrayerAdvisor(Advisor):
         ])
         return Advice(self.__class__, pray, menu_plan)
 
+class PrayWhenWeakAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.am_weak:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
+
+class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.am_critically_injured:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
+
+class PrayWhenMajorTroubleAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.major_trouble:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
+
 class DownstairsAdvisor(Advisor):
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
