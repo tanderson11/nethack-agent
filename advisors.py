@@ -305,12 +305,37 @@ class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class PrayerAdvisor(Advisor):
-    def advice(self, rng, character, _1, _2, _3, _4, _5):
+    def advice(self, rng, character, blstats, _2, _3, _4, _5):
+        if character.last_pray_time is None and blstats.get('time') <= 300:
+            return None
+        if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 500:
+            return None
         pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", self, [
             menuplan.YesMenuResponse("Are you sure you want to pray?")
         ])
         return Advice(self.__class__, pray, menu_plan)
+
+class PrayWhenWeakAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.am_weak:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
+
+class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.am_critically_injured:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
+
+class PrayWhenMajorTroubleAdvisor(PrayerAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.major_trouble:
+            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+        else:
+            return None
 
 class DownstairsAdvisor(Advisor):
     exp_lvl_to_max_mazes_lvl = {

@@ -392,6 +392,8 @@ BackgroundMenuPlan = menuplan.MenuPlan(
 class Character():
     def __init__(self, character_data):
         self.character = character_data
+        self.last_pray_time = None
+        self.last_pray_reason = None
 
 class CharacterData(NamedTuple):
     base_race: str
@@ -425,7 +427,7 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'hunger', 'message_log', 'action_log', 'score']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
 
     def log(self):
         if not self.log_path:
@@ -446,6 +448,8 @@ class RunState():
                 'message_log': "||".join(self.message_log[-10:]),
                 'action_log': self.print_action_log(10),
                 'score': self.reward,
+                'last_pray_time': self.character.last_pray_time,
+                'last_pray_reason': str(self.character.last_pray_reason),
             })
 
     def reset(self):
@@ -820,6 +824,9 @@ class CustomAgent(BatchedAgent):
                     #if action == nethack.actions.Command.FIRE: print("firing!")
                     #if action == nethack.actions.Command.WEAR: print("wearing!")
                     #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
+                    if action == nethack.actions.Command.PRAY:
+                        run_state.character.last_pray_time = blstats.get('time')
+                        run_state.character.last_pray_reason = chosen_advice.advisor
 
                     menu_plan = chosen_advice.menu_plan
                     break
