@@ -11,95 +11,147 @@ import nle.nethack as nethack
 from utilities import ARS
 
 class MenuPlan():
-    def __init__(self, name, advisor, match_to_keypress, interactive_menu_header_rows=None, menu_item_selector=None, expects_strange_messages=False, fallback=None):
+    def __init__(self, name, advisor, match_to_keypress, fallback=None, interactive_menu=None):
         self.name = name
         self.advisor = advisor
         self.match_to_keypress = match_to_keypress
-        self.keypress_count = 0
-
-        self.menu_item_selector = menu_item_selector
-        self.interactive_menu_header_rows = interactive_menu_header_rows
-        self.expects_strange_messages = expects_strange_messages
         self.fallback = fallback
+        self.interactive_menu = interactive_menu
+        self.in_interactive_menu = False
 
-    def interact(self, message_obj, live_interactive_menu):
-        if message_obj.interactive_menu_class is not None:
-            #if environment.env.debug: pdb.set_trace()
-            if self.menu_item_selector:
-                selected_item = live_interactive_menu.add_rows(message_obj.tty_chars, self.interactive_menu_header_rows, self.menu_item_selector)
-                if selected_item is not None:
-                    return utilities.keypress_action(ord(selected_item.character))
+    def interact(self, message_obj):
+        if message_obj.message is None:
+            raise Exception("That's not right")
+        if self.interactive_menu and self.interactive_menu.trigger_phrase == message_obj.message:
+            self.in_interactive_menu = True
+        if self.in_interactive_menu:
+            try:
+                selected_item = self.interactive_menu.search_through_rows(message_obj.tty_chars)
+            except EndOfMenu:
+                self.in_interactive_menu = False
+                return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+            except EndOfPage:
+                self.interactive_menu.flip_page()
+                return utilities.keypress_action(ord('>'))
 
-            return nethack.ACTIONS.index(nethack.actions.Command.ESC)
-            #return utilities.keypress_action(ord('\r')) # carriage return to see more if no matches
+            if selected_item is not None:
+                if not self.interactive_menu.multi_select:
+                    self.in_interactive_menu = False
+                return utilities.keypress_action(ord(selected_item.character))
+
         for k, v in self.match_to_keypress.items():
             if k in message_obj.message:
-                self.keypress_count += 1
+                if self.interactive_menu and self.interactive_menu.trigger_action == v:
+                    self.in_interactive_menu = True
                 return v
-
-        if self.keypress_count == 0:
-            pass
 
         return None
 
     def __repr__(self):
         return self.name
 
+class EndOfPage(Exception):
+    pass
+
+class EndOfMenu(Exception):
+    pass
+
 class InteractiveMenu():
     menu_item_pattern = re.compile("([a-zA-z]) (-|\+) (.+)$")
-    def __init__(self):
+    terminator_pattern = re.compile("\(([0-9]+) of ([0-9]+)\)")
+    header_rows = 0
+    # We define selectors here so that their implementation is close to the MenuItem implementation
+    selectors = {}
+    # How should the menu plan know that we're now in the interactive menu.
+    # Either because we just pressed * (which is default)
+    trigger_action = utilities.keypress_action(ord('*'))
+    # or because we see a particular prompt on the screen, which is helpful for the pickup situation where it could go either way
+    trigger_phrase = None
+    # Is this an interactive menu where we can select many items?
+    multi_select = False
+
+    class MenuItem():
+        def __init__(self, category, character, selected, item_text):
+            self.category = category
+            self.character = character
+            self.selected = selected
+            self.item_text = item_text
+
+    def __init__(self, selector_name=None):
         #if environment.env.debug: pdb.set_trace()
 
         self.rendered_rows = []
-        self.category_count = 0
+        self.vertical_offset = 0
         self.active_category = None
         self.offset = None
+        if selector_name:
+            self.item_selector = self.selectors[selector_name]
+        else:
+            self.item_selector = lambda x: True
 
-    def add_rows(self, tty_chars, menu_header_rows, item_selector=None):
+    def flip_page(self):
+        self.vertical_offset = 0
+
+    def search_through_rows(self, tty_chars):
         text_rows = [bytes(row).decode('ascii') for row in tty_chars]
         if not self.offset:
             self.offset = re.search("[^ ]", text_rows[0]).start()
-            #if text_rows[1].rstrip(' '): if environment.env.debug: pdb.set_trace()
-        # Skip 2 header rows plus ones already parsed
-        for row in text_rows[(len(self.rendered_rows) + menu_header_rows + self.category_count):]:
+        # Skip header rows plus ones already parsed
+        for row in text_rows[(self.header_rows + self.vertical_offset):]:
             potential_menu = row[self.offset:].rstrip(' ')
-            if potential_menu == '(end)': # Probably need to handle 1 of 2 pages and such
-                break
+            terminator = re.match(self.terminator_pattern, potential_menu)
+            if terminator:
+                if terminator[1] == terminator[2]:
+                    raise EndOfMenu()
+                else:
+                    raise EndOfPage()
 
-            if isinstance(self,InteractiveEnhanceSkillsMenu):
-                pass #pdb.set_trace()
+            if potential_menu == '(end)':
+                raise EndOfMenu()
 
             item_match = re.match(self.menu_item_pattern, potential_menu)
             if item_match:
                 if not self.active_category:
                     if environment.env.debug: pdb.set_trace()
-                next_item = self.MenuItem(self.active_category, item_match[1], item_match[2] == "+", item_match[3])
+                next_item = self.MenuItem(
+                    self.active_category,
+                    item_match[1],
+                    item_match[2] == "+",
+                    item_match[3]
+                )
                 self.rendered_rows.append(next_item)
-                if not next_item.selected and item_selector and item_selector(next_item):
+                if not next_item.selected and self.item_selector(next_item):
                     return next_item
             else:
                 self.active_category = potential_menu
-                self.category_count += 1
+            
+            self.vertical_offset += 1
+
+        if environment.env.debug:
+            pdb.set_trace()
+            # We should not fall through the menu
 
 class InteractiveEnhanceSkillsMenu(InteractiveMenu):
-    
-    class MenuItem:
-        pattern = re.compile("")
-
-        def __init__(self, category, character, selected, line_text):
-            self.category = category
-            self.character = character
-            self.selected = selected
-            self.line_text = line_text
+    header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Current skills:"
 
 class InteractiveInventoryMenu(InteractiveMenu):
+    selectors = {
+        'teleport scrolls': lambda x: (x.category == "Scrolls") & ("teleporation" in x.item_appearance),
+        'teleport wands': lambda x: (x.category == "Wands") & ("teleporation" in x.item_appearance),
+        'healing potions': lambda x: (x.category == "Potions") & ("healing" in x.item_appearance),
+        'extra weapons': lambda x: (x.category == "Weapons") & ("weapon in hand" not in x.item_equipped_status),
+        'comestibles': lambda x: x.category == "Comestibles",
+        'armor': lambda x: x.category == "Armor",
+    }
+
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
 
         def __init__(self, category, character, selected, item_text):
-            #print(item_text)
             self.category = category
             self.character = character
             self.selected = selected
@@ -132,6 +184,8 @@ class InteractiveInventoryMenu(InteractiveMenu):
 
                 self.item_appearance = item_description
                 self.item_name = '' # slightly questionable but it lets us check `in` on item names that aren't defined
-                #if environment.env.debug: pdb.set_trace()
 
-            #print(self.item_name, self.item_appearance)
+class InteractivePickupMenu(InteractiveInventoryMenu):
+    header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Pick up what?"
