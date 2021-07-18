@@ -26,21 +26,24 @@ class EscapeMenuResponse(MenuResponse):
 
 class YesMenuResponse(MenuResponse):
     def value(self, message_obj):
-        if not message_obj.yn_question and environment.env.debug:
+        if not message_obj.yn_question:
+            # Decently common: Fast yn lingers on screen
+            return None
             pdb.set_trace()
         return utilities.keypress_action(ord('y'))
 
 class NoMenuResponse(MenuResponse):
     def value(self, message_obj):
-        if not message_obj.yn_question and environment.env.debug:
-            pdb.set_trace()
+        if not message_obj.yn_question:
+            # Decently common: Fast yn lingers on screen
+            return None
         return utilities.keypress_action(ord('n'))
 
 class CharacterMenuResponse(MenuResponse):
     def __init__(self, match_str, character):
         super().__init__(match_str)
         self.character = character
-    
+
     def value(self, message_obj):
         return utilities.keypress_action(ord(self.character))
 
@@ -70,6 +73,7 @@ class PhraseMenuResponse(MenuResponse):
         if not message_obj.getline and environment.env.debug:
             pdb.set_trace()
         if self.next_index == len(self.phrase):
+            self.next_index = 0
             return utilities.keypress_action(ord('\r'))
         character = self.phrase[self.next_index]
         self.next_index += 1

@@ -433,7 +433,6 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
             menuplan.CharacterMenuResponse("want to eat?", chr(letter)),
             menuplan.MoreMenuResponse("You succeed in opening the tin."),
             menuplan.YesMenuResponse("smells like"),
-            menuplan.MoreMenuResponse("Rotten food!"),
             menuplan.YesMenuResponse("Eat it?"),
             menuplan.NoMenuResponse("Continue eating")
         ])
