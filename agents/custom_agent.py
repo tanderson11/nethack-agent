@@ -17,6 +17,9 @@ import advisor_sets
 import menuplan
 import utilities
 import physics
+import inventory as inv
+
+import functools
 
 from utilities import ARS
 import glyphs as gd
@@ -44,9 +47,9 @@ class BLStats():
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
 
-class RecordedMonsterDeath():
+class RecordedMonsterDeath(): 
     def __init__(self, square, time, monster_name):
-        self.square = square
+        self.square = square # doesn't know about dungeon levels
         self.time = time
         self.monster_name = monster_name
 
@@ -389,7 +392,11 @@ BackgroundMenuPlan = menuplan.MenuPlan("background", background_advisor, {
     "For what do you wish?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC], # :(
 })
 
-class Character(NamedTuple):
+class Character():
+    def __init__(self, character_data):
+        self.character = character_data
+
+class CharacterData(NamedTuple):
     base_race: str
     base_class: str
     base_sex: str
@@ -398,12 +405,12 @@ class Character(NamedTuple):
     def can_cannibalize(self):
         if self.base_race == 'orc':
             return False
-        if self.base_class == 'Caveman' or self.base_class == 'Cavewoman':
+        if self.base_class == 'Caveperson':
             return False
         return True
 
     def sick_from_tripe(self):
-        if self.base_class == 'Caveman' or self.base_class == 'Cavewoman':
+        if self.base_class == 'Caveperson':
             return False
         return True
 
@@ -426,8 +433,8 @@ class RunState():
         with open(self.log_path, 'a') as log_file:
             writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
             writer.writerow({
-                'race': self.character.base_race,
-                'class': self.character.base_class,
+                'race': self.character.character.base_race,
+                'class': self.character.character.base_class,
                 'level': self.blstats.get('experience_level'),
                 'depth': self.blstats.get('depth'),
                 'branch': self.blstats.get('dungeon_number'),
@@ -512,13 +519,22 @@ class RunState():
             base_sex = self.class_to_sex_mapping[attribute_match_1[3]]
         else:
             base_sex = attribute_match_1[1]
-        character = Character(
+
+        base_class = attribute_match_1[3]
+        if base_class == "Cavewoman" or base_class == "Caveman":
+            base_class = "Caveperson" 
+        if base_class == "Priest" or base_class == "Priestess":
+            base_class = "Priest"
+
+
+        character = CharacterData(
             base_sex=base_sex,
             base_race = self.base_race_mapping[attribute_match_1[2]],
-            base_class = attribute_match_1[3],
+            base_class = base_class,
             base_alignment = attribute_match_2[1],
         )
-        self.character = character
+        self.character = Character(character)
+
         self.gods_by_alignment[character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
