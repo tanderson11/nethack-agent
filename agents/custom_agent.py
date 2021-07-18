@@ -348,8 +348,8 @@ class Neighborhood():
 
         vision = 2
         self.threat_map = ThreatMap(observation['glyphs'], self.player_location, row_slice, col_slice, vision)
-        self.n_threat = self.threat_map.melee_n_threat[self.threat_map.neighborhood_view]
-        self.damage_threat = self.threat_map.melee_damage_threat[self.threat_map.neighborhood_view]
+        self.n_threat = self.threat_map.melee_n_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_n_threat[self.threat_map.neighborhood_view]
+        self.damage_threat = self.threat_map.melee_damage_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_damage_threat[self.threat_map.neighborhood_view]
         self.threatened = self.n_threat > 0
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
