@@ -390,6 +390,8 @@ BackgroundMenuPlan = menuplan.MenuPlan(
 class Character():
     def __init__(self, character_data):
         self.character = character_data
+        self.last_pray_time = None
+        self.last_pray_reason = None
 
 class CharacterData(NamedTuple):
     base_race: str
@@ -804,6 +806,9 @@ class CustomAgent(BatchedAgent):
                     if action == nethack.actions.Command.FIRE: print("firing!")
                     if action == nethack.actions.Command.WEAR: print("wearing!")
                     #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
+                    if action == nethack.actions.Command.PRAY:
+                        run_state.character.last_pray_time = blstats.get('time')
+                        run_state.character.last_pray_reason = chosen_advice.advisor
 
                     menu_plan = chosen_advice.menu_plan
                     break
