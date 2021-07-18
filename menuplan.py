@@ -4,6 +4,7 @@ import re
 import environment
 import glyphs as gd
 import utilities
+import inventory as inv
 
 import nle.nethack as nethack
 
@@ -96,7 +97,6 @@ class InteractiveInventoryMenu(InteractiveMenu):
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
-        pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?((very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
 
         def __init__(self, category, character, selected, item_text):
             #print(item_text)
@@ -107,7 +107,7 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.item_appearance = None
             self.item_equipped_status = ''
 
-            match = re.match(self.pattern, item_text)
+            match = re.match(inv.ItemParser.item_pattern, item_text)
             if match:
                 if match[1] == "a" or match[1] == "an":
                     self.quantity = 1
