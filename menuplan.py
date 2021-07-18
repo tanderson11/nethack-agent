@@ -107,7 +107,7 @@ class MenuPlan():
 
         for response in self.menu_responses:
             action = response.action_message(message_obj)
-            if action:
+            if action is not None:
                 if self.interactive_menu and self.interactive_menu.trigger_action == action:
                     self.in_interactive_menu = True
                 return action
