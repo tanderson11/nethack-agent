@@ -25,7 +25,11 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install poetry
         poetry install
-    - name: Do 1024 runs
+    - name: Run test_run.env
       run: |
         source test_run.env
         poetry run python test_submission.py
+    - uses: actions/upload-artifact@v2
+      with:
+        name: nle_data
+        path: nle_data
