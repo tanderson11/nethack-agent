@@ -689,7 +689,7 @@ class CustomAgent(BatchedAgent):
             run_state.update_base_attributes(raw_screen_content)
             #import pdb; pdb.set_trace()
 
-        _inventory = inv.Inventory(observation)
+        #_inventory = inv.Inventory(observation)
         #import pdb; pdb.set_trace()
 
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
@@ -818,7 +818,7 @@ class CustomAgent(BatchedAgent):
             menu_plan = chosen_advice.menu_plan
             #if environment.env.debug: pdb.set_trace()
 
-        run_state.log_action(retval, advice=chosen_advice)
+        run_state.log_action(retval, advice=chosen_advice) # don't log menu plan because this wasn't a menu plan action
 
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
