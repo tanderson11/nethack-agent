@@ -17,7 +17,7 @@ class MenuResponse:
 
     def action_message(self, message_obj):
         if not self.match_str in message_obj.message:
-            return False
+            return None
         return self.value(message_obj)
 
 class EscapeMenuResponse(MenuResponse):
