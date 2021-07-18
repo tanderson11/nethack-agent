@@ -106,6 +106,8 @@ class Message():
         self.raw_message = message
         self.tty_chars = tty_chars
         self.message = ''
+        self.yn_question = (misc_observation[0] == 1)
+        self.getline = (misc_observation[1] == 1)
         self.has_more = (misc_observation[2] == 1)
 
         if np.count_nonzero(message) > 0:
@@ -374,17 +376,18 @@ class Neighborhood():
         return mons
  
 background_advisor = advs.BackgroundActionsAdvisor()
-BackgroundMenuPlan = menuplan.MenuPlan("background", background_advisor, {
-    '"Hello stranger, who are you?" - ': utilities.keypress_action(ord('\r')),
-    "Call a ": utilities.keypress_action(ord('\r')),
-    "Call an ": utilities.keypress_action(ord('\r')),
-    "Really attack": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC], # Attacking because don't know about peaceful monsters yet
-    "Shall I remove": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
-    "Would you wear it for me?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
-    "zorkmids worth of damage!": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
-    "little trouble lifting": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC],
-    "For what do you wish?": utilities.ACTION_LOOKUP[nethack.actions.Command.ESC], # :(
-})
+BackgroundMenuPlan = menuplan.MenuPlan(
+    "background", background_advisor, [
+        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
+        menuplan.EscapeMenuResponse("Call a "),
+        menuplan.EscapeMenuResponse("Call an "),
+        menuplan.NoMenuResponse("Really attack"),
+        menuplan.NoMenuResponse("Shall I remove"),
+        menuplan.NoMenuResponse("Would you wear it for me?"),
+        menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
+        menuplan.EscapeMenuResponse("little trouble lifting"),
+        menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
+    ])
 
 class Character():
     def __init__(self, character_data):
@@ -579,6 +582,11 @@ class RunState():
                 self.active_menu_plan = BackgroundMenuPlan
                 retval = self.active_menu_plan.interact(message)
 
+        if retval is None and (message.yn_question or message.getline):
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+                # This should have been dealt with by our menu plan
+
         return retval
 
     def update_neighborhood(self, neighborhood):
@@ -747,7 +755,8 @@ class CustomAgent(BatchedAgent):
             print(message.message)
 
         if "It's a wall" in message.message and environment.env.debug:
-            if environment.env.debug: pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+            if environment.env.debug:
+                import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
 
         #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state) # maybe we want something more like this?
 
@@ -825,7 +834,7 @@ class CustomAgent(BatchedAgent):
             menu_plan = chosen_advice.menu_plan
             #if environment.env.debug: pdb.set_trace()
 
-        run_state.log_action(retval, advice=chosen_advice)
+        run_state.log_action(retval, advice=chosen_advice) # don't log menu plan because this wasn't a menu plan action
 
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
