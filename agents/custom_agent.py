@@ -685,6 +685,10 @@ class CustomAgent(BatchedAgent):
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
+            #import pdb; pdb.set_trace()
+
+        _inventory = inv.Inventory(observation)
+        #import pdb; pdb.set_trace()
 
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
@@ -801,6 +805,7 @@ class CustomAgent(BatchedAgent):
 
                     #if action == nethack.actions.Command.QUAFF: print("quaffing!")
                     if action == nethack.actions.Command.FIRE: print("firing!")
+                    if action == nethack.actions.Command.WEAR: print("wearing!")
                     #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
 
                     menu_plan = chosen_advice.menu_plan
