@@ -396,7 +396,32 @@ class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__cla
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if self.have_item_oclass(inventory):
-            return self.use_item(rng, blstats, inventory, neighborhood, message, flags)
+            use_item = self.use_item(rng, blstats, inventory, neighborhood, message, flags)
+            if use_item is not None:
+                return use_item
+        return None
+
+class WearTopInventoryAdvisor(ItemUseAdvisor):
+    oclasses_used = ['ARMOR_CLASS']
+
+    def make_menu_plan(self, letter):
+        menu_plan = menuplan.MenuPlan("wear armor", self, {
+            "What do you want to wear?": utilities.keypress_action(letter),
+            "Which ring-finger": nethack.ACTIONS.index(nethack.actions.Command.ESC),
+        })
+        return menu_plan
+
+    def use_item(self, rng, _1, inventory, _3, _4, flags):
+        if rng.randint(1,45) == 1:
+            wear = nethack.actions.Command.WEAR
+            ARMOR_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('ARMOR_CLASS')
+            armor_index = [i for i in inventory['inv_oclasses'].tolist() if i == ARMOR_CLASS]
+            armor_index = rng.choice(armor_index)
+
+            letter = inventory['inv_letters'][armor_index]
+            if letter != 0:
+                menu_plan = self.make_menu_plan(letter)
+                return Advice(self.__class__, wear, menu_plan)
         return None
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):

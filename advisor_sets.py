@@ -24,6 +24,7 @@ small_advisors = [
         PickupFoodAdvisor: 1,
         PickupArmorAdvisor: 1,
         EatCorpseAdvisor: 1,
+        WearTopInventoryAdvisor: 1,
     }),
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
