@@ -58,6 +58,7 @@ class ItemParser():
 
         else:
             if environment.env.debug: pdb.set_trace()
+            return None
 
         item_init_args = (description, quantity, BUC, equipped_status, condition)
         return item_init_args # should we actually be making and caching the object??
@@ -81,7 +82,8 @@ class Inventory():
 
             if item_str:
                 item_args = ItemParser.parse_inventory_item(item_str)
-                item = Item(*item_args, glyph_numeral=glyph_num)
+                if item_args is not None:
+                    item = Item(*item_args, glyph_numeral=glyph_num)
 
                 contents.append(item)
 
