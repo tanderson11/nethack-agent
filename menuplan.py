@@ -5,16 +5,82 @@ import environment
 import glyphs as gd
 import utilities
 import inventory as inv
+import physics
 
 import nle.nethack as nethack
 
 from utilities import ARS
 
+class MenuResponse:
+    def __init__(self, match_str):
+        self.match_str = match_str
+
+    def action_message(self, message_obj):
+        if not self.match_str in message_obj.message:
+            return False
+        return self.value(message_obj)
+
+class EscapeMenuResponse(MenuResponse):
+    def value(self, message_obj):
+        return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+
+class YesMenuResponse(MenuResponse):
+    def value(self, message_obj):
+        if not message_obj.yn_question and environment.env.debug:
+            pdb.set_trace()
+        return utilities.keypress_action(ord('y'))
+
+class NoMenuResponse(MenuResponse):
+    def value(self, message_obj):
+        if not message_obj.yn_question and environment.env.debug:
+            pdb.set_trace()
+        return utilities.keypress_action(ord('n'))
+
+class CharacterMenuResponse(MenuResponse):
+    def __init__(self, match_str, character):
+        super().__init__(match_str)
+        self.character = character
+    
+    def value(self, message_obj):
+        return utilities.keypress_action(ord(self.character))
+
+class MoreMenuResponse(MenuResponse):
+    def value(self, message_obj):
+        if not message_obj.has_more and environment.env.debug:
+            pdb.set_trace()
+        return utilities.keypress_action(ord(' '))
+
+class DirectionMenuResponse(MenuResponse):
+    def __init__(self, match_str, direction):
+        super().__init__(match_str)
+        if not direction in physics.action_grid:
+            raise Exception("Bad direction")
+        self.direction = direction
+
+    def value(self, message_obj):
+        return utilities.ACTION_LOOKUP[self.direction]
+
+class PhraseMenuResponse(MenuResponse):
+    def __init__(self, match_str, phrase):
+        super().__init__(match_str)
+        self.phrase = phrase
+        self.next_index = 0
+
+    def value(self, message_obj):
+        if not message_obj.getline and environment.env.debug:
+            pdb.set_trace()
+        if self.next_index == len(self.phrase):
+            return utilities.keypress_action(ord('\r'))
+        character = self.phrase[self.next_index]
+        self.next_index += 1
+        return utilities.keypress_action(ord(character))
+
+
 class MenuPlan():
-    def __init__(self, name, advisor, match_to_keypress, fallback=None, interactive_menu=None):
+    def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None):
         self.name = name
         self.advisor = advisor
-        self.match_to_keypress = match_to_keypress
+        self.menu_responses = menu_responses
         self.fallback = fallback
         self.interactive_menu = interactive_menu
         self.in_interactive_menu = False
@@ -39,11 +105,12 @@ class MenuPlan():
                     self.in_interactive_menu = False
                 return utilities.keypress_action(ord(selected_item.character))
 
-        for k, v in self.match_to_keypress.items():
-            if k in message_obj.message:
-                if self.interactive_menu and self.interactive_menu.trigger_action == v:
+        for response in self.menu_responses:
+            action = response.action_message(message_obj)
+            if action:
+                if self.interactive_menu and self.interactive_menu.trigger_action == action:
                     self.in_interactive_menu = True
-                return v
+                return action
 
         return None
 
