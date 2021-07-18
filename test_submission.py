@@ -26,7 +26,7 @@ def evaluate():
 
     batched_env = BatchedEnv(env_make_fn=env_make_fn, num_envs=num_envs)
 
-    agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.debug else None)
+    agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.log_runs else None)
 
     ascensions, scores = run_batched_rollout(num_episodes, batched_env, agent)
     print(
@@ -35,7 +35,7 @@ def evaluate():
         f"Mean Score: {np.mean(scores)}"
     )
 
-    if environment.env.debug:
+    if environment.env.log_runs:
         return batched_env.envs[0].savedir
 
 

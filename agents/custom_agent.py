@@ -413,7 +413,7 @@ class RunState():
         self.reset()
         self.debug_env = debug_env
         self.log_path = None
-        if environment.env.debug:
+        if environment.env.log_runs:
             self.log_path = os.path.join(debug_env.savedir, "log.csv")
             with open(self.log_path, 'w') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
