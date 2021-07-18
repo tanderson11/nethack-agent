@@ -92,13 +92,13 @@ class Message():
             self.diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
             self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
             self.collapse_message = "You collapse under your load" in message.message
-            #boulder_in_vain_message = "boulder, but in vain." in message.message
+            self.boulder_in_vain_message = "boulder, but in vain." in message.message
             #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
             #carrying_too_much_message = "You are carrying too much to get through." in message.message
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
-            self.failed_move = self.diagonal_out_of_doorway_message or self.diagonal_into_doorway_message or self.collapse_message
+            #self.failed_move =  self.diagonal_into_doorway_message or self.collapse_message or self.boulder_in_vain_message
             self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
 
@@ -230,32 +230,33 @@ class ThreatMap():
 
                 is_invis = isinstance(glyph, gd.InvisibleGlyph)
                 if isinstance(glyph, gd.MonsterGlyph) or is_invis:
-                    ### SHARED ###
-                    can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
-                    ###
+                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
+                        ### SHARED ###
+                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
+                        ###
 
-                    ### MELEE ###
-                    if is_invis or glyph.has_melee:
-                        can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
+                        ### MELEE ###
+                        if is_invis or glyph.has_melee:
+                            can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
 
-                        melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
-                    
-                        if isinstance(glyph, gd.MonsterGlyph):
-                            melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
+                            melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
+                        
+                            if isinstance(glyph, gd.MonsterGlyph):
+                                melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
 
-                        if is_invis:
-                            melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?                
-                    ###
+                            if is_invis:
+                                melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?                
+                        ###
 
-                    ### RANGED ###
-                    if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
-                        can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
-                        ranged_n_threat[can_hit_mask] += 1
-                        if is_invis:
-                            ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
-                        else:
-                            ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
-                    ###
+                        ### RANGED ###
+                        if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
+                            can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
+                            ranged_n_threat[can_hit_mask] += 1
+                            if is_invis:
+                                ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
+                            else:
+                                ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
+                        ###
 
         self.melee_n_threat = melee_n_threat
         self.melee_damage_threat = melee_damage_threat
@@ -312,7 +313,7 @@ class Neighborhood():
         [-1, 0, 1,],
     ])
 
-    def __init__(self, player_location, observation, dmap, character, previous_glyph_on_player, latest_monster_death, feedback):
+    def __init__(self, player_location, observation, dmap, character, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
         blstats = BLStats(observation['blstats'])
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
@@ -331,6 +332,7 @@ class Neighborhood():
         self.glyphs = utilities.vectorized_map(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g), self.raw_glyphs)
 
         self.visits = dmap.visits_map[row_slice, col_slice]
+
         self.players_square_mask = self.action_grid == physics.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
 
         x,y = np.where(self.players_square_mask)
@@ -368,7 +370,7 @@ class Neighborhood():
         return directions
 
     def is_monster(self):
-        mons = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph), self.glyphs)
+        mons = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
         return mons
  
 background_advisor = advs.BackgroundActionsAdvisor()
@@ -463,6 +465,7 @@ class RunState():
         
         self.time_hung = 0
         self.time_stuck = 0
+        self.failed_moves_on_square = []
         self.rng = self.make_seeded_rng()
         self.glyph_under_player = None
         self.time_did_advance = True
@@ -479,7 +482,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'g4kEfA=='
+        #seed = b'u8mUnw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -590,6 +593,7 @@ class RunState():
             self.time_stuck += 1
         else:
             self.time_stuck = 0
+            self.failed_moves_on_square = []
 
         if self.time_stuck > 200:
             pass
@@ -610,8 +614,13 @@ class RunState():
                 print("Deleting record")
                 self.latest_monster_death = None
 
-        #if message.feedback.failed_move:
-        #    self.failed_move_advisors.append(self.advice_log[-1].action)
+        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message:
+            if self.advice_log[-1]:
+                move = utilities.ACTION_LOOKUP[self.advice_log[-1].action]
+                assert move in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
+                self.failed_moves_on_square.append(move)
+            else:
+                print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
     def log_action(self, action, menu_plan=None, advice=None):
         self.menu_plan_log.append(menu_plan)
@@ -713,7 +722,6 @@ class CustomAgent(BatchedAgent):
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.log_message(message)
 
-
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
@@ -767,9 +775,17 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         neighborhood = Neighborhood(
-            player_location, observation, run_state.dmap, run_state.character, previous_glyph_on_player, run_state.latest_monster_death, message.feedback)
+            player_location, observation, run_state.dmap, run_state.character, previous_glyph_on_player, run_state.latest_monster_death, run_state.failed_moves_on_square, message.feedback)
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
+
+        for f in run_state.failed_moves_on_square:
+            failed_move_offset = physics.action_to_delta[f]
+            location = (neighborhood.player_location_in_neighborhood[0]+failed_move_offset[0], neighborhood.player_location_in_neighborhood[1]+failed_move_offset[1])
+            try:
+                neighborhood.walkable[location] = False
+            except IndexError:
+                if environment.env.debug: import pdb; pdb.set_trace()
 
         flags = advs.Flags(blstats, inventory, neighborhood, message, run_state.character)
 
@@ -792,8 +808,8 @@ class CustomAgent(BatchedAgent):
                     action = chosen_advice.action
 
                     #if action == nethack.actions.Command.QUAFF: print("quaffing!")
-                    if action == nethack.actions.Command.FIRE: print("firing!")
-                    if action == nethack.actions.Command.WEAR: print("wearing!")
+                    #if action == nethack.actions.Command.FIRE: print("firing!")
+                    #if action == nethack.actions.Command.WEAR: print("wearing!")
                     #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
 
                     menu_plan = chosen_advice.menu_plan
@@ -814,8 +830,8 @@ class CustomAgent(BatchedAgent):
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
 
-        if retval == nethack.actions.MiscDirection.WAIT:
-            if environment.env.debug: pdb.set_trace()
+        if retval == utilities.ACTION_LOOKUP[nethack.actions.MiscDirection.WAIT]:
+            if environment.env.debug: import pdb; pdb.set_trace() # maybe this happens when we travel?
 
         return retval
 
