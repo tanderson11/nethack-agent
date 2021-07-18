@@ -38,7 +38,7 @@ class BLStats():
         'hero_col', 'hero_row', 'strength_pct', 'strength', 'dexterity', 'constitution',
         'intelligence', 'wisdom', 'charisma', 'score', 'hitpoints', 'max_hitpoints', 'depth', 
         'gold', 'energy', 'max_energy', 'armor_class', 'monster_level', 'experience_level', 
-        'experience_points', 'time', 'hunger_state', 'carrying_capacity', 'dungeon_number', 'level_number'
+        'experience_points', 'time', 'hunger_state', 'encumberance', 'dungeon_number', 'level_number'
     ]
 
     def __init__(self, raw):
