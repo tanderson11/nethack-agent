@@ -142,6 +142,7 @@ class MonsterGlyph(MonsterAlikeGlyph):
             self.has_passive = self.monster_spoiler.passive_attack_bundle.num_attacks > 0
             self.has_melee = self.monster_spoiler.melee_attack_bundle.num_attacks > 0
             self.has_ranged = self.monster_spoiler.ranged_attack_bundle.num_attacks > 0
+            self.has_death_throes = self.monster_spoiler.death_attack_bundle.num_attacks > 0
 
         self.always_peaceful = False
         if self.offset == 267: # shopkeeper

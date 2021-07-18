@@ -543,7 +543,8 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
     def get_target_monsters(self, neighborhood):
         always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
         has_passive_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask & ~always_peaceful
+        has_death_throes_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_death_throes, neighborhood.glyphs)
+        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
         return targeted_monster_mask
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
