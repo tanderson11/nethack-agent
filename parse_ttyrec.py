@@ -4,6 +4,7 @@ import tqdm
 import bz2
 
 import pandas as pd
+import environment
 
 # problem if the lines get cut off onto a new line
 score_line_pattern = re.compile("You ((?:were |turned to )?([a-zA-Z]+)) in ([a-zA-Z ]+) on dungeon level ([0-9]+) with ([0-9]+) points")
@@ -110,7 +111,7 @@ def ttyrec_parse(f, path):
                     d['status'] = None
                     
             if "pieces of gold, after" in line and not score_match:
-                import pdb; pdb.set_trace() # looks like we're on the score screen, but we failed to match score
+                if environment.env.debug: import pdb; pdb.set_trace() # looks like we're on the score screen, but we failed to match score
 
             if "Vanquished creatures:" in line:
                 d['kills'] = 1  # when only one line in kills, it doesn't show total separately
