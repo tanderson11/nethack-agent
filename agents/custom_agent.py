@@ -639,13 +639,17 @@ class RunState():
         self.action_log.append(action)
         self.advice_log.append(advice)
 
+
+        if action in range(0,8): #is a movement action; bad
+            self.last_movement_action = action
+
         if menu_plan == None:
             self.last_non_menu_action = action
             self.last_non_menu_action_timestamp = self.time
 
     def check_gamestate_advancement(self, neighborhood):
         game_did_advance = True
-        if self.time is not None and self.last_non_menu_action_timestamp is not None:
+        if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 3: # time_hung > 3 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
                 neighborhood_diverged = self.neighborhood.player_location != neighborhood.player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
                 #pdb.set_trace()
@@ -804,7 +808,7 @@ class CustomAgent(BatchedAgent):
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
-            if advisor_level.check_flags(flags):
+            if advisor_level.check_flags(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
                 all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
@@ -848,6 +852,15 @@ class CustomAgent(BatchedAgent):
 
         if retval == utilities.ACTION_LOOKUP[nethack.actions.MiscDirection.WAIT]:
             if environment.env.debug: import pdb; pdb.set_trace() # maybe this happens when we travel?
+
+
+        if environment.env.debug and retval in range(0,8): #cardinal
+            delta = physics.action_to_delta[retval]
+            new_loc = (neighborhood.player_location_in_neighborhood[0] + delta[0], neighborhood.player_location_in_neighborhood[1] + delta[1])
+            #print(new_loc)
+            if neighborhood.threatened[new_loc] and not neighborhood.is_monster()[new_loc]:
+                print("Moved into threat")
+                #import pdb; pdb.set_trace()
 
         return retval
 
