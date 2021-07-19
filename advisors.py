@@ -2,11 +2,11 @@ import abc
 from collections import OrderedDict
 import pdb
 
-import glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 
 import environment
+import glyphs as gd
 import menuplan
 import utilities
 from utilities import ARS
