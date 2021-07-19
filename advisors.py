@@ -6,6 +6,7 @@ import glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 
+import physics
 import environment
 import menuplan
 import utilities
@@ -105,7 +106,7 @@ class Flags():
             return self.computed_values['have_unthreatened_moves']
         except KeyError:
             # someday Held, Handspan, Overburdened etc.
-            have_unthreatened_moves = (self.neighborhood.walkable & self.neighborhood.n_threat == 0).any() # at least one square is walkable
+            have_unthreatened_moves = (self.neighborhood.walkable & ~self.neighborhood.threatened).any() # at least one square is walkable
             self.computed_values['have_unthreatened_moves'] = have_unthreatened_moves
             return have_unthreatened_moves
 
@@ -156,66 +157,88 @@ class Flags():
             return fresh_corpse_on_square
 
 class AdvisorLevel():
-    def __init__(self, advisors):
+    def __init__(self, advisors, skip_probability=0):
         self.advisors = advisors
+        self.skip_probability = skip_probability
 
-    def check_flags(self, flags):
+    def check_if_random_skip(self, rng):
+        if self.skip_probability > 0 and rng.random() < self.skip_probability:
+            return True
+        return False
+
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return True
 
 class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] > 1
-
+        
 class AmUnthreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
 
 class MajorTroubleAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.major_trouble()
 
 class UnthreatenedMovesAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.have_unthreatened_moves()
 
 class FreeImprovementAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.can_enhance()
 
 class AllMovesThreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return not flags.have_unthreatened_moves()
 
 class CriticallyInjuredAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.am_critically_injured()
 
 class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.am_critically_injured() and flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
 
 class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.blstats.get('dungeon_number') == 0
 
+
 class NoMovesAdvisor(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return not flags.have_moves()
 
 class WeakWithHungerAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.am_weak()
 
 class AdjacentToMonsterAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.near_monster()  
 
 class LowHPAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.am_low_hp()
 
 class AdjacentToMonsterAndLowHpAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
         return flags.near_monster() and flags.am_low_hp()
 
 class Advisor(abc.ABC):
@@ -245,7 +268,6 @@ class RandomMoveAdvisor(MoveAdvisor):
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
         possible_actions = neighborhood.action_grid[agreeable_move_mask]
 
-        #print(possible_actions)
         if possible_actions.any():
             return Advice(self.__class__, rng.choice(possible_actions), None)
         else:
@@ -290,11 +312,11 @@ class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
 
 class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
-        return neighborhood.walkable & neighborhood.has_fresh_corpse
+        return neighborhood.walkable & neighborhood.has_fresh_corpse & ~neighborhood.threatened
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
-        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character), neighborhood.glyphs)
+        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character), neighborhood.glyphs) & ~neighborhood.threatened
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
@@ -510,6 +532,7 @@ class DrinkHealingPotionAdvisor(ItemUseAdvisor):
             "drink healing potion", self, [
                 menuplan.CharacterMenuResponse("What do you want to drink?", '*'),
                 menuplan.NoMenuResponse("Drink from the fountain?"),
+                menuplan.NoMenuResponse("Drink from the sink?"),
             ],
             interactive_menu=menuplan.InteractiveInventoryMenu('healing potions'),
         )
