@@ -315,10 +315,11 @@ class Neighborhood():
         [-1, 0, 1,],
     ])
 
-    def __init__(self, player_location, observation, dmap, character, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
+    def __init__(self, player_location, observation, dmap, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
         blstats = BLStats(observation['blstats'])
         self.player_location = player_location
         self.player_row, self.player_col = self.player_location
+        self.last_movement_action = last_movement_action
 
         neighborhood_size = 1
 
@@ -353,6 +354,10 @@ class Neighborhood():
         self.n_threat = self.threat_map.melee_n_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_n_threat[self.threat_map.neighborhood_view]
         self.damage_threat = self.threat_map.melee_damage_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_damage_threat[self.threat_map.neighborhood_view]
         self.threatened = self.n_threat > 0
+
+        if self.n_threat.any():
+            pass
+            #import pdb; pdb.set_trace()
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
         if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
@@ -469,6 +474,7 @@ class RunState():
 
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
+        self.last_movement_action = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -792,7 +798,7 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         neighborhood = Neighborhood(
-            player_location, observation, run_state.dmap, run_state.character, previous_glyph_on_player, run_state.latest_monster_death, run_state.failed_moves_on_square, message.feedback)
+            player_location, observation, run_state.dmap, run_state.character, run_state.last_movement_action, previous_glyph_on_player, run_state.latest_monster_death, run_state.failed_moves_on_square, message.feedback)
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 

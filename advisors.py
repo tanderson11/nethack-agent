@@ -298,6 +298,25 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
         else:
             return None
 
+class ContinueMovementIfUnthreatenedAdvisor(MoveAdvisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.can_move() and flags.have_moves() and neighborhood.last_movement_action is not None:
+            dx,dy = physics.action_to_delta[neighborhood.last_movement_action]
+            x,y = neighborhood.player_location_in_neighborhood
+
+            try:
+                is_threatened = neighborhood.threatened[x+dx, y+dy]
+                is_walkabe = neighborhood.walkable[x+dx, y+dy]
+            except IndexError:
+                return None
+
+            if is_walkabe and not is_threatened:
+                return Advice(self.__class__, neighborhood.action_grid[x+dx, y+dy], None)
+            else:
+                return None
+        else:
+            return None
+
 class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened

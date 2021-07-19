@@ -30,6 +30,7 @@ small_advisors = [
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AdvisorLevel({FreshCorpseMoveAdvisor: 1,}),
+    AdvisorLevel({ContinueMovementIfUnthreatenedAdvisor: 1}, skip_probability=0.3),
     AdvisorLevel({
         MostNovelUnthreatenedMoveAdvisor: 10,
         NoUnexploredSearchAdvisor: 6,
