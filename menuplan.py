@@ -207,6 +207,15 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
     trigger_action = None
     trigger_phrase = "Current skills:"
 
+class InteractiveDropTypeMenu(InteractiveMenu):
+    header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Drop what type of items?"
+
+    selectors = {
+        'unknown buc': lambda x: (x.item_text == "Items of unknown Bless/Curse status")
+    }
+
 class InteractiveInventoryMenu(InteractiveMenu):
     selectors = {
         'teleport scrolls': lambda x: (x.category == "Scrolls") & ("teleporation" in x.item_appearance),

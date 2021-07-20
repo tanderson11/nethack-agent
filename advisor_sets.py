@@ -12,6 +12,7 @@ small_advisors = [
     MajorTroubleAdvisorLevel({PrayWhenMajorTroubleAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayWhenWeakAdvisor: 1,}),
+    BurdenedAdvisorLevel({DropAllUnknownBUC: 1}),
     AdjacentToMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
     AdjacentToMonsterAdvisorLevel({RandomSafeMeleeAttack: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
@@ -30,7 +31,7 @@ small_advisors = [
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AdvisorLevel({FreshCorpseMoveAdvisor: 1,}),
-    AdvisorLevel({ContinueMovementIfUnthreatenedAdvisor: 1}, skip_probability=0.3),
+    #AdvisorLevel({ContinueMovementIfUnthreatenedAdvisor: 1}, skip_probability=0.3),
     AdvisorLevel({
         MostNovelUnthreatenedMoveAdvisor: 10,
         NoUnexploredSearchAdvisor: 6,

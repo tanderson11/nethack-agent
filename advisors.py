@@ -56,6 +56,14 @@ class Flags():
             self.computed_values['am_satiated'] = am_satiated
             return am_satiated
 
+    def am_burdened(self):
+        try:
+            return self.computed_values['am_burdened']
+        except KeyError:
+            am_burdened = self.blstats.get('encumberance') > 0
+            self.computed_values['am_burdened'] = am_burdened
+            return am_burdened
+
     def am_critically_injured(self):
         try:
             return self.computed_values['am_critically_injured']
@@ -226,6 +234,11 @@ class WeakWithHungerAdvisorLevel(AdvisorLevel):
         if self.check_if_random_skip(rng): return False
         return flags.am_weak()
 
+class BurdenedAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
+        return flags.am_burdened()    
+
 class AdjacentToMonsterAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
         if self.check_if_random_skip(rng): return False
@@ -252,6 +265,18 @@ class Advisor(abc.ABC):
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         pass
+
+class DropAllUnknownBUC(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        drop_type = nethack.actions.Command.DROPTYPE
+        menu_plan = menuplan.MenuPlan("drop unknown buc",
+            self,
+            [],
+            interactive_menu=menuplan.InteractiveDropTypeMenu('unknown buc'),
+        )
+        print("Dropping unknown BUC")
+        pdb.set_trace()
+        return Advice(self.__class__, drop_type, menu_plan)
 
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
@@ -628,7 +653,7 @@ class PickupFoodAdvisor(Advisor):
                 [],
                 interactive_menu=menuplan.InteractivePickupMenu('comestibles'),
             )
-            print("Food pickup")
+            #print("Food pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 
@@ -641,7 +666,7 @@ class PickupArmorAdvisor(Advisor):
                 [],
                 interactive_menu=menuplan.InteractivePickupMenu('armor'),
             )
-            print("Armor pickup")
+            #print("Armor pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 

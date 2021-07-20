@@ -713,7 +713,6 @@ class CustomAgent(BatchedAgent):
             #import pdb; pdb.set_trace()
 
         #_inventory = inv.Inventory(observation)
-        #import pdb; pdb.set_trace()
 
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
