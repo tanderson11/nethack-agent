@@ -156,6 +156,15 @@ class Flags():
             self.computed_values['fresh_corpse_on_square'] = fresh_corpse_on_square
             return fresh_corpse_on_square
 
+    def unvisited_in_full_vision(self):
+        try:
+            return self.computed_values['unvisited_in_full_vision']
+        except KeyError:
+            # someday Held, Handspan, Overburdened etc.
+            unvisited_in_full_vision = self.neighborhood.unvisited_walkable_in_full_vision
+            self.computed_values['unvisited_in_full_vision'] = unvisited_in_full_vision
+            return unvisited_in_full_vision
+
 class AdvisorLevel():
     def __init__(self, advisors, skip_probability=0):
         self.advisors = advisors
@@ -215,6 +224,10 @@ class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
         if self.check_if_random_skip(rng): return False
         return flags.blstats.get('dungeon_number') == 0
 
+class NoUnvisitedWalkableInFullVisionAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags, rng):
+        if self.check_if_random_skip(rng): return False
+        return not flags.unvisited_in_full_vision
 
 class NoMovesAdvisor(AdvisorLevel):
     def check_flags(self, flags, rng):
@@ -291,6 +304,10 @@ class MostNovelMoveAdvisor(MoveAdvisor):
         else:
             return None
 
+class VisitUndersearchedSquareByNoveltyAdvisor(MostNovelMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+        return neighborhood.walkable & ~neighborhood.threatened & neighborhood.searches < 30 & neighborhood.secret_door_adjacent
+
 class LeastNovelMoveAdvisor(MoveAdvisor):
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
         possible_actions = neighborhood.action_grid[agreeable_move_mask]
@@ -338,7 +355,11 @@ class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
-        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character), neighborhood.glyphs) & ~neighborhood.threatened
+        desirable_mask = utilities.vectorized_map(
+            lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character)
+                or isinstance(g, gd.CorpseGlyph) and g.desirable_object(character),
+            neighborhood.glyphs) & ~neighborhood.threatened
+        return neighborhood.walkable & desirable_mask
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
@@ -563,6 +584,12 @@ class DrinkHealingPotionAdvisor(ItemUseAdvisor):
 class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, character, _1, _2, _3, _4, _5):
         return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
+
+class SearchUndersearchedAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if neighborhood.searches[neighborhood.local_player_location] < 30 and neighborhood.secret_door_adjacent[neighborhood.local_player_location]:
+            return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
+        return None
 
 class NoUnexploredSearchAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):

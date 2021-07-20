@@ -135,9 +135,14 @@ class DMap():
 
         self.visits_map = np.zeros_like(glyphs)
         self.visits_map[initial_player_location] += 1
+
+        self.search_map = np.zeros_like(glyphs)
     
-    def update(self, player_location):
+    def update_visits(self, player_location):
         self.visits_map[player_location] += 1
+
+    def update_search(self, player_location):
+        self.search_map[player_location] += 1
 
 class FloodMap():
     @staticmethod
@@ -310,8 +315,7 @@ class ThreatMap(FloodMap):
         return can_hit_mask
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
-    extended_vision = 2
-    def __init__(self, absolute_player_location, observation, dmap, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
+    def __init__(self, absolute_player_location, observation, dmap, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback, vision=2):
         ###################
         ### COPY FIELDS ###
         ###################
@@ -325,11 +329,13 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### FULL EXTENT OF VISION ###
         #############################
         row_vision, col_vision = utilities.centered_slices_bounded_on_array(
-            absolute_player_location, (self.__class__.extended_vision, self.__class__.extended_vision), observation['glyphs']
+            absolute_player_location, (vision, vision), observation['glyphs']
         )
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
         extended_visits = dmap.visits_map[row_vision, col_vision]
+        extended_searches = dmap.search_map[row_vision, col_vision]
+        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -368,9 +374,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
+        self.searches = extended_searches[neighborhood_view]
+
         self.is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
 
-        walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
+        walkable_tile = extended_walkable_tile[neighborhood_view]
         open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
         on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
@@ -383,12 +391,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.secret_door_map = SecretDoorMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
         self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
 
+        self.unvisited_walkable_in_full_vision = (extended_walkable_tile & (extended_visits == 0)).any()
+
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
         #########################################
         self.n_threat = self.threat_map.melee_n_threat[neighborhood_view]# + self.threat_map.ranged_n_threat[neighborhood_view]
         self.damage_threat = self.threat_map.melee_damage_threat[neighborhood_view]# + self.threat_map.ranged_damage_threat[neighborhood_view]
         self.threatened = self.n_threat > 0
+
+        self.secret_door_adjacent = self.secret_door_map.secret_door_adjacent_mask[neighborhood_view]
 
         ####################
         ### CORPSE STUFF ###
@@ -768,7 +780,7 @@ class CustomAgent(BatchedAgent):
         if level_changed:
             run_state.dmap = DMap(blstats.get("dungeon_number"), blstats.get("level_number"), observation['glyphs'], player_location)
         else:
-            run_state.dmap.update(player_location)
+            run_state.dmap.update_visits(player_location)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.log_message(message)
@@ -907,6 +919,9 @@ class CustomAgent(BatchedAgent):
             if neighborhood.threatened[new_loc] and not neighborhood.is_monster[new_loc]:
                 print("Moved into threat")
                 #import pdb; pdb.set_trace()
+
+        if retval == utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]:
+            run_state.dmap.update_search(player_location)
 
         return retval
 
