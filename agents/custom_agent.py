@@ -386,8 +386,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
         #########################################
-        self.n_threat = self.threat_map.melee_n_threat[neighborhood_view]# + self.threat_map.ranged_n_threat[neighborhood_view]
-        self.damage_threat = self.threat_map.melee_damage_threat[neighborhood_view]# + self.threat_map.ranged_damage_threat[neighborhood_view]
+        self.n_threat = self.threat_map.melee_n_threat[neighborhood_view] + self.threat_map.ranged_n_threat[neighborhood_view]
+        self.damage_threat = self.threat_map.melee_damage_threat[neighborhood_view] + self.threat_map.ranged_damage_threat[neighborhood_view]
         self.threatened = self.n_threat > 0
 
         ####################
