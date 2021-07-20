@@ -213,8 +213,9 @@ class InteractiveInventoryMenu(InteractiveMenu):
         'teleport wands': lambda x: (x.category == "Wands") & ("teleporation" in x.item_appearance),
         'healing potions': lambda x: (x.category == "Potions") & ("healing" in x.item_appearance),
         'extra weapons': lambda x: (x.category == "Weapons") & ("weapon in hand" not in x.item_equipped_status),
-        'comestibles': lambda x: x.category == "Comestibles",
-        'armor': lambda x: x.category == "Armor",
+
+        'comestibles': lambda x: x.category == "Comestibles" and "unpaid" not in x.item_equipped_status,
+        'armor': lambda x: x.category == "Armor" and "unpaid" not in x.item_equipped_status,
     }
 
     class MenuItem:

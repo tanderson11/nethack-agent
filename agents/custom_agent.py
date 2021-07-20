@@ -814,6 +814,9 @@ class CustomAgent(BatchedAgent):
         if "corpse tastes" in message.message:
             print(message.message)
 
+        if "corpse tastes" in message.message:
+            print(message.message)
+
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
                 import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
