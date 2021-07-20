@@ -133,7 +133,7 @@ class Flags():
             return self.computed_values['near_monster']
         except KeyError:
             # someday Held, Handspan, Overburdened etc.
-            near_monster = (self.neighborhood.is_monster() & ~self.neighborhood.players_square_mask).any()
+            near_monster = (self.neighborhood.is_monster & ~self.neighborhood.player_location_mask).any()
             self.computed_values['near_monster'] = near_monster
             return near_monster
 
@@ -181,12 +181,12 @@ class AdvisorLevel():
 class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
         if self.check_if_random_skip(rng): return False
-        return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] > 1
+        return flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] > 1
         
 class AmUnthreatenedAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
         if self.check_if_random_skip(rng): return False
-        return flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
+        return flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0
 
 class MajorTroubleAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
@@ -216,7 +216,7 @@ class CriticallyInjuredAdvisorLevel(AdvisorLevel):
 class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
         if self.check_if_random_skip(rng): return False
-        return flags.am_critically_injured() and flags.neighborhood.n_threat[flags.neighborhood.players_square_mask] == 0
+        return flags.am_critically_injured() and flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0
 
 class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
@@ -298,6 +298,10 @@ class RandomMoveAdvisor(MoveAdvisor):
         else:
             return None
 
+class VisitUnvisitedSquareAdvisor(RandomMoveAdvisor):
+    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+        return neighborhood.walkable & ~neighborhood.threatened & (neighborhood.visits == 0)
+
 class MostNovelMoveAdvisor(MoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable
@@ -326,12 +330,11 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
 class ContinueMovementIfUnthreatenedAdvisor(MoveAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move() and flags.have_moves() and neighborhood.last_movement_action is not None:
-            dx,dy = physics.action_to_delta[neighborhood.last_movement_action]
-            x,y = neighborhood.player_location_in_neighborhood
+            next_target = physics.offset_location_by_action(neighborhood.local_player_location, neighborhood.last_movement_action)
 
             try:
-                is_threatened = neighborhood.threatened[x+dx, y+dy]
-                is_walkabe = neighborhood.walkable[x+dx, y+dy]
+                is_threatened = neighborhood.threatened[next_target]
+                is_walkabe = neighborhood.walkable[next_target]
             except IndexError:
                 return None
 
@@ -595,7 +598,7 @@ class NoUnexploredSearchAdvisor(Advisor):
 class RandomAttackAdvisor(Advisor):
     def get_target_monsters(self, neighborhood):
         always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~always_peaceful
+        targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~always_peaceful
         return targeted_monster_mask
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
@@ -611,7 +614,7 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
         always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
         has_passive_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive, neighborhood.glyphs)
         has_death_throes_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_death_throes, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster() & ~neighborhood.players_square_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
+        targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
         return targeted_monster_mask
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
@@ -659,7 +662,7 @@ class PickupFoodAdvisor(Advisor):
 
 class PickupArmorAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.desirable_object_on_space():
+        if flags.desirable_object_on_space(): #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
             menu_plan = menuplan.MenuPlan(
                 "pick up armor",
                 self,
