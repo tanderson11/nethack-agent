@@ -28,3 +28,8 @@ action_to_delta = {
 action_deltas = action_to_delta.values()
 
 diagonal_moves = utilities.vectorized_map(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8, action_grid)
+
+def offset_location_by_action(location, action):
+     delta = action_to_delta[action]
+     new_loc = (location[0] + delta[0], location[1] + delta[1])
+     return new_loc

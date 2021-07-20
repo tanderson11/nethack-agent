@@ -139,25 +139,7 @@ class DMap():
     def update(self, player_location):
         self.visits_map[player_location] += 1
 
-class ThreatMap():
-    INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
-
-    def __init__(self, all_glyphs, player_location, neighborhood_row_slice, neighborhood_col_slice, vision):
-        # take the section of the observed glyphs that is relevant
-        large_row_window, large_col_window = utilities.centered_slices_bounded_on_array(player_location, (vision, vision), all_glyphs)
-        player_location_in_glyph_grid = (player_location[0]-large_row_window.start, player_location[1]-large_col_window.start)
-        translated_row_slice, translated_col_slice = utilities.move_slice_center(player_location, player_location_in_glyph_grid, (neighborhood_row_slice, neighborhood_col_slice))
-        
-        # a way for people to view map that's equivalent to neighborhood: ie. threat_map.melee_threat[threat_map.neighborhood_view].shape == neighborhood.glyphs.shape
-        self.neighborhood_view = (translated_row_slice, translated_col_slice)
-
-        self.raw_glyph_grid = all_glyphs[large_row_window,large_col_window]
-        self.glyph_grid = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], self.raw_glyph_grid) 
-        self.player_location_in_glyph_grid = player_location_in_glyph_grid
-
-        self.calculate_threat()
-        #self.calculate_implied_threat()
-
+class FloodMap():
     @staticmethod
     def flood_one_level_from_mask(mask):
         flooded_mask = np.full_like(mask, False, dtype='bool')
@@ -173,6 +155,31 @@ class ThreatMap():
                 flooded_mask[row_slice, col_slice] = True
 
         return flooded_mask
+
+class SecretDoorMap(FloodMap):
+    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
+        self.raw_glyph_grid = raw_visible_glyphs
+        self.glyph_grid = visible_glyphs
+        self.player_location_in_glyph_grid = player_location_in_vision
+
+        self.secret_door_adjacent_mask = self.calculate_secret_door_adjacencies()
+
+    def calculate_secret_door_adjacencies(self):
+        can_hold_secret_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door, self.glyph_grid)
+        secret_door_adjacent = self.__class__.flood_one_level_from_mask(can_hold_secret_door)
+        return secret_door_adjacent
+
+class ThreatMap(FloodMap):
+    INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
+
+    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
+        # take the section of the observed glyphs that is relevant
+        self.glyph_grid = visible_glyphs
+        self.raw_glyph_grid = raw_visible_glyphs
+        self.player_location_in_glyph_grid = player_location_in_vision
+
+        self.calculate_threat()
+        #self.calculate_implied_threat()
 
     @classmethod
     def calculate_can_occupy(cls, monster, start, glyph_grid):
@@ -302,78 +309,105 @@ class ThreatMap():
         can_hit_mask = np.logical_or.reduce(masks)
         return can_hit_mask
 
-class Neighborhood():
-    row_offset_grid = np.array([
-        [-1, -1, -1,],
-        [0, 0, 0,],
-        [1, 1, 1,],
-    ])
+class Neighborhood(): # goal: mediates all access to glyphs by advisors
+    extended_vision = 2
+    def __init__(self, absolute_player_location, observation, dmap, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
+        ###################
+        ### COPY FIELDS ###
+        ###################
 
-    col_offset_grid = np.array([
-        [-1, 0, 1,],
-        [-1, 0, 1,],
-        [-1, 0, 1,],
-    ])
-
-    def __init__(self, player_location, observation, dmap, character, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
         blstats = BLStats(observation['blstats'])
-        self.player_location = player_location
-        self.player_row, self.player_col = self.player_location
+        self.last_movement_action = last_movement_action
+        self.previous_glyph_on_player = previous_glyph_on_player
+        self.absolute_player_location = absolute_player_location
 
-        neighborhood_size = 1
+        #############################
+        ### FULL EXTENT OF VISION ###
+        #############################
+        row_vision, col_vision = utilities.centered_slices_bounded_on_array(
+            absolute_player_location, (self.__class__.extended_vision, self.__class__.extended_vision), observation['glyphs']
+        )
+        extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
+        extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
+        extended_visits = dmap.visits_map[row_vision, col_vision]
 
-        row_slice, col_slice = utilities.centered_slices_bounded_on_array(player_location, (neighborhood_size, neighborhood_size), observation['glyphs'])
+        ###################################
+        ### RELATIVE POSITION IN VISION ###
+        ###################################
+
+        # index of player in the full vision
+        player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
+
+        # radius 1 box around player in vision glyphs
+        neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
+        neighborhood_view = (neighborhood_rows, neighborhood_cols)
+
+        ##############################
+        ### RESTRICTED ACTION GRID ###
+        ##############################
 
         # a window into the action grid of the size size and shape as our window into the glyph grid (ie: don't include actions out of bounds on the map)
-        action_grid_row_slice, action_grid_col_slice = utilities.move_slice_center(player_location, (1,1), (row_slice,col_slice)) # move center to (1,1) (action grid center)
+        action_grid_rows, action_grid_cols = utilities.move_slice_center(player_location_in_extended, (1,1), neighborhood_view) # move center to (1,1) (action grid center)
+        action_grid_view = (action_grid_rows, action_grid_cols)
 
-        self.action_grid = physics.action_grid[action_grid_row_slice, action_grid_col_slice]
-        diagonal_moves = physics.diagonal_moves[action_grid_row_slice, action_grid_col_slice]
+        self.action_grid = physics.action_grid[action_grid_view]
+        diagonal_moves = physics.diagonal_moves[action_grid_view]
 
-        self.raw_glyphs = observation['glyphs'][row_slice, col_slice]
-        self.glyphs = utilities.vectorized_map(lambda g: gd.GLYPH_NUMERAL_LOOKUP.get(g), self.raw_glyphs)
+        ########################################
+        ### RELATIVE POSITION IN ACTION GRID ###
+        ########################################
 
-        self.visits = dmap.visits_map[row_slice, col_slice]
+        self.local_player_location = (1-action_grid_rows.start, 1-action_grid_cols.start) # not always guranteed to be (1,1) if we're at the edge of the map
+        self.player_location_mask = np.full_like(self.action_grid, False, dtype='bool')
+        self.player_location_mask[self.local_player_location] = True
 
-        self.players_square_mask = self.action_grid == physics.action_grid[1,1] # if the direction is the direction towards our square, we're not interested
+        #######################
+        ### THE LOCAL STUFF ###
+        #######################
 
-        x,y = np.where(self.players_square_mask)
-        self.player_location_in_neighborhood = list(zip(x,y))[0]
+        self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
+        self.glyphs = extended_visible_glyphs[neighborhood_view]
+        self.visits = extended_visits[neighborhood_view]
+        self.is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
         open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
         on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
+        # in the narrow sense
         self.walkable = walkable_tile & ~(diagonal_moves & open_door) & ~(diagonal_moves & on_doorway) # don't move diagonally into open doors
 
-        self.previous_glyph_on_player = previous_glyph_on_player
+        #########################################
+        ### MAPS DERVIED FROM EXTENDED VISION ###
+        #########################################
+        self.secret_door_map = SecretDoorMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
 
-        vision = 2
-        self.threat_map = ThreatMap(observation['glyphs'], self.player_location, row_slice, col_slice, vision)
-        self.n_threat = self.threat_map.melee_n_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_n_threat[self.threat_map.neighborhood_view]
-        self.damage_threat = self.threat_map.melee_damage_threat[self.threat_map.neighborhood_view]# + self.threat_map.ranged_damage_threat[self.threat_map.neighborhood_view]
+        #########################################
+        ### LOCAL PROPERTIES OF EXTENDED MAPS ###
+        #########################################
+        self.n_threat = self.threat_map.melee_n_threat[neighborhood_view]# + self.threat_map.ranged_n_threat[neighborhood_view]
+        self.damage_threat = self.threat_map.melee_damage_threat[neighborhood_view]# + self.threat_map.ranged_damage_threat[neighborhood_view]
         self.threatened = self.n_threat > 0
+
+        ####################
+        ### CORPSE STUFF ###
+        ####################
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
-        if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
-            absolute_row_offsets = self.__class__.row_offset_grid[action_grid_row_slice, action_grid_col_slice] + self.player_location[0]
-            absolute_col_offsets = self.__class__.col_offset_grid[action_grid_row_slice, action_grid_col_slice] + self.player_location[1]
-
-            self.has_fresh_corpse = (absolute_row_offsets == latest_monster_death.square[0]) & (absolute_col_offsets == latest_monster_death.square[1])
-
         self.fresh_corpse_on_square_glyph = None
-        if latest_monster_death and latest_monster_death.can_corpse and (player_location == latest_monster_death.square) and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+        if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+            try:
+                corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
+                corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
+                #print(corpse_relative_location)
+
+                self.has_fresh_corpse[corpse_relative_location] = True
+            except IndexError: # we are far away from the corpse
+                pass
+
+        if self.has_fresh_corpse[self.local_player_location]:
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
-
-    def glyph_set_to_directions(self, glyph_set):
-        matches = np.isin(self.raw_glyphs, glyph_set)
-        directions = physics.action_grid[matches]
-
-        return directions
-
-    def is_monster(self):
-        mons = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
-        return mons
  
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
@@ -469,6 +503,7 @@ class RunState():
 
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
+        self.last_movement_action = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -489,7 +524,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'u8mUnw=='
+        #seed = b'NkE2KQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -595,13 +630,13 @@ class RunState():
 
     def update_neighborhood(self, neighborhood):
         if self.neighborhood is not None:
-            old_loc = self.neighborhood.player_location
+            old_loc = self.neighborhood.absolute_player_location
         else:
             old_loc = None
         
         self.neighborhood = neighborhood
 
-        if self.neighborhood is not None and old_loc == self.neighborhood.player_location:
+        if self.neighborhood is not None and old_loc == self.neighborhood.absolute_player_location:
             self.time_stuck += 1
         else:
             self.time_stuck = 0
@@ -623,7 +658,7 @@ class RunState():
                 eat_corpse_flag = True
 
             if eat_corpse_flag:
-                print("Deleting record")
+                #print("Deleting record")
                 self.latest_monster_death = None
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message:
@@ -651,7 +686,7 @@ class RunState():
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 3: # time_hung > 3 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
-                neighborhood_diverged = self.neighborhood.player_location != neighborhood.player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
+                neighborhood_diverged = self.neighborhood.absolute_player_location != neighborhood.absolute_player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
                 #pdb.set_trace()
                 if not neighborhood_diverged:
                     game_did_advance = False
@@ -762,9 +797,14 @@ class CustomAgent(BatchedAgent):
         if "corpse tastes" in message.message:
             print(message.message)
 
+        if "You hear someone muttering an incantation" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
                 import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+                # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
         #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state) # maybe we want something more like this?
 
@@ -792,15 +832,23 @@ class CustomAgent(BatchedAgent):
                 return retval
 
         neighborhood = Neighborhood(
-            player_location, observation, run_state.dmap, run_state.character, previous_glyph_on_player, run_state.latest_monster_death, run_state.failed_moves_on_square, message.feedback)
+            player_location,
+            observation,
+            run_state.dmap,
+            run_state.character,
+            run_state.last_movement_action,
+            previous_glyph_on_player,
+            run_state.latest_monster_death,
+            run_state.failed_moves_on_square,
+            message.feedback
+        )
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
         run_state.update_neighborhood(neighborhood)
 
         for f in run_state.failed_moves_on_square:
-            failed_move_offset = physics.action_to_delta[f]
-            location = (neighborhood.player_location_in_neighborhood[0]+failed_move_offset[0], neighborhood.player_location_in_neighborhood[1]+failed_move_offset[1])
+            failed_target = physics.offset_location_by_action(neighborhood.local_player_location, f)
             try:
-                neighborhood.walkable[location] = False
+                neighborhood.walkable[failed_target] = False
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
@@ -855,10 +903,8 @@ class CustomAgent(BatchedAgent):
 
 
         if environment.env.debug and retval in range(0,8): #cardinal
-            delta = physics.action_to_delta[retval]
-            new_loc = (neighborhood.player_location_in_neighborhood[0] + delta[0], neighborhood.player_location_in_neighborhood[1] + delta[1])
-            #print(new_loc)
-            if neighborhood.threatened[new_loc] and not neighborhood.is_monster()[new_loc]:
+            new_loc = physics.offset_location_by_action(neighborhood.local_player_location, retval)
+            if neighborhood.threatened[new_loc] and not neighborhood.is_monster[new_loc]:
                 print("Moved into threat")
                 #import pdb; pdb.set_trace()
 
