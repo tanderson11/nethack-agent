@@ -636,7 +636,8 @@ class RunState():
 
         if retval is None and (message.yn_question or message.getline):
             if environment.env.debug:
-                import pdb; pdb.set_trace()
+                pass # not anymore, now we hit space blindly after interacting with the menu
+                #import pdb; pdb.set_trace()
                 # This should have been dealt with by our menu plan
 
         return retval
@@ -807,6 +808,9 @@ class CustomAgent(BatchedAgent):
                 except Exception as e:
                     print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
 
+        if "more skilled" in message.message or "most skilled" in message.message:
+            print(message.message)
+
         if "corpse tastes" in message.message:
             print(message.message)
 
@@ -821,11 +825,23 @@ class CustomAgent(BatchedAgent):
         # We are done observing and ready to start acting #
         ###################################################
 
-        if message.has_more and not run_state.active_menu_plan.in_interactive_menu:
+        menu_plan_retval = None
+        if message:
+            menu_plan_retval = run_state.run_menu_plan(message)
+            ### GET MENU_PLAN RETVAL ###
+
+        if menu_plan_retval is None and message.has_more and not run_state.active_menu_plan.in_interactive_menu:
             retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
             dummy_menu_plan = type('MenuPlan', (), {"name":"hit space if more", "advisor":background_advisor})()
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
             return retval
+
+        if menu_plan_retval is not None: # wait to return menu_plan retval, in case our click through more is supposed to override behavior in non-interactive menu plan
+            run_state.log_action(menu_plan_retval, menu_plan=run_state.active_menu_plan)
+            return menu_plan_retval
+
+        if message.has_more:
+            if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
 
         if not run_state.character:
             retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
@@ -834,11 +850,6 @@ class CustomAgent(BatchedAgent):
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
             return retval
 
-        if message:
-            retval = run_state.run_menu_plan(message)
-            if retval is not None:
-                run_state.log_action(retval, menu_plan=run_state.active_menu_plan)
-                return retval
 
         neighborhood = Neighborhood(
             player_location,
