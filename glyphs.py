@@ -451,7 +451,8 @@ class CMapGlyph(Glyph):
         self.is_floor = self.offset >= 19 and self.offset <= 31
 
         self.is_wall = self.offset < 12
-        self.is_open_door = self.offset > 11 and self.offset < 15
+        # offset 12 is technically the square where a door used to be, we're going to ignore it
+        self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
         self.is_downstairs = self.offset == 24 or self.offset == 26
         self.is_upstairs = self.offset == 23 or self.offset == 25
