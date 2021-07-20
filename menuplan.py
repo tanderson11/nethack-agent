@@ -205,7 +205,7 @@ class InteractiveMenu():
 class InteractiveEnhanceSkillsMenu(InteractiveMenu):
     header_rows = 2
     trigger_action = None
-    trigger_phrase = "Current skills:"
+    trigger_phrase = 'Pick a skill to advance:'
 
 class InteractiveInventoryMenu(InteractiveMenu):
     selectors = {
