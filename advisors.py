@@ -227,7 +227,7 @@ class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
 class NoUnvisitedWalkableInFullVisionAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags, rng):
         if self.check_if_random_skip(rng): return False
-        return not flags.unvisited_in_full_vision
+        return not flags.unvisited_in_full_vision()
 
 class NoMovesAdvisor(AdvisorLevel):
     def check_flags(self, flags, rng):
@@ -712,6 +712,19 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
      
             return Advice(self.__class__, travel, menu_plan)
         return None
+
+class TravelToUnexploredSquareAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        travel = nethack.actions.Command.TRAVEL
+
+        menu_plan = menuplan.MenuPlan(
+            "travel down", self, [
+                menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
+                #menuplan.EscapeMenuResponse("Can't find dungeon feature"),
+            ],
+            fallback=utilities.keypress_action(ord('.')))
+     
+        return Advice(self.__class__, travel, menu_plan)
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):

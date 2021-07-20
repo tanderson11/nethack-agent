@@ -120,7 +120,8 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                print(f"NLE missed this message: {potential_message}")
+                pass
+                #print(f"NLE missed this message: {potential_message}")
             self.message = potential_message
 
         self.feedback = self.__class__.Feedback(self)
@@ -536,7 +537,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'NkE2KQ=='
+        #seed = b'l8bD0Q=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -808,10 +809,6 @@ class CustomAgent(BatchedAgent):
 
         if "corpse tastes" in message.message:
             print(message.message)
-
-        if "You hear someone muttering an incantation" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
 
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
