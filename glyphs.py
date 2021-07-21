@@ -144,9 +144,12 @@ class MonsterGlyph(MonsterAlikeGlyph):
             self.has_ranged = self.monster_spoiler.ranged_attack_bundle.num_attacks > 0
             self.has_death_throes = self.monster_spoiler.death_attack_bundle.num_attacks > 0
 
+        self.is_shopkeeper = self.offset == 267
+        
         self.always_peaceful = False
-        if self.offset == 267 or self.offset in [278, 279]: # shopkeeper and watch people
+        if self.is_shopkeeper or self.offset in [278, 279]: # shopkeeper and watch people
             self.always_peaceful = True
+
 
     @classmethod
     def names(cls):

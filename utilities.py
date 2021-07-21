@@ -59,3 +59,11 @@ def move_slice_center(old_center, new_center, slices):
     relative_col_slice = slice(col_slice.start-col_translate,col_slice.stop-col_translate)
 
     return relative_row_slice, relative_col_slice
+
+def rectangle_defined_by_corners(corner1, corner2):
+    x1,y1 = corner1
+    x2,y2 = corner2
+    row_slice = slice(min(x1,x2), max(x1,x2)+1)
+    col_slice = slice(min(y1,y2), max(y1,y2)+1)
+
+    return row_slice, col_slice

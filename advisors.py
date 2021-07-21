@@ -1,5 +1,6 @@
 import abc
 from collections import OrderedDict
+import functools
 import pdb
 
 import glyphs as gd
@@ -21,7 +22,6 @@ class Advice():
     def __repr__(self):
         return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action, self.advisor, self.menu_plan)
 
-
 class Flags():
     exp_lvl_to_prayer_hp_thresholds = {
         1: 1/5,
@@ -40,121 +40,76 @@ class Flags():
 
         self.computed_values = {}
 
+    @functools.cached_property
     def am_weak(self):
-        try:
-            return self.computed_values['am_weak']
-        except KeyError:
-            am_weak = self.blstats.get('hunger_state') > 2
-            self.computed_values['am_weak'] = am_weak
-            return am_weak
+        am_weak = self.blstats.get('hunger_state') > 2
+        return am_weak
 
+    @functools.cached_property
     def am_satiated(self):
-        try:
-            return self.computed_values['am_satiated']
-        except KeyError:
-            am_satiated = self.blstats.get('hunger_state') > 2
-            self.computed_values['am_satiated'] = am_satiated
-            return am_satiated
+        am_satiated = self.blstats.get('hunger_state') > 2
+        return am_satiated
 
+    @functools.cached_property
     def am_critically_injured(self):
-        try:
-            return self.computed_values['am_critically_injured']
-        except KeyError:
-            fraction_index = [k for k in list(self.__class__.exp_lvl_to_prayer_hp_thresholds.keys()) if k <= self.blstats.get('experience_level')][-1]
-            hp = self.blstats.get('hitpoints')
-            am_critically_injured = hp < self.blstats.get('max_hitpoints') and (hp < self.__class__.exp_lvl_to_prayer_hp_thresholds[fraction_index] or hp < 6)
-            self.computed_values['am_critically_injured'] = am_critically_injured
-            return am_critically_injured
+        fraction_index = [k for k in list(self.__class__.exp_lvl_to_prayer_hp_thresholds.keys()) if k <= self.blstats.get('experience_level')][-1]
+        hp = self.blstats.get('hitpoints')
+        am_critically_injured = hp < self.blstats.get('max_hitpoints') and (hp < self.__class__.exp_lvl_to_prayer_hp_thresholds[fraction_index] or hp < 6)
+        return am_critically_injured
 
+    @functools.cached_property
     def am_low_hp(self):
-        try:
-            return self.computed_values['am_low_hp']
-        except KeyError:
-            am_low_hp = self.am_critically_injured() or self.blstats.get('hitpoints') <= self.blstats.get('max_hitpoints') * 6/10
-            self.computed_values['am_low_hp'] = am_low_hp
-            return am_low_hp
+        am_low_hp = self.am_critically_injured or self.blstats.get('hitpoints') <= self.blstats.get('max_hitpoints') * 6/10
+        return am_low_hp
 
+    @functools.cached_property
     def on_downstairs(self):
-        try:
-            return self.computed_values['on_downstairs']
-        except KeyError:
-            previous_is_downstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_downstairs
-            on_downstairs = "staircase down here" in self.message.message or previous_is_downstairs
-            self.computed_values['on_downstairs'] = on_downstairs
-            return on_downstairs
+        previous_is_downstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_downstairs
+        on_downstairs = "staircase down here" in self.message.message or previous_is_downstairs
+        return on_downstairs
 
+    @functools.cached_property
     def can_move(self):
-        try:
-            return self.computed_values['can_move']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            can_move = not self.message.feedback.collapse_message
-            self.computed_values['can_move'] = can_move
-            return can_move
+        # someday Held, Handspan, Overburdened etc.
+        can_move = not self.message.feedback.collapse_message
+        return can_move
 
+    @functools.cached_property
     def have_moves(self):
-        try:
-            return self.computed_values['have_moves']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            have_moves = self.neighborhood.walkable.any() # at least one square is walkable
-            self.computed_values['have_moves'] = have_moves
-            return have_moves
+        have_moves = self.neighborhood.walkable.any() # at least one square is walkable
+        return have_moves
 
+    @functools.cached_property
     def have_unthreatened_moves(self):
-        try:
-            return self.computed_values['have_unthreatened_moves']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            have_unthreatened_moves = (self.neighborhood.walkable & ~self.neighborhood.threatened).any() # at least one square is walkable
-            self.computed_values['have_unthreatened_moves'] = have_unthreatened_moves
-            return have_unthreatened_moves
+        have_unthreatened_moves = (self.neighborhood.walkable & ~self.neighborhood.threatened).any() # at least one square is walkable
+        return have_unthreatened_moves
 
+    @functools.cached_property
     def desirable_object_on_space(self):
-        try:
-            return self.computed_values['desirable_object_on_space']
-        except KeyError:
-            prev_glyph = self.neighborhood.previous_glyph_on_player
-            desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.character)
+        prev_glyph = self.neighborhood.previous_glyph_on_player
+        desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.character)
 
-            self.computed_values['desirable_object_on_space'] = desirable_object_on_space
-            return desirable_object_on_space
+        return desirable_object_on_space
 
+    @functools.cached_property
     def near_monster(self):
-        try:
-            return self.computed_values['near_monster']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            near_monster = (self.neighborhood.is_monster & ~self.neighborhood.player_location_mask).any()
-            self.computed_values['near_monster'] = near_monster
-            return near_monster
+        near_monster = (self.neighborhood.is_monster & ~self.neighborhood.player_location_mask).any()
+        return near_monster
 
+    @functools.cached_property
     def major_trouble(self):
-        try:
-            return self.computed_values['major_trouble']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            major_trouble = "You feel feverish." in self.message.message
-            self.computed_values['major_trouble'] = major_trouble
-            return major_trouble
+        major_trouble = "You feel feverish." in self.message.message
+        return major_trouble
 
+    @functools.cached_property
     def can_enhance(self):    
-        try:
-            return self.computed_values['can_enhance']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            can_enhance = "You feel more confident" in self.message.message or "could be more dangerous" in self.message.message
-            self.computed_values['can_enhance'] = can_enhance
-            return can_enhance
+        can_enhance = "You feel more confident" in self.message.message or "could be more dangerous" in self.message.message
+        return can_enhance
 
+    @functools.cached_property
     def fresh_corpse_on_square(self):    
-        try:
-            return self.computed_values['fresh_corpse_on_square']
-        except KeyError:
-            # someday Held, Handspan, Overburdened etc.
-            fresh_corpse_on_square = (self.neighborhood.fresh_corpse_on_square_glyph is not None)
-            self.computed_values['fresh_corpse_on_square'] = fresh_corpse_on_square
-            return fresh_corpse_on_square
+        fresh_corpse_on_square = (self.neighborhood.fresh_corpse_on_square_glyph is not None)
+        return fresh_corpse_on_square
 
 class AdvisorLevel():
     def __init__(self, advisors, skip_probability=0):
@@ -166,80 +121,73 @@ class AdvisorLevel():
             return True
         return False
 
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
+    def check_flags(self, flags):
         return True
 
-class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
+    def check_level(self, flags, rng):
         if self.check_if_random_skip(rng): return False
+        return self.check_flags(flags)
+
+class ThreatenedMoreThanOnceAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
         return flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] > 1
         
 class AmUnthreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
+    def check_flags(self, flags):
         return flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0
 
 class MajorTroubleAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.major_trouble()
+    def check_flags(self, flags):
+        return flags.major_trouble
 
 class UnthreatenedMovesAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.have_unthreatened_moves()
+    def check_flags(self, flags):
+        return flags.have_unthreatened_moves
 
 class FreeImprovementAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.can_enhance()
+    def check_flags(self, flags):
+        return flags.can_enhance
 
 class AllMovesThreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return not flags.have_unthreatened_moves()
+    def check_flags(self, flags):
+        return not flags.have_unthreatened_moves
 
 class CriticallyInjuredAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.am_critically_injured()
+    def check_flags(self, flags):
+        return flags.am_critically_injured
 
 class CriticallyInjuredAndUnthreatenedAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.am_critically_injured() and flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0
+    def check_flags(self, flags):
+        return flags.am_critically_injured and flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0
 
 class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
+    def check_flags(self, flags):
         return flags.blstats.get('dungeon_number') == 0
 
 
 class NoMovesAdvisor(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return not flags.have_moves()
+    def check_flags(self, flags):
+        return not flags.have_moves
 
 class WeakWithHungerAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.am_weak()
+    def check_flags(self, flags):
+        return flags.am_weak
 
 class AdjacentToMonsterAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.near_monster()  
+    def check_flags(self, flags):
+        return flags.near_monster
 
 class LowHPAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.am_low_hp()
+    def check_flags(self, flags):
+        return flags.am_low_hp
+
+class UnthreatenedLowHPAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.am_low_hp & (flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0)
 
 class AdjacentToMonsterAndLowHpAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags, rng):
-        if self.check_if_random_skip(rng): return False
-        return flags.near_monster() and flags.am_low_hp()
+    def check_flags(self, flags):
+        return flags.near_monster and flags.am_low_hp
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -255,7 +203,7 @@ class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu
 
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.can_move() and flags.have_moves():
+        if flags.can_move and flags.have_moves:
             agreeable_move_mask = self.find_agreeable_moves(rng, blstats, inventory, neighborhood, message, character)
             return self.get_move(rng, blstats, inventory, neighborhood, message, agreeable_move_mask)
         else:
@@ -304,7 +252,7 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
 
 class ContinueMovementIfUnthreatenedAdvisor(MoveAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.can_move() and flags.have_moves() and neighborhood.last_movement_action is not None:
+        if flags.can_move and flags.have_moves and neighborhood.last_movement_action is not None:
             next_target = physics.offset_location_by_action(neighborhood.local_player_location, neighborhood.last_movement_action)
 
             try:
@@ -433,7 +381,7 @@ class DownstairsAdvisor(Advisor):
 
 class TakeDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.can_move() and flags.on_downstairs():
+        if flags.can_move and flags.on_downstairs:
             willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory)
             if willing_to_descend:
                 return Advice(self.__class__, nethack.actions.MiscDirection.DOWN, None)
@@ -593,6 +541,15 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
         targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
         return targeted_monster_mask
 
+class DeterministicSafeMeleeAttack(RandomSafeMeleeAttack):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        targeted_monster_mask = self.get_target_monsters(neighborhood)
+        monster_directions = neighborhood.action_grid[targeted_monster_mask]
+        if monster_directions.any():
+            attack_direction = monster_directions[0]
+            return Advice(self.__class__, attack_direction, None)
+        return None
+
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
@@ -625,7 +582,7 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
 
 class PickupFoodAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.desirable_object_on_space():
+        if flags.desirable_object_on_space:
             menu_plan = menuplan.MenuPlan(
                 "pick up comestibles and safe corpses",
                 self,
@@ -638,7 +595,7 @@ class PickupFoodAdvisor(Advisor):
 
 class PickupArmorAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if flags.desirable_object_on_space(): #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
+        if flags.desirable_object_on_space: #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
             menu_plan = menuplan.MenuPlan(
                 "pick up armor",
                 self,
@@ -651,10 +608,10 @@ class PickupArmorAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if not flags.fresh_corpse_on_square():
+        if not flags.fresh_corpse_on_square:
             return None
 
-        if flags.am_satiated():
+        if flags.am_satiated:
             return None
 
         if not neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
