@@ -454,6 +454,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
             menuplan.MoreMenuResponse("smells like"),
             menuplan.MoreMenuResponse("It contains"),
             menuplan.YesMenuResponse("Eat it?"),
+            menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
             menuplan.NoMenuResponse("Continue eating")
         ])
         return menu_plan
@@ -623,7 +624,8 @@ class EatCorpseAdvisor(Advisor):
                 menuplan.YesMenuResponse(f"{neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat"),
                 menuplan.NoMenuResponse("here; eat"),
                 menuplan.EscapeMenuResponse("want to eat?"),
-                menuplan.NoMenuResponse("Continue eating")
+                menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
+                menuplan.NoMenuResponse("Continue eating"),
             ])
         return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)
 
