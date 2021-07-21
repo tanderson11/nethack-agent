@@ -332,6 +332,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
         extended_visits = dmap.visits_map[row_vision, col_vision]
+        extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -344,6 +345,23 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         neighborhood_view = (neighborhood_rows, neighborhood_cols)
 
+        ####################
+        # SHOPKEEPER STUFF #
+        ####################
+        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
+        shopkeeper_present = is_shopkeeper.any()
+
+        extended_shop = np.full_like(extended_visible_glyphs, False, dtype='bool')
+        if shopkeeper_present and on_doorway:
+            it = np.nditer(is_shopkeeper, flags=['multi_index'])
+            for b in it:
+                if b: # if this is a shopkeeper
+                    # draw the rectangle containing the player and shopkeeper
+                    shop_row_slice, shop_col_slice = utilities.rectangle_defined_by_corners(player_location_in_extended, it.multi_index)
+                    # check if that rectangle contains another doorway
+                    # if it doesn't, assume we're at the shop entrance
+                    if not extended_open_door[shop_row_slice, shop_col_slice].any():
+                        extended_shop[shop_row_slice, shop_col_slice] = True
 
         ##############################
         ### RESTRICTED ACTION GRID ###
@@ -371,24 +389,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
-        is_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, self.glyphs)
+        is_open_door = extended_open_door[neighborhood_view]
+        shop = extended_shop[neighborhood_view]
         self.is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
-
-        ####################
-        # SHOPKEEPER STUFF #
-        ####################
-        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, self.glyphs)
-        shopkeeper_present = is_shopkeeper.any()
-
-        shop = np.full_like(self.glyphs, False, dtype='bool')
-        if shopkeeper_present and on_doorway:
-            it = np.nditer(is_shopkeeper, flags=['multi_index'])
-            for b in it:
-                if b: # if this is a shopkeeper
-                    # draw the rectangle containing the player and shopkeeper
-                    shop_row_slice, shop_col_slice = utilities.rectangle_defined_by_corners(self.local_player_location, it.multi_index)
-
-                    shop[shop_row_slice, shop_col_slice] = True
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
 
