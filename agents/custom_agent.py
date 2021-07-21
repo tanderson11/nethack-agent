@@ -867,7 +867,7 @@ class CustomAgent(BatchedAgent):
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
-            if advisor_level.check_flags(flags, run_state.rng):
+            if advisor_level.check_level(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
                 all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
