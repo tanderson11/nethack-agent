@@ -382,7 +382,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         shop = np.full_like(self.glyphs, False, dtype='bool')
         if shopkeeper_present and on_doorway:
-            import pdb; pdb.set_trace()
             it = np.nditer(is_shopkeeper, flags=['multi_index'])
             for b in it:
                 if b: # if this is a shopkeeper
