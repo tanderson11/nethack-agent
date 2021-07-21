@@ -181,6 +181,10 @@ class LowHPAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_low_hp
 
+class UnthreatenedLowHPAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.am_low_hp & (flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0)
+
 class AdjacentToMonsterAndLowHpAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.near_monster and flags.am_low_hp
