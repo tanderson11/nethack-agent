@@ -65,8 +65,26 @@ class Flags():
     @functools.cached_property
     def on_downstairs(self):
         previous_is_downstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_downstairs
-        on_downstairs = "staircase down here" in self.message.message or previous_is_downstairs
+        try:
+            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
+            direction = staircase.direction
+        except KeyError:
+            direction = None
+
+        on_downstairs = "staircase down here" in self.message.message or direction == 'down' or previous_is_downstairs
         return on_downstairs
+
+    @functools.cached_property
+    def on_upstairs(self):
+        previous_is_upstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_upstairs
+        try:
+            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
+            direction = staircase.direction
+        except KeyError:
+            direction = None
+
+        on_upstairs = "staircase up here" in self.message.message or direction == 'up' or previous_is_upstairs
+        return on_upstairs
 
     @functools.cached_property
     def can_move(self):
@@ -110,6 +128,11 @@ class Flags():
     def fresh_corpse_on_square(self):    
         fresh_corpse_on_square = (self.neighborhood.fresh_corpse_on_square_glyph is not None)
         return fresh_corpse_on_square
+
+    @functools.cached_property
+    def in_gnomish_mines(self):
+        in_gnomish_mines = self.blstats.get('dungeon_number') == 2
+        return in_gnomish_mines
 
 class AdvisorLevel():
     def __init__(self, advisors, skip_probability=0):
@@ -164,6 +187,9 @@ class DungeonsOfDoomAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.blstats.get('dungeon_number') == 0
 
+class GnomishMinesAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.in_gnomish_mines
 
 class NoMovesAdvisor(AdvisorLevel):
     def check_flags(self, flags):
@@ -329,6 +355,30 @@ class PrayWhenMajorTroubleAdvisor(PrayerAdvisor):
         else:
             return None
 
+class UpstairsAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.can_move and flags.on_upstairs:
+            willing_to_ascend = self.willing_to_ascend(rng, character, blstats, inventory, neighborhood, message, flags)
+            if willing_to_ascend:
+                menu_plan = menuplan.MenuPlan("go upstairs", self, [
+                      menuplan.NoMenuResponse("Beware, there will be no return!  Still climb? [yn] (n)"),
+                  ])
+                return Advice(self.__class__, nethack.actions.MiscDirection.UP, None)
+            return None
+        return None
+
+    def willing_to_ascend(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        return True 
+
+class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
+    def willing_to_ascend(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        try:
+            # if we know about this staircase, we're not interested
+            staircase = neighborhood.level_map.staircases[neighborhood.absolute_player_location]
+            return False
+        except:
+            return True
+
 class DownstairsAdvisor(Advisor):
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
@@ -366,7 +416,16 @@ class DownstairsAdvisor(Advisor):
     }
 
     @classmethod
-    def check_willingness_to_descend(cls, blstats, inventory):
+    def check_willingness_to_descend(cls, blstats, inventory, neighborhood):
+        try:
+            # see if we know about this staircase
+            staircase = neighborhood.level_map.staircases[neighborhood.absolute_player_location]
+            # don't descend if it leads to the mines
+            if staircase.end_dcoord[0] == 2:
+                return False
+        except KeyError:
+            pass
+
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
         if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
             willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
@@ -382,7 +441,7 @@ class DownstairsAdvisor(Advisor):
 class TakeDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.on_downstairs:
-            willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory)
+            willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory, neighborhood)
             if willing_to_descend:
                 return Advice(self.__class__, nethack.actions.MiscDirection.DOWN, None)
             return None
@@ -629,7 +688,7 @@ class EatCorpseAdvisor(Advisor):
 
 class TravelToDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory)
+        willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory, neighborhood)
         
         if willing_to_descend:
             travel = nethack.actions.Command.TRAVEL
