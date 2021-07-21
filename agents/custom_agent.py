@@ -129,15 +129,48 @@ class Message():
         return bool(self.message)
 
 class DMap():
+    dungeon_number_to_name = {
+        0: "dungeons of doom"
+    }
+    def __init__(self):
+        self.dlevels = {}
+
+    def make_level_map(self, dungeon_number, level_number, glyphs, initial_player_location):
+        lmap = DLevelMap(dungeon_number, level_number, glyphs, initial_player_location)
+        self.dlevels[(dungeon_number, level_number)] = lmap
+
+        return lmap
+
+class Staircase():
+    def __init__(self, dcoord, location, new_dcoord, new_location):
+        self.start_dcoord = dcoord
+        self.start_location = location
+
+        self.end_dcoord = new_dcoord
+        self.end_location = new_location
+
+class DLevelMap():
     def __init__(self, dungeon_number, level_number, glyphs, initial_player_location):
         self.dungeon_number = dungeon_number
         self.level_number = level_number
 
         self.visits_map = np.zeros_like(glyphs)
         self.visits_map[initial_player_location] += 1
+
+        self.staircases = {}
+
     
     def update(self, player_location):
         self.visits_map[player_location] += 1
+
+    def add_staircase(self, location, new_dcoord, new_location):
+        try:
+            return self.staircases[location]
+        except KeyError:
+            staircase = Staircase((self.dungeon_number, self.level_number), location, new_dcoord, new_location)
+            self.staircases[location] = staircase
+            return staircase
+
 
 class FloodMap():
     @staticmethod
@@ -311,7 +344,7 @@ class ThreatMap(FloodMap):
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 2
-    def __init__(self, absolute_player_location, observation, dmap, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
+    def __init__(self, absolute_player_location, observation, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
         ###################
         ### COPY FIELDS ###
         ###################
@@ -320,6 +353,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.last_movement_action = last_movement_action
         self.previous_glyph_on_player = previous_glyph_on_player
         self.absolute_player_location = absolute_player_location
+        self.dcoord = dcoord
 
         #############################
         ### FULL EXTENT OF VISION ###
@@ -329,7 +363,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = dmap.visits_map[row_vision, col_vision]
+        extended_visits = level_map.visits_map[row_vision, col_vision]
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -518,7 +552,8 @@ class RunState():
         self.menu_plan_log = []
 
         # for mapping purposes
-        self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
+        self.dmap = DMap()
+        #self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
         self.glyphs = None
 
     def make_seeded_rng(self):
@@ -728,25 +763,38 @@ class CustomAgent(BatchedAgent):
 
         blstats = BLStats(observation['blstats'])
 
+        player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
+
         # Our previous run finished, we are now at the start of a new run
+        dungeon_number = blstats.get("dungeon_number")
+        level_number = blstats.get("level_number")
+        dcoord = (dungeon_number, level_number)
+        
         if done:
             print_stats(done, run_state, blstats)
             run_state.log()
             run_state.reset()
             level_changed = True
         else:
-            level_changed = blstats.get("level_number") != run_state.dmap.level_number or blstats.get("dungeon_number") != run_state.dmap.dungeon_number
+            if run_state.neighborhood is not None: # don't exceute on first turn
+                level_changed = (dcoord != run_state.neighborhood.dcoord)
+            else:
+                level_changed = True
+
+        try:
+            level_map = run_state.dmap.dlevels[dcoord]
+        except KeyError:
+            level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
+        
+        level_map.update(player_location)
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
-            #import pdb; pdb.set_trace()
 
         #_inventory = inv.Inventory(observation)
-        #import pdb; pdb.set_trace()
 
         inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
-        player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -764,12 +812,6 @@ class CustomAgent(BatchedAgent):
 
         if run_state.step_count % 1000 == 0:
             print_stats(done, run_state, blstats)
-
-        # mapping
-        if level_changed:
-            run_state.dmap = DMap(blstats.get("dungeon_number"), blstats.get("level_number"), observation['glyphs'], player_location)
-        else:
-            run_state.dmap.update(player_location)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.log_message(message)
@@ -794,6 +836,17 @@ class CustomAgent(BatchedAgent):
                         run_state.latest_monster_death = recorded_death
                 except Exception as e:
                     print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
+
+        #create staircases. oddly, when we receive the descend message, it looks like we are on the old dlevel, but we are actually on the new one
+        if "You descend the" in message.message or "You climb" in message.message:
+            # create the staircases (idempotent)
+
+            # staircase we just took
+            previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
+            previous_level_map.add_staircase(run_state.neighborhood.absolute_player_location, dcoord, player_location) # start, end, end
+            # staircase it's implied we've arrived on (probably breaks in the Valley)
+            level_map.add_staircase(player_location, run_state.neighborhood.dcoord, run_state.neighborhood.absolute_player_location) # start, end, end 
+
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)
@@ -845,7 +898,8 @@ class CustomAgent(BatchedAgent):
         neighborhood = Neighborhood(
             player_location,
             observation,
-            run_state.dmap,
+            dcoord,
+            level_map,
             run_state.character,
             run_state.last_movement_action,
             previous_glyph_on_player,
@@ -854,7 +908,12 @@ class CustomAgent(BatchedAgent):
             message.feedback
         )
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+
+        ############################
+        ### NEIGHBORHOOD UPDATED ###
+        ############################
         run_state.update_neighborhood(neighborhood)
+        ############################
 
         for f in run_state.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(neighborhood.local_player_location, f)
