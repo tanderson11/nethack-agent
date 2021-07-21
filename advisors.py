@@ -537,6 +537,15 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
         targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
         return targeted_monster_mask
 
+class DeterministicSafeMeleeAttack(RandomSafeMeleeAttack):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        targeted_monster_mask = self.get_target_monsters(neighborhood)
+        monster_directions = neighborhood.action_grid[targeted_monster_mask]
+        if monster_directions.any():
+            attack_direction = monster_directions[0]
+            return Advice(self.__class__, attack_direction, None)
+        return None
+
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
