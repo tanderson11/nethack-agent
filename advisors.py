@@ -474,32 +474,24 @@ class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__cla
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if self.have_item_oclass(inventory):
-            use_item = self.use_item(rng, blstats, inventory, neighborhood, message, flags)
+            use_item = self.use_item(rng, character, blstats, inventory, neighborhood, message, flags)
             if use_item is not None:
                 return use_item
         return None
 
-class WearTopInventoryAdvisor(ItemUseAdvisor):
+class WearValidArmorAdvisor(ItemUseAdvisor):
     oclasses_used = ['ARMOR_CLASS']
 
-    def make_menu_plan(self, letter):
-        menu_plan = menuplan.MenuPlan("wear armor", self, [
-            menuplan.CharacterMenuResponse("What do you want to wear?", chr(letter)),
-            menuplan.EscapeMenuResponse("Which ring-finger"),
-        ])
-        return menu_plan
-
-    def use_item(self, rng, _1, inventory, _3, _4, flags):
-        if rng.randint(1,45) == 1:
+    def use_item(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if (not character.character.body_armor_penalty()) and rng.random() < 0.01:
             wear = nethack.actions.Command.WEAR
-            ARMOR_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('ARMOR_CLASS')
-            armor_index = [i for i in inventory['inv_oclasses'].tolist() if i == ARMOR_CLASS]
-            armor_index = rng.choice(armor_index)
 
-            letter = inventory['inv_letters'][armor_index]
-            if letter != 0:
-                menu_plan = self.make_menu_plan(letter)
-                return Advice(self.__class__, wear, menu_plan)
+            menu_plan = menuplan.MenuPlan("wear armor", self, [
+                menuplan.FirstLetterChoiceMenuResponse("What do you want to wear?"),
+                menuplan.EscapeMenuResponse("Which ring-finger"),
+            ])
+            
+            return Advice(self.__class__, wear, menu_plan)
         return None
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):
@@ -517,7 +509,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
         ])
         return menu_plan
 
-    def use_item(self, rng, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
         eat = nethack.actions.Command.EAT
         FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
         food_index = inventory['inv_oclasses'].tolist().index(FOOD_CLASS)
@@ -529,7 +521,7 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
 class ReadTeleportAdvisor(ItemUseAdvisor):
     oclasses_used = ['SCROLL_CLASS']
 
-    def use_item(self, rng, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
         read = nethack.actions.Command.READ
         menu_plan = menuplan.MenuPlan("read teleportation scroll", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", '*')
@@ -541,7 +533,7 @@ class ReadTeleportAdvisor(ItemUseAdvisor):
 class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
     oclasses_used = ['WAND_CLASS']
 
-    def use_item(self, rng, _1, inventory, _3, _4, flags):
+    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
         zap = nethack.actions.Command.ZAP
 
         menu_plan = menuplan.MenuPlan(
@@ -556,7 +548,7 @@ class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
 
 class DrinkHealingPotionAdvisor(ItemUseAdvisor):
     oclasses_used = ['POTION_CLASS']
-    def use_item(self, rng, _1, inventory, _3, _4, flags):
+    def use_item(self, character, rng, _1, inventory, _3, _4, flags):
         quaff = nethack.actions.Command.QUAFF
         menu_plan = menuplan.MenuPlan(
             "drink healing potion", self, [

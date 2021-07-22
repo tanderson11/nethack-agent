@@ -47,6 +47,15 @@ class CharacterMenuResponse(MenuResponse):
     def value(self, message_obj):
         return utilities.keypress_action(ord(self.character))
 
+class FirstLetterChoiceMenuResponse(MenuResponse):
+    pattern = re.compile('\[([a-zA-Z]).+\]')
+    def value(self, message_obj):
+        match = re.search(self.__class__.pattern, message_obj.message)
+        if match:
+            character = match[1]
+            return utilities.keypress_action(ord(character))
+        return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+
 class MoreMenuResponse(MenuResponse):
     def value(self, message_obj):
         if not message_obj.has_more and environment.env.debug:
@@ -128,7 +137,7 @@ class EndOfMenu(Exception):
     pass
 
 class InteractiveMenu():
-    menu_item_pattern = re.compile("([a-zA-z]) (-|\+) (.+)$")
+    menu_item_pattern = re.compile("([a-zA-Z]) (-|\+) (.+)$")
     terminator_pattern = re.compile("\(([0-9]+) of ([0-9]+)\)")
     header_rows = 0
     # We define selectors here so that their implementation is close to the MenuItem implementation
