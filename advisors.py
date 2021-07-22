@@ -90,7 +90,6 @@ class Flags():
     def on_warning_engraving(self):
         return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
 
-
     @functools.cached_property
     def can_move(self):
         # someday Held, Handspan, Overburdened etc.
@@ -452,6 +451,28 @@ class TakeDownstairsAdvisor(DownstairsAdvisor):
             return None
         return None
 
+class OpenClosedDoorAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        # coarse check
+        if flags.on_warning_engraving:
+            return None
+
+        door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, neighborhood.glyphs)]
+        if len(door_directions > 0):
+            a = rng.choice(door_directions)
+            # better check: don't want to open doors if they are adjacent to an engraving
+            for location in neighborhood.level_map.warning_engravings.keys():
+                door_loc = physics.offset_location_by_action(neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                    return None
+        else:
+            return None
+
+        return Advice(self.__class__, a, None)
+
+
+
 class KickLockedDoorAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.on_warning_engraving:
@@ -459,9 +480,14 @@ class KickLockedDoorAdvisor(Advisor):
         if not "This door is locked" in message.message:
             return None
         kick = nethack.actions.Command.KICK
-        door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: getattr(g, 'is_closed_door', False), neighborhood.glyphs)]
+        door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, neighborhood.glyphs)]
         if len(door_directions) > 0:
             a = rng.choice(door_directions)
+            for location in neighborhood.level_map.warning_engravings.keys():
+                door_loc = physics.offset_location_by_action(neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                    return None
         else: # we got the locked door message but didn't find a door
             a = None
             if environment.env.debug: pdb.set_trace()
