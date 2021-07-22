@@ -13,7 +13,7 @@ small_advisors = [
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayWhenWeakAdvisor: 1,}),
     AdjacentToMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
-    ThreatenedMoreThanOnceAdvisorLevel({RandomLeastDamageThreatenedNetAdvantagedMoveAdvisor: 1}),
+    ThreatenedMoreThanOnceAdvisorLevel({RandomLeastDamageThreatenedMoveAdvisor: 1}),
     AdjacentToMonsterAdvisorLevel({DeterministicSafeMeleeAttack: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1,}), # we can't ranged attack, can we move to an unthreatened place?
