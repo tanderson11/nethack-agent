@@ -29,6 +29,8 @@ small_advisors = [
     }),
     UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
+    AdvisorLevel({TraverseUnknownUpstairsAdvisor: 1,}),
+    GnomishMinesAdvisorLevel({UpstairsAdvisor: 1,}),
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AdvisorLevel({FreshCorpseMoveAdvisor: 1,}),
     AdvisorLevel({VisitUnvisitedSquareAdvisor: 1}),

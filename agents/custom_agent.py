@@ -142,12 +142,14 @@ class DMap():
         return lmap
 
 class Staircase():
-    def __init__(self, dcoord, location, new_dcoord, new_location):
+    def __init__(self, dcoord, location, new_dcoord=None, new_location=None, direction=None):
         self.start_dcoord = dcoord
         self.start_location = location
 
         self.end_dcoord = new_dcoord
         self.end_location = new_location
+
+        self.direction = direction
 
 class DLevelMap():
     def __init__(self, dungeon_number, level_number, glyphs, initial_player_location):
@@ -163,11 +165,11 @@ class DLevelMap():
     def update(self, player_location):
         self.visits_map[player_location] += 1
 
-    def add_staircase(self, location, new_dcoord, new_location):
+    def add_staircase(self, location, **kwargs):
         try:
             return self.staircases[location]
         except KeyError:
-            staircase = Staircase((self.dungeon_number, self.level_number), location, new_dcoord, new_location)
+            staircase = Staircase((self.dungeon_number, self.level_number), location, **kwargs)
             self.staircases[location] = staircase
             return staircase
 
@@ -354,6 +356,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.previous_glyph_on_player = previous_glyph_on_player
         self.absolute_player_location = absolute_player_location
         self.dcoord = dcoord
+        self.level_map = level_map
 
         on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
@@ -791,6 +794,10 @@ class CustomAgent(BatchedAgent):
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
         dcoord = (dungeon_number, level_number)
+
+        if dungeon_number != 0:
+            pass
+            #if environment.env.debug: import pdb; pdb.set_trace()
         
         if done:
             print_stats(done, run_state, blstats)
@@ -807,6 +814,12 @@ class CustomAgent(BatchedAgent):
             level_map = run_state.dmap.dlevels[dcoord]
         except KeyError:
             level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
+
+            # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
+            if dungeon_number == 0 and level_number == 1:
+                # EARTH PLANE DCOORD = ?
+                EARTH_PLANE_DNUM = -1
+                level_map.add_staircase(player_location, new_dcoord=(EARTH_PLANE_DNUM, 1), direction='up')
         
         level_map.update(player_location)
 
@@ -861,14 +874,20 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. oddly, when we receive the descend message, it looks like we are on the old dlevel, but we are actually on the new one
         if "You descend the" in message.message or "You climb" in message.message:
+            print(message.message)
             # create the staircases (idempotent)
+            if "You descend the" in message.message:
+                direction = ('down', 'up')
+            elif "You climb" in message.message:
+                direction = ('up', 'down')
+
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
-            previous_level_map.add_staircase(run_state.neighborhood.absolute_player_location, dcoord, player_location) # start, end, end
+            previous_level_map.add_staircase(run_state.neighborhood.absolute_player_location, new_dcoord=dcoord, new_location=player_location, direction=direction[0]) # start, end, end
             # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_staircase(player_location, run_state.neighborhood.dcoord, run_state.neighborhood.absolute_player_location) # start, end, end 
-
+            level_map.add_staircase(player_location, new_dcoord=run_state.neighborhood.dcoord, new_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end 
+            print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)
@@ -915,7 +934,6 @@ class CustomAgent(BatchedAgent):
             dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
             return retval
-
 
         neighborhood = Neighborhood(
             player_location,
