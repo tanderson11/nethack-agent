@@ -507,6 +507,11 @@ class CharacterData(NamedTuple):
             return False
         return True
 
+    def body_armor_penalty(self):
+        if self.base_class == 'Monk':
+            return True
+        return False
+
 class RunState():
     def __init__(self, debug_env=None):
         self.reset()
@@ -898,6 +903,9 @@ class CustomAgent(BatchedAgent):
             print(message.message)
 
         if "corpse tastes" in message.message:
+            print(message.message)
+
+        if "You finish your dressing maneuver" in message.message:
             print(message.message)
 
         if "You hear someone muttering an incantation" in message.message:

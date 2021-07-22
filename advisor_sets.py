@@ -25,7 +25,7 @@ small_advisors = [
         PickupFoodAdvisor: 1,
         PickupArmorAdvisor: 1,
         EatCorpseAdvisor: 1,
-        WearTopInventoryAdvisor: 1,
+        WearValidArmorAdvisor: 1,
     }),
     UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
     AdvisorLevel({OpenClosedDoorAdvisor: 1,}),
