@@ -526,7 +526,7 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
 
     def log(self):
         if not self.log_path:
@@ -543,6 +543,8 @@ class RunState():
                 'time': self.blstats.get('time'),
                 'hp': self.blstats.get('hitpoints'),
                 'max_hp': self.blstats.get('max_hitpoints'),
+                'AC': self.blstats.get('armor_class'),
+                'encumberance': self.blstats.get('encumberance'),
                 'hunger': self.blstats.get('hunger_state'),
                 'message_log': "||".join(self.message_log[-10:]),
                 'action_log': self.print_action_log(10),
