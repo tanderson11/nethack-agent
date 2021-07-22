@@ -263,7 +263,7 @@ class MostNovelMoveAdvisor(MoveAdvisor):
         possible_actions = neighborhood.action_grid[agreeable_move_mask]
         visits = neighborhood.visits[agreeable_move_mask]
 
-        if len(visits) > 0: # len in case all sqaures that are walkable have 0 visits
+        if len(visits) > 0: # len in case all sqaures that are walkable have 0 visits.
             most_novel = possible_actions[visits == visits.min()]
             return Advice(self.__class__, rng.choice(most_novel), None)
         else:
