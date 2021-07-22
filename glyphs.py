@@ -462,7 +462,7 @@ class CMapGlyph(Glyph):
         self.is_trap = self.offset > 41 and self.offset < 65
         
     def walkable(self, character):
-        return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_closed_door or self.is_downstairs or self.is_upstairs
+        return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_downstairs or self.is_upstairs
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):

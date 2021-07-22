@@ -85,5 +85,13 @@ class TestAttributeScreen(unittest.TestCase):
         self.assertEqual("Blind Io", run_state.gods_by_alignment['lawful'])
         self.assertEqual("Offler", run_state.gods_by_alignment['chaotic'])
 
+
+'Something is written here in the dust.  You read: "\\ ad wa  here".'
+['', '', '', 'Something is written here in the dust.', 'You read: "Closed for inventory".']
+'You read: "Wizards are wimps".'
+'You read: "X < -- You ?re he e.".'
+'You read: "The? say ?hat a stethc?cope i? ro good ?f you ?an onlv hear you? hea\ntbeat.".'
+'There\'s some graffiti on the floor here.  You read: "We?l Come".'
+
 if __name__ == '__main__':
     unittest.main()
