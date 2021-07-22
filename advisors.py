@@ -326,7 +326,7 @@ class RandomLeastDamageThreatenedMoveAdvisor(RandomMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & (neighborhood.damage_threat == neighborhood.damage_threat.min())
 
-class RandomLeastDamageThreatenedNetAdvantagedMoveAdvisor(RandomLeastDamageThreatenedMoveAdvisor)
+class RandomLeastDamageThreatenedNetAdvantagedMoveAdvisor(RandomLeastDamageThreatenedMoveAdvisor):
     def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
         agreeable_moves = super().find_agreeable_moves(rng, blstats, inventory, neighborhood, message, character)
         # and the threat we shed by moving is greater than the damage we'll take on the square we move to
