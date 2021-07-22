@@ -116,7 +116,7 @@ class Flags():
 
     @functools.cached_property
     def major_trouble(self):
-        major_trouble = "You feel feverish." in self.message.message or "You slow down" in message.message
+        major_trouble = "You feel feverish." in self.message.message or "You are slowing down" in self.message.message
         return major_trouble
 
     @functools.cached_property
