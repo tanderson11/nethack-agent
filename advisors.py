@@ -87,6 +87,11 @@ class Flags():
         return on_upstairs
 
     @functools.cached_property
+    def on_warning_engraving(self):
+        return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
+
+
+    @functools.cached_property
     def can_move(self):
         # someday Held, Handspan, Overburdened etc.
         can_move = not self.message.feedback.collapse_message
@@ -448,23 +453,24 @@ class TakeDownstairsAdvisor(DownstairsAdvisor):
         return None
 
 class KickLockedDoorAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flag):
-        if "This door is locked" in message.message:
-            kick = nethack.actions.Command.KICK
-            door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: getattr(g, 'is_closed_door', False), neighborhood.glyphs)]
-            if len(door_directions) > 0:
-                a = rng.choice(door_directions)
-            else: # we got the locked door message but didn't find a door
-                a = None
-                if environment.env.debug: pdb.set_trace()
-                pass
-            if a is not None:
-              menu_plan = menuplan.MenuPlan("kick locked door", self, [
-                  menuplan.DirectionMenuResponse("In what direction?", a),
-              ])
-              return Advice(self.__class__, kick, menu_plan)
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.on_warning_engraving:
             return None
-        return None
+        if not "This door is locked" in message.message:
+            return None
+        kick = nethack.actions.Command.KICK
+        door_directions = neighborhood.action_grid[utilities.vectorized_map(lambda g: getattr(g, 'is_closed_door', False), neighborhood.glyphs)]
+        if len(door_directions) > 0:
+            a = rng.choice(door_directions)
+        else: # we got the locked door message but didn't find a door
+            a = None
+            if environment.env.debug: pdb.set_trace()
+            pass
+        if a is not None:
+            menu_plan = menuplan.MenuPlan("kick locked door", self, [
+                menuplan.DirectionMenuResponse("In what direction?", a),
+            ])
+            return Advice(self.__class__, kick, menu_plan)
 
 class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__class__.oclassess_used
     oclasses_used = None
@@ -575,6 +581,8 @@ class FallbackSearchAdvisor(Advisor):
 
 class NoUnexploredSearchAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        if flags.on_warning_engraving:
+            return None
         if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (utilities.vectorized_map(lambda g: getattr(g, 'possible_secret_door', False), neighborhood.glyphs)).any():
             return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
         return None

@@ -160,6 +160,7 @@ class DLevelMap():
         self.visits_map[initial_player_location] += 1
 
         self.staircases = {}
+        self.warning_engravings = {}
 
     
     def update(self, player_location):
@@ -707,7 +708,7 @@ class RunState():
             pass
             #if environment.env.debug: import pdb; pdb.set_trace()
 
-    def log_message(self, message):
+    def handle_message(self, message):
         self.message_log.append(message.message)
 
         if message.feedback.nevermind or message.feedback.nothing_to_eat:
@@ -849,7 +850,7 @@ class CustomAgent(BatchedAgent):
             print_stats(done, run_state, blstats)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
-        run_state.log_message(message)
+        run_state.handle_message(message)
 
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
         if killed_monster_name:
@@ -888,6 +889,10 @@ class CustomAgent(BatchedAgent):
             # staircase it's implied we've arrived on (probably breaks in the Valley)
             level_map.add_staircase(player_location, new_dcoord=run_state.neighborhood.dcoord, new_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end 
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
+
+        if "Something is written here in the dust" in message.message:
+            # TODO When we learn to write in the dust we need to be smarter about this
+            level_map.warning_engravings[player_location] = True
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)
