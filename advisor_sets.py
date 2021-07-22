@@ -34,6 +34,7 @@ small_advisors = [
     AdvisorLevel({TakeDownstairsAdvisor: 1,}),
     AdvisorLevel({FreshCorpseMoveAdvisor: 1,}),
     AdvisorLevel({VisitUnvisitedSquareAdvisor: 1}),
+    AdvisorLevel({TravelToUnexploredSquareAdvisor: 1}, skip_probability=0.9),
     AdvisorLevel({
         MostNovelUnthreatenedMoveAdvisor: 10,
         NoUnexploredSearchAdvisor: 6,

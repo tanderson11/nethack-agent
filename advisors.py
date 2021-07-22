@@ -705,6 +705,19 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
             return Advice(self.__class__, travel, menu_plan)
         return None
 
+class TravelToUnexploredSquareAdvisor(Advisor):
+     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+         travel = nethack.actions.Command.TRAVEL
+
+         menu_plan = menuplan.MenuPlan(
+             "travel down", self, [
+                 menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
+                 menuplan.EscapeMenuResponse("called Agent"),
+             ],
+             fallback=utilities.keypress_action(ord('.')))
+
+         return Advice(self.__class__, travel, menu_plan)
+
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         enhance = nethack.actions.Command.ENHANCE
