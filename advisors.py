@@ -330,7 +330,7 @@ class PrayerAdvisor(Advisor):
     def advice(self, rng, character, blstats, _2, _3, _4, _5):
         if character.last_pray_time is None and blstats.get('time') <= 300:
             return None
-        if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 50:
+        if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
             return None
         pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", self, [
