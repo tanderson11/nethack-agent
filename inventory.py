@@ -155,8 +155,14 @@ class Inventory():
         self.inv_oclasses = observation['inv_oclasses']
         self.inv_glyphs = observation['inv_glyphs']
 
+        self.observation = observation
+
+    def have_item_oclass(self, object_class_name):
+        object_class_num = gd.ObjectGlyph.OBJECT_CLASSES.index(object_class_name) # TK make better with a mapping
+        return object_class_num in self.inv_oclasses
+
     def get_oclass(self, object_class_name):
-        object_class_num = gd.ObjectGlyph.OBJECT_CLASSES.index(object_class_name) # TK make better with mapping
+        object_class_num = gd.ObjectGlyph.OBJECT_CLASSES.index(object_class_name) # TK make better with a mapping
 
         try:
             items = self.items_by_class[object_class_name]

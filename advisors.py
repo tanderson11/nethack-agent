@@ -431,7 +431,7 @@ class DownstairsAdvisor(Advisor):
             pass
 
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        if utilities.have_item_oclasses(['FOOD_CLASS'], inventory):
+        if inventory.have_item_oclass('FOOD_CLASS'):
             willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         else:
             willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
@@ -471,8 +471,6 @@ class OpenClosedDoorAdvisor(Advisor):
 
         return Advice(self.__class__, a, None)
 
-
-
 class KickLockedDoorAdvisor(Advisor):
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         if flags.on_warning_engraving:
@@ -501,11 +499,17 @@ class KickLockedDoorAdvisor(Advisor):
 class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__class__.oclassess_used
     oclasses_used = None
 
-    def have_item_oclass(self, inventory):
-        return utilities.have_item_oclasses(self.__class__.oclasses_used, inventory)
+    def have_relevant_class(self, inventory):
+        if isinstance(self.__class__.oclasses_used, list):
+            oclasses = self.__class__.oclasses_used
+            for oclass in oclasses:
+                if inventory.have_item_oclass(oclass): return True
+            return False
+        elif isinstance(object_class_name, str):
+            return inventory.have_item_oclass(self.__class__.oclasses_used)
 
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if self.have_item_oclass(inventory):
+        if self.have_relevant_class(inventory):
             use_item = self.use_item(rng, character, blstats, inventory, neighborhood, message, flags)
             if use_item is not None:
                 return use_item
@@ -545,9 +549,9 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
     def use_item(self, rng, character, _1, inventory, _3, _4, flags):
         eat = nethack.actions.Command.EAT
         FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
-        food_index = inventory['inv_oclasses'].tolist().index(FOOD_CLASS)
+        food_index = inventory.observation['inv_oclasses'].tolist().index(FOOD_CLASS) # TK normalize once inventory includes food
 
-        letter = inventory['inv_letters'][food_index]
+        letter = inventory.observation['inv_letters'][food_index] # TK normalize once inventory includes food
         menu_plan = self.make_menu_plan(letter)
         return Advice(self.__class__, eat, menu_plan)
 
@@ -647,7 +651,7 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
             attack_direction = rng.choice(monster_directions)
 
             WEAPON_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('WEAPON_CLASS')
-            is_weapon = [c == WEAPON_CLASS for c in inventory['inv_oclasses'].tolist()]
+            is_weapon = [c == WEAPON_CLASS for c in inventory.observation['inv_oclasses'].tolist()] # TK normalize
             extra_weapon = sum(is_weapon) > 1
 
             if extra_weapon:
