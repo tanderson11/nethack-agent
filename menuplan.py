@@ -220,13 +220,13 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class InteractiveInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (x.category == "Scrolls") & ("teleporation" in x.item_appearance),
-        'teleport wands': lambda x: (x.category == "Wands") & ("teleporation" in x.item_appearance),
-        'healing potions': lambda x: (x.category == "Potions") & ("healing" in x.item_appearance),
-        'extra weapons': lambda x: (x.category == "Weapons") & ("weapon in hand" not in x.item_equipped_status),
+        'teleport scrolls': lambda x: (x.object_class == "SCROLL_CLASS") & (x.identity.name() == 'teleport'),
+        'teleport wands': lambda x: (x.object_class == "WAND_CLASS") & (x.identity.name() == 'teleporation'),
+        'healing potions': lambda x: (x.object_class == "POTION_CLASS") & ("healing" in x.identity.name()),
+        'extra weapons': lambda x: (x.object_class == "WEAPON_CLASS") & ("weapon in hand" not in x.equipped_status),
 
-        'comestibles': lambda x: x.category == "Comestibles" and "for sale" not in x.item_equipped_status,
-        'armor': lambda x: x.category == "Armor" and "for sale" not in x.item_equipped_status,
+        'comestibles': lambda x: x.category == "Comestibles" and "for sale" not in x.item.equipped_status, # comestibles = food and corpses
+        'armor': lambda x: x.object_class == "ARMOR_CLASS" and "for sale" not in x.item.equipped_status,
     }
 
     class MenuItem:
@@ -238,35 +238,8 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.category = category
             self.character = character
             self.selected = selected
-            self.item_name = None
-            self.item_appearance = None
-            self.item_equipped_status = ''
-
-            match = re.match(inv.ItemParser.item_pattern, item_text)
-            if match:
-                if match[1] == "a" or match[1] == "an":
-                    self.quantity = 1
-                else:
-                    self.quantity = int(match[1])
-
-                item_description = match[8]
-                if match[9] is not None:
-                    self.item_equipped_status = match[9]
-            else:
-                if environment.env.debug: pdb.set_trace()
-
-            if item_description in gd.ALL_OBJECT_NAMES:
-                self.item_name = item_description
-                self.item_appearance = item_description # choosing to trample appearance with identified appearance
-            else:
-
-                # doesn't always work: item description is like "blessed +1 orcish dagger (weapon in hand)"
-                if not item_description in gd.ALL_OBJECT_APPEARANCES:
-                    #if environment.env.debug: pdb.set_trace()
-                    pass
-
-                self.item_appearance = item_description
-                self.item_name = '' # slightly questionable but it lets us check `in` on item names that aren't defined
+            #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
+            self.item = inv.ItemParser.parse_inventory_item(item_text)
 
 class InteractivePickupMenu(InteractiveInventoryMenu):
     header_rows = 2
