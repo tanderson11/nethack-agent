@@ -18,7 +18,9 @@ class MenuResponse:
     def action_message(self, message_obj):
         if not self.match_str in message_obj.message:
             return None
-        return self.value(message_obj)
+
+        val = self.value(message_obj)
+        return val
 
 class EscapeMenuResponse(MenuResponse):
     def value(self, message_obj):
@@ -29,7 +31,6 @@ class YesMenuResponse(MenuResponse):
         if not message_obj.yn_question:
             # Decently common: Fast yn lingers on screen
             return None
-            pdb.set_trace()
         return utilities.keypress_action(ord('y'))
 
 class NoMenuResponse(MenuResponse):
@@ -90,13 +91,14 @@ class PhraseMenuResponse(MenuResponse):
 
 
 class MenuPlan():
-    def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None):
+    def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None, listening_item=None):
         self.name = name
         self.advisor = advisor
         self.menu_responses = menu_responses
         self.fallback = fallback
         self.interactive_menu = interactive_menu
         self.in_interactive_menu = False
+        self.listening_item = listening_item
 
     def interact(self, message_obj):
         if message_obj.message is None:

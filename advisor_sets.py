@@ -26,6 +26,7 @@ small_advisors = [
         PickupArmorAdvisor: 1,
         EatCorpseAdvisor: 1,
         WearValidArmorAdvisor: 1,
+        EngraveTestWandsAdvisor: 1,
     }),
     UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
     AdvisorLevel({OpenClosedDoorAdvisor: 1,}),

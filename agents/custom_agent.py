@@ -720,6 +720,9 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
+        if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
+            self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+
         if message.feedback.nevermind or message.feedback.nothing_to_eat:
             eat_corpse_flag = False
             if self.advice_log[-1] is None:
@@ -837,9 +840,9 @@ class CustomAgent(BatchedAgent):
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
-        #_inventory = inv.Inventory(observation)
-
-        inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
+        inventory = inv.Inventory(observation)
+        #_armor = _inventory.get_oclass('ARMOR_CLASS')
+        _wands = inventory.get_oclass('WAND_CLASS')
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:

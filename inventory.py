@@ -9,12 +9,13 @@ import numpy as np
 from utilities import ARS
 
 class Item():
-    def __init__(self, object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=None):
+    def __init__(self, object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=None, inventory_letter=None):
         self.object_class = object_class
         self.quantity = quantity
         self.BUC = BUC
         self.equipped_status = equipped_status
         self.condition = condition
+        self.inventory_letter = inventory_letter
 
         self.appearance = appearance
         self.glyph_numeral = glyph_numeral # not always present. example: seeing item in a stack
@@ -23,8 +24,8 @@ class Item():
 
         # this is the easy case, we pull the identity directly
         if self.glyph_numeral is not None:
-            self.identity_obj = gd.GLYPH_NUMERAL_LOOKUP[self.glyph_numeral].identity
-            self.identity_objs = [self.identity_obj] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
+            self.identity = gd.GLYPH_NUMERAL_LOOKUP[self.glyph_numeral].identity
+            self.identity_objs = [self.identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
         # this is the hard case, we look up the appearance in the relevant object class
         else:
             class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[self.object_class]
@@ -32,15 +33,18 @@ class Item():
 
             # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
             if len(matches) == 1:
-                self.identity_obj = gd.GLYPH_NUMERAL_LOOKUP[matches[0]].identity
-                self.identity_objs = [self.identity_obj]
+                self.identity = gd.GLYPH_NUMERAL_LOOKUP[matches[0]].identity
+                self.identity_objs = [self.identity]
                 self.glyph_numeral = self.identity.numeral
             # otherwise
             elif len(matches) > 1:
-                self.identity_obj = None
+                self.identity = None
                 self.identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in matches]
             else:
                 raise Exception("no matches for appearance in class")
+
+    def process_message(self, *args):
+        self.identity.process_message(*args)
 
 class ItemParser():
     item_pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
@@ -70,7 +74,7 @@ class ItemParser():
 
     @classmethod
     @functools.lru_cache(maxsize=128)
-    def parse_inventory_item(cls, string, glyph_numeral=None, passed_object_class=None):
+    def parse_inventory_item(cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None):
         match = re.match(cls.item_pattern, string)
 
         if match:
@@ -100,8 +104,8 @@ class ItemParser():
                 if class_pattern_match:
                     appearance = class_pattern_match[1]
                     object_class = klass
-                    print(klass)
-                    pdb.set_trace()
+                    print('UNIDENTIFIED', klass)
+                    #pdb.set_trace()
                     break
 
             if appearance is None and object_class is None:
@@ -129,7 +133,7 @@ class ItemParser():
             if environment.env.debug: pdb.set_trace()
             return None
 
-        item = Item(object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=glyph_numeral)
+        item = Item(object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
         return item # if caching, garbage collection will keep this object around
 
 class Inventory():
@@ -174,7 +178,7 @@ class Inventory():
                 item_str = ItemParser.decode_inventory_item(raw_string)
 
                 if item_str:
-                    item = ItemParser.parse_inventory_item(item_str, glyph_numeral=numeral, passed_object_class=object_class_name)
+                    item = ItemParser.parse_inventory_item(item_str, glyph_numeral=numeral, passed_object_class=object_class_name, inventory_letter=letter)
                     self.items_by_letter[letter] = item
                     class_contents.append(item)
 

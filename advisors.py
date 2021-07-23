@@ -747,5 +747,28 @@ class EnhanceSkillsAdvisor(Advisor):
 
         return Advice(self.__class__, enhance, menu_plan)
 
+class EngraveTestWandsAdvisor(Advisor):
+    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+        engrave = nethack.actions.Command.ENGRAVE
+        wands = inventory.get_oclass('WAND_CLASS')
+        letter = None
+        for w in wands:
+            if not w.identity.is_identified() and not w.identity.listened_actions.get(utilities.ACTION_LOOKUP[engrave], False):
+                letter = w.inventory_letter
+                break
+
+        if letter is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("engrave test wand", self, [
+            menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
+            menuplan.MoreMenuResponse("You write in the dust with"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+        ], listening_item=w)
+
+        #pdb.set_trace()
+        return Advice(self.__class__, engrave, menu_plan)
+
+
 # Thinking outloud ...
 # Free/scheduled (eg enhance), Repair major, escape, attack, repair minor, improve/identify, descend, explore

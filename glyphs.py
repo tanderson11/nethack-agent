@@ -9,6 +9,7 @@ import pandas as pd
 import numpy as np
 
 import environment
+import utilities
 from utilities import ARS
 from spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
 
@@ -553,9 +554,23 @@ class ObjectIdentity():
 
         self.data = data
 
-    def apply_filter(self, filter):
-        # filter the idx on a condition
-        pass
+        self.listened_actions = {}
+
+    def is_identified(self):
+        return len(self.idx) == 1
+
+    def process_message(self, message_obj, action):
+        self.listened_actions[action] = True
+        # engrave testing
+        if self.object_class_name == 'WAND_CLASS' and action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
+            # if there is an engrave message and it is in fact contained in the overheard message
+            message_matches = ~self.data.iloc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.iloc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
+            if message_matches.any():
+                self.apply_filter(np.where(message_matches)[0])
+
+    def apply_filter(self, idx):
+        self.idx = idx
+        #pdb.set_trace()
 
     @classmethod
     def make_agnostic_identities(cls):
@@ -596,7 +611,6 @@ def dump_class(cls):
         df.to_csv(f)
 
 #dump_class(ObjectGlyph)
-
 
 def get_by_name(klass, name):
     glyph = GLYPH_NAME_LOOKUP.get(name, None)
