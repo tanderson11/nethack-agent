@@ -6,6 +6,7 @@ from collections import Counter
 
 from nle import nethack
 import pandas as pd
+import numpy as np
 
 import environment
 from utilities import ARS
@@ -67,9 +68,13 @@ class Glyph():
 
         return mapping
 
-
     def __repr__(self):
         return "{} named {}".format(self.__class__, self.name or 'NO NAME DEFINED')
+
+    @classmethod
+    def numerals(cls):
+        numerals = range(cls.OFFSET, cls.OFFSET + cls.COUNT)
+        return numerals
 
 class MonsterAlikeGlyph(Glyph):
     NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
@@ -127,6 +132,12 @@ class MonsterAlikeGlyph(Glyph):
 
         return True
 
+    @classmethod
+    def names(cls):
+        names = set()
+        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
+            names.add(cls(numeral).name)
+        return names
 
 class MonsterGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_MON_OFF
@@ -150,13 +161,8 @@ class MonsterGlyph(MonsterAlikeGlyph):
         if self.is_shopkeeper or self.offset in [278, 279]: # shopkeeper and watch people
             self.always_peaceful = True
 
-
-    @classmethod
-    def names(cls):
-        names = set()
-        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            names.add(cls(numeral).name)
-        return names
+class BadObjectClass(Exception):
+    pass
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF
@@ -204,14 +210,6 @@ class ObjectGlyph(Glyph):
         'VENOM_CLASS', # 17
     ]
 
-    class ObjectIdentity():
-        def __init__(self, name, numeral):
-            self.numeral = numeral
-
-            self.name = name
-
-            #self.spoiler = spoiler
-
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
@@ -223,43 +221,6 @@ class ObjectGlyph(Glyph):
         self.object_class_name = self.__class__.OBJECT_CLASSES[self.object_class_numeral]
         self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
         self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
-
-        #####################################
-        ##### Objects that get shuffled #####
-        #####################################
-
-        is_shuffled = False
-        fully_shuffled_classes = ['WAND_CLASS', 'POTION_CLASS', 'RING_CLASS', 'AMULET_CLASS']
-        if self.object_class_name == 'ARMOR_CLASS':
-            shuffled_helms = range(78, 82) # get owned, dunce caps
-            shuffled_cloaks = range(125, 129)
-            shuffled_gloves = range(136, 140)
-            shuffled_boots = range(143, 150)
-            is_shuffled = self.offset in shuffled_helms or self.offset in shuffled_cloaks or self.offset in shuffled_gloves or self.offset in shuffled_boots
-
-        elif self.object_class_name == 'POTION_CLASS':
-            water_offset = 297
-            is_shuffled = self.offset != water_offset
-
-        elif self.object_class_name == 'SPBOOK_CLASS':
-            magic_and_non_unique = range(340, 380) # blank, paperback, book of the dead are excluded
-            is_shuffled = self.offset in magic_and_non_unique
-
-        elif self.object_class_name == 'SCROLL_CLASS': # scrolls work in a unique way, where none of them have names (except blank paper) only appearances. what does this affect?
-            blank_paper_offset = 339
-            is_shuffled = self.offset != blank_paper_offset
-
-        elif self.object_class_name in fully_shuffled_classes:
-            is_shuffled = True
-
-        self.is_shuffled = is_shuffled
-
-        ####################################
-
-        if not self.is_shuffled:
-            self.identity = self.__class__.ObjectIdentity(self.name, self.numeral)
-        else:
-            self.identity = None
 
     def walkable(self, character):
         return True
@@ -283,62 +244,33 @@ class ObjectGlyph(Glyph):
     def names(cls):
         names = set()
         for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            # print(f"{cls} {numeral}")
             names.add(cls(numeral).name)
         return names
 
     @classmethod
-    def distinct_appearances(cls): # distinct, not unique
+    def appearances(cls):
         appearances = set()
         for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            # print(f"{cls} {numeral}")
             appearances.add(cls(numeral).appearance)
         return appearances
 
     @classmethod
-    def duplicated_appearances(cls):
-        appearances = []
+    def object_classes_by_appearance(cls):
+        classes_by_appearance = {}
         for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            # print(f"{cls} {numeral}")
-            appearances.append(cls(numeral).appearance)
+            g = ObjectGlyph(numeral)
+            classes_by_appearance[g.appearance] = g.object_class_name
 
-        duplicates = [k for k,v in Counter(appearances).items() if v>1]
-
-        return duplicates
+        return classes_by_appearance
 
     @classmethod
-    def identities_by_glyph(cls):
-        identities = {}
+    def object_classes_by_name(cls):
+        classes_by_name = {}
         for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            identity = cls(numeral).identity
+            g = ObjectGlyph(numeral)
+            classes_by_name[g.name] = g.object_class_name
 
-            if identity is not None:
-                identities[numeral] = identity
-
-        return identities
-
-    @classmethod
-    def identities_by_name(cls):
-        identities = {}
-        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            glyph = cls(numeral)
-
-            if glyph.identity is not None:
-                identities[glyph.name] = glyph.identity
-
-        return identities
-
-    @classmethod
-    def identities_by_appearance(cls):
-        duplicated_appearances = cls.duplicated_appearances()
-        identities = {}
-        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
-            glyph = cls(numeral)
-            if glyph.identity is not None and glyph.appearance not in duplicated_appearances:
-                identities[glyph.appearance] = glyph.identity
-
-        return identities
-
+        return classes_by_name
 
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
@@ -574,17 +506,96 @@ for glyph in GLYPH_NUMERAL_LOOKUP.values():
 
 GLYPH_NUMERAL_LOOKUP[5976] = None # Weird and bad thing in the inventory
 
-ALL_OBJECT_NAMES = ObjectGlyph.names()
+#################
+# OBJECT GLYPHS #
+#################
 
-ALL_OBJECT_APPEARANCES = ObjectGlyph.distinct_appearances() # problem with this and blank paper + blank spellbook
+class ObjectClassMetadeta():
+    def __init__(self):
+        OBJECT_DATA_BY_CLASS = {}
+        for klass in ObjectGlyph.OBJECT_CLASSES:
+            try:
+                with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", klass+".csv"), 'r') as f:
+                    df = pd.read_csv(f)
+                    df = df.set_index('GLYPH')
+                OBJECT_DATA_BY_CLASS[klass] = df
 
-OBJECT_IDENTITIES_BY_GLYPH = ObjectGlyph.identities_by_glyph()
+            except FileNotFoundError:
+                pass
 
-#for k,v in OBJECT_IDENTITIES_BY_GLYPH.items():
-#    print(k, v.name)
+        self.OBJECT_DATA_BY_CLASS = OBJECT_DATA_BY_CLASS
 
-UNSHUFFLED_OBJECT_IDENTITIES_BY_APPEARNCE = ObjectGlyph.identities_by_appearance()
-OBJECT_IDENTITIES_BY_NAME = ObjectGlyph.identities_by_name()
+OBJECT_METADATA = ObjectClassMetadeta()
+
+class ObjectIdentity():
+    '''Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.'''
+    def __init__(self, object_class_name, numeral=None, name=None, appearance=None):
+        self.object_class_name = object_class_name
+        self.numeral = numeral
+
+        try:
+            data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
+        except KeyError:
+            raise(BadObjectClass)
+
+        self.idx = None # get idx into table of items: can be a range of values or something?
+        if numeral is not None:
+            spoiler_row = data.loc[numeral]
+
+            if not spoiler_row['SHUFFLED']:
+                # if it's not shuffled, the numeral accurately picks out the object
+                self.idx = [numeral]
+            else:
+                # if it is shuffled, it could be any object in the shuffled class
+                same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
+                self.idx = np.where(same_shuffle_class)[0]
+        #a = np.where(a)[0]
+
+        self.data = data
+
+    def apply_filter(self, filter):
+        # filter the idx on a condition
+        pass
+
+    @classmethod
+    def make_agnostic_identities(cls):
+        for numeral in range(ObjectGlyph.OFFSET, ObjectGlyph.OFFSET + ObjectGlyph.COUNT):
+            glyph = GLYPH_NUMERAL_LOOKUP[numeral]
+            try:
+                glyph.identity = cls(glyph.object_class_name, glyph.numeral, glyph.name, glyph.appearance)
+            except BadObjectClass:
+                glyph.identity = None
+
+OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE = ObjectGlyph.object_classes_by_appearance()
+OBJECT_METADATA.OBJECT_CLASS_BY_NAME = ObjectGlyph.object_classes_by_name()
+
+ALL_OBJECT_NAMES = ObjectGlyph.names() # TK deprecate
+ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances() # TK deprecate
+
+def dump_class(cls):
+    #df_dict = {'glyph': [], 'name': [], 'appearance': [], 'is_shuffled': []}
+    rows = []
+    for n in cls.numerals():
+        identity = OBJECT_IDENTITIES_BY_GLYPH.get(n, None)
+        g = GLYPH_NUMERAL_LOOKUP[n]
+
+        if identity is not None:
+            name = identity.name
+        else:
+            name = g.name
+
+        row = [n, name, g.appearance, g.is_shuffled, g.object_class_name]
+        rows.append(row)
+
+    for row in rows:
+        if len(row) != 4:
+            print(row)
+    df = pd.DataFrame(columns=['glyph', 'name', 'appearance', 'is_shuffled', 'class'], data=rows)
+    print(df)
+    with open('glyph_dump.csv', 'w') as f:
+        df.to_csv(f)
+
+#dump_class(ObjectGlyph)
 
 
 def get_by_name(klass, name):

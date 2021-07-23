@@ -554,6 +554,8 @@ class RunState():
             })
 
     def reset(self):
+        gd.ObjectIdentity.make_agnostic_identities() # reset object identities
+
         self.reading_base_attributes = False
         self.character = None
         self.gods_by_alignment = {}
