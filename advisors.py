@@ -748,7 +748,6 @@ class EnhanceSkillsAdvisor(Advisor):
         return Advice(self.__class__, enhance, menu_plan)
 
 class EngraveTestWandsAdvisor(Advisor):
-
     def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
         engrave = nethack.actions.Command.ENGRAVE
         wands = inventory.get_oclass('WAND_CLASS')
@@ -769,12 +768,10 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("is a wand of digging!"),
             menuplan.MoreMenuResponse("is a wand of fire!"),
             menuplan.MoreMenuResponse("You engrave in the floor"),
-            menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.MoreMenuResponse("You burn into the floor"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
-            menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
         ], listening_item=w)
 
         #pdb.set_trace()
