@@ -464,7 +464,7 @@ class OpenClosedDoorAdvisor(Advisor):
             for location in neighborhood.level_map.warning_engravings.keys():
                 door_loc = physics.offset_location_by_action(neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
                 if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    if environment.env.debug: import pdb; pdb.set_trace()
+                    #if environment.env.debug: import pdb; pdb.set_trace()
                     return None
         else:
             return None
@@ -763,6 +763,14 @@ class EngraveTestWandsAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("engrave test wand", self, [
             menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
             menuplan.MoreMenuResponse("You write in the dust with"),
+            menuplan.MoreMenuResponse("A lit field surrounds you!"),
+            menuplan.MoreMenuResponse("is a wand of lightning!"),
+            menuplan.MoreMenuResponse("is a wand of digging!"),
+            menuplan.MoreMenuResponse("is a wand of fire!"),
+            menuplan.MoreMenuResponse("You engrave in the floor"),
+            menuplan.MoreMenuResponse("You burn into the floor"),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
         ], listening_item=w)
 

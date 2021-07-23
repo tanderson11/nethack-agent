@@ -43,6 +43,10 @@ class Item():
             else:
                 raise Exception("no matches for appearance in class")
 
+
+        if self.identity is None:
+            if environment.env.debug: pdb.set_trace() # are we hallucinating?
+
     def process_message(self, *args):
         self.identity.process_message(*args)
 
@@ -122,7 +126,10 @@ class ItemParser():
                         try:
                             object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE[appearance]
                         except KeyError:
-                            object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_NAME[appearance]
+                            try:
+                                object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_NAME[appearance]
+                            except KeyError:
+                                if environment.env.debug: pdb.set_trace()
 
             equipped_status = match[9]
 
