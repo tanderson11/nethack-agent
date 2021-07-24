@@ -840,9 +840,12 @@ class CustomAgent(BatchedAgent):
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
-        inventory = inv.Inventory(observation)
+        inventory = inv.PlayerInventory(observation)
         #_armor = _inventory.get_oclass('ARMOR_CLASS')
-        _wands = inventory.get_oclass('WAND_CLASS')
+        #_wands = inventory.get_oclass('WAND_CLASS')
+        #_armor = inventory.get_oclass('ARMOR_CLASS')
+        #armaments = inventory.get_slots('armaments')
+        #import pdb; pdb.set_trace()
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -1030,7 +1033,6 @@ class CustomAgent(BatchedAgent):
 
         if retval == utilities.ACTION_LOOKUP[nethack.actions.MiscDirection.WAIT]:
             if environment.env.debug: import pdb; pdb.set_trace() # maybe this happens when we travel?
-
 
         if environment.env.debug and retval in range(0,8): #cardinal
             new_loc = physics.offset_location_by_action(neighborhood.local_player_location, retval)

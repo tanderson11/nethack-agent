@@ -549,7 +549,7 @@ class ObjectIdentity():
             else:
                 # if it is shuffled, it could be any object in the shuffled class
                 same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
-                self.idx = np.where(same_shuffle_class)[0]
+                self.idx = same_shuffle_class.index[same_shuffle_class]
         #a = np.where(a)[0]
 
         self.data = data
@@ -564,13 +564,25 @@ class ObjectIdentity():
         # engrave testing
         if self.object_class_name == 'WAND_CLASS' and action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
             # if there is an engrave message and it is in fact contained in the overheard message
-            message_matches = ~self.data.iloc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.iloc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
+            message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
             if message_matches.any():
-                self.apply_filter(np.where(message_matches)[0])
+                self.apply_filter(message_matches.index[message_matches])
 
     def apply_filter(self, idx):
         self.idx = idx
         #pdb.set_trace()
+
+    def find_values(self, column):
+        try:
+            return np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
+        except:
+            pdb.set_trace()
+
+    def name(self):
+        if self.is_identified():
+            return self.data.loc[self.idx].NAME
+        else:
+            return None
 
     @classmethod
     def make_agnostic_identities(cls):

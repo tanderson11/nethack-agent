@@ -9,12 +9,50 @@ import numpy as np
 from utilities import ARS
 
 class Item():
-    def __init__(self, object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=None, inventory_letter=None):
+    class EquippedStatus():
+        def __init__(self, item, parenthetical_status):
+            self.status = None
+            self.slot = None
+            if parenthetical_status is not None:
+                if "being worn" in parenthetical_status:
+                    self.status = 'worn'
+                    potential_slots = item.identity.find_values('SLOT')
+                    assert len(potential_slots) == 1, 'Item could occupy multiple slots, non sensically.'
+                    self.slot = potential_slots[0]
+
+                elif "weapon in hand" in parenthetical_status:
+                    self.status = 'wielded'
+
+                    if parenthetical_status == "(weapon in hands)":
+                        self.slot = ['hand', 'off_hand']
+                    else:
+                        self.slot = 'hand'
+
+                elif "wielded in other hand" in parenthetical_status:
+                    self.status = 'alt-wielded'
+                    self.slot = 'off_hand'
+
+                elif "on right hand" in parenthetical_status:
+                    self.status = 'worn'
+                    self.slot = 'right_ring'
+
+                elif "on left hand" in parenthetical_status:
+                    self.status = 'worn'
+                    self.slot = 'left_ring'
+
+                elif "in quiver" in parenthetical_status:
+                    self.status = 'quivered'
+                    self.slot = 'quiver'
+
+
+
+    def __init__(self, object_class, appearance, quantity, BUC_str, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None):
         self.object_class = object_class
         self.quantity = quantity
-        self.BUC = BUC
-        self.equipped_status = equipped_status
+        self.BUC = BUC_str
+        self.parenthetical_status = parenthetical_status
         self.condition = condition
+        self.enhancement = enhancement
         self.inventory_letter = inventory_letter
 
         self.appearance = appearance
@@ -43,9 +81,12 @@ class Item():
             else:
                 raise Exception("no matches for appearance in class")
 
-
         if self.identity is None:
             if environment.env.debug: pdb.set_trace() # are we hallucinating?
+
+        self.equipped_status = self.__class__.EquippedStatus(self, parenthetical_status)
+        if self.equipped_status.slot is None and self.equipped_status.status is None:
+            self.equipped_status = None
 
     def process_message(self, *args):
         self.identity.process_message(*args)
@@ -140,26 +181,83 @@ class ItemParser():
             if environment.env.debug: pdb.set_trace()
             return None
 
-        item = Item(object_class, appearance, quantity, BUC, equipped_status, condition, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
+        item = Item(object_class, appearance, quantity, BUC, equipped_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
         return item # if caching, garbage collection will keep this object around
 
-class Inventory():
-    class Slots(NamedTuple):
-        gloves: bool
-        shirt: bool
-        suit: bool
-        cloak: bool
-        helmet: bool
-        boots: bool
-        amulet: bool
-        left_ring: bool
-        right_ring: bool
-        hand: bool
-        off_hand: bool
+
+class Slot():
+    blockers = []
+    def __init__(self, name):
+        self.name = name
+        self.occupied = None
+        self.occupant_letter = None
+
+    def add_occupant(self, occupant_letter):
+        self.occupied=True
+        self.occupant_letter=occupant_letter
+
+    def __repr__(self):
+        prefix = "{}:".format(self.name)
+        if self.occupant_letter is None:
+            return prefix + 'nothing'
+        return prefix + chr(self.occupant_letter)
+
+class SuitSlot(Slot):
+    blockers = ['cloak']
+
+class ShirtSlot(Slot):
+    blockers = ['suit', 'cloak']
+
+class SlotCluster():
+    def __init__(self, inventory):
+        slots = {slot_name:slot_type(slot_name) for slot_name, slot_type in self.__class__.slot_type_mapping.items()}
+
+        for oclass in self.__class__.involved_classes:
+            class_contents = inventory.get_oclass(oclass)
+
+            for item in class_contents:
+                if item.equipped_status is not None:
+                    occ_slot = item.equipped_status.slot
+                    #print(occ_slot)
+                    #print(occ_slot is not None)
+                    if occ_slot is not None:
+                        slots[occ_slot].add_occupant(item.inventory_letter)
+
+        #pdb.set_trace()
+        self.slots = slots
+
+    def blocked_by_letters(self, slot, inventory):
+        blockers = [self.slots[block_name].occupant_letter for block_name in self.slots[slot.name].blockers if self.slots[block_name].occupied]
+
+        if slot.occupied:
+            blockers.append(self.slots[slot.name].occupant_letter)
+        
+        return blockers
+
+class ArmamentSlots(SlotCluster):
+    slot_type_mapping = {
+        "gloves": Slot,
+        "shirt": ShirtSlot,
+        "suit": SuitSlot,
+        "cloak": Slot,
+        "helmet": Slot,
+        "boots": Slot,
+        "hand": Slot,
+        "off-hand": Slot,
+    }
+    involved_classes = ['ARMOR_CLASS'] # until I add weapons TK TK
+    #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
+
+class PlayerInventory():
+    slot_cluster_mapping = {
+        'armaments': ArmamentSlots,
+    }
 
     def __init__(self, observation):
         self.items_by_letter = {}
         self.items_by_class = {}
+
+        self.slot_groups_by_name = {}
 
         self.inv_strs = observation['inv_strs']
         self.inv_letters = observation['inv_letters']
@@ -194,4 +292,10 @@ class Inventory():
             return class_contents
         #self.armor_worn = False
 
-
+    def get_slots(self, slot_cluster_name):
+        try:
+            return self.slot_groups_by_name[slot_cluster_name] # if we've already baked the slots
+        except KeyError:
+            slots = self.__class__.slot_cluster_mapping[slot_cluster_name](self)
+            self.slot_groups_by_name[slot_cluster_name] = slots
+            return slots

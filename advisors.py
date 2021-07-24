@@ -519,16 +519,38 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
     oclasses_used = ['ARMOR_CLASS']
 
     def use_item(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if (not character.character.body_armor_penalty()) and rng.random() < 0.01:
-            wear = nethack.actions.Command.WEAR
+        armor = inventory.get_oclass('ARMOR_CLASS')
+        armaments = inventory.get_slots('armaments')
 
-            menu_plan = menuplan.MenuPlan("wear armor", self, [
-                menuplan.FirstLetterChoiceMenuResponse("What do you want to wear?"),
-                menuplan.EscapeMenuResponse("Which ring-finger"),
-            ])
-            
-            return Advice(self.__class__, wear, menu_plan)
-        return None
+        for item in armor:
+            # character.character.body_armor_penalty()
+            if item.equipped_status is None: # not equipped
+                potential_slots = item.identity.find_values('SLOT')
+                assert len(potential_slots) == 1, 'Item could occupy multiple slots, non sensically.'
+                slot_name = potential_slots[0]
+
+                slot = armaments.slots[slot_name]
+                #pdb.set_trace()
+                blockers = armaments.blocked_by_letters(slot, inventory)
+
+                #print(blockers)
+                #print(armaments.slots)
+                #pdb.set_trace()
+                if len(blockers) == 0:
+                    wear = nethack.actions.Command.WEAR
+
+                    menu_plan = menuplan.MenuPlan("wear armor", self, [
+                        menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+                    ], listening_item=item)
+
+                    return Advice(self.__class__, wear, menu_plan)
+                else:
+                    takeoff = nethack.actions.Command.TAKEOFF
+                    menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
+                        menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
+                    ])
+
+                    return Advice(self.__class__, takeoff, menu_plan)
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):
     oclasses_used = ['FOOD_CLASS']
@@ -764,10 +786,11 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
             menuplan.MoreMenuResponse("You write in the dust with"),
             menuplan.MoreMenuResponse("A lit field surrounds you!"),
-            menuplan.MoreMenuResponse("is a wand of lightning!"),
+            menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
             menuplan.MoreMenuResponse("is a wand of digging!"),
             menuplan.MoreMenuResponse("is a wand of fire!"),
-            menuplan.MoreMenuResponse("You engrave in the floor"),
+            menuplan.MoreMenuResponse("You engrave in the ground"),
+            menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the floor"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
