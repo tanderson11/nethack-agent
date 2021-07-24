@@ -554,7 +554,7 @@ class RunState():
             })
 
     def reset(self):
-        gd.ObjectIdentity.make_agnostic_identities() # reset object identities
+        gd.IdentityFactory.make_agnostic_identities() # reset object identities
 
         self.reading_base_attributes = False
         self.character = None
@@ -915,7 +915,7 @@ class CustomAgent(BatchedAgent):
         if "corpse tastes" in message.message:
             print(message.message)
 
-        if "You finish your dressing maneuver" in message.message:
+        if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)
 
         if "You hear someone muttering an incantation" in message.message:

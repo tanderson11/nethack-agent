@@ -523,34 +523,41 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
         armaments = inventory.get_slots('armaments')
 
         for item in armor:
-            # character.character.body_armor_penalty()
-            if item.equipped_status is None: # not equipped
-                potential_slots = item.identity.find_values('SLOT')
-                assert len(potential_slots) == 1, 'Item could occupy multiple slots, non sensically.'
-                slot_name = potential_slots[0]
+            if item.equipped_status is None:
+                slot_name = item.identity.find_values('SLOT')
 
-                slot = armaments.slots[slot_name]
-                #pdb.set_trace()
-                blockers = armaments.blocked_by_letters(slot, inventory)
-
-                #print(blockers)
-                #print(armaments.slots)
-                #pdb.set_trace()
-                if len(blockers) == 0:
-                    wear = nethack.actions.Command.WEAR
-
-                    menu_plan = menuplan.MenuPlan("wear armor", self, [
-                        menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
-                    ], listening_item=item)
-
-                    return Advice(self.__class__, wear, menu_plan)
+                current_letter = armaments.slots[slot_name].occupant_letter
+                if current_letter is not None:
+                    current_item = inventory.items_by_letter[current_letter]
+                    current_desirability = current_item.desirability(character)
                 else:
-                    takeoff = nethack.actions.Command.TAKEOFF
-                    menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
-                        menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
-                    ])
+                    current_item = None
+                    current_desirability = 0
 
-                    return Advice(self.__class__, takeoff, menu_plan)
+                desirability = item.desirability(character)
+
+                if desirability > current_desirability:
+                    slot = armaments.slots[slot_name]
+                    blockers = armaments.blocked_by_letters(slot, inventory)
+
+                    pdb.set_trace()
+
+                    if len(blockers) == 0:
+                        wear = nethack.actions.Command.WEAR
+
+                        menu_plan = menuplan.MenuPlan("wear armor", self, [
+                            menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+                        ], listening_item=item)
+
+                        return Advice(self.__class__, wear, menu_plan)
+                    else:
+                        takeoff = nethack.actions.Command.TAKEOFF
+                        menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
+                            menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
+                        ])
+
+                        return Advice(self.__class__, takeoff, menu_plan)
+                return None
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):
     oclasses_used = ['FOOD_CLASS']

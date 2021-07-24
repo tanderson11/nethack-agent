@@ -16,9 +16,7 @@ class Item():
             if parenthetical_status is not None:
                 if "being worn" in parenthetical_status:
                     self.status = 'worn'
-                    potential_slots = item.identity.find_values('SLOT')
-                    assert len(potential_slots) == 1, 'Item could occupy multiple slots, non sensically.'
-                    self.slot = potential_slots[0]
+                    self.slot = item.identity.find_values('SLOT')
 
                 elif "weapon in hand" in parenthetical_status:
                     self.status = 'wielded'
@@ -45,44 +43,18 @@ class Item():
                     self.slot = 'quiver'
 
 
-
-    def __init__(self, object_class, appearance, quantity, BUC_str, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None):
-        self.object_class = object_class
+    #identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter
+    def __init__(self, identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None):
+        self.identity = identity
+        self.appearance = appearance
         self.quantity = quantity
-        self.BUC = BUC_str
+        self.BUC = BUC
+
         self.parenthetical_status = parenthetical_status
         self.condition = condition
         self.enhancement = enhancement
+
         self.inventory_letter = inventory_letter
-
-        self.appearance = appearance
-        self.glyph_numeral = glyph_numeral # not always present. example: seeing item in a stack
-
-        #pdb.set_trace()
-
-        # this is the easy case, we pull the identity directly
-        if self.glyph_numeral is not None:
-            self.identity = gd.GLYPH_NUMERAL_LOOKUP[self.glyph_numeral].identity
-            self.identity_objs = [self.identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
-        # this is the hard case, we look up the appearance in the relevant object class
-        else:
-            class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[self.object_class]
-            matches = np.where(class_data['APPEARANCE'] == self.appearance)[0]
-
-            # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
-            if len(matches) == 1:
-                self.identity = gd.GLYPH_NUMERAL_LOOKUP[matches[0]].identity
-                self.identity_objs = [self.identity]
-                self.glyph_numeral = self.identity.numeral
-            # otherwise
-            elif len(matches) > 1:
-                self.identity = None
-                self.identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in matches]
-            else:
-                raise Exception("no matches for appearance in class")
-
-        if self.identity is None:
-            if environment.env.debug: pdb.set_trace() # are we hallucinating?
 
         self.equipped_status = self.__class__.EquippedStatus(self, parenthetical_status)
         if self.equipped_status.slot is None and self.equipped_status.status is None:
@@ -90,6 +62,30 @@ class Item():
 
     def process_message(self, *args):
         self.identity.process_message(*args)
+
+    def desirability(self, character):
+        return None
+
+class Armor(Item):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        #self.occupies_slot = self.identity.find_values('SLOT')
+
+    def desirability(self, character):
+        if character.character.body_armor_penalty() and self.identity.find_values('SLOT') == 'suit':
+            return -10
+
+        if self.enhancement is None:
+            best_case_enhancement = 5
+        else:
+            best_case_enhancement = self.enhancement
+
+        desirability = (10 - self.identity.find_values('AC').min()) + best_case_enhancement
+        return desirability
+
+
+class Wand(Item):
+    pass
 
 class ItemParser():
     item_pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
@@ -111,6 +107,42 @@ class ItemParser():
         'SCROLL_CLASS': re.compile('scroll?s of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
         'SPBOOK_CLASS': re.compile('spellbook of ([a-zA-Z ]+)$'),
     }
+
+    class_strings_to_classes = {
+        'ARMOR_CLASS': Armor,
+        'WAND_CLASS': Wand,
+    }
+
+    @classmethod
+    def make_item_of_class(cls, object_class_name, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None):
+        oclass = cls.class_strings_to_classes.get(object_class_name, Item)
+
+        # this is the easy case, we pull the identity directly
+        if glyph_numeral is not None:
+            identity = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral].identity
+            identity_objs = [identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
+        # this is the hard case, we look up the appearance in the relevant object class
+        else:
+            class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
+            matches = np.where(class_data['APPEARANCE'] == appearance)[0]
+
+            # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
+            if len(matches) == 1:
+                identity = gd.GLYPH_NUMERAL_LOOKUP[matches[0]].identity
+                identity_objs = [identity]
+                glyph_numeral = identity.numeral
+            # otherwise
+            elif len(matches) > 1:
+                identity = None
+                identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in matches]
+            else:
+                raise Exception("no matches for appearance in class")
+
+        if identity is None:
+            if environment.env.debug: pdb.set_trace() # are we hallucinating?
+
+        item = oclass(identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=inventory_letter)
+        return item
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
@@ -136,13 +168,14 @@ class ItemParser():
                 condition = condition_intensifier + ' ' + condition
 
             enhancement = match[6]
+            if enhancement is not None:
+                enhancement = int(enhancement)
 
             description = match[8]
             
             appearance = None
             object_class = None
 
-            #pdb.set_trace()
             # scrolls, wands, etc. have wonky descriptions vs appearances. e.g. scroll labeled FOO versus FOO
             for klass, pattern in cls.unidentified_class_patterns.items():
                 class_pattern_match = re.search(pattern, description)
@@ -181,8 +214,8 @@ class ItemParser():
             if environment.env.debug: pdb.set_trace()
             return None
 
-        item = Item(object_class, appearance, quantity, BUC, equipped_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
-        return item # if caching, garbage collection will keep this object around
+        item = cls.make_item_of_class(object_class, appearance, quantity, BUC, equipped_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
+        return item # if caching, garbage collection will keep this object around I think
 
 
 class Slot():

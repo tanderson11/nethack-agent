@@ -529,14 +529,17 @@ class ObjectClassMetadeta():
 OBJECT_METADATA = ObjectClassMetadeta()
 
 class ObjectIdentity():
-    '''Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.'''
-    def __init__(self, object_class_name, numeral=None, name=None, appearance=None):
-        self.object_class_name = object_class_name
+    '''
+    Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
+
+    Listens to messages to gain knowledge about the identity of the object.
+    '''
+    def __init__(self, numeral=None, name=None, appearance=None):
         self.numeral = numeral
 
         try:
-            data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
-        except KeyError:
+            data = self.__class__.data
+        except AttributeError:
             raise(BadObjectClass)
 
         self.idx = None # get idx into table of items: can be a range of values or something?
@@ -550,9 +553,6 @@ class ObjectIdentity():
                 # if it is shuffled, it could be any object in the shuffled class
                 same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
                 self.idx = same_shuffle_class.index[same_shuffle_class]
-        #a = np.where(a)[0]
-
-        self.data = data
 
         self.listened_actions = {}
 
@@ -560,23 +560,16 @@ class ObjectIdentity():
         return len(self.idx) == 1
 
     def process_message(self, message_obj, action):
-        self.listened_actions[action] = True
-        # engrave testing
-        if self.object_class_name == 'WAND_CLASS' and action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
-            # if there is an engrave message and it is in fact contained in the overheard message
-            message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
-            if message_matches.any():
-                self.apply_filter(message_matches.index[message_matches])
+        pass
 
     def apply_filter(self, idx):
         self.idx = idx
-        #pdb.set_trace()
 
     def find_values(self, column):
-        try:
-            return np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
-        except:
-            pdb.set_trace()
+        unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
+        if len(unique) == 1:
+            return unique[0] # policy: if we find only one value, just return it
+        return unique
 
     def name(self):
         if self.is_identified():
@@ -584,12 +577,35 @@ class ObjectIdentity():
         else:
             return None
 
+class WandIdentity(ObjectIdentity):
+    data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS['WAND_CLASS']
+    def process_message(self, message_obj, action):
+        self.listened_actions[action] = True
+
+        # engrave testing
+        if action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
+            # if there is an engrave message and it is in fact contained in the overheard message
+            message_matches = ~self.__class__.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.__class__.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
+            if message_matches.any():
+                self.apply_filter(message_matches.index[message_matches])
+
+class ArmorIdentity(ObjectIdentity):
+    data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS['ARMOR_CLASS']
+
+class IdentityFactory():
+    identity_class_by_oclass_name = {
+        'ARMOR_CLASS': ArmorIdentity,
+        'WAND_CLASS': WandIdentity,
+    }
+
     @classmethod
     def make_agnostic_identities(cls):
         for numeral in range(ObjectGlyph.OFFSET, ObjectGlyph.OFFSET + ObjectGlyph.COUNT):
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]
+            identity_class = cls.identity_class_by_oclass_name.get(glyph.object_class_name, ObjectIdentity)
+
             try:
-                glyph.identity = cls(glyph.object_class_name, glyph.numeral, glyph.name, glyph.appearance)
+                glyph.identity = identity_class(glyph.numeral, glyph.name, glyph.appearance)
             except BadObjectClass:
                 glyph.identity = None
 
