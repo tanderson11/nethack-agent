@@ -522,9 +522,26 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
         armor = inventory.get_oclass('ARMOR_CLASS')
         armaments = inventory.get_slots('armaments')
 
+        unequipped_by_slot = {}
         for item in armor:
             if item.equipped_status is None:
                 slot_name = item.identity.find_values('SLOT')
+                try:
+                    unequipped_by_slot[slot_name].append(item)
+                except:
+                    unequipped_by_slot[slot_name] = [item]
+
+        for slot_name in armaments.__class__.slot_type_mapping.keys(): # ordered dict by difficulty to access
+            unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
+
+            if len(unequipped_in_slot) > 0:
+                most_desirable = None
+                max_desirability = None
+                for item in unequipped_in_slot:
+                    desirability = item.desirability(character)
+                    if max_desirability is None or desirability > max_desirability:
+                        max_desirability = desirability
+                        most_desirable = item
 
                 current_letter = armaments.slots[slot_name].occupant_letter
                 if current_letter is not None:
@@ -534,19 +551,15 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
                     current_item = None
                     current_desirability = 0
 
-                desirability = item.desirability(character)
-
-                if desirability > current_desirability:
+                if max_desirability > current_desirability:
                     slot = armaments.slots[slot_name]
                     blockers = armaments.blocked_by_letters(slot, inventory)
-
-                    pdb.set_trace()
 
                     if len(blockers) == 0:
                         wear = nethack.actions.Command.WEAR
 
                         menu_plan = menuplan.MenuPlan("wear armor", self, [
-                            menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+                            menuplan.CharacterMenuResponse("What do you want to wear?", chr(most_desirable.inventory_letter)),
                         ], listening_item=item)
 
                         return Advice(self.__class__, wear, menu_plan)
@@ -557,7 +570,6 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
                         ])
 
                         return Advice(self.__class__, takeoff, menu_plan)
-                return None
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):
     oclasses_used = ['FOOD_CLASS']

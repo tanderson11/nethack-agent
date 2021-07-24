@@ -1,6 +1,7 @@
 import functools
 import re
 from typing import NamedTuple
+from collections import OrderedDict
 import pdb
 import glyphs as gd
 import environment
@@ -268,16 +269,16 @@ class SlotCluster():
         return blockers
 
 class ArmamentSlots(SlotCluster):
-    slot_type_mapping = {
-        "gloves": Slot,
+    slot_type_mapping = OrderedDict({
         "shirt": ShirtSlot,
         "suit": SuitSlot,
         "cloak": Slot,
+        "off-hand": Slot,
+        "hand": Slot,
+        "gloves": Slot,
         "helmet": Slot,
         "boots": Slot,
-        "hand": Slot,
-        "off-hand": Slot,
-    }
+    })
     involved_classes = ['ARMOR_CLASS'] # until I add weapons TK TK
     #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
 
