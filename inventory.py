@@ -81,7 +81,7 @@ class Armor(Item):
         else:
             best_case_enhancement = self.enhancement
 
-        desirability = (10 - self.identity.find_values('AC').min()) + best_case_enhancement
+        desirability = self.identity.find_values('AC').max() + best_case_enhancement
         return desirability
 
 
