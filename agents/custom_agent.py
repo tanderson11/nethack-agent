@@ -517,6 +517,7 @@ class RunState():
         self.reset()
         self.debug_env = debug_env
         self.log_path = None
+        self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
             self.log_path = os.path.join(debug_env.savedir, "log.csv")
             with open(self.log_path, 'w') as log_file:
@@ -555,6 +556,7 @@ class RunState():
 
     def reset(self):
         self.reading_base_attributes = False
+        self.scumming = False
         self.character = None
         self.gods_by_alignment = {}
 
@@ -809,7 +811,14 @@ class CustomAgent(BatchedAgent):
         
         if done:
             print_stats(done, run_state, blstats)
-            run_state.log()
+            if run_state.scumming:
+                if not environment.env.debug:
+                    raise Exception("Should not scum except to debug")
+                if not run_state.reward == 0:
+                    # Weird to scum and get reward > 0
+                    import pdb; pdb.set_trace()
+            else:
+                run_state.log()
             run_state.reset()
             level_changed = True
         else:
@@ -834,6 +843,8 @@ class CustomAgent(BatchedAgent):
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
+            if environment.env.debug and run_state.target_roles and run_state.character.character.base_class not in run_state.target_roles:
+                run_state.scumming = True
 
         #_inventory = inv.Inventory(observation)
 
@@ -948,6 +959,15 @@ class CustomAgent(BatchedAgent):
             run_state.reading_base_attributes = True
             dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
+            return retval
+
+        if run_state.scumming:
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.QUIT]
+            scumming_menu_plan = menuplan.MenuPlan("scumming", self, [
+                menuplan.YesMenuResponse("Really quit?")
+            ])
+            run_state.set_menu_plan(scumming_menu_plan)
+            run_state.log_action(retval, menu_plan=scumming_menu_plan)
             return retval
 
         neighborhood = Neighborhood(
