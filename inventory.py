@@ -87,16 +87,37 @@ class Armor(Item):
 class Wand(Item):
     pass
 
+class Weapon(Item):
+    pass
+
+class Potion(Item):
+    pass
+
+class Scroll(Item):
+    pass
+
+class UnimplementedClass(Exception):
+    pass
+
 class ItemParser():
     item_pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
+    
+    ############## TODO ##################
+    # These patterns are currently a bit #
+    # overloaded because they are doing  #
+    # things both with added words like  #
+    # `ring` and with pluralization.     #
+    ############## TODO ##################
+    # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+
     unidentified_class_patterns = {
         'ARMOR_CLASS': re.compile('pair of ([a-zA-Z ]+)$'),
         'WAND_CLASS': re.compile('([a-zA-Z])+ wand$'),
         'RING_CLASS': re.compile('([a-zA-Z]+) ring$'),
         'AMULET_CLASS': re.compile('([a-zA-Z]+) amulet$'),
         'POTION_CLASS': re.compile('([a-zA-Z]+) potions?$'),
-        'SCROLL_CLASS': re.compile('scroll?s labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
-        'SPBOOK_CLASS': re.compile('([a-zA-Z])+ spellbook$'),
+        'SCROLL_CLASS': re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
+        'SPBOOK_CLASS': re.compile('([a-zA-Z]+) spellbook$'),
     }
     identified_class_patterns = {
         'WAND_CLASS': re.compile('wand of ([a-zA-Z ]+)$'),
@@ -104,48 +125,70 @@ class ItemParser():
         'RING_CLASS': re.compile('([a-zA-Z]+) ring$'),
         'AMULET_CLASS': re.compile('amulet of ([a-zA-Z ]+)$'),
         'POTION_CLASS': re.compile('potions? of ([a-zA-Z ]+)$'),
-        'SCROLL_CLASS': re.compile('scroll?s of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
+        'SCROLL_CLASS': re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
         'SPBOOK_CLASS': re.compile('spellbook of ([a-zA-Z ]+)$'),
     }
 
     class_strings_to_classes = {
         'ARMOR_CLASS': Armor,
+        'WEAPON_CLASS': Weapon,
         'WAND_CLASS': Wand,
         'RING_CLASS': Item,
         'AMULET_CLASS': Item,
-        'POTION_CLASS': Item,
-        'SCROLL_CLASS': Item,
+        'POTION_CLASS': Potion,
+        'SCROLL_CLASS': Scroll,
         'SPBOOK_CLASS': Item,
         'FOOD_CLASS': Item,
+        'TOOL_CLASS': Item,
     }
 
     @classmethod
-    def make_item_of_class(cls, object_class_name, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None):
+    def make_item_of_class(cls, object_class_name, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None, category=None):
+        if object_class_name == '' or object_class_name is None:
+            if environment.env.debug: pdb.set_trace()
         oclass = cls.class_strings_to_classes.get(object_class_name, Item)
 
         # this is the easy case, we pull the identity directly
-        if glyph_numeral is not None:
-            identity = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral].identity
-            identity_objs = [identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
-        # this is the hard case, we look up the appearance in the relevant object class
-        else:
-            class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
-            matches = np.where(class_data['APPEARANCE'] == appearance)[0]
 
-            # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
-            if len(matches) == 1:
-                identity = gd.GLYPH_NUMERAL_LOOKUP[matches[0]].identity
-                identity_objs = [identity]
-                glyph_numeral = identity.numeral
-            # otherwise
-            elif len(matches) > 1:
-                identity = None
-                identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in matches]
+        try:
+            if glyph_numeral is not None:
+                identity = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral].identity
+                identity_objs = [identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
+            # this is the hard case, we look up the appearance in the relevant object class
             else:
-                raise Exception("no matches for appearance in class")
+                try:
+                    class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
 
-        if identity is None:
-            if environment.env.debug: pdb.set_trace() # are we hallucinating?
+                    # find appearance matches
+                    matches = (class_data['APPEARANCE'] == appearance)
+                    # get their glyph numerals (not just indices in the spoiler table)
+                    match_idx = matches.index[matches]
+                    # as a numpy array
+                    match_glyph_numerals = match_idx.to_numpy()
+
+                    # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
+                    if len(match_glyph_numerals) == 1:
+                        identity = gd.GLYPH_NUMERAL_LOOKUP[match_glyph_numerals[0]].identity
+                        identity_objs = [identity]
+                        glyph_numeral = identity.numeral
+                    # otherwise
+                    elif len(match_glyph_numerals) > 1:
+                        identity = None
+                        identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in match_glyph_numerals]
+                    else:
+                        if environment.env.debug: pdb.set_trace()
+
+                except KeyError: # we haven't implemented this class yet
+                    class_data = None
+                    matches = []
+                    identity = None
+                    raise(UnimplementedClass)
+
+
+            if identity is None:
+                if environment.env.debug: pdb.set_trace() # are we hallucinating?
+        except UnimplementedClass:
+            pass
 
         item = oclass(identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=inventory_letter)
         return item
@@ -157,7 +200,7 @@ class ItemParser():
 
     @classmethod
     @functools.lru_cache(maxsize=128)
-    def parse_inventory_item(cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None):
+    def parse_inventory_item(cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None, category=None):
         match = re.match(cls.item_pattern, string)
 
         if match:
@@ -201,19 +244,22 @@ class ItemParser():
                         object_class = klass
                         break
 
-                    if appearance is None and object_class is None:
-                        appearance = description
+                # none of the class patterns matched
+                if appearance is None and object_class is None:
+                    appearance = description
+                    try:
+                        object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE[appearance]
+                    except KeyError:
                         try:
-                            object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE[appearance]
+                            object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_NAME[appearance]
                         except KeyError:
-                            try:
-                                object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_NAME[appearance]
-                            except KeyError:
-                                if environment.env.debug: pdb.set_trace()
+                            if environment.env.debug: pdb.set_trace()
+                            pass
 
             equipped_status = match[9]
 
             if passed_object_class is not None and passed_object_class != object_class:
+                if environment.env.debug: pdb.set_trace()
                 raise Exception("Passed object class and found object class don't match")
 
         else:

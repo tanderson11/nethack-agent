@@ -573,7 +573,7 @@ class ObjectIdentity():
 
     def name(self):
         if self.is_identified():
-            return self.data.loc[self.idx].NAME
+            return self.data.loc[self.idx].NAME.iloc[0]
         else:
             return None
 

@@ -202,8 +202,10 @@ class InteractiveMenu():
                     item_match[3]
                 )
                 self.rendered_rows.append(next_item)
+
                 if not next_item.selected and self.item_selector(next_item):
                     return next_item
+
             else:
                 self.active_category = potential_menu
             
@@ -220,13 +222,13 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class InteractiveInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (x.object_class == "SCROLL_CLASS") & (x.identity.name() == 'teleport'),
-        'teleport wands': lambda x: (x.object_class == "WAND_CLASS") & (x.identity.name() == 'teleporation'),
-        'healing potions': lambda x: (x.object_class == "POTION_CLASS") & ("healing" in x.identity.name()),
-        'extra weapons': lambda x: (x.object_class == "WEAPON_CLASS") & ("weapon in hand" not in x.equipped_status),
+        'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) & (x.item.identity is not None and x.item.identity.name() == 'teleport'),
+        'teleport wands': lambda x: (isinstance(x, inv.Wand)) & (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
+        'healing potions': lambda x: (isinstance(x, inv.Potion)) & (x.item.identity is not None and "healing" in x.identity.name()),
+        'extra weapons': lambda x: (isinstance(x, inv.Weapon)) & (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
 
-        'comestibles': lambda x: x.category == "Comestibles" and "for sale" not in x.item.equipped_status, # comestibles = food and corpses
-        'armor': lambda x: x.object_class == "ARMOR_CLASS" and "for sale" not in x.item.equipped_status,
+        'comestibles': lambda x: x.category == "Comestibles" and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
+        'armor': lambda x: x.category == "Armor" and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
     }
 
     class MenuItem:
@@ -239,7 +241,7 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.character = character
             self.selected = selected
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
-            self.item = inv.ItemParser.parse_inventory_item(item_text)
+            self.item = inv.ItemParser.parse_inventory_item(item_text, category=category)
 
 class InteractivePickupMenu(InteractiveInventoryMenu):
     header_rows = 2
