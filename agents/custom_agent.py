@@ -582,6 +582,7 @@ class RunState():
         self.time_did_advance = True
 
         self.neighborhood = None
+        self.inventory = None
         self.latest_monster_death = None
 
         self.menu_plan_log = []
@@ -748,7 +749,6 @@ class RunState():
         self.action_log.append(action)
         self.advice_log.append(advice)
 
-
         if action in range(0,8): #is a movement action; bad
             self.last_movement_action = action
 
@@ -840,12 +840,12 @@ class CustomAgent(BatchedAgent):
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
-        inventory = inv.PlayerInventory(observation)
-        #_armor = _inventory.get_oclass('ARMOR_CLASS')
-        #_wands = inventory.get_oclass('WAND_CLASS')
-        #_armor = inventory.get_oclass('ARMOR_CLASS')
-        #armaments = inventory.get_slots('armaments')
-        #import pdb; pdb.set_trace()
+        # Two cases when we reset inventory: new run or something changed 
+        if run_state.inventory is None:
+            run_state.inventory = inv.PlayerInventory(observation)
+
+        if (observation['inv_strs'] != run_state.inventory.inv_strs).any():
+            run_state.inventory = inv.PlayerInventory(observation)
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -985,14 +985,14 @@ class CustomAgent(BatchedAgent):
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-        flags = advs.Flags(blstats, inventory, neighborhood, message, run_state.character)
+        flags = advs.Flags(blstats, run_state.inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
             if advisor_level.check_level(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, run_state.inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]

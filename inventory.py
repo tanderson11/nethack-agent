@@ -84,7 +84,6 @@ class Armor(Item):
         desirability = self.identity.find_values('AC').max() + best_case_enhancement
         return desirability
 
-
 class Wand(Item):
     pass
 
@@ -112,6 +111,12 @@ class ItemParser():
     class_strings_to_classes = {
         'ARMOR_CLASS': Armor,
         'WAND_CLASS': Wand,
+        'RING_CLASS': Item,
+        'AMULET_CLASS': Item,
+        'POTION_CLASS': Item,
+        'SCROLL_CLASS': Item,
+        'SPBOOK_CLASS': Item,
+        'FOOD_CLASS': Item,
     }
 
     @classmethod

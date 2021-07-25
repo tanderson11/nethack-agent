@@ -488,7 +488,7 @@ class KickLockedDoorAdvisor(Advisor):
                     return None
         else: # we got the locked door message but didn't find a door
             a = None
-            if environment.env.debug: pdb.set_trace()
+            if environment.env.debug: import pdb; pdb.set_trace()
             pass
         if a is not None:
             menu_plan = menuplan.MenuPlan("kick locked door", self, [
@@ -520,7 +520,6 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
 
     def use_item(self, rng, character, blstats, inventory, neighborhood, message, flags):
         armor = inventory.get_oclass('ARMOR_CLASS')
-        armaments = inventory.get_slots('armaments')
 
         unequipped_by_slot = {}
         for item in armor:
@@ -531,6 +530,10 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
                 except:
                     unequipped_by_slot[slot_name] = [item]
 
+        if len(unequipped_by_slot.keys()) == 0:
+            return None
+
+        armaments = inventory.get_slots('armaments')
         for slot_name in armaments.__class__.slot_type_mapping.keys(): # ordered dict by difficulty to access
             unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
 
