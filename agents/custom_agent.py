@@ -529,7 +529,16 @@ class RunState():
 
     LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
 
-    def log(self):
+    def log_final_state(self, final_reward):
+        # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
+        self.update_reward(final_reward)
+        print_stats(True, self, self.blstats)
+        if self.scumming:
+            if not environment.env.debug:
+                raise Exception("Should not scum except to debug")
+            if not self.reward == 0:
+                # Weird to scum and get reward > 0
+                import pdb; pdb.set_trace()
         if not self.log_path:
             return
         with open(self.log_path, 'a') as log_file:
@@ -794,6 +803,10 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+
+        if done and run_state.step_count != 0:
+            raise Exception("The runner framework should have reset the run state")
+
         run_state.update_reward(reward)
 
         blstats = BLStats(observation['blstats'])
@@ -809,23 +822,10 @@ class CustomAgent(BatchedAgent):
             pass
             #if environment.env.debug: import pdb; pdb.set_trace()
         
-        if done:
-            print_stats(done, run_state, blstats)
-            if run_state.scumming:
-                if not environment.env.debug:
-                    raise Exception("Should not scum except to debug")
-                if not run_state.reward == 0:
-                    # Weird to scum and get reward > 0
-                    import pdb; pdb.set_trace()
-            else:
-                run_state.log()
-            run_state.reset()
-            level_changed = True
+        if run_state.neighborhood is not None: # don't exceute on first turn
+            level_changed = (dcoord != run_state.neighborhood.dcoord)
         else:
-            if run_state.neighborhood is not None: # don't exceute on first turn
-                level_changed = (dcoord != run_state.neighborhood.dcoord)
-            else:
-                level_changed = True
+            level_changed = True
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
