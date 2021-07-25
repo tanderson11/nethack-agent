@@ -706,7 +706,7 @@ python-versions = ">=3.5"
 
 [[package]]
 name = "nle"
-version = "0.7.2+ee92860"
+version = "0.7.3+11042c5"
 description = "The NetHack Learning Environment (NLE): a reinforcement learning environment based on NetHack"
 category = "main"
 optional = false
@@ -726,8 +726,8 @@ dev = ["pre-commit (>=2.0.1)", "black (>=19.10b0)", "cmake-format (>=0.6.10)", "
 [package.source]
 type = "git"
 url = "https://github.com/canderson/nle.git"
-reference = "fork"
-resolved_reference = "ee92860a00ac84e31c8180fdbd0d33a31cd3e55f"
+reference = "fork-0.7.3"
+resolved_reference = "11042c5dd1bf11e68c9587e73fa4a9fa8624c45c"
 
 [[package]]
 name = "notebook"
@@ -1378,7 +1378,7 @@ pyzmq = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.10"
-content-hash = "1e258cedb4b4bf3aa01e9a483c13f77e5348e426bd4e5cca6e0a08876eb2f148"
+content-hash = "71b5643afbc4eab84356ba57dfbc55012de523a6a612846a3be32f99b597d70a"
 
 [metadata.files]
 aicrowd-api = [

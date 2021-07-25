@@ -10,7 +10,7 @@ aicrowd-api = "^0.1.23"
 aicrowd-gym = "^0.0.3"
 numpy = "^1.20.3"
 scipy = "^1.6.3"
-nle = { git = "https://github.com/canderson/nle.git", branch="fork" }
+nle = { git = "https://github.com/canderson/nle.git", branch="fork-0.7.3" }
 tqdm = "^4.61.1"
 wandb = "^0.10.32"
 torch = "^1.9.0"
