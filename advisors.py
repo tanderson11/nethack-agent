@@ -527,7 +527,7 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
                 slot_name = item.identity.find_values('SLOT')
                 try:
                     unequipped_by_slot[slot_name].append(item)
-                except:
+                except KeyError:
                     unequipped_by_slot[slot_name] = [item]
 
         if len(unequipped_by_slot.keys()) == 0:
@@ -814,6 +814,8 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You engrave in the ground"),
             menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the floor"),
+            menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
+            menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
