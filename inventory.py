@@ -166,6 +166,12 @@ class ItemParser():
                     # as a numpy array
                     match_glyph_numerals = match_idx.to_numpy()
 
+                    # even though we don't have the glyph_numeral, we might be encountering an identified object in a stack
+                    if len(match_glyph_numerals) == 0:
+                        matches = (class_data['NAME'] == appearance)
+                        match_idx = matches.index[matches]
+                        match_glyph_numerals = match_idx.to_numpy()
+
                     # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
                     if len(match_glyph_numerals) == 1:
                         identity = gd.GLYPH_NUMERAL_LOOKUP[match_glyph_numerals[0]].identity
