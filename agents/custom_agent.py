@@ -554,8 +554,6 @@ class RunState():
             })
 
     def reset(self):
-        gd.IdentityFactory.make_agnostic_identities() # reset object identities
-
         self.reading_base_attributes = False
         self.character = None
         self.gods_by_alignment = {}
@@ -583,6 +581,8 @@ class RunState():
 
         self.neighborhood = None
         self.inventory = None
+        self.global_identity_map = gd.GlobalIdentityMap()
+
         self.latest_monster_death = None
 
         self.menu_plan_log = []
@@ -595,7 +595,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'Z1NhGQ=='
+        #seed = b'aES5Mw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -842,10 +842,10 @@ class CustomAgent(BatchedAgent):
 
         # Two cases when we reset inventory: new run or something changed 
         if run_state.inventory is None:
-            run_state.inventory = inv.PlayerInventory(observation)
+            run_state.inventory = inv.PlayerInventory(run_state, observation)
 
         if (observation['inv_strs'] != run_state.inventory.inv_strs).any():
-            run_state.inventory = inv.PlayerInventory(observation)
+            run_state.inventory = inv.PlayerInventory(run_state, observation)
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -985,14 +985,14 @@ class CustomAgent(BatchedAgent):
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-        flags = advs.Flags(blstats, run_state.inventory, neighborhood, message, run_state.character)
+        flags = advs.Flags(run_state, blstats, run_state.inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
             if advisor_level.check_level(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, run_state.inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state, run_state.rng, run_state.character, blstats, run_state.inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]

@@ -12,6 +12,8 @@ import environment
 import menuplan
 import utilities
 from utilities import ARS
+import inventory as inv
+import inspect
 
 class Advice():
     def __init__(self, advisor, action, menu_plan):
@@ -31,7 +33,8 @@ class Flags():
         30: 1/9
     }
 
-    def __init__(self, blstats, inventory, neighborhood, message, character):
+    def __init__(self, run_state, blstats, inventory, neighborhood, message, character):
+        self.run_state = run_state
         self.blstats = blstats
         self.inventory = inventory
         self.neighborhood = neighborhood
@@ -109,7 +112,7 @@ class Flags():
     @functools.cached_property
     def desirable_object_on_space(self):
         prev_glyph = self.neighborhood.previous_glyph_on_player
-        desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.character)
+        desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
 
         return desirable_object_on_space
 
@@ -224,23 +227,23 @@ class Advisor(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags): # returns action, MenuPlan
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags): # returns action, MenuPlan
         pass
 
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         pass
 
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.have_moves:
-            agreeable_move_mask = self.find_agreeable_moves(rng, blstats, inventory, neighborhood, message, character)
+            agreeable_move_mask = self.find_agreeable_moves(run_state, rng, blstats, inventory, neighborhood, message, character)
             return self.get_move(rng, blstats, inventory, neighborhood, message, agreeable_move_mask)
         else:
             return None
 
 class RandomMoveAdvisor(MoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable
 
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
@@ -252,11 +255,11 @@ class RandomMoveAdvisor(MoveAdvisor):
             return None
 
 class VisitUnvisitedSquareAdvisor(RandomMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened & (neighborhood.visits == 0)
 
 class MostNovelMoveAdvisor(MoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable
 
     def get_move(self, rng, blstats, inventory, neighborhood, message, agreeable_move_mask):
@@ -281,7 +284,7 @@ class LeastNovelMoveAdvisor(MoveAdvisor):
             return None
 
 class ContinueMovementIfUnthreatenedAdvisor(MoveAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.have_moves and neighborhood.last_movement_action is not None:
             next_target = physics.offset_location_by_action(neighborhood.local_player_location, neighborhood.last_movement_action)
 
@@ -299,35 +302,35 @@ class ContinueMovementIfUnthreatenedAdvisor(MoveAdvisor):
             return None
 
 class LeastNovelUnthreatenedMoveAdvisor(LeastNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class LeastNovelNonObjectGlyphMoveAdvisor(LeastNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened & utilities.vectorized_map(lambda g: not isinstance(g, gd.ObjectGlyph), neighborhood.glyphs)
 
 class MostNovelUnthreatenedMoveAdvisor(MostNovelMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class FreshCorpseMoveAdvisor(RandomMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & neighborhood.has_fresh_corpse & ~neighborhood.threatened
 
 class DesirableObjectMoveAdvisor(RandomMoveAdvisor):
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
-        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(character), neighborhood.glyphs) & ~neighborhood.threatened
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
+        return neighborhood.walkable & utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) and g.desirable_object(run_state.global_identity_map, character), neighborhood.glyphs) & ~neighborhood.threatened
 
 class RandomLeastThreatenedMoveAdvisor(RandomMoveAdvisor): 
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & (neighborhood.n_threat == neighborhood.n_threat.min())
 
 class RandomUnthreatenedMoveAdvisor(RandomMoveAdvisor): 
-    def find_agreeable_moves(self, rng, blstats, inventory, neighborhood, message, character):
+    def find_agreeable_moves(self, run_state, rng, blstats, inventory, neighborhood, message, character):
         return neighborhood.walkable & ~neighborhood.threatened
 
 class PrayerAdvisor(Advisor):
-    def advice(self, rng, character, blstats, _2, _3, _4, _5):
+    def advice(self, run_state, rng, character, blstats, _2, _3, _4, _5):
         if character.last_pray_time is None and blstats.get('time') <= 300:
             return None
         if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
@@ -339,28 +342,28 @@ class PrayerAdvisor(Advisor):
         return Advice(self.__class__, pray, menu_plan)
 
 class PrayWhenWeakAdvisor(PrayerAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.am_weak:
-            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+            return super().advice(run_state, rng, character, blstats, inventory, neighborhood, message, flags)
         else:
             return None
 
 class PrayWhenCriticallyInjuredAdvisor(PrayerAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.am_critically_injured:
-            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+            return super().advice(run_state, rng, character, blstats, inventory, neighborhood, message, flags)
         else:
             return None
 
 class PrayWhenMajorTroubleAdvisor(PrayerAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.major_trouble:
-            return super().advice(rng, character, blstats, inventory, neighborhood, message, flags)
+            return super().advice(run_state, rng, character, blstats, inventory, neighborhood, message, flags)
         else:
             return None
 
 class UpstairsAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.on_upstairs:
             willing_to_ascend = self.willing_to_ascend(rng, character, blstats, inventory, neighborhood, message, flags)
             if willing_to_ascend:
@@ -431,7 +434,7 @@ class DownstairsAdvisor(Advisor):
             pass
 
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        if inventory.have_item_oclass('FOOD_CLASS'):
+        if inventory.have_item_oclass(inv.Food):
             willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         else:
             willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
@@ -439,11 +442,11 @@ class DownstairsAdvisor(Advisor):
         #willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         return willing_to_descend
 
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         pass
 
 class TakeDownstairsAdvisor(DownstairsAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.on_downstairs:
             willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory, neighborhood)
             if willing_to_descend:
@@ -452,7 +455,7 @@ class TakeDownstairsAdvisor(DownstairsAdvisor):
         return None
 
 class OpenClosedDoorAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         # coarse check
         if flags.on_warning_engraving:
             return None
@@ -472,7 +475,7 @@ class OpenClosedDoorAdvisor(Advisor):
         return Advice(self.__class__, a, None)
 
 class KickLockedDoorAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.on_warning_engraving:
             return None
         if not "This door is locked" in message.message:
@@ -500,26 +503,28 @@ class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__cla
     oclasses_used = None
 
     def have_relevant_class(self, inventory):
-        if isinstance(self.__class__.oclasses_used, list):
-            oclasses = self.__class__.oclasses_used
+        if isinstance(self.oclasses_used, list):
+            oclasses = self.oclasses_used
             for oclass in oclasses:
                 if inventory.have_item_oclass(oclass): return True
             return False
-        elif isinstance(object_class_name, str):
-            return inventory.have_item_oclass(self.__class__.oclasses_used)
+        elif inspect.isclass(self.oclasses_used):
+            return inventory.have_item_oclass(self.oclasses_used)
+        else:
+            raise(TypeError)
 
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if self.have_relevant_class(inventory):
-            use_item = self.use_item(rng, character, blstats, inventory, neighborhood, message, flags)
+            use_item = self.use_item(run_state, rng, character, blstats, inventory, neighborhood, message, flags)
             if use_item is not None:
                 return use_item
         return None
 
 class WearValidArmorAdvisor(ItemUseAdvisor):
-    oclasses_used = ['ARMOR_CLASS']
+    oclasses_used = inv.Armor
 
-    def use_item(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        armor = inventory.get_oclass('ARMOR_CLASS')
+    def use_item(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
+        armor = inventory.get_oclass(inv.Armor)
 
         unequipped_by_slot = {}
         for item in armor:
@@ -575,7 +580,7 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
                         return Advice(self.__class__, takeoff, menu_plan)
 
 class EatTopInventoryAdvisor(ItemUseAdvisor):
-    oclasses_used = ['FOOD_CLASS']
+    oclasses_used = inv.Food
 
     def make_menu_plan(self, letter):
         menu_plan = menuplan.MenuPlan("eat from inventory", self, [
@@ -590,31 +595,31 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
         ])
         return menu_plan
 
-    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
+    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
         eat = nethack.actions.Command.EAT
-        FOOD_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('FOOD_CLASS')
-        food_index = inventory.observation['inv_oclasses'].tolist().index(FOOD_CLASS) # TK normalize once inventory includes food
-
-        letter = inventory.observation['inv_letters'][food_index] # TK normalize once inventory includes food
-        menu_plan = self.make_menu_plan(letter)
-        return Advice(self.__class__, eat, menu_plan)
+        food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
+        if len(food) > 0:
+            letter = food[0].inventory_letter
+            menu_plan = self.make_menu_plan(letter)
+            return Advice(self.__class__, eat, menu_plan)
+        return None
 
 class ReadTeleportAdvisor(ItemUseAdvisor):
-    oclasses_used = ['SCROLL_CLASS']
+    oclasses_used = inv.Scroll
 
-    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
+    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
         read = nethack.actions.Command.READ
         menu_plan = menuplan.MenuPlan("read teleportation scroll", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", '*')
         ],
-        interactive_menu=menuplan.InteractiveInventoryMenu('teleport scrolls'),
+        interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'teleport scrolls'),
         )
         return Advice(self.__class__, read, menu_plan)
 
 class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
-    oclasses_used = ['WAND_CLASS']
+    oclasses_used = inv.Wand
 
-    def use_item(self, rng, character, _1, inventory, _3, _4, flags):
+    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
         zap = nethack.actions.Command.ZAP
 
         menu_plan = menuplan.MenuPlan(
@@ -623,13 +628,13 @@ class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
             [
                 menuplan.CharacterMenuResponse("What do you want to zap?", '*')
             ],
-            interactive_menu=menuplan.InteractiveInventoryMenu('teleport wands'),
+            interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'teleport wands'),
         )
         return Advice(self.__class__, zap, menu_plan)
 
 class DrinkHealingPotionAdvisor(ItemUseAdvisor):
-    oclasses_used = ['POTION_CLASS']
-    def use_item(self, character, rng, _1, inventory, _3, _4, flags):
+    oclasses_used = inv.Potion
+    def use_item(self, run_state, character, rng, _1, inventory, _3, _4, flags):
         quaff = nethack.actions.Command.QUAFF
         menu_plan = menuplan.MenuPlan(
             "drink healing potion", self, [
@@ -637,16 +642,16 @@ class DrinkHealingPotionAdvisor(ItemUseAdvisor):
                 menuplan.NoMenuResponse("Drink from the fountain?"),
                 menuplan.NoMenuResponse("Drink from the sink?"),
             ],
-            interactive_menu=menuplan.InteractiveInventoryMenu('healing potions'),
+            interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'healing potions'),
         )
         return Advice(self.__class__, quaff, menu_plan)
 
 class FallbackSearchAdvisor(Advisor):
-    def advice(self, rng, character, _1, _2, _3, _4, _5):
+    def advice(self, run_state, rng,character, _1, _2, _3, _4, _5):
         return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
 
 class NoUnexploredSearchAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.on_warning_engraving:
             return None
         if not (neighborhood.visits[neighborhood.walkable] == 0).any() and (utilities.vectorized_map(lambda g: getattr(g, 'possible_secret_door', False), neighborhood.glyphs)).any():
@@ -659,7 +664,7 @@ class RandomAttackAdvisor(Advisor):
         targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~always_peaceful
         return targeted_monster_mask
 
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
         monster_directions = neighborhood.action_grid[targeted_monster_mask]
         if monster_directions.any():
@@ -676,7 +681,7 @@ class RandomSafeMeleeAttack(RandomAttackAdvisor):
         return targeted_monster_mask
 
 class DeterministicSafeMeleeAttack(RandomSafeMeleeAttack):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
         monster_directions = neighborhood.action_grid[targeted_monster_mask]
         if monster_directions.any():
@@ -685,7 +690,7 @@ class DeterministicSafeMeleeAttack(RandomSafeMeleeAttack):
         return None
 
 class RandomRangedAttackAdvisor(RandomAttackAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
 
         monster_directions = neighborhood.action_grid[targeted_monster_mask]
@@ -694,11 +699,8 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
             fire = nethack.actions.Command.FIRE
             attack_direction = rng.choice(monster_directions)
 
-            WEAPON_CLASS = gd.ObjectGlyph.OBJECT_CLASSES.index('WEAPON_CLASS')
-            is_weapon = [c == WEAPON_CLASS for c in inventory.observation['inv_oclasses'].tolist()] # TK normalize
-            extra_weapon = sum(is_weapon) > 1
-
-            if extra_weapon:
+            weapons = inventory.get_oclass(inv.Weapon)
+            if len(weapons) > 1:
                 menu_plan = menuplan.MenuPlan(
                     "ranged attack", self, [
                         menuplan.DirectionMenuResponse("In what direction?", attack_direction),
@@ -707,7 +709,7 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
                         # note throw: means we didn't have anything quivered
                         menuplan.CharacterMenuResponse("What do you want to throw?", '*')
                     ],
-                    interactive_menu=menuplan.InteractiveInventoryMenu('extra weapons'),
+                    interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'extra weapons'),
                 )
                 return Advice(self.__class__, fire, menu_plan)
 
@@ -715,33 +717,33 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
         return None
 
 class PickupFoodAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.desirable_object_on_space:
             menu_plan = menuplan.MenuPlan(
                 "pick up comestibles and safe corpses",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu('comestibles'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'comestibles'),
             )
             #print("Food pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 
 class PickupArmorAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.desirable_object_on_space: #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
             menu_plan = menuplan.MenuPlan(
                 "pick up armor",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu('armor'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'armor'),
             )
             #print("Armor pickup")
             return Advice(self.__class__, nethack.actions.Command.PICKUP, menu_plan)
         return None
 
 class EatCorpseAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if not flags.fresh_corpse_on_square:
             return None
 
@@ -763,7 +765,7 @@ class EatCorpseAdvisor(Advisor):
         return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)
 
 class TravelToDownstairsAdvisor(DownstairsAdvisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         willing_to_descend = self.__class__.check_willingness_to_descend(blstats, inventory, neighborhood)
         
         if willing_to_descend:
@@ -780,21 +782,21 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
         return None
 
 class EnhanceSkillsAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         enhance = nethack.actions.Command.ENHANCE
         menu_plan = menuplan.MenuPlan(
             "enhance skills",
             self,
             [],
-            interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(),
+            interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(run_state),
         )
 
         return Advice(self.__class__, enhance, menu_plan)
 
 class EngraveTestWandsAdvisor(Advisor):
-    def advice(self, rng, character, blstats, inventory, neighborhood, message, flags):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         engrave = nethack.actions.Command.ENGRAVE
-        wands = inventory.get_oclass('WAND_CLASS')
+        wands = inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
             if not w.identity.is_identified() and not w.identity.listened_actions.get(utilities.ACTION_LOOKUP[engrave], False):
@@ -823,7 +825,3 @@ class EngraveTestWandsAdvisor(Advisor):
 
         #pdb.set_trace()
         return Advice(self.__class__, engrave, menu_plan)
-
-
-# Thinking outloud ...
-# Free/scheduled (eg enhance), Repair major, escape, attack, repair minor, improve/identify, descend, explore

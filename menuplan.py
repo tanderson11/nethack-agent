@@ -153,15 +153,15 @@ class InteractiveMenu():
     multi_select = False
 
     class MenuItem():
-        def __init__(self, category, character, selected, item_text):
+        def __init__(self, run_state, category, character, selected, item_text):
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
 
-    def __init__(self, selector_name=None):
+    def __init__(self, run_state, selector_name=None):
         #if environment.env.debug: pdb.set_trace()
-
+        self.run_state = run_state
         self.rendered_rows = []
         self.vertical_offset = 0
         self.active_category = None
@@ -196,6 +196,7 @@ class InteractiveMenu():
                 if not self.active_category:
                     if environment.env.debug: pdb.set_trace()
                 next_item = self.MenuItem(
+                    self.run_state,
                     self.active_category,
                     item_match[1],
                     item_match[2] == "+",
@@ -236,12 +237,12 @@ class InteractiveInventoryMenu(InteractiveMenu):
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
 
-        def __init__(self, category, character, selected, item_text):
+        def __init__(self, run_state, category, character, selected, item_text):
             self.category = category
             self.character = character
             self.selected = selected
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
-            self.item = inv.ItemParser.parse_inventory_item(item_text, category=category)
+            self.item = inv.ItemParser.parse_inventory_item(run_state.global_identity_map, item_text, category=category)
 
 class InteractivePickupMenu(InteractiveInventoryMenu):
     header_rows = 2

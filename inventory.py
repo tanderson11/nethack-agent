@@ -9,7 +9,8 @@ import numpy as np
 
 from utilities import ARS
 
-class Item():
+
+class ItemLike():
     class EquippedStatus():
         def __init__(self, item, parenthetical_status):
             self.status = None
@@ -44,18 +45,14 @@ class Item():
                     self.slot = 'quiver'
 
 
-    #identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter
-    def __init__(self, identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None):
-        self.identity = identity
-        self.appearance = appearance
+   
+    def __init__(self, quantity, BUC, parenthetical_status, condition, enhancement):
         self.quantity = quantity
         self.BUC = BUC
 
         self.parenthetical_status = parenthetical_status
         self.condition = condition
         self.enhancement = enhancement
-
-        self.inventory_letter = inventory_letter
 
         self.equipped_status = self.__class__.EquippedStatus(self, parenthetical_status)
         if self.equipped_status.slot is None and self.equipped_status.status is None:
@@ -67,10 +64,21 @@ class Item():
     def desirability(self, character):
         return None
 
+class Item(ItemLike):
+     #global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter
+    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None):
+        self.inventory_letter = inventory_letter
+        self.glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral]
+
+        try:
+            self.identity = global_identity_map.identity_by_numeral[glyph_numeral]
+        except KeyError:
+            print("No identity found for {}".format(glyph_numeral))
+
+        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement)
+
 class Armor(Item):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        #self.occupies_slot = self.identity.find_values('SLOT')
+    glyph_class = gd.ArmorGlyph
 
     def desirability(self, character):
         if character.character.body_armor_penalty() and self.identity.find_values('SLOT') == 'suit':
@@ -85,18 +93,30 @@ class Armor(Item):
         return desirability
 
 class Wand(Item):
-    pass
+    glyph_class = gd.WandGlyph
 
-class Weapon(Item):
-    pass
-
-class Potion(Item):
-    pass
+class Food(Item):
+    glyph_class = gd.FoodGlyph
 
 class Scroll(Item):
-    pass
+    glyph_class = gd.ScrollGlyph
 
-class UnimplementedClass(Exception):
+class Potion(Item):
+    glyph_class = gd.PotionGlyph
+
+class Weapon(Item):
+    glyph_class = gd.WeaponGlyph
+
+class AmbiguousItem(ItemLike):
+    '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
+
+    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement):
+        self.identity = None
+        self.glyph_numeral = None
+        self.possible_glyphs = possible_glyphs
+        super().__init__(appearance, quantity, BUC, parenthetical_status, condition, enhancement)
+
+class UnimplementedItemClassException(Exception):
     pass
 
 class ItemParser():
@@ -111,93 +131,34 @@ class ItemParser():
     # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 
     unidentified_class_patterns = {
-        'ARMOR_CLASS': re.compile('pair of ([a-zA-Z ]+)$'),
-        'WAND_CLASS': re.compile('([a-zA-Z])+ wand$'),
-        'RING_CLASS': re.compile('([a-zA-Z]+) ring$'),
-        'AMULET_CLASS': re.compile('([a-zA-Z]+) amulet$'),
-        'POTION_CLASS': re.compile('([a-zA-Z]+) potions?$'),
-        'SCROLL_CLASS': re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
-        'SPBOOK_CLASS': re.compile('([a-zA-Z]+) spellbook$'),
+        gd.ArmorGlyph: re.compile('pair of ([a-zA-Z ]+)$'),
+        gd.WandGlyph: re.compile('([a-zA-Z])+ wand$'),
+        gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
+        gd.AmuletGlyph: re.compile('([a-zA-Z]+) amulet$'),
+        gd.PotionGlyph: re.compile('([a-zA-Z]+) potions?$'),
+        gd.ScrollGlyph: re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
+        gd.SpellbookGlyph: re.compile('([a-zA-Z]+) spellbook$'),
     }
     identified_class_patterns = {
-        'WAND_CLASS': re.compile('wand of ([a-zA-Z ]+)$'),
-        'ARMOR_CLASS': re.compile('pair of ([a-zA-Z ]+)$'),
-        'RING_CLASS': re.compile('([a-zA-Z]+) ring$'),
-        'AMULET_CLASS': re.compile('amulet of ([a-zA-Z ]+)$'),
-        'POTION_CLASS': re.compile('potions? of ([a-zA-Z ]+)$'),
-        'SCROLL_CLASS': re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
-        'SPBOOK_CLASS': re.compile('spellbook of ([a-zA-Z ]+)$'),
+        gd.WandGlyph: re.compile('wand of ([a-zA-Z ]+)$'),
+        gd.ArmorGlyph: re.compile('pair of ([a-zA-Z ]+)$'),
+        gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
+        gd.AmuletGlyph: re.compile('amulet of ([a-zA-Z ]+)$'),
+        gd.PotionGlyph: re.compile('potions? of ([a-zA-Z ]+)$'),
+        gd.ScrollGlyph: re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
+        gd.SpellbookGlyph: re.compile('spellbook of ([a-zA-Z ]+)$'),
     }
 
-    class_strings_to_classes = {
-        'ARMOR_CLASS': Armor,
-        'WEAPON_CLASS': Weapon,
-        'WAND_CLASS': Wand,
-        'RING_CLASS': Item,
-        'AMULET_CLASS': Item,
-        'POTION_CLASS': Potion,
-        'SCROLL_CLASS': Scroll,
-        'SPBOOK_CLASS': Item,
-        'FOOD_CLASS': Item,
-        'TOOL_CLASS': Item,
+    item_class_by_glyph_class = {
+        gd.WandGlyph: Wand,
+        gd.ArmorGlyph: Armor,
+        gd.FoodGlyph: Food,
+        gd.ScrollGlyph: Scroll,
+        gd.PotionGlyph: Potion,
+        gd.WeaponGlyph: Weapon,
     }
 
-    @classmethod
-    def make_item_of_class(cls, object_class_name, appearance, quantity, BUC, parenthetical_status, condition, enhancement, glyph_numeral=None, inventory_letter=None, category=None):
-        if object_class_name == '' or object_class_name is None:
-            if environment.env.debug: pdb.set_trace()
-        oclass = cls.class_strings_to_classes.get(object_class_name, Item)
-
-        # this is the easy case, we pull the identity directly
-
-        try:
-            if glyph_numeral is not None:
-                identity = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral].identity
-                identity_objs = [identity] # possible distinct identity OBJECTS, each one can have an idx of possible real spoilers. this matters for classes like gems, where appearances aren't unique
-            # this is the hard case, we look up the appearance in the relevant object class
-            else:
-                try:
-                    class_data = gd.OBJECT_METADATA.OBJECT_DATA_BY_CLASS[object_class_name]
-
-                    # find appearance matches
-                    matches = (class_data['APPEARANCE'] == appearance)
-                    # get their glyph numerals (not just indices in the spoiler table)
-                    match_idx = matches.index[matches]
-                    # as a numpy array
-                    match_glyph_numerals = match_idx.to_numpy()
-
-                    # even though we don't have the glyph_numeral, we might be encountering an identified object in a stack
-                    if len(match_glyph_numerals) == 0:
-                        matches = (class_data['NAME'] == appearance)
-                        match_idx = matches.index[matches]
-                        match_glyph_numerals = match_idx.to_numpy()
-
-                    # if appearance uniquely determines the NUMERAL (note: it still won't have a unique identity if it's shuffled)
-                    if len(match_glyph_numerals) == 1:
-                        identity = gd.GLYPH_NUMERAL_LOOKUP[match_glyph_numerals[0]].identity
-                        identity_objs = [identity]
-                        glyph_numeral = identity.numeral
-                    # otherwise
-                    elif len(match_glyph_numerals) > 1:
-                        identity = None
-                        identity_objs = [gd.GLYPH_NUMERAL_LOOKUP[x].identity for x in match_glyph_numerals]
-                    else:
-                        if environment.env.debug: pdb.set_trace()
-
-                except KeyError: # we haven't implemented this class yet
-                    class_data = None
-                    matches = []
-                    identity = None
-                    raise(UnimplementedClass)
-
-
-            if identity is None:
-                if environment.env.debug: pdb.set_trace() # are we hallucinating?
-        except UnimplementedClass:
-            pass
-
-        item = oclass(identity, appearance, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=inventory_letter)
-        return item
+    #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
@@ -205,9 +166,9 @@ class ItemParser():
         return decoded
 
     @classmethod
-    @functools.lru_cache(maxsize=128)
-    def parse_inventory_item(cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None, category=None):
+    def parse_inventory_item(cls, global_identity_map ,string, glyph_numeral=None, inventory_letter=None, category=None):
         match = re.match(cls.item_pattern, string)
+        glyph_class = None
 
         if match:
             quantity_match = match[1]
@@ -229,52 +190,69 @@ class ItemParser():
             description = match[8]
             
             appearance = None
-            object_class = None
-
-            # scrolls, wands, etc. have wonky descriptions vs appearances. e.g. scroll labeled FOO versus FOO
-            for klass, pattern in cls.unidentified_class_patterns.items():
-                class_pattern_match = re.search(pattern, description)
-                if class_pattern_match:
-                    appearance = class_pattern_match[1]
-                    object_class = klass
-                    print('UNIDENTIFIED', klass)
-                    #pdb.set_trace()
-                    break
-
-            if appearance is None and object_class is None:
-                # try to match against identified patterns like scrolls of identify
-                for klass, pattern in cls.identified_class_patterns.items():
-                    class_pattern_match = re.search(pattern, description)
-                    if class_pattern_match:
-                        appearance = class_pattern_match[1]
-                        object_class = klass
-                        break
-
-                # none of the class patterns matched
-                if appearance is None and object_class is None:
-                    appearance = description
-                    try:
-                        object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE[appearance]
-                    except KeyError:
-                        try:
-                            object_class = gd.OBJECT_METADATA.OBJECT_CLASS_BY_NAME[appearance]
-                        except KeyError:
-                            if environment.env.debug: pdb.set_trace()
-                            pass
 
             equipped_status = match[9]
-
-            if passed_object_class is not None and passed_object_class != object_class:
-                if environment.env.debug: pdb.set_trace()
-                raise Exception("Passed object class and found object class don't match")
-
-        else:
+        else: # our governing regex failed to find
             if environment.env.debug: pdb.set_trace()
             return None
 
-        item = cls.make_item_of_class(object_class, appearance, quantity, BUC, equipped_status, condition, enhancement, glyph_numeral=glyph_numeral, inventory_letter=inventory_letter)
-        return item # if caching, garbage collection will keep this object around I think
+        if glyph_numeral:
+            glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral])
 
+        # if we don't have the numeral, we should still always be able to pull the glyph_class from the appearance somehow
+        else:
+            # we should first try just looking up the appearance to see if it's a raw match for an item
+            # should we though? maybe only in classes that don't need futzing
+            # TK TK TK
+            # TK TK TK
+
+            # next we imagine the object is unidentified, and we see if we can locate its appearance after applying our class specific regex
+            # that extract the true (NLE) appearance from a looser string e.g. 'scroll labeled NR9' -> 'NR9'
+            # we're searching as if unidentified first to not get goofed by plastic imitations of AoY,
+            # which when NOT identified look like identified AoY
+            for klass, pattern in cls.unidentified_class_patterns.items():
+                class_pattern_match = re.search(pattern, description)
+                if class_pattern_match:
+                    appearance = class_pattern_match[1] # we've successfully defuzzed the appearance!
+                    glyph_class = klass
+                    print('UNIDENTIFIED', klass)
+
+                    # if we find an appearance, we should then look it up to see if it unambiguously identifies the glyph, appearance-wise
+                    possible_glyphs = global_identity_map.glyph_by_appearance[(glyph_class, appearance)]
+                    # just because we think we're dealing with an unidentified object does not necessarily make it so (plastic AoY)
+                    # so we treat our appearance match as if it were a name and try to grab glyphs with that name
+                    possible_glyphs += global_identity_map.glyph_by_name.get((glyph_class, appearance), [])
+                    if len(possible_glyphs) == 1:
+                        glyph_numeral = possible_glyphs[0].numeral
+
+                    break
+
+            # if we didn't find a match after trying to treat it like an unidentified glyph, we should assume it's identified
+            # things like 'scroll of fire' -> 'fire'
+            if not glyph_class:
+                for klass, pattern in cls.identified_class_patterns.items():
+                    class_pattern_match = re.search(pattern, description)
+                    if class_pattern_match:
+                        name = class_pattern_match[1]
+                        glyph_numeral = global_identity_map.identity_by_name[(klass, name)].numeral
+                        break
+
+            # if we still haven't found the class, then we are screwed
+            # can happen when we are blind and so on, so at some point we need to fail gracefully
+            if not glyph_class:
+                if environment.env.debug: pdb.set_trace()
+                return None
+
+        # now we are in a state where we know glyph_class and we might know glyph_numeral
+        # if we know glyph_numeral, we want to instantiate a real Item
+        # if we don't know glyph_numeral, we want to make an AmbiguousItem
+
+        if glyph_numeral:
+            item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
+            print(item_class)
+            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter)
+        else:
+            return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement)
 
 class Slot():
     blockers = []
@@ -336,7 +314,7 @@ class ArmamentSlots(SlotCluster):
         "helmet": Slot,
         "boots": Slot,
     })
-    involved_classes = ['ARMOR_CLASS'] # until I add weapons TK TK
+    involved_classes = [Armor] # until I add weapons TK TK
     #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
 
 class PlayerInventory():
@@ -344,7 +322,7 @@ class PlayerInventory():
         'armaments': ArmamentSlots,
     }
 
-    def __init__(self, observation):
+    def __init__(self, run_state, observation):
         self.items_by_letter = {}
         self.items_by_class = {}
 
@@ -356,16 +334,17 @@ class PlayerInventory():
         self.inv_glyphs = observation['inv_glyphs']
 
         self.observation = observation
+        self.global_identity_map = run_state.global_identity_map
 
-    def have_item_oclass(self, object_class_name):
-        object_class_num = gd.ObjectGlyph.OBJECT_CLASSES.index(object_class_name) # TK make better with a mapping
+    def have_item_oclass(self, object_class):
+        object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
-    def get_oclass(self, object_class_name):
-        object_class_num = gd.ObjectGlyph.OBJECT_CLASSES.index(object_class_name) # TK make better with a mapping
+    def get_oclass(self, object_class):
+        object_class_num = object_class.glyph_class.class_number
 
         try:
-            items = self.items_by_class[object_class_name]
+            items = self.items_by_class[object_class]
             return items
         except KeyError:
             class_contents = []
@@ -374,14 +353,12 @@ class PlayerInventory():
                 item_str = ItemParser.decode_inventory_item(raw_string)
 
                 if item_str:
-                    item = ItemParser.parse_inventory_item(item_str, glyph_numeral=numeral, passed_object_class=object_class_name, inventory_letter=letter)
+                    item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=numeral, inventory_letter=letter)
                     self.items_by_letter[letter] = item
                     class_contents.append(item)
 
-            self.items_by_class[object_class_name] = class_contents
-            #pdb.set_trace()
+            self.items_by_class[object_class] = class_contents
             return class_contents
-        #self.armor_worn = False
 
     def get_slots(self, slot_cluster_name):
         try:

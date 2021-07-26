@@ -63,7 +63,7 @@ class Glyph():
     @classmethod
     def numeral_mapping(cls):
         mapping = {}
-        for numeral in range(cls.OFFSET, cls.OFFSET + cls.COUNT):
+        for numeral in cls.numerals():
             # print(f"{cls} {numeral}")
             mapping[numeral] = cls(numeral)
 
@@ -162,84 +162,30 @@ class MonsterGlyph(MonsterAlikeGlyph):
         if self.is_shopkeeper or self.offset in [278, 279]: # shopkeeper and watch people
             self.always_peaceful = True
 
-class BadObjectClass(Exception):
-    pass
-
 class ObjectGlyph(Glyph):
-    OFFSET = nethack.GLYPH_OBJ_OFF
+    OFFSET = nethack.GLYPH_OBJ_OFF # kept around so that ObjectGlyph.numerals() gives all object glyphs
     COUNT = nethack.NUM_OBJECTS
 
-    OBJECT_CLASSES = [
-        'RANDOM_CLASS', # 0
-        'ILLOBJ_CLASS', # 1
-        'WEAPON_CLASS', # 2
-        'ARMOR_CLASS', # 3
-        'RING_CLASS', # 4
-        'AMULET_CLASS', # 5
-        'TOOL_CLASS', # 6
-        'FOOD_CLASS', # 7
-        'POTION_CLASS', # 8
-        'SCROLL_CLASS', # 9
-        'SPBOOK_CLASS', # 10
-        'WAND_CLASS', # 11
-        'COIN_CLASS', # 12
-        'GEM_CLASS', # 13
-        'ROCK_CLASS', # 14
-        'BALL_CLASS', # 15
-        'CHAIN_CLASS', # 16
-        'VENOM_CLASS', # 17
-    ]
-
-    OBJECT_CLASS_LABEL_IN_INVENTORY = [
-        'RANDOM_CLASS', # 0
-        'ILLOBJ_CLASS', # 1
-        'Weapons', # 2
-        'Armor', # 3
-        'Rings', # 4
-        'Amulets', # 5
-        'Tools', # 6
-        'Comestibles', # 7
-        'Potions', # 8
-        'Scrolls', # 9
-        'Spellbooks', # 10
-        'Wands', # 11
-        'Coins', # 12
-        'Gems/Stones', # 13
-        'Gems/Stones', # 14
-        'BALL_CLASS', # 15
-        'CHAIN_CLASS', # 16
-        'VENOM_CLASS', # 17
-    ]
-
     def __init__(self, numeral):
-        self.numeral = numeral
-        self.offset = self.numeral - self.__class__.OFFSET
         obj = nethack.objclass(nethack.glyph_to_obj(numeral))
         # Has data:
         # 'oc_class', 'oc_color', 'oc_cost', 'oc_delay', 'oc_descr_idx', 'oc_name_idx', 'oc_oprop',
         # 'oc_prob', 'oc_weight'
-        self.object_class_numeral = ord(obj.oc_class)
-        self.object_class_name = self.__class__.OBJECT_CLASSES[self.object_class_numeral]
-        self.appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
-        self.name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
+
+        object_class_numeral = ord(obj.oc_class)
+        appearance = nethack.OBJ_DESCR(obj) or nethack.OBJ_NAME(obj)
+        name = nethack.OBJ_NAME(obj) # This is only sometimes accurate. Not for shuffled objects.
+        self.numeral = numeral
+        self.offset = self.numeral - self.__class__.OFFSET
+
+        self.appearance = appearance
+        self.name = name # not accurate for shuffled glyphs
 
     def walkable(self, character):
         return True
 
-    def safe_non_perishable(self, character):
-        assert self.object_class_name == "FOOD_CLASS"
-
-        if character.character.sick_from_tripe() and  "tripe" in self.appearance:
-            return False
-
-        safe_non_perishable = ("glob" not in self.appearance and "egg" not in self.appearance)
-        return safe_non_perishable
-
-    def desirable_object(self, character):
-        safe_food = self.object_class_name == "FOOD_CLASS" and self.safe_non_perishable(character)
-        good_armor = self.object_class_name == "ARMOR_CLASS" # add some logic here at some point
-        desirable = safe_food or good_armor
-        return desirable
+    def desirable_object(self, global_identity_map, character):
+        return False
 
     @classmethod
     def names(cls):
@@ -272,6 +218,116 @@ class ObjectGlyph(Glyph):
             classes_by_name[g.name] = g.object_class_name
 
         return classes_by_name
+
+class RandomClassGlyph(ObjectGlyph):
+    OFFSET = nethack.GLYPH_OBJ_OFF
+    COUNT = 0
+    class_number = 0
+
+class IllobjGlyph(ObjectGlyph):
+    OFFSET = RandomClassGlyph.OFFSET + RandomClassGlyph.COUNT
+    COUNT = 1
+    class_number = 1
+
+class WeaponGlyph(ObjectGlyph):
+    OFFSET = IllobjGlyph.OFFSET + IllobjGlyph.COUNT
+    COUNT = 70
+    class_number = 2
+
+class ArmorGlyph(ObjectGlyph):
+    OFFSET = WeaponGlyph.OFFSET + WeaponGlyph.COUNT
+    COUNT = 79
+    class_number = 3
+
+    def desirable_object(self, global_identity_map, character):
+        return True
+
+class RingGlyph(ObjectGlyph):
+    OFFSET = ArmorGlyph.OFFSET + ArmorGlyph.COUNT
+    COUNT = 28
+    class_number = 4
+
+class AmuletGlyph(ObjectGlyph):
+    OFFSET = RingGlyph.OFFSET + RingGlyph.COUNT
+    COUNT = 11
+    class_number = 5
+
+class ToolGlyph(ObjectGlyph):
+    OFFSET = AmuletGlyph.OFFSET + AmuletGlyph.COUNT
+    COUNT = 50
+    class_number = 6
+
+class FoodGlyph(ObjectGlyph):
+    OFFSET = ToolGlyph.OFFSET + ToolGlyph.COUNT
+    COUNT = 33
+    class_number = 7
+
+    def safe_non_perishable(self, global_identity_map, character):
+        identity = global_identity_map.identity_by_numeral[self.numeral]
+        if identity is None:
+            return False
+
+        if character.character.sick_from_tripe() and identity.name() == "tripe ration":
+            return False
+
+        if "glob" in identity.name() or identity.name() == "egg":
+            return False
+
+        return True
+
+    def desirable_object(self, global_identity_map, character):
+        return self.safe_non_perishable(global_identity_map, character)
+
+class PotionGlyph(ObjectGlyph):
+    OFFSET = FoodGlyph.OFFSET + FoodGlyph.COUNT
+    COUNT = 26
+    class_number = 8
+
+class ScrollGlyph(ObjectGlyph):
+    OFFSET = PotionGlyph.OFFSET + PotionGlyph.COUNT
+    COUNT = 42
+    class_number = 9
+
+class SpellbookGlyph(ObjectGlyph):
+    OFFSET = ScrollGlyph.OFFSET + ScrollGlyph.COUNT
+    COUNT = 43
+    class_number = 10
+
+class WandGlyph(ObjectGlyph):
+    OFFSET = SpellbookGlyph.OFFSET + SpellbookGlyph.COUNT
+    COUNT = 27
+    class_number = 11
+
+class CoinGlyph(ObjectGlyph):
+    OFFSET = WandGlyph.OFFSET + WandGlyph.COUNT
+    COUNT = 1
+    class_number = 12
+
+class GemGlyph(ObjectGlyph):
+    OFFSET = CoinGlyph.OFFSET + CoinGlyph.COUNT
+    COUNT = 36
+    class_number = 13
+
+class RockGlyph(ObjectGlyph):
+    # confusingly this is not 'rocks' but 'Statue' and 'Boulder'
+    OFFSET = GemGlyph.OFFSET + GemGlyph.COUNT
+    COUNT = 2
+    class_number = 14
+
+class BallGlyph(ObjectGlyph):
+    OFFSET = RockGlyph.OFFSET + RockGlyph.COUNT
+    COUNT = 1
+    class_number = 15
+
+class ChainGlyph(ObjectGlyph):
+    OFFSET = BallGlyph.OFFSET + BallGlyph.COUNT
+    COUNT = 1
+    class_number = 16
+
+class VenomGlyph(ObjectGlyph):
+    OFFSET = ChainGlyph.OFFSET + ChainGlyph.COUNT
+    COUNT = 2
+    class_number = 17
 
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
@@ -437,7 +493,7 @@ class CorpseGlyph(Glyph):
     def walkable(self, character):
         return True
 
-    def desirable_object(self, character):
+    def desirable_object(self, global_identity_map, character):
         return self.always_safe_non_perishable
 
 class RiddenGlyph(MonsterAlikeGlyph):
@@ -477,7 +533,25 @@ class StatueGlyph(Glyph):
 
 klasses = [
     MonsterGlyph,
-    ObjectGlyph,
+    RandomClassGlyph,
+    IllobjGlyph,
+    WeaponGlyph,
+    ArmorGlyph,
+    RingGlyph,
+    AmuletGlyph,
+    ArmorGlyph,
+    ToolGlyph,
+    FoodGlyph,
+    PotionGlyph,
+    ScrollGlyph,
+    SpellbookGlyph,
+    WandGlyph,
+    CoinGlyph,
+    GemGlyph,
+    RockGlyph,
+    BallGlyph,
+    ChainGlyph,
+    VenomGlyph,
     CMapGlyph,
     PetGlyph,
     InvisibleGlyph,
@@ -496,6 +570,13 @@ GLYPH_NUMERAL_LOOKUP = {}
 for klass in klasses:
     GLYPH_NUMERAL_LOOKUP.update(klass.numeral_mapping())
 
+
+#print(GLYPH_NUMERAL_LOOKUP)
+ks = GLYPH_NUMERAL_LOOKUP.keys()
+for i in range(0, 5977):
+    if i not in ks:
+        print(i)
+
 if not len(GLYPH_NUMERAL_LOOKUP.keys()) == 5_976:
     raise Exception("Surprising number of glyphs")
 
@@ -510,23 +591,40 @@ GLYPH_NUMERAL_LOOKUP[5976] = None # Weird and bad thing in the inventory
 #################
 # OBJECT GLYPHS #
 #################
-
-class ObjectClassMetadeta():
+class ObjectSpoilers():
+    spoiler_file_by_glyph_class = {
+        RandomClassGlyph: '',
+        IllobjGlyph: '',
+        WeaponGlyph: '',
+        ArmorGlyph: '',
+        RingGlyph: '',
+        AmuletGlyph: '',
+        ArmorGlyph: 'armor_spoiler.csv',
+        ToolGlyph: '',
+        FoodGlyph: '',
+        PotionGlyph: '',
+        ScrollGlyph: '',
+        SpellbookGlyph: '',
+        WandGlyph: 'wand_spoiler.csv',
+        CoinGlyph: '',
+        GemGlyph: '',
+        RockGlyph: '',
+        BallGlyph: '',
+        ChainGlyph: '',
+        VenomGlyph: '',
+    }
     def __init__(self):
-        OBJECT_DATA_BY_CLASS = {}
-        for klass in ObjectGlyph.OBJECT_CLASSES:
-            try:
-                with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", klass+".csv"), 'r') as f:
+        object_spoilers_by_class = {}
+        for glyph_class, spoiler_file in self.spoiler_file_by_glyph_class.items():
+            if spoiler_file != '':
+                with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", spoiler_file), 'r') as f:
                     df = pd.read_csv(f)
                     df = df.set_index('GLYPH')
-                OBJECT_DATA_BY_CLASS[klass] = df
+                object_spoilers_by_class[glyph_class] = df
 
-            except FileNotFoundError:
-                pass
+        self.object_spoilers_by_class = object_spoilers_by_class
 
-        self.OBJECT_DATA_BY_CLASS = OBJECT_DATA_BY_CLASS
-
-OBJECT_METADATA = ObjectClassMetadeta()
+OBJECT_SPOILERS = ObjectSpoilers()
 
 class ObjectIdentity():
     '''
@@ -536,11 +634,12 @@ class ObjectIdentity():
     '''
     def __init__(self, numeral=None, name=None, appearance=None):
         self.numeral = numeral
+        self.glyph = GLYPH_NUMERAL_LOOKUP[numeral]
 
         try:
-            data = self.__class__.data
-        except AttributeError:
-            raise(BadObjectClass)
+            data = OBJECT_SPOILERS.object_spoilers_by_class[type(self.glyph)]
+        except KeyError:
+            raise(UnimplementedObjectClassException)
 
         self.idx = None # get idx into table of items: can be a range of values or something?
         if numeral is not None:
@@ -578,7 +677,7 @@ class ObjectIdentity():
             return None
 
 class WandIdentity(ObjectIdentity):
-    data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS['WAND_CLASS']
+    data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
 
@@ -590,32 +689,66 @@ class WandIdentity(ObjectIdentity):
                 self.apply_filter(message_matches.index[message_matches])
 
 class ArmorIdentity(ObjectIdentity):
-    data = OBJECT_METADATA.OBJECT_DATA_BY_CLASS['ARMOR_CLASS']
+    data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
-class IdentityFactory():
-    identity_class_by_oclass_name = {
-        'ARMOR_CLASS': ArmorIdentity,
-        'WAND_CLASS': WandIdentity,
+
+class UnimplementedObjectClassException(Exception):
+    pass
+
+class GlobalIdentityMap():
+    identity_by_glyph_class = {
+        ArmorGlyph: ArmorIdentity,
+        WandGlyph: WandIdentity,
     }
 
-    @classmethod
-    def make_agnostic_identities(cls):
-        for numeral in range(ObjectGlyph.OFFSET, ObjectGlyph.OFFSET + ObjectGlyph.COUNT):
+    def __init__(self):
+        self.identity_by_numeral = {}
+        # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
+        self.identity_by_name = {} # this we will have to be careful to keep updated
+        # indexed by (glyph_class, appearance) for consistency (don't think there are any overlapping appearances, but there could be)
+        self.glyph_by_appearance = {}
+
+        self.appearance_counts = {} # when we '#name' or identify an object, we can decrement this
+
+        for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]
-            identity_class = cls.identity_class_by_oclass_name.get(glyph.object_class_name, ObjectIdentity)
+
+            identity_class = self.identity_by_glyph_class.get(type(glyph), ObjectIdentity)
 
             try:
-                glyph.identity = identity_class(glyph.numeral, glyph.name, glyph.appearance)
-            except BadObjectClass:
-                glyph.identity = None
+                identity = identity_class(glyph.numeral, glyph.name, glyph.appearance)
+            except UnimplementedObjectClassException:
+                identity = None
 
-OBJECT_METADATA.OBJECT_CLASS_BY_APPEARANCE = ObjectGlyph.object_classes_by_appearance()
-OBJECT_METADATA.OBJECT_CLASS_BY_NAME = ObjectGlyph.object_classes_by_name()
+            self.identity_by_numeral[numeral] = identity
 
-ALL_OBJECT_NAMES = ObjectGlyph.names() # TK deprecate
-ALL_OBJECT_APPEARANCES = ObjectGlyph.appearances() # TK deprecate
+            try:
+                self.appearance_counts[(type(glyph), glyph.appearance)] += 1
+                # class + appearance no longer uniquely identifies but we can add to the list
+                self.glyph_by_appearance[(type(glyph), glyph.appearance)].append(glyph)
+            except KeyError:
+                self.appearance_counts[(type(glyph), glyph.appearance)] = 1
+                self.glyph_by_appearance[(type(glyph), glyph.appearance)] = [glyph] 
 
-def dump_class(cls):
+            
+            name = identity.name() if identity else None
+
+
+            if name is not None:
+                self.identity_by_name[(type(glyph), name)] = identity
+
+        #print(self.identity_by_numeral)
+
+    def update(self, glyph):
+        # call whenever we update an identity in a way that might cause it be `is_identified`
+        pass
+
+
+#####################
+# UTILITY FUNCTIONS #
+#####################
+
+def dump_oclass(cls):
     #df_dict = {'glyph': [], 'name': [], 'appearance': [], 'is_shuffled': []}
     rows = []
     for n in cls.numerals():
@@ -637,8 +770,6 @@ def dump_class(cls):
     print(df)
     with open('glyph_dump.csv', 'w') as f:
         df.to_csv(f)
-
-#dump_class(ObjectGlyph)
 
 def get_by_name(klass, name):
     glyph = GLYPH_NAME_LOOKUP.get(name, None)
