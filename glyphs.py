@@ -592,6 +592,28 @@ GLYPH_NUMERAL_LOOKUP[5976] = None # Weird and bad thing in the inventory
 # OBJECT GLYPHS #
 #################
 class ObjectSpoilers():
+    OBJECT_GLYPH_CLASSES = [
+        RandomClassGlyph,
+        IllobjGlyph,
+        WeaponGlyph,
+        ArmorGlyph,
+        RingGlyph,
+        AmuletGlyph,
+        ArmorGlyph,
+        ToolGlyph,
+        FoodGlyph,
+        PotionGlyph,
+        ScrollGlyph,
+        SpellbookGlyph,
+        WandGlyph,
+        CoinGlyph,
+        GemGlyph,
+        RockGlyph,
+        BallGlyph,
+        ChainGlyph,
+        VenomGlyph,
+    ]
+
     spoiler_file_by_glyph_class = {
         RandomClassGlyph: '',
         IllobjGlyph: '',

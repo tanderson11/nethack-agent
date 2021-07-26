@@ -228,8 +228,8 @@ class InteractiveInventoryMenu(InteractiveMenu):
         'healing potions': lambda x: (isinstance(x, inv.Potion)) & (x.item.identity is not None and "healing" in x.item.identity.name()),
         'extra weapons': lambda x: (isinstance(x, inv.Weapon)) & (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
 
-        'comestibles': lambda x: x.category == "Comestibles" and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
-        'armor': lambda x: x.category == "Armor" and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
+        'comestibles': lambda x: isinstance(x, inv.Food) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
+        'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
     }
 
     class MenuItem:

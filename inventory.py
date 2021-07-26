@@ -110,11 +110,11 @@ class Weapon(Item):
 class AmbiguousItem(ItemLike):
     '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
 
-    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement):
+    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, parenthetical_status, condition, enhancement):
         self.identity = None
         self.glyph_numeral = None
         self.possible_glyphs = possible_glyphs
-        super().__init__(appearance, quantity, BUC, parenthetical_status, condition, enhancement)
+        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement)
 
 class UnimplementedItemClassException(Exception):
     pass
@@ -130,8 +130,8 @@ class ItemParser():
     ############## TODO ##################
     # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 
-    unidentified_class_patterns = {
-        gd.ArmorGlyph: re.compile('pair of ([a-zA-Z ]+)$'),
+    defuzzing_unidentified_class_patterns = {
+        gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
         gd.WandGlyph: re.compile('([a-zA-Z])+ wand$'),
         gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
         gd.AmuletGlyph: re.compile('([a-zA-Z]+) amulet$'),
@@ -139,9 +139,9 @@ class ItemParser():
         gd.ScrollGlyph: re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
         gd.SpellbookGlyph: re.compile('([a-zA-Z]+) spellbook$'),
     }
-    identified_class_patterns = {
+    defuzzing_identified_class_patterns = {
         gd.WandGlyph: re.compile('wand of ([a-zA-Z ]+)$'),
-        gd.ArmorGlyph: re.compile('pair of ([a-zA-Z ]+)$'),
+        gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
         gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
         gd.AmuletGlyph: re.compile('amulet of ([a-zA-Z ]+)$'),
         gd.PotionGlyph: re.compile('potions? of ([a-zA-Z ]+)$'),
@@ -158,12 +158,67 @@ class ItemParser():
         gd.WeaponGlyph: Weapon,
     }
 
+    glyph_class_by_category = {
+        'Weapons': gd.WeaponGlyph,
+        'Armor': gd.ArmorGlyph,
+        'Rings': gd.RingGlyph,
+        'Amulets': gd.AmuletGlyph,
+        'Tools': gd.ToolGlyph,
+        'Comestibles': [gd.FoodGlyph, gd.CorpseGlyph],
+        'Potions': gd.PotionGlyph,
+        'Scrolls': gd.ScrollGlyph,
+        'Spellbooks': gd.SpellbookGlyph,
+        'Wands': gd.WandGlyph,
+        'Coins': gd.CoinGlyph,
+        'Gems/Stones': [gd.GemGlyph, gd.RockGlyph],
+    }
+
     #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
         decoded = bytes(raw_item_repr).decode('ascii').rstrip('\x00')
         return decoded
+
+    @classmethod
+    def attempt_to_match_to_glyph_class(cls, global_identity_map, glyph_class, description):
+        defuzzed_appearance = ''
+        possible_glyphs = []
+
+        unid_pattern = cls.defuzzing_unidentified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
+        unid_class_pattern_match = re.search(unid_pattern, description)
+
+        if unid_class_pattern_match:
+            defuzzed_appearance = unid_class_pattern_match[1]
+
+            # we look to see if the appearance is in the class
+            try:
+                results = global_identity_map.glyph_by_appearance[(glyph_class, defuzzed_appearance)]
+                try: 
+                    possible_glyphs += results
+                except TypeError:
+                    possible_glyphs += [results]
+                #pdb.set_trace()
+                pass
+            except KeyError:
+                pass
+
+        id_pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
+        id_class_pattern_match = re.search(id_pattern, description)
+
+        if id_class_pattern_match:
+            defuzzed_name = id_class_pattern_match[1]
+            assert defuzzed_name == defuzzed_appearance
+
+            # we look to see if the name is in the class
+            try:
+                # should never have more than one match for name
+                possible_glyphs += [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)]]
+            except KeyError:
+                pass
+
+        return defuzzed_appearance, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
+
 
     @classmethod
     def parse_inventory_item(cls, global_identity_map ,string, glyph_numeral=None, inventory_letter=None, category=None):
@@ -198,60 +253,54 @@ class ItemParser():
 
         if glyph_numeral:
             glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral])
-
         # if we don't have the numeral, we should still always be able to pull the glyph_class from the appearance somehow
         else:
-            # we should first try just looking up the appearance to see if it's a raw match for an item
-            # should we though? maybe only in classes that don't need futzing
-            # TK TK TK
-            # TK TK TK
+            # for starters, if we are given the category, as we are in big stacks of items, we can use that to help
+            if category:
+                possible_glyph_classes = cls.glyph_class_by_category[category]
+                if type(possible_glyph_classes) != list:
+                    possible_glyph_classes = [possible_glyph_classes]
 
-            # next we imagine the object is unidentified, and we see if we can locate its appearance after applying our class specific regex
-            # that extract the true (NLE) appearance from a looser string e.g. 'scroll labeled NR9' -> 'NR9'
-            # we're searching as if unidentified first to not get goofed by plastic imitations of AoY,
-            # which when NOT identified look like identified AoY
-            for klass, pattern in cls.unidentified_class_patterns.items():
-                class_pattern_match = re.search(pattern, description)
-                if class_pattern_match:
-                    appearance = class_pattern_match[1] # we've successfully defuzzed the appearance!
-                    glyph_class = klass
-                    print('UNIDENTIFIED', klass)
+                for klass in possible_glyph_classes:
+                    appearance, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
-                    # if we find an appearance, we should then look it up to see if it unambiguously identifies the glyph, appearance-wise
-                    possible_glyphs = global_identity_map.glyph_by_appearance[(glyph_class, appearance)]
-                    # just because we think we're dealing with an unidentified object does not necessarily make it so (plastic AoY)
-                    # so we treat our appearance match as if it were a name and try to grab glyphs with that name
-                    possible_glyphs += global_identity_map.glyph_by_name.get((glyph_class, appearance), [])
-                    if len(possible_glyphs) == 1:
-                        glyph_numeral = possible_glyphs[0].numeral
+                    # the description resides in the glyph class
+                    if len(possible_glyphs) > 0:
+                        glyph_class = klass
+                        break
+                
+                if len(possible_glyphs) == 0:
+                    #if environment.env.debug: pdb.set_trace()
+                    print("WARNING: Failed to find possible glyphs for " + description)
+                    return None
 
-                    break
+            # if we don't have the category, we have nothing better to do than try every class's defuzzing approach
+            else:
+                for klass in gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES:
+                    appearance, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
-            # if we didn't find a match after trying to treat it like an unidentified glyph, we should assume it's identified
-            # things like 'scroll of fire' -> 'fire'
-            if not glyph_class:
-                for klass, pattern in cls.identified_class_patterns.items():
-                    class_pattern_match = re.search(pattern, description)
-                    if class_pattern_match:
-                        name = class_pattern_match[1]
-                        glyph_numeral = global_identity_map.identity_by_name[(klass, name)].numeral
+                    if len(possible_glyphs) > 0:
+                        glyph_class = klass
                         break
 
-            # if we still haven't found the class, then we are screwed
-            # can happen when we are blind and so on, so at some point we need to fail gracefully
-            if not glyph_class:
-                if environment.env.debug: pdb.set_trace()
-                return None
+                if len(possible_glyphs) == 0:
+                    #if environment.env.debug: pdb.set_trace()
+                    print("WARNING: Failed to find possible glyphs for " + description)
+                    return None
+
+        if not glyph_numeral and len(possible_glyphs) == 1:
+            glyph_numeral = next(iter(possible_glyphs)).numeral # because possible_glyphs is a set
+
 
         # now we are in a state where we know glyph_class and we might know glyph_numeral
         # if we know glyph_numeral, we want to instantiate a real Item
         # if we don't know glyph_numeral, we want to make an AmbiguousItem
-
         if glyph_numeral:
             item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
-            print(item_class)
+            #print(item_class)
             return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter)
         else:
+            print("Ambiguous Item found: " + description)
             return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement)
 
 class Slot():

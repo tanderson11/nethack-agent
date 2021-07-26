@@ -609,42 +609,49 @@ class ReadTeleportAdvisor(ItemUseAdvisor):
 
     def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
         read = nethack.actions.Command.READ
-        menu_plan = menuplan.MenuPlan("read teleportation scroll", self, [
-            menuplan.CharacterMenuResponse("What do you want to read?", '*')
-        ],
-        interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'teleport scrolls'),
-        )
-        return Advice(self.__class__, read, menu_plan)
+        scrolls = inventory.get_oclass(inv.Scroll)
+
+        for scroll in scrolls:
+            if scroll.identity and scroll.identity.name() == 'teleport':
+                letter = scrolls.inventory_letter
+                menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
+                ])
+                return Advice(self.__class__, read, menu_plan)
+        return None
 
 class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
     oclasses_used = inv.Wand
 
     def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
         zap = nethack.actions.Command.ZAP
+        wands = inventory.get_oclass(inv.Wand)
 
-        menu_plan = menuplan.MenuPlan(
-            "zap teleportation wand",
-            self,
-            [
-                menuplan.CharacterMenuResponse("What do you want to zap?", '*')
-            ],
-            interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'teleport wands'),
-        )
-        return Advice(self.__class__, zap, menu_plan)
+        for wand in wands:
+            if wand.identity and wand.identity.name() == 'teleportation':
+                letter = wand.inventory_letter
+                menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
+                    menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter))
+                ])
+                return Advice(self.__class__, read, menu_plan)
+        return None
 
 class DrinkHealingPotionAdvisor(ItemUseAdvisor):
     oclasses_used = inv.Potion
     def use_item(self, run_state, character, rng, _1, inventory, _3, _4, flags):
         quaff = nethack.actions.Command.QUAFF
-        menu_plan = menuplan.MenuPlan(
-            "drink healing potion", self, [
-                menuplan.CharacterMenuResponse("What do you want to drink?", '*'),
-                menuplan.NoMenuResponse("Drink from the fountain?"),
-                menuplan.NoMenuResponse("Drink from the sink?"),
-            ],
-            interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'healing potions'),
-        )
-        return Advice(self.__class__, quaff, menu_plan)
+        potions = inventory.get_oclass(inv.Potion)
+
+        for potion in potions:
+            if potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+                menu_plan = menuplan.MenuPlan(
+                    "drink healing potion", self, [
+                        menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
+                        menuplan.NoMenuResponse("Drink from the fountain?"),
+                        menuplan.NoMenuResponse("Drink from the sink?"),
+                    ])
+                return Advice(self.__class__, quaff, menu_plan)
+        return None
 
 class FallbackSearchAdvisor(Advisor):
     def advice(self, run_state, rng,character, _1, _2, _3, _4, _5):
@@ -813,9 +820,9 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
             menuplan.MoreMenuResponse("is a wand of digging!"),
             menuplan.MoreMenuResponse("is a wand of fire!"),
-            menuplan.MoreMenuResponse("You engrave in the ground"),
+            menuplan.MoreMenuResponse("You engrave in the"),
             menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
-            menuplan.MoreMenuResponse("You burn into the floor"),
+            menuplan.MoreMenuResponse("You burn into the"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
