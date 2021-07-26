@@ -499,31 +499,8 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return Advice(self.__class__, kick, menu_plan)
 
-class ItemUseAdvisor(Advisor): # should be abc over self.use_item and self.__class__.oclassess_used
-    oclasses_used = None
-
-    def have_relevant_class(self, inventory):
-        if isinstance(self.oclasses_used, list):
-            oclasses = self.oclasses_used
-            for oclass in oclasses:
-                if inventory.have_item_oclass(oclass): return True
-            return False
-        elif inspect.isclass(self.oclasses_used):
-            return inventory.have_item_oclass(self.oclasses_used)
-        else:
-            raise(TypeError)
-
-    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
-        if self.have_relevant_class(inventory):
-            use_item = self.use_item(run_state, rng, character, blstats, inventory, neighborhood, message, flags)
-            if use_item is not None:
-                return use_item
-        return None
-
-class WearValidArmorAdvisor(ItemUseAdvisor):
-    oclasses_used = inv.Armor
-
-    def use_item(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
+class WearValidArmorAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         armor = inventory.get_oclass(inv.Armor)
 
         unequipped_by_slot = {}
@@ -579,9 +556,7 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
 
                         return Advice(self.__class__, takeoff, menu_plan)
 
-class EatTopInventoryAdvisor(ItemUseAdvisor):
-    oclasses_used = inv.Food
-
+class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):
         menu_plan = menuplan.MenuPlan("eat from inventory", self, [
             menuplan.NoMenuResponse("here; eat"),
@@ -591,11 +566,12 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
             menuplan.MoreMenuResponse("It contains"),
             menuplan.YesMenuResponse("Eat it?"),
             menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
-            menuplan.NoMenuResponse("Continue eating")
+            menuplan.NoMenuResponse("Continue eating"),
+            menuplan.MoreMenuResponse("You resume your meal"),
         ])
         return menu_plan
 
-    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         eat = nethack.actions.Command.EAT
         food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
         if len(food) > 0:
@@ -604,10 +580,8 @@ class EatTopInventoryAdvisor(ItemUseAdvisor):
             return Advice(self.__class__, eat, menu_plan)
         return None
 
-class ReadTeleportAdvisor(ItemUseAdvisor):
-    oclasses_used = inv.Scroll
-
-    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
+class ReadTeleportAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         read = nethack.actions.Command.READ
         scrolls = inventory.get_oclass(inv.Scroll)
 
@@ -620,10 +594,8 @@ class ReadTeleportAdvisor(ItemUseAdvisor):
                 return Advice(self.__class__, read, menu_plan)
         return None
 
-class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
-    oclasses_used = inv.Wand
-
-    def use_item(self, run_state, rng, character, _1, inventory, _3, _4, flags):
+class ZapTeleportOnSelfAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         zap = nethack.actions.Command.ZAP
         wands = inventory.get_oclass(inv.Wand)
 
@@ -636,9 +608,8 @@ class ZapTeleportOnSelfAdvisor(ItemUseAdvisor):
                 return Advice(self.__class__, read, menu_plan)
         return None
 
-class DrinkHealingPotionAdvisor(ItemUseAdvisor):
-    oclasses_used = inv.Potion
-    def use_item(self, run_state, character, rng, _1, inventory, _3, _4, flags):
+class DrinkHealingPotionAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         quaff = nethack.actions.Command.QUAFF
         potions = inventory.get_oclass(inv.Potion)
 
@@ -767,6 +738,7 @@ class EatCorpseAdvisor(Advisor):
                 menuplan.NoMenuResponse("here; eat"),
                 menuplan.EscapeMenuResponse("want to eat?"),
                 menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
+                menuplan.MoreMenuResponse("You resume your meal"),
                 menuplan.NoMenuResponse("Continue eating"),
             ])
         return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)
