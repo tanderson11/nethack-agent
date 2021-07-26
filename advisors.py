@@ -825,6 +825,10 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You burn into the"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
+            menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
+            menuplan.MoreMenuResponse("You may wish for an object"),
+            menuplan.PhraseMenuResponse("For what do you wish?", "+2 blessed silver dragon scale mail"),
+            menuplan.MoreMenuResponse("silver dragon scale mail"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
