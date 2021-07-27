@@ -167,7 +167,11 @@ class ObjectGlyph(Glyph):
     COUNT = nethack.NUM_OBJECTS
 
     def __init__(self, numeral):
-        obj = nethack.objclass(nethack.glyph_to_obj(numeral))
+        try:
+            obj = nethack.objclass(nethack.glyph_to_obj(numeral))
+        except IndexError:
+            print(numeral)
+            raise(Exception)
         # Has data:
         # 'oc_class', 'oc_color', 'oc_cost', 'oc_delay', 'oc_descr_idx', 'oc_name_idx', 'oc_oprop',
         # 'oc_prob', 'oc_weight'
@@ -617,7 +621,7 @@ class ObjectSpoilers():
     spoiler_file_by_glyph_class = {
         RandomClassGlyph: '',
         IllobjGlyph: '',
-        WeaponGlyph: '',
+        WeaponGlyph: 'weapon_spoiler.csv',
         ArmorGlyph: '',
         RingGlyph: '',
         AmuletGlyph: '',
@@ -665,7 +669,11 @@ class ObjectIdentity():
 
         self.idx = None # get idx into table of items: can be a range of values or something?
         if numeral is not None:
-            spoiler_row = self.data.loc[numeral]
+            try:
+                spoiler_row = self.data.loc[numeral]
+            except KeyError:
+                if environment.env.debug: pdb.set_trace()
+                raise(Exception)
 
             if not spoiler_row['SHUFFLED']:
                 # if it's not shuffled, the numeral accurately picks out the object
@@ -706,6 +714,16 @@ class ObjectIdentity():
         else:
             return None
 
+    def japanese_name(self):
+        if self.is_identified():
+            japanese_name = self.data.loc[self.idx].JAPANESE_NAME.iloc[0]
+            if pd.isnull(japanese_name):
+                return None
+            else:
+                return japanese_name
+        else:
+            return None 
+
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
     def process_message(self, message_obj, action):
@@ -724,8 +742,28 @@ class ArmorIdentity(ObjectIdentity):
     def __init__(self, numeral=None, name=None, appearance=None):
         super().__init__(numeral, name, appearance)
 
-        self.slot = self.find_values('SLOT')
+        try:
+            self.slot = self.find_values('SLOT')
+        except AttributeError:
+            if environment.env.debug: pdb.set_trace()
+            pass
 
+class WeaponIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
+
+    def __init__(self, numeral=None, name=None, appearance=None):
+        super().__init__(numeral, name, appearance)
+
+        try:
+            self.slot = self.find_values('SLOT')
+
+            second_slot = self.find_values('SECOND_SLOT')
+            if pd.isnull(second_slot):
+                self.slot = [self.slot, second_slot]
+
+        except AttributeError:
+            if environment.env.debug: pdb.set_trace()
+            pass
 
 class UnimplementedObjectClassException(Exception):
     pass
@@ -734,12 +772,14 @@ class GlobalIdentityMap():
     identity_by_glyph_class = {
         ArmorGlyph: ArmorIdentity,
         WandGlyph: WandIdentity,
+        WeaponGlyph: WeaponIdentity,
     }
 
     def __init__(self):
         self.identity_by_numeral = {}
         # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
         self.identity_by_name = {} # this we will have to be careful to keep updated
+        self.identity_by_japanese_name = {}
         # indexed by (glyph_class, appearance) for consistency (don't think there are any overlapping appearances, but there could be)
         self.glyph_by_appearance = {}
 
@@ -767,10 +807,14 @@ class GlobalIdentityMap():
 
             
             name = identity.name() if identity else None
+            japanese_name = identity.japanese_name() if identity else None
 
 
             if name is not None:
                 self.identity_by_name[(type(glyph), name)] = identity
+
+            if japanese_name is not None:
+                self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
 
         #print(self.identity_by_numeral)
 

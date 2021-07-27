@@ -138,17 +138,17 @@ class ItemParser():
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
-        gd.WandGlyph: re.compile('([a-zA-Z])+ wand$'),
-        gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
-        gd.AmuletGlyph: re.compile('([a-zA-Z]+) amulet$'),
-        gd.PotionGlyph: re.compile('([a-zA-Z]+) potions?$'),
+        gd.WandGlyph: re.compile('([a-zA-Z ]+) wand$'),
+        gd.RingGlyph: re.compile('([a-zA-Z ]+) ring$'),
+        gd.AmuletGlyph: re.compile('([a-zA-Z ]+) amulet$'),
+        gd.PotionGlyph: re.compile('([a-zA-Z ]+) potions?$'),
         gd.ScrollGlyph: re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
-        gd.SpellbookGlyph: re.compile('([a-zA-Z]+) spellbook$'),
+        gd.SpellbookGlyph: re.compile('([a-zA-Z ]+) spellbook$'),
     }
     defuzzing_identified_class_patterns = {
         gd.WandGlyph: re.compile('wand of ([a-zA-Z ]+)$'),
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
-        gd.RingGlyph: re.compile('([a-zA-Z]+) ring$'),
+        gd.RingGlyph: re.compile('ring of ([a-zA-Z ]+)$'),
         gd.AmuletGlyph: re.compile('amulet of ([a-zA-Z ]+)$'),
         gd.PotionGlyph: re.compile('potions? of ([a-zA-Z ]+)$'),
         gd.ScrollGlyph: re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
@@ -199,10 +199,18 @@ class ItemParser():
             # we look to see if the name is in the class
             try:
                 # should never have more than one match for name
-                possible_glyphs = [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)]]
+                possible_glyphs = [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)].glyph]
             except KeyError:
+                # we couldn't find the name in the identities table, suggesting it doesn't belong to this class, unless ...
+                # we're currently looking at a Japanese name
+                try:
+                    possible_glyphs = [global_identity_map.identity_by_japanese_name[(glyph_class, defuzzed_name)].glyph]
+                except KeyError:
+                    defuzzed_name = None
+
                 defuzzed_name = None
 
+        if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
         return defuzzed_name, possible_glyphs
 
     @classmethod
@@ -233,6 +241,7 @@ class ItemParser():
         assert defuzzed_name is None or defuzzed_appearance is None or defuzzed_name == defuzzed_appearance
         possible_glyphs += possible_glyphs_by_name
 
+        if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
         return defuzzed_appearance, defuzzed_name, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
 
     @classmethod
@@ -295,6 +304,7 @@ class ItemParser():
                 if len(possible_glyphs) == 0:
                     #if environment.env.debug: pdb.set_trace()
                     print("WARNING: Failed to find possible glyphs for " + description)
+                    #if environment.env.debug: pdb.set_trace()
                     return None
 
             # if we don't have the category, we have nothing better to do than try every class's defuzzing approach
@@ -309,6 +319,7 @@ class ItemParser():
                 if len(possible_glyphs) == 0:
                     #if environment.env.debug: pdb.set_trace()
                     print("WARNING: Failed to find possible glyphs for " + description)
+                    #if environment.environment.debug: pdb.set_trace()
                     return None
 
         if not glyph_numeral and len(possible_glyphs) == 1:
@@ -324,6 +335,7 @@ class ItemParser():
             return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter, description=description, name=defuzzed_name)
         else:
             print("Ambiguous Item found: " + description)
+            #if environment.env.debug: pdb.set_trace()
             return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement, description=description)
 
 class Slot():
