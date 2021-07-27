@@ -170,6 +170,10 @@ class MajorTroubleAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.major_trouble
 
+class SafeAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return ~flags.am_low_hp and ~flags.neighborhood.monster_present and ~flags.am_weak
+
 class UnthreatenedMovesAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.have_unthreatened_moves
@@ -499,62 +503,42 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return Advice(self.__class__, kick, menu_plan)
 
-class WearValidArmorAdvisor(Advisor):
+class WearUnblockedArmorAdvisor(Advisor):
     def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
-        armor = inventory.get_oclass(inv.Armor)
+        proposed_items, proposal_blockers = inventory.proposed_attire_changes(character)
 
-        unequipped_by_slot = {}
-        for item in armor:
-            if item.equipped_status is None:
-                slot_name = item.identity.find_values('SLOT')
-                try:
-                    unequipped_by_slot[slot_name].append(item)
-                except KeyError:
-                    unequipped_by_slot[slot_name] = [item]
+        for item, blockers in zip(proposed_items, proposal_blockers):
+            if len(blockers) == 0:
+                wear = nethack.actions.Command.WEAR
 
-        if len(unequipped_by_slot.keys()) == 0:
-            return None
+                menu_plan = menuplan.MenuPlan("wear armor", self, [
+                    menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+                ], listening_item=item)
 
-        armaments = inventory.get_slots('armaments')
-        for slot_name in armaments.__class__.slot_type_mapping.keys(): # ordered dict by difficulty to access
-            unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
+                return Advice(self.__class__, wear, menu_plan)
+        return None
 
-            if len(unequipped_in_slot) > 0:
-                most_desirable = None
-                max_desirability = None
-                for item in unequipped_in_slot:
-                    desirability = item.desirability(character)
-                    if max_desirability is None or desirability > max_desirability:
-                        max_desirability = desirability
-                        most_desirable = item
+class WearEvenBlockedArmorAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
+        proposed_items, proposal_blockers = inventory.proposed_attire_changes(character)
 
-                current_letter = armaments.slots[slot_name].occupant_letter
-                if current_letter is not None:
-                    current_item = inventory.items_by_letter[current_letter]
-                    current_desirability = current_item.desirability(character)
-                else:
-                    current_item = None
-                    current_desirability = 0
+        for item, blockers in zip(proposed_items, proposal_blockers):
+            if len(blockers) == 0:
+                wear = nethack.actions.Command.WEAR
 
-                if max_desirability > current_desirability:
-                    slot = armaments.slots[slot_name]
-                    blockers = armaments.blocked_by_letters(slot, inventory)
+                menu_plan = menuplan.MenuPlan("wear armor", self, [
+                    menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+                ], listening_item=item)
 
-                    if len(blockers) == 0:
-                        wear = nethack.actions.Command.WEAR
+                return Advice(self.__class__, wear, menu_plan)
 
-                        menu_plan = menuplan.MenuPlan("wear armor", self, [
-                            menuplan.CharacterMenuResponse("What do you want to wear?", chr(most_desirable.inventory_letter)),
-                        ], listening_item=item)
+            else:
+                takeoff = nethack.actions.Command.TAKEOFF
+                menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
+                    menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
+                ])
 
-                        return Advice(self.__class__, wear, menu_plan)
-                    else:
-                        takeoff = nethack.actions.Command.TAKEOFF
-                        menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
-                            menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
-                        ])
-
-                        return Advice(self.__class__, takeoff, menu_plan)
+                return Advice(self.__class__, takeoff, menu_plan)
 
 class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):
@@ -567,7 +551,7 @@ class EatTopInventoryAdvisor(Advisor):
             menuplan.YesMenuResponse("Eat it?"),
             menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
             menuplan.NoMenuResponse("Continue eating"),
-            menuplan.MoreMenuResponse("You resume your meal"),
+            #menuplan.MoreMenuResponse("You resume your meal"),
         ])
         return menu_plan
 
@@ -738,7 +722,7 @@ class EatCorpseAdvisor(Advisor):
                 menuplan.NoMenuResponse("here; eat"),
                 menuplan.EscapeMenuResponse("want to eat?"),
                 menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
-                menuplan.MoreMenuResponse("You resume your meal"),
+                #menuplan.MoreMenuResponse("You resume your meal"),
                 menuplan.NoMenuResponse("Continue eating"),
             ])
         return Advice(self.__class__, nethack.actions.Command.EAT, menu_plan)

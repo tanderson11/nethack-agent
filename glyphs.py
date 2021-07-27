@@ -713,6 +713,11 @@ class WandIdentity(ObjectIdentity):
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
+    def __init__(self, numeral=None, name=None, appearance=None):
+        super().__init__(numeral, name, appearance)
+
+        self.slot = self.find_values('SLOT')
+
 
 class UnimplementedObjectClassException(Exception):
     pass

@@ -372,6 +372,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visits = level_map.visits_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
 
+        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
+        self.monster_present = extended_is_monster.any()
+
         ###################################
         ### RELATIVE POSITION IN VISION ###
         ###################################
@@ -429,7 +432,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
-        self.is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
+        self.is_monster = extended_is_monster[neighborhood_view]
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
 

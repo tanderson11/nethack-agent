@@ -219,7 +219,6 @@ class ItemParser():
 
         return defuzzed_appearance, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
 
-
     @classmethod
     def parse_inventory_item(cls, global_identity_map ,string, glyph_numeral=None, inventory_letter=None, category=None):
         match = re.match(cls.item_pattern, string)
@@ -384,6 +383,64 @@ class PlayerInventory():
 
         self.observation = observation
         self.global_identity_map = run_state.global_identity_map
+
+    def wants_glyph(self, character, glyph):
+        pass
+
+    @functools.cached_property
+    def armaments(self):
+        return self.get_slots('armaments')
+
+    def wants_item(self, character, item):
+        pass
+
+    def proposed_attire_changes(self, character):
+        armor = self.get_oclass(Armor)
+
+        unequipped_by_slot = {}
+        for item in armor:
+            if item.equipped_status is None:
+                slot = item.identity.slot
+                try:
+                    unequipped_by_slot[slot].append(item)
+                except KeyError:
+                    unequipped_by_slot[slot] = [item]
+
+        if len(unequipped_by_slot.keys()) == 0:
+            return [], []
+
+
+        proposed_items = []
+        proposal_blockers = []
+        for slot in self.armaments.slot_type_mapping.keys(): # ordered dict by difficulty to access
+            unequipped_in_slot = unequipped_by_slot.get(slot, [])
+
+            if len(unequipped_in_slot) > 0:
+                most_desirable = None
+                max_desirability = None
+                for item in unequipped_in_slot:
+                    desirability = item.desirability(character)
+                    if max_desirability is None or desirability > max_desirability:
+                        max_desirability = desirability
+                        most_desirable = item
+
+                current_letter = self.armaments.slots[slot].occupant_letter
+                if current_letter is not None:
+                    current_item = self.items_by_letter[current_letter]
+                    current_desirability = current_item.desirability(character)
+                else:
+                    current_item = None
+                    current_desirability = 0
+
+                if max_desirability > current_desirability:
+                    slot = self.armaments.slots[slot]
+                    blockers = self.armaments.blocked_by_letters(slot, self)
+
+                    proposed_items.append(most_desirable)
+                    proposal_blockers.append(blockers)
+
+        return proposed_items, proposal_blockers
+
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number

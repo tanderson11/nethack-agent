@@ -21,11 +21,12 @@ small_advisors = [
         RandomAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged or move
         FallbackSearchAdvisor: 40, # basically controls to probability we yolo attack floating eyes
         }),
+    SafeAdvisorLevel({WearEvenBlockedArmorAdvisor: 1}),
     AmUnthreatenedAdvisorLevel({
         PickupFoodAdvisor: 1,
         PickupArmorAdvisor: 1,
         EatCorpseAdvisor: 1,
-        WearValidArmorAdvisor: 1,
+        WearUnblockedArmorAdvisor: 1,
         EngraveTestWandsAdvisor: 1,
     }),
     UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
