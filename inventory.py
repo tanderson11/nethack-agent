@@ -273,7 +273,7 @@ class ItemParser():
                 identity = global_identity_map.identity_by_numeral[glyph_numeral]
                 if identity and identity.is_shuffled:
                     defuzzed_name, _ = cls.match_name_from_class(global_identity_map, glyph_class, description)
-                    print(defuzzed_name)
+                    #print(defuzzed_name)
             except KeyError:
                 print("Couldn't find identity for " + str(glyph_numeral))
         # if we don't have the numeral, we should still always be able to pull the glyph_class from the appearance somehow
