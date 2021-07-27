@@ -659,23 +659,31 @@ class ObjectIdentity():
         self.glyph = GLYPH_NUMERAL_LOOKUP[numeral]
 
         try:
-            data = OBJECT_SPOILERS.object_spoilers_by_class[type(self.glyph)]
+            data = OBJECT_SPOILERS.object_spoilers_by_class[type(self.glyph)] # TK switch to class attribute
         except KeyError:
             raise(UnimplementedObjectClassException)
 
         self.idx = None # get idx into table of items: can be a range of values or something?
         if numeral is not None:
-            spoiler_row = data.loc[numeral]
+            spoiler_row = self.data.loc[numeral]
 
             if not spoiler_row['SHUFFLED']:
                 # if it's not shuffled, the numeral accurately picks out the object
                 self.idx = [numeral]
+                self.is_shuffled = False
             else:
                 # if it is shuffled, it could be any object in the shuffled class
                 same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
                 self.idx = same_shuffle_class.index[same_shuffle_class]
+                self.is_shuffled = True
 
         self.listened_actions = {}
+
+    def give_name(self, name):
+        matches_name = self.data.loc[self.idx].NAME == name
+        self.idx = matches_name.index[matches_name]
+
+        if environment.env.debug: assert self.name() == name
 
     def is_identified(self):
         return len(self.idx) == 1
@@ -706,7 +714,7 @@ class WandIdentity(ObjectIdentity):
         # engrave testing
         if action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
             # if there is an engrave message and it is in fact contained in the overheard message
-            message_matches = ~self.__class__.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.__class__.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
+            message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
@@ -765,6 +773,14 @@ class GlobalIdentityMap():
                 self.identity_by_name[(type(glyph), name)] = identity
 
         #print(self.identity_by_numeral)
+
+    def make_name_correspondence(self, identity, name):
+        try:
+            self.identity_by_name.get((type(identity.glyph), name))
+        except:
+            print("Giving name {} to identity {}".format(name, identity))
+            identity.give_name(name)
+            self.identity_by_name[(type(identity.glyph), name)] = identity
 
     def update(self, glyph):
         # call whenever we update an identity in a way that might cause it be `is_identified`

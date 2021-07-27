@@ -46,9 +46,11 @@ class ItemLike():
 
 
    
-    def __init__(self, quantity, BUC, parenthetical_status, condition, enhancement):
+    def __init__(self, quantity, BUC, parenthetical_status, condition, enhancement, description=None):
         self.quantity = quantity
         self.BUC = BUC
+
+        self._description = description
 
         self.parenthetical_status = parenthetical_status
         self.condition = condition
@@ -66,7 +68,7 @@ class ItemLike():
 
 class Item(ItemLike):
      #global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter
-    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None):
+    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None, description=None, name=None):
         self.inventory_letter = inventory_letter
         self.glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral]
 
@@ -75,7 +77,11 @@ class Item(ItemLike):
         except KeyError:
             print("No identity found for {}".format(glyph_numeral))
 
-        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement)
+        if name is not None:
+            # update the registry and identification status if we were able to locate its name
+            global_identity_map.make_name_correspondence(self.identity, name)
+
+        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -110,11 +116,11 @@ class Weapon(Item):
 class AmbiguousItem(ItemLike):
     '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
 
-    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, parenthetical_status, condition, enhancement):
+    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, parenthetical_status, condition, enhancement, description=None):
         self.identity = None
         self.glyph_numeral = None
         self.possible_glyphs = possible_glyphs
-        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement)
+        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
 
 class UnimplementedItemClassException(Exception):
     pass
@@ -181,8 +187,27 @@ class ItemParser():
         return decoded
 
     @classmethod
+    def match_name_from_class(cls, global_identity_map, glyph_class, description):
+        possible_glyphs = []
+        defuzzed_name = None # passed only if we identify the object by name
+        id_pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
+        id_class_pattern_match = re.search(id_pattern, description)
+
+        if id_class_pattern_match:
+            defuzzed_name = id_class_pattern_match[1]
+
+            # we look to see if the name is in the class
+            try:
+                # should never have more than one match for name
+                possible_glyphs = [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)]]
+            except KeyError:
+                defuzzed_name = None
+
+        return defuzzed_name, possible_glyphs
+
+    @classmethod
     def attempt_to_match_to_glyph_class(cls, global_identity_map, glyph_class, description):
-        defuzzed_appearance = ''
+        defuzzed_appearance = None
         possible_glyphs = []
 
         unid_pattern = cls.defuzzing_unidentified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
@@ -201,28 +226,20 @@ class ItemParser():
                 #pdb.set_trace()
                 pass
             except KeyError:
-                pass
+                defuzzed_appearance = None
 
-        id_pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
-        id_class_pattern_match = re.search(id_pattern, description)
+        # try next to match by name (AoY and plastic AoY share name / appearance respectively)
+        defuzzed_name, possible_glyphs_by_name = cls.match_name_from_class(global_identity_map, glyph_class, description)
+        assert defuzzed_name is None or defuzzed_appearance is None or defuzzed_name == defuzzed_appearance
+        possible_glyphs += possible_glyphs_by_name
 
-        if id_class_pattern_match:
-            defuzzed_name = id_class_pattern_match[1]
-            assert defuzzed_name == defuzzed_appearance
-
-            # we look to see if the name is in the class
-            try:
-                # should never have more than one match for name
-                possible_glyphs += [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)]]
-            except KeyError:
-                pass
-
-        return defuzzed_appearance, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
+        return defuzzed_appearance, defuzzed_name, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
 
     @classmethod
     def parse_inventory_item(cls, global_identity_map ,string, glyph_numeral=None, inventory_letter=None, category=None):
         match = re.match(cls.item_pattern, string)
         glyph_class = None
+        defuzzed_name = None
 
         if match:
             quantity_match = match[1]
@@ -252,6 +269,13 @@ class ItemParser():
 
         if glyph_numeral:
             glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral])
+            try:
+                identity = global_identity_map.identity_by_numeral[glyph_numeral]
+                if identity and identity.is_shuffled:
+                    defuzzed_name, _ = cls.match_name_from_class(global_identity_map, glyph_class, description)
+                    print(defuzzed_name)
+            except KeyError:
+                print("Couldn't find identity for " + str(glyph_numeral))
         # if we don't have the numeral, we should still always be able to pull the glyph_class from the appearance somehow
         else:
             # for starters, if we are given the category, as we are in big stacks of items, we can use that to help
@@ -261,7 +285,7 @@ class ItemParser():
                     possible_glyph_classes = [possible_glyph_classes]
 
                 for klass in possible_glyph_classes:
-                    appearance, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
+                    appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
                     # the description resides in the glyph class
                     if len(possible_glyphs) > 0:
@@ -276,7 +300,7 @@ class ItemParser():
             # if we don't have the category, we have nothing better to do than try every class's defuzzing approach
             else:
                 for klass in gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES:
-                    appearance, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
+                    appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
                     if len(possible_glyphs) > 0:
                         glyph_class = klass
@@ -297,10 +321,10 @@ class ItemParser():
         if glyph_numeral:
             item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
             #print(item_class)
-            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter)
+            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter, description=description, name=defuzzed_name)
         else:
             print("Ambiguous Item found: " + description)
-            return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement)
+            return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement, description=description)
 
 class Slot():
     blockers = []
