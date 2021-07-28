@@ -691,7 +691,7 @@ class ObjectIdentity():
         matches_name = self.data.loc[self.idx].NAME == name
         self.idx = matches_name.index[matches_name]
 
-        if environment.env.debug: assert self.name() == name
+        if environment.env.debug and self.name() != name: pdb.set_trace()
 
     def is_identified(self):
         return len(self.idx) == 1
@@ -732,7 +732,9 @@ class WandIdentity(ObjectIdentity):
         # engrave testing
         if action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
             # if there is an engrave message and it is in fact contained in the overheard message
-            message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.str.contains(message_obj.message)
+            #pdb.set_trace()
+            message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.apply(lambda v: pd.isnull(v) or v in message_obj.message)
+            #print(message_matches)
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
@@ -818,13 +820,16 @@ class GlobalIdentityMap():
 
         #print(self.identity_by_numeral)
 
-    def make_name_correspondence(self, identity, name):
-        try:
-            self.identity_by_name.get((type(identity.glyph), name))
-        except:
-            print("Giving name {} to identity {}".format(name, identity))
+    def try_name_correspondence(self, name, glyph_class, glyph_numeral):
+        print("Trying to give name {} to {} (class {})".format(name, glyph_numeral, glyph_class))
+        identity = self.identity_by_numeral[glyph_numeral]
+        name_matches = identity.data.NAME == name
+        if name_matches.any():
+            self.identity_by_name[(glyph_class, name)] = identity
             identity.give_name(name)
-            self.identity_by_name[(type(identity.glyph), name)] = identity
+            print("Successfully giving name to {}".format(identity))
+        else:
+            print("And failing to give name ...")
 
     def update(self, glyph):
         # call whenever we update an identity in a way that might cause it be `is_identified`

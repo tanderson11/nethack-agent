@@ -779,6 +779,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You engrave in the"),
             menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the"),
+            menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written here"),

@@ -68,7 +68,7 @@ class ItemLike():
 
 class Item(ItemLike):
      #global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter
-    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None, description=None, name=None):
+    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None, description=None):
         self.inventory_letter = inventory_letter
         self.glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral]
 
@@ -76,10 +76,6 @@ class Item(ItemLike):
             self.identity = global_identity_map.identity_by_numeral[glyph_numeral]
         except KeyError:
             print("No identity found for {}".format(glyph_numeral))
-
-        if name is not None:
-            # update the registry and identification status if we were able to locate its name
-            global_identity_map.make_name_correspondence(self.identity, name)
 
         super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
 
@@ -141,7 +137,7 @@ class ItemParser():
         gd.WandGlyph: re.compile('([a-zA-Z ]+) wand$'),
         gd.RingGlyph: re.compile('([a-zA-Z ]+) ring$'),
         gd.AmuletGlyph: re.compile('([a-zA-Z ]+) amulet$'),
-        gd.PotionGlyph: re.compile('([a-zA-Z ]+) potions?$'),
+        gd.PotionGlyph: re.compile('([a-zA-Z -]+) potions?$'),
         gd.ScrollGlyph: re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
         gd.SpellbookGlyph: re.compile('([a-zA-Z ]+) spellbook$'),
     }
@@ -187,9 +183,10 @@ class ItemParser():
         return decoded
 
     @classmethod
-    def match_name_from_class(cls, global_identity_map, glyph_class, description):
+    def match_name_from_class(cls, global_identity_map, glyph_class, description, numeral=None):
         possible_glyphs = []
         defuzzed_name = None # passed only if we identify the object by name
+        key_error = False
         id_pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
         id_class_pattern_match = re.search(id_pattern, description)
 
@@ -203,14 +200,19 @@ class ItemParser():
             except KeyError:
                 # we couldn't find the name in the identities table, suggesting it doesn't belong to this class, unless ...
                 # we're currently looking at a Japanese name
+                key_error = True
                 try:
                     possible_glyphs = [global_identity_map.identity_by_japanese_name[(glyph_class, defuzzed_name)].glyph]
+                    key_error = False
                 except KeyError:
-                    defuzzed_name = None
+                    pass
 
-                defuzzed_name = None
+        if key_error and numeral:
+            global_identity_map.try_name_correspondence(defuzzed_name, glyph_class, numeral)
+            possible_glyphs += [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)].glyph]
+            pass
 
-        if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
+        #if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
         return defuzzed_name, possible_glyphs
 
     @classmethod
@@ -241,7 +243,7 @@ class ItemParser():
         assert defuzzed_name is None or defuzzed_appearance is None or defuzzed_name == defuzzed_appearance
         possible_glyphs += possible_glyphs_by_name
 
-        if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
+        #if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
         return defuzzed_appearance, defuzzed_name, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
 
     @classmethod
@@ -281,7 +283,7 @@ class ItemParser():
             try:
                 identity = global_identity_map.identity_by_numeral[glyph_numeral]
                 if identity and identity.is_shuffled:
-                    defuzzed_name, _ = cls.match_name_from_class(global_identity_map, glyph_class, description)
+                    _, _, = cls.match_name_from_class(global_identity_map, glyph_class, description, numeral=glyph_numeral)
                     #print(defuzzed_name)
             except KeyError:
                 print("Couldn't find identity for " + str(glyph_numeral))
@@ -331,8 +333,8 @@ class ItemParser():
         # if we don't know glyph_numeral, we want to make an AmbiguousItem
         if glyph_numeral:
             item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
-            #print(item_class)
-            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter, description=description, name=defuzzed_name)
+
+            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter, description=description)
         else:
             print("Ambiguous Item found: " + description)
             #if environment.env.debug: pdb.set_trace()

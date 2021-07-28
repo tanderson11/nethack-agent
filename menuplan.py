@@ -223,10 +223,10 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class InteractiveInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) & (x.item.identity is not None and x.item.identity.name() == 'teleport'),
-        'teleport wands': lambda x: (isinstance(x, inv.Wand)) & (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
-        'healing potions': lambda x: (isinstance(x, inv.Potion)) & (x.item.identity is not None and "healing" in x.item.identity.name()),
-        'extra weapons': lambda x: (isinstance(x, inv.Weapon)) & (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
+        'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleport'),
+        'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
+        'healing potions': lambda x: (isinstance(x, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
+        'extra weapons': lambda x: (isinstance(x, inv.Weapon)) and (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
 
         'comestibles': lambda x: isinstance(x, inv.Food) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
         'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
