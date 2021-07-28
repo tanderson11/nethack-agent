@@ -587,7 +587,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
             if wand.identity and wand.identity.name() == 'teleportation':
                 letter = wand.inventory_letter
                 menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
-                    menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter))
+                    menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
                     menuplan.DirectionMenuResponse("In what direction?", chr(.)),
                 ])
                 return Advice(self.__class__, zap, menu_plan)
