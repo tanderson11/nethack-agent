@@ -641,14 +641,17 @@ class ObjectSpoilers():
     }
     def __init__(self):
         object_spoilers_by_class = {}
+        object_names_by_class = {}
         for glyph_class, spoiler_file in self.spoiler_file_by_glyph_class.items():
             if spoiler_file != '':
                 with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", spoiler_file), 'r') as f:
                     df = pd.read_csv(f)
                     df = df.set_index('GLYPH')
                 object_spoilers_by_class[glyph_class] = df
+                object_names_by_class[glyph_class] = set(df.NAME.to_list())
 
         self.object_spoilers_by_class = object_spoilers_by_class
+        self.object_names_by_class = object_names_by_class
 
 OBJECT_SPOILERS = ObjectSpoilers()
 
@@ -823,8 +826,7 @@ class GlobalIdentityMap():
     def try_name_correspondence(self, name, glyph_class, glyph_numeral):
         print("Trying to give name {} to {} (class {})".format(name, glyph_numeral, glyph_class))
         identity = self.identity_by_numeral[glyph_numeral]
-        name_matches = identity.data.NAME == name
-        if name_matches.any():
+        if name in OBJECT_SPOILERS.object_names_by_class[glyph_class]:
             self.identity_by_name[(glyph_class, name)] = identity
             identity.give_name(name)
             print("Successfully giving name to {}".format(identity))
