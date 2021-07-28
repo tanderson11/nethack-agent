@@ -103,8 +103,7 @@ class MonsterAlikeGlyph(Glyph):
             self.corpse_spoiler = CORPSES_BY_NAME[self.name]
 
         self.monster_spoiler = None
-        if self.name != 'long worm tail':
-            self.monster_spoiler = MONSTERS_BY_NAME[self.name]
+        self.monster_spoiler = MONSTERS_BY_NAME[self.name]
 
     def safe_to_eat(self, character):
         if not self.corpse_spoiler:

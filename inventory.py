@@ -305,7 +305,7 @@ class ItemParser():
                 
                 if len(possible_glyphs) == 0:
                     #if environment.env.debug: pdb.set_trace()
-                    print("WARNING: Failed to find possible glyphs for " + description)
+                    if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
                     #if environment.env.debug: pdb.set_trace()
                     return None
 
@@ -320,7 +320,7 @@ class ItemParser():
 
                 if len(possible_glyphs) == 0:
                     #if environment.env.debug: pdb.set_trace()
-                    print("WARNING: Failed to find possible glyphs for " + description)
+                    if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
                     #if environment.environment.debug: pdb.set_trace()
                     return None
 

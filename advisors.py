@@ -588,7 +588,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
                 letter = wand.inventory_letter
                 menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                     menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
-                    menuplan.DirectionMenuResponse("In what direction?", chr('.')),
+                    menuplan.DirectionMenuResponse("In what direction?", neighborhood.action_grid[neighborhood.local_player_location]),
                 ])
                 return Advice(self.__class__, zap, menu_plan)
         return None
