@@ -267,13 +267,13 @@ class FoodGlyph(ObjectGlyph):
 
     def safe_non_perishable(self, global_identity_map, character):
         identity = global_identity_map.identity_by_numeral[self.numeral]
-        if identity is None:
+        #if identity is None:
+        #    return False
+
+        if identity and character.character.sick_from_tripe() and identity.name() == "tripe ration":
             return False
 
-        if character.character.sick_from_tripe() and identity.name() == "tripe ration":
-            return False
-
-        if "glob" in identity.name() or identity.name() == "egg":
+        if identity and ("glob" in identity.name() or identity.name() == "egg"):
             return False
 
         return True

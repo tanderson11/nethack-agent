@@ -664,20 +664,18 @@ class RandomRangedAttackAdvisor(RandomAttackAdvisor):
 
             weapons = inventory.get_oclass(inv.Weapon)
             if len(weapons) > 1:
-                menu_plan = menuplan.MenuPlan(
-                    "ranged attack", self, [
-                        menuplan.DirectionMenuResponse("In what direction?", attack_direction),
-                        menuplan.MoreMenuResponse("You have no ammunition"),
-                        menuplan.MoreMenuResponse("You ready"),
-                        # note throw: means we didn't have anything quivered
-                        menuplan.CharacterMenuResponse("What do you want to throw?", '*')
-                    ],
-                    interactive_menu=menuplan.InteractiveInventoryMenu(run_state, 'extra weapons'),
-                )
-                return Advice(self.__class__, fire, menu_plan)
-
-            return None
-        return None
+                for w in weapons:
+                    if w.equipped_status is None or w.equipped_status.status != 'wielded':
+                        menu_plan = menuplan.MenuPlan(
+                            "ranged attack", self, [
+                                menuplan.DirectionMenuResponse("In what direction?", attack_direction),
+                                menuplan.MoreMenuResponse("You have no ammunition"),
+                                menuplan.MoreMenuResponse("You ready"),
+                                # note throw: means we didn't have anything quivered
+                                menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
+                            ],
+                        )
+                        return Advice(self.__class__, fire, menu_plan)
 
 class PickupFoodAdvisor(Advisor):
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):

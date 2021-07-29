@@ -172,7 +172,8 @@ class ItemParser():
         'Spellbooks': gd.SpellbookGlyph,
         'Wands': gd.WandGlyph,
         'Coins': gd.CoinGlyph,
-        'Gems/Stones': [gd.GemGlyph, gd.RockGlyph],
+        'Gems/Stones': gd.GemGlyph,
+        'Boulders/Statues': gd.RockGlyph,
     }
 
     #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}

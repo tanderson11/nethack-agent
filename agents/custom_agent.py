@@ -373,15 +373,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visits = level_map.visits_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
 
-        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
-        self.monster_present = extended_is_monster.any()
-
         ###################################
         ### RELATIVE POSITION IN VISION ###
         ###################################
 
         # index of player in the full vision
         player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
+
+        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
+        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+        self.monster_present = extended_is_monster.any()
 
         # radius 1 box around player in vision glyphs
         neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
@@ -439,6 +440,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         # in the narrow sense
         self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
+        self.walkable[self.local_player_location] = False # in case we turn invisible
 
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
@@ -599,7 +601,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'wo50Tg=='
+        #seed = b'e/AWeQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
