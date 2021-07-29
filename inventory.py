@@ -18,7 +18,7 @@ class ItemLike():
             if parenthetical_status is not None:
                 if "being worn" in parenthetical_status:
                     self.status = 'worn'
-                    self.slot = item.identity.find_values('SLOT')
+                    self.slot = item.identity.slot
 
                 elif "weapon in hand" in parenthetical_status:
                     self.status = 'wielded'
@@ -83,7 +83,7 @@ class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
     def desirability(self, character):
-        if character.character.body_armor_penalty() and self.identity.find_values('SLOT') == 'suit':
+        if character.character.body_armor_penalty() and self.identity.slot == 'suit':
             return -10
 
         if self.enhancement is None:
