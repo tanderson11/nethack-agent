@@ -1,80 +1,80 @@
-ARBITRARY,GLYPH,NAME,APPEARANCE,JAPANESE_NAME,SHUFFLED,SHUFFLE_CLASS,SLOT,COST,WEIGHT,PRICE,GEN_CURSED,AC,MATERIAL,MC,SPECIAL
-0,2021,Hawaiian shirt,Hawaiian shirt,,FALSE,,shirt,3,5,8,,0,C,0,Shops
-1,2022,T-shirt,T-shirt,,FALSE,,shirt,2,5,2,,0,C,0,Shops
-3,2020,leather jacket,leather jacket,,FALSE,,suit,10,30,12,,1,L,1,
-4,2019,leather armor,leather armor,,FALSE,,suit,5,150,82,,2,L,1,
-5,2018,orcish ring mail,crude ring mail,,FALSE,,suit,80,250,20,,2,I,1,
-6,2016,studded leather armor,studded leather armor,,FALSE,,suit,15,200,72,,3,L,1,
-7,2017,ring mail,ring mail,,FALSE,,suit,100,250,72,,3,I,1,
-8,2015,scale mail,scale mail,,FALSE,,suit,45,250,72,,4,I,1,
-9,2014,orcish chain mail,crude chain mail,,FALSE,,suit,75,300,20,,4,I,1,
-10,2013,chain mail,chain mail,,FALSE,,suit,75,300,72,,5,I,1,
-11,2012,elven mithril coat,elven mithril-coat,,FALSE,,suit,240,150,15,,5,M,2,
-12,2009,splint mail,splint mail,,FALSE,,suit,80,400,62,,6,I,1,
-13,2010,banded mail,banded mail,,FALSE,,suit,90,350,72,,6,I,1,
-14,2011,dwarvish mithril coat,dwarvish mithril-coat,,FALSE,,suit,240,150,10,,6,M,2,
-15,2008,bronze plate mail,bronze plate mail,,FALSE,,suit,400,450,25,,6,B,1,
-16,2006,plate mail,plate mail,tanko,FALSE,,suit,600,450,44,,7,I,2,
-17,2007,crystal plate mail,crystal plate mail,,FALSE,,suit,820,450,10,,7,G,2,
-19,1999,red dragon scales,red dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Fire
-20,2000,white dragon scales,white dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Cold
-21,2001,orange dragon scales,orange dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Sleep
-22,2003,blue dragon scales,blue dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Elec
-23,2004,green dragon scales,green dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Poison
-24,2005,yellow dragon scales,yellow dragon scales,,FALSE,,suit,500,40,0,,3,D,1,Acd
-25,2002,black dragon scales,black dragon scales,,FALSE,,suit,700,40,0,,3,D,1,Disint
-26,1998,silver dragon scales,silver dragon scales,,FALSE,,suit,700,40,0,,3,D,1,Reflect
-27,1997,gray dragon scales,gray dragon scales,,FALSE,,suit,700,40,0,,3,D,1,Magic
-28,1990,red dragon scale mail,red dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Fire
-29,1991,white dragon scale mail,white dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Cold
-30,1992,orange dragon scale mail,orange dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Sleep
-31,1994,blue dragon scale mail,blue dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Elec
-32,1995,green dragon scale mail,green dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Poison
-33,1996,yellow dragon scale mail,yellow dragon scale mail,,FALSE,,suit,900,40,0,,9,D,1,Acd
-34,1993,black dragon scale mail,black dragon scale mail,,FALSE,,suit,1200,40,0,,9,D,1,Disint
-35,1989,silver dragon scale mail,silver dragon scale mail,,FALSE,,suit,1200,40,0,,9,D,1,Reflect
-36,1988,gray dragon scale mail,gray dragon scale mail,,FALSE,,suit,1200,40,0,,9,D,1,Magic
-38,2023,mummy wrapping,mummy wrapping,,FALSE,,cloak,2,3,0,,0,C,1,Vis
-39,2025,orcish cloak,coarse mantelet,,FALSE,,cloak,40,10,8,,0,C,1,
-40,2026,dwarvish cloak,hooded cloak,,FALSE,,cloak,50,10,8,,0,C,1,
-41,2030,leather cloak,leather cloak,,FALSE,,cloak,40,15,8,,1,L,1,
-43,2027,oilskin cloak,slippery cloak,,FALSE,,cloak,50,10,10,,1,C,2,Water
-44,2029,alchemy smock,apron,,FALSE,,cloak,50,10,9,,1,C,1,Poi+Acid
-48,2028,robe,robe,,FALSE,,cloak,50,15,3,,2,C,2,Spell
-51,1980,fedora,fedora,,FALSE,,helmet,1,3,0,,0,C,1,
-52,1982,dunce cap,conical hat,,FALSE,,helmet,1,4,3,,0,C,1,Stupid
-53,1981,cornuthaum,conical hat,,FALSE,,helmet,80,4,3,,0,C,1,Clair
-54,1983,dented pot,dented pot,,FALSE,,helmet,8,10,2,,1,I,1,
-55,1977,elven leather helm,leather hat,,FALSE,,helmet,8,3,6,,1,L,1,
-57,1978,orcish helm,iron skull cap,,FALSE,,helmet,10,30,6,,1,I,1,
-61,1979,dwarvish iron helm,hard hat,,FALSE,,helmet,20,40,6,,2,I,1,
-68,2035,small shield,small shield,,FALSE,,off-hand,3,30,6,,1,W,1,
-69,2038,orcish shield,red-eyed shield,,FALSE,,off-hand,7,50,2,,1,I,1,
-70,2037,Uruk-hai shield,white-handed shield,,FALSE,,off-hand,7,50,2,,1,I,1,
-71,2036,elven shield,blue and green shield,,FALSE,,off-hand,7,40,2,,2,W,1,
-72,2040,dwarvish roundshield,large round shield,,FALSE,,off-hand,10,100,4,,2,I,1,
-73,2039,large shield,large shield,,FALSE,,off-hand,10,100,7,,2,I,1,
-74,2041,shield of reflection,polished silver shield,,FALSE,,off-hand,50,50,3,,2,S,1,Reflect
-76,2046,low boots,walking shoes,,FALSE,,boots,8,10,25,,1,L,1,
-84,2048,high boots,jackboots,,FALSE,,boots,12,20,15,,2,L,1,
-85,2047,iron shoes,hard shoes,,FALSE,,boots,16,50,7,,2,I,1,
-42,2034,cloak of displacement,piece of cloth,,TRUE,cloak,cloak,50,10,10,,1,C,1,Displ
-45,2032,cloak of invisibility,opera cloak,,TRUE,cloak,cloak,60,10,10,,1,C,1,Invis
-46,2033,cloak of magic resistance,ornamental cope,,TRUE,cloak,cloak,60,10,2,,1,C,1,Magic
-47,2024,elven cloak,faded pall,,TRUE,cloak,cloak,60,10,8,,1,C,1,Stealth
-49,2031,cloak of protection,tattered cape,,TRUE,cloak,cloak,50,10,9,,3,C,3,Prot
-56,1984,helmet,plumed helmet,kabuto,TRUE,helmet,helmet,10,30,10,,1,I,1,
-58,1985,helm of brilliance,etched helmet,,TRUE,helmet,helmet,50,50,6,,1,I,1,Int+Wis
-59,1986,helm of opposite alignment,crested helmet,,TRUE,helmet,helmet,50,50,6,TRUE,1,I,1,Align
-60,1987,helm of telepathy,visored helmet,,TRUE,helmet,helmet,50,50,2,,1,I,1,ESP
-63,2042,leather gloves,old gloves,yugake,TRUE,gloves,gloves,8,10,16,,1,L,1,
-64,2045,gauntlets of dexterity,fencing gloves,,TRUE,gloves,gloves,50,10,8,,1,L,1,Dex
-65,2043,gauntlets of fumbling,padded gloves,,TRUE,gloves,gloves,50,10,8,TRUE,1,L,1,Fumble
-66,2044,gauntlets of power,riding gloves,,TRUE,gloves,gloves,50,30,8,,1,I,1,Str
-77,2052,elven boots,mud boots,,TRUE,boots,boots,8,15,12,,1,L,1,Stealth
-78,2053,kicking boots,buckled boots,,TRUE,boots,boots,8,15,12,,1,I,1,Kick
-79,2054,fumble boots,riding boots,,TRUE,boots,boots,30,20,12,TRUE,1,L,1,Fumble
-80,2055,levitation boots,snow boots,,TRUE,boots,boots,30,15,12,TRUE,1,L,1,Lev
-81,2051,jumping boots,hiking boots,,TRUE,boots,boots,50,20,12,,1,L,1,Jump
-82,2049,speed boots,combat boots,,TRUE,boots,boots,50,20,12,,1,L,1,Speed
-83,2050,water walking boots,jungle boots,,TRUE,boots,boots,50,20,12,,1,L,1,WWalk
+ARBITRARY,GLYPH,NAME,APPEARANCE,JAPANESE_NAME,MAGIC,SHUFFLED,SHUFFLE_CLASS,SLOT,COST,WEIGHT,PRICE,GEN_CURSED,AC,MATERIAL,MC,SPECIAL
+55,1977,elven leather helm,leather hat,,FALSE,FALSE,,helmet,8,3,6,,1,L,1,
+57,1978,orcish helm,iron skull cap,,FALSE,FALSE,,helmet,10,30,6,,1,I,1,
+61,1979,dwarvish iron helm,hard hat,,FALSE,FALSE,,helmet,20,40,6,,2,I,1,
+51,1980,fedora,fedora,,FALSE,FALSE,,helmet,1,3,0,,0,C,1,
+53,1981,cornuthaum,conical hat,,FALSE,FALSE,,helmet,80,4,3,,0,C,1,Clair
+52,1982,dunce cap,conical hat,,FALSE,FALSE,,helmet,1,4,3,,0,C,1,Stupid
+54,1983,dented pot,dented pot,,FALSE,FALSE,,helmet,8,10,2,,1,I,1,
+56,1984,helmet,plumed helmet,kabuto,FALSE,TRUE,helmet,helmet,10,30,10,,1,I,1,
+58,1985,helm of brilliance,etched helmet,,TRUE,TRUE,helmet,helmet,50,50,6,,1,I,1,Int+Wis
+59,1986,helm of opposite alignment,crested helmet,,TRUE,TRUE,helmet,helmet,50,50,6,TRUE,1,I,1,Align
+60,1987,helm of telepathy,visored helmet,,TRUE,TRUE,helmet,helmet,50,50,2,,1,I,1,ESP
+36,1988,gray dragon scale mail,gray dragon scale mail,,FALSE,FALSE,,suit,1200,40,0,,9,D,1,Magic
+35,1989,silver dragon scale mail,silver dragon scale mail,,FALSE,FALSE,,suit,1200,40,0,,9,D,1,Reflect
+28,1990,red dragon scale mail,red dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Fire
+29,1991,white dragon scale mail,white dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Cold
+30,1992,orange dragon scale mail,orange dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Sleep
+34,1993,black dragon scale mail,black dragon scale mail,,FALSE,FALSE,,suit,1200,40,0,,9,D,1,Disint
+31,1994,blue dragon scale mail,blue dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Elec
+32,1995,green dragon scale mail,green dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Poison
+33,1996,yellow dragon scale mail,yellow dragon scale mail,,FALSE,FALSE,,suit,900,40,0,,9,D,1,Acd
+27,1997,gray dragon scales,gray dragon scales,,FALSE,FALSE,,suit,700,40,0,,3,D,1,Magic
+26,1998,silver dragon scales,silver dragon scales,,FALSE,FALSE,,suit,700,40,0,,3,D,1,Reflect
+19,1999,red dragon scales,red dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Fire
+20,2000,white dragon scales,white dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Cold
+21,2001,orange dragon scales,orange dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Sleep
+25,2002,black dragon scales,black dragon scales,,FALSE,FALSE,,suit,700,40,0,,3,D,1,Disint
+22,2003,blue dragon scales,blue dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Elec
+23,2004,green dragon scales,green dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Poison
+24,2005,yellow dragon scales,yellow dragon scales,,FALSE,FALSE,,suit,500,40,0,,3,D,1,Acd
+16,2006,plate mail,plate mail,tanko,FALSE,FALSE,,suit,600,450,44,,7,I,2,
+17,2007,crystal plate mail,crystal plate mail,,FALSE,FALSE,,suit,820,450,10,,7,G,2,
+15,2008,bronze plate mail,bronze plate mail,,FALSE,FALSE,,suit,400,450,25,,6,B,1,
+12,2009,splint mail,splint mail,,FALSE,FALSE,,suit,80,400,62,,6,I,1,
+13,2010,banded mail,banded mail,,FALSE,FALSE,,suit,90,350,72,,6,I,1,
+14,2011,dwarvish mithril coat,dwarvish mithril-coat,,FALSE,FALSE,,suit,240,150,10,,6,M,2,
+11,2012,elven mithril coat,elven mithril-coat,,FALSE,FALSE,,suit,240,150,15,,5,M,2,
+10,2013,chain mail,chain mail,,FALSE,FALSE,,suit,75,300,72,,5,I,1,
+9,2014,orcish chain mail,crude chain mail,,FALSE,FALSE,,suit,75,300,20,,4,I,1,
+8,2015,scale mail,scale mail,,FALSE,FALSE,,suit,45,250,72,,4,I,1,
+6,2016,studded leather armor,studded leather armor,,FALSE,FALSE,,suit,15,200,72,,3,L,1,
+7,2017,ring mail,ring mail,,FALSE,FALSE,,suit,100,250,72,,3,I,1,
+5,2018,orcish ring mail,crude ring mail,,FALSE,FALSE,,suit,80,250,20,,2,I,1,
+4,2019,leather armor,leather armor,,FALSE,FALSE,,suit,5,150,82,,2,L,1,
+3,2020,leather jacket,leather jacket,,FALSE,FALSE,,suit,10,30,12,,1,L,1,
+0,2021,Hawaiian shirt,Hawaiian shirt,,FALSE,FALSE,,shirt,3,5,8,,0,C,0,Shops
+1,2022,T-shirt,T-shirt,,FALSE,FALSE,,shirt,2,5,2,,0,C,0,Shops
+38,2023,mummy wrapping,mummy wrapping,,FALSE,FALSE,,cloak,2,3,0,,0,C,1,Vis
+47,2024,elven cloak,faded pall,,TRUE,TRUE,cloak,cloak,60,10,8,,1,C,1,Stealth
+39,2025,orcish cloak,coarse mantelet,,FALSE,FALSE,,cloak,40,10,8,,0,C,1,
+40,2026,dwarvish cloak,hooded cloak,,FALSE,FALSE,,cloak,50,10,8,,0,C,1,
+43,2027,oilskin cloak,slippery cloak,,FALSE,FALSE,,cloak,50,10,10,,1,C,2,Water
+48,2028,robe,robe,,FALSE,FALSE,,cloak,50,15,3,,2,C,2,Spell
+44,2029,alchemy smock,apron,,FALSE,FALSE,,cloak,50,10,9,,1,C,1,Poi+Acid
+41,2030,leather cloak,leather cloak,,FALSE,FALSE,,cloak,40,15,8,,1,L,1,
+49,2031,cloak of protection,tattered cape,,TRUE,TRUE,cloak,cloak,50,10,9,,3,C,3,Prot
+45,2032,cloak of invisibility,opera cloak,,TRUE,TRUE,cloak,cloak,60,10,10,,1,C,1,Invis
+46,2033,cloak of magic resistance,ornamental cope,,TRUE,TRUE,cloak,cloak,60,10,2,,1,C,1,Magic
+42,2034,cloak of displacement,piece of cloth,,TRUE,TRUE,cloak,cloak,50,10,10,,1,C,1,Displ
+68,2035,small shield,small shield,,FALSE,FALSE,,off-hand,3,30,6,,1,W,1,
+71,2036,elven shield,blue and green shield,,FALSE,FALSE,,off-hand,7,40,2,,2,W,1,
+70,2037,Uruk-hai shield,white-handed shield,,FALSE,FALSE,,off-hand,7,50,2,,1,I,1,
+69,2038,orcish shield,red-eyed shield,,FALSE,FALSE,,off-hand,7,50,2,,1,I,1,
+73,2039,large shield,large shield,,FALSE,FALSE,,off-hand,10,100,7,,2,I,1,
+72,2040,dwarvish roundshield,large round shield,,FALSE,FALSE,,off-hand,10,100,4,,2,I,1,
+74,2041,shield of reflection,polished silver shield,,FALSE,FALSE,,off-hand,50,50,3,,2,S,1,Reflect
+63,2042,leather gloves,old gloves,yugake,FALSE,TRUE,gloves,gloves,8,10,16,,1,L,1,
+65,2043,gauntlets of fumbling,padded gloves,,TRUE,TRUE,gloves,gloves,50,10,8,TRUE,1,L,1,Fumble
+66,2044,gauntlets of power,riding gloves,,TRUE,TRUE,gloves,gloves,50,30,8,,1,I,1,Str
+64,2045,gauntlets of dexterity,fencing gloves,,TRUE,TRUE,gloves,gloves,50,10,8,,1,L,1,Dex
+76,2046,low boots,walking shoes,,FALSE,FALSE,,boots,8,10,25,,1,L,1,
+85,2047,iron shoes,hard shoes,,FALSE,FALSE,,boots,16,50,7,,2,I,1,
+84,2048,high boots,jackboots,,FALSE,FALSE,,boots,12,20,15,,2,L,1,
+82,2049,speed boots,combat boots,,TRUE,TRUE,boots,boots,50,20,12,,1,L,1,Speed
+83,2050,water walking boots,jungle boots,,TRUE,TRUE,boots,boots,50,20,12,,1,L,1,WWalk
+81,2051,jumping boots,hiking boots,,TRUE,TRUE,boots,boots,50,20,12,,1,L,1,Jump
+77,2052,elven boots,mud boots,,TRUE,TRUE,boots,boots,8,15,12,,1,L,1,Stealth
+78,2053,kicking boots,buckled boots,,TRUE,TRUE,boots,boots,8,15,12,,1,I,1,Kick
+79,2054,fumble boots,riding boots,,TRUE,TRUE,boots,boots,30,20,12,TRUE,1,L,1,Fumble
+80,2055,levitation boots,snow boots,,TRUE,TRUE,boots,boots,30,15,12,TRUE,1,L,1,Lev

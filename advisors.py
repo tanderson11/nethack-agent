@@ -600,6 +600,7 @@ class DrinkHealingPotionAdvisor(Advisor):
 
         for potion in potions:
             if potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+                letter = potion.inventory_letter
                 menu_plan = menuplan.MenuPlan(
                     "drink healing potion", self, [
                         menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),

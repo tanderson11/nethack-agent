@@ -267,8 +267,8 @@ class FoodGlyph(ObjectGlyph):
 
     def safe_non_perishable(self, global_identity_map, character):
         identity = global_identity_map.identity_by_numeral[self.numeral]
-        #if identity is None:
-        #    return False
+        if identity is None:
+            return False
 
         if identity and character.character.sick_from_tripe() and identity.name() == "tripe ration":
             return False
@@ -621,18 +621,17 @@ class ObjectSpoilers():
         RandomClassGlyph: '',
         IllobjGlyph: '',
         WeaponGlyph: 'weapon_spoiler.csv',
-        ArmorGlyph: '',
-        RingGlyph: '',
-        AmuletGlyph: '',
+        RingGlyph: 'ring_spoiler.csv',
+        AmuletGlyph: 'amulet_spoiler.csv',
         ArmorGlyph: 'armor_spoiler.csv',
-        ToolGlyph: '',
-        FoodGlyph: '',
-        PotionGlyph: '',
-        ScrollGlyph: '',
-        SpellbookGlyph: '',
+        ToolGlyph: 'tool_spoiler.csv',
+        FoodGlyph: 'food_spoiler.csv',
+        PotionGlyph: 'potion_spoiler.csv',
+        ScrollGlyph: 'scroll_spoiler.csv',
+        SpellbookGlyph: 'spellbook_spoiler.csv',
         WandGlyph: 'wand_spoiler.csv',
         CoinGlyph: '',
-        GemGlyph: '',
+        GemGlyph: 'gem_spoiler.csv',
         RockGlyph: '',
         BallGlyph: '',
         ChainGlyph: '',
@@ -718,13 +717,42 @@ class ObjectIdentity():
 
     def japanese_name(self):
         if self.is_identified():
-            japanese_name = self.data.loc[self.idx].JAPANESE_NAME.iloc[0]
-            if pd.isnull(japanese_name):
+            try:
+                japanese_name = self.data.loc[self.idx].JAPANESE_NAME.iloc[0]
+                if pd.isnull(japanese_name):
+                    return None
+                else:
+                    return japanese_name
+            # the data doesn't have a JAPANESE_NAME column
+            except AttributeError:
                 return None
-            else:
-                return japanese_name
+
         else:
-            return None 
+            return None
+
+class ScrollIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
+
+class SpellbookIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
+
+class RingIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
+
+class AmuletIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
+
+class PotionIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
+
+class FoodIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
+
+class ToolIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
+
+class GemIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
 
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
@@ -777,6 +805,14 @@ class GlobalIdentityMap():
         ArmorGlyph: ArmorIdentity,
         WandGlyph: WandIdentity,
         WeaponGlyph: WeaponIdentity,
+        FoodGlyph: FoodIdentity,
+        AmuletGlyph: AmuletIdentity,
+        RingGlyph: RingIdentity,
+        GemGlyph: GemIdentity,
+        PotionGlyph: PotionIdentity,
+        ToolGlyph: ToolIdentity,
+        SpellbookGlyph: SpellbookIdentity,
+        ScrollGlyph: ScrollIdentity,
     }
 
     def __init__(self):
