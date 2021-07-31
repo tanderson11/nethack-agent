@@ -881,15 +881,14 @@ class CustomAgent(BatchedAgent):
                 except Exception as e:
                     print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
 
-        #create staircases. oddly, when we receive the descend message, it looks like we are on the old dlevel, but we are actually on the new one
-        if "You descend the" in message.message or "You climb" in message.message:
+        #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
+        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
             print(message.message)
             # create the staircases (idempotent)
-            if "You descend the" in message.message:
+            if "You descend the" in run_state.message_log[-2]:
                 direction = ('down', 'up')
-            elif "You climb" in message.message:
+            elif "You climb" in run_state.message_log[-2]:
                 direction = ('up', 'down')
-
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
