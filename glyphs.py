@@ -780,22 +780,33 @@ class ArmorIdentity(ObjectIdentity):
             if environment.env.debug: pdb.set_trace()
             pass
 
+    def AC(self):
+        return self.find_values('AC')
+
+    def gen_cursed(self):
+        return self.find_values('GEN_CURSED')
+
+    def MC(self):
+        return self.find_values('MC')
+
+    def magic(self):
+        return self.find_values('MAGIC')
+
+    def converted_wear_value(self):
+        return self.find_values('CONVERTED_WEAR_VALUE')
+
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
 
     def __init__(self, numeral=None, name=None, appearance=None):
         super().__init__(numeral, name, appearance)
 
-        try:
-            self.slot = self.find_values('SLOT')
+        self.slot = self.find_values('SLOT')
 
-            second_slot = self.find_values('SECOND_SLOT')
-            if pd.isnull(second_slot):
-                self.slot = [self.slot, second_slot]
+        second_slot = self.find_values('SECOND_SLOT')
+        if pd.isnull(second_slot):
+            self.slot = [self.slot, second_slot]
 
-        except AttributeError:
-            if environment.env.debug: pdb.set_trace()
-            pass
 
 class UnimplementedObjectClassException(Exception):
     pass

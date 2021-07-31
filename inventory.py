@@ -82,16 +82,30 @@ class Item(ItemLike):
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
-    def desirability(self, character):
+    def instance_desirability_to_wear(self, character):
+        body_armor_penalty = 0
         if character.character.body_armor_penalty() and self.identity.slot == 'suit':
-            return -10
+            body_armor_penalty = -10
 
         if self.enhancement is None:
             best_case_enhancement = 5
         else:
             best_case_enhancement = self.enhancement
 
-        desirability = self.identity.find_values('AC').max() + best_case_enhancement
+        if self.BUC == 'blessed':
+            buc_adjustment = 0.5
+            raw_value = self.identity.converted_wear_value().max()
+        elif self.BUC == 'uncursed' or (character.character.base_class == 'Priest' and self.BUC == None):
+            buc_adjustment = 0
+            raw_value = self.identity.converted_wear_value().max()
+        # cursed or might be cursed
+        else:
+            buc_adjustment = -2 if self.BUC == 'cursed' else -0.5
+            # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
+            raw_value = self.identity.converted_wear_value().min()
+
+        desirability = raw_value + best_case_enhancement + body_armor_penalty
+        #pdb.set_trace()
         return desirability
 
 class Wand(Item):
@@ -458,7 +472,7 @@ class PlayerInventory():
                 most_desirable = None
                 max_desirability = None
                 for item in unequipped_in_slot:
-                    desirability = item.desirability(character)
+                    desirability = item.instance_desirability_to_wear(character)
                     if max_desirability is None or desirability > max_desirability:
                         max_desirability = desirability
                         most_desirable = item
@@ -466,7 +480,7 @@ class PlayerInventory():
                 current_letter = self.armaments.slots[slot].occupant_letter
                 if current_letter is not None:
                     current_item = self.items_by_letter[current_letter]
-                    current_desirability = current_item.desirability(character)
+                    current_desirability = current_item.instance_desirability_to_wear(character)
                 else:
                     current_item = None
                     current_desirability = 0
