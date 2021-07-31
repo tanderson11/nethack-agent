@@ -5,6 +5,7 @@
 # * The run might be slower than your local run
 # * Resources might vary from your local machine
 
+from typing import NamedTuple
 import numpy as np
 import pandas as pd
 import os
@@ -16,6 +17,13 @@ from envs.batched_env import BatchedEnv
 
 import environment
 import parse_ttyrec
+
+class RolloutResults(NamedTuple):
+    ascensions: int
+    scores: list[int]
+    median_score: int
+    mean_score: int
+    log_path: str
 
 def evaluate():
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
@@ -29,20 +37,27 @@ def evaluate():
     agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.log_runs else None)
 
     ascensions, scores = run_batched_rollout(num_episodes, batched_env, agent)
-    print(
-        f"Ascensions: {ascensions} "
-        f"Median Score: {np.median(scores)}, "
-        f"Mean Score: {np.mean(scores)}"
+
+    log_path = None
+    if environment.env.log_runs:
+        log_path = batched_env.envs[0].savedir
+
+    results = RolloutResults(
+        ascensions=ascensions,
+        scores=scores,
+        median_score=np.median(scores),
+        mean_score=np.mean(scores),
+        log_path=log_path,
     )
 
-    if environment.env.log_runs:
-        return batched_env.envs[0].savedir
+    return results
 
 
 if __name__ == "__main__":
-    path = evaluate()
+    results = evaluate()
 
-    if path is not None:
+    if results.log_path is not None:
+        path = results.log_path
         files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
         for f in files:
             if f.endswith('{}.ttyrec.bz2'.format(environment.env.num_episodes)): # rm this junk file
@@ -56,3 +71,16 @@ if __name__ == "__main__":
 
         with open(os.path.join(path, "joint_log.csv"), 'w') as f:
             df.to_csv(f)
+
+        df = df[~df['scummed']]
+
+        print(
+            f"Runs: {len(df.index)}, "
+            f"Ascensions: {df['ascended'].sum()}, "
+            f"Median Score: {df['score_log'].median()}, "
+            f"Mean Score: {df['score_log'].mean()}, "
+            f"Min Score: {df['score_log'].min()}, "
+            f"Max Score: {df['score_log'].max()}, "
+            f"Max depth: {df['depth_log'].max()}, "
+            f"Max experience: {df['explevel'].max()}, "
+        )

@@ -22,7 +22,7 @@ class BatchedEnv:
             [env.unwrapped.seed(None, None, False) for env in self.envs]
         self.num_actions = self.envs[0].action_space.n
 
-    def batch_step(self, actions):
+    def apply_batch_actions(self, actions):
         """
         Applies each action to each env in the same order as self.envs
         Actions should be iterable and have the same length as self.envs
@@ -70,6 +70,6 @@ if __name__ == '__main__':
     num_actions = batched_env.envs[0].action_space.n
     for _ in range(50):
         actions = np.random.randint(num_actions, size=num_envs)
-        observations, rewards, dones, infos = batched_env.batch_step(actions)
+        observations, rewards, dones, infos = batched_env.apply_batch_actions(actions)
         for done_idx in np.where(dones)[0]:
             observations[done_idx] = batched_env.single_env_reset(done_idx) 

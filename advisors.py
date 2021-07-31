@@ -471,7 +471,6 @@ class OpenClosedDoorAdvisor(Advisor):
             for location in neighborhood.level_map.warning_engravings.keys():
                 door_loc = physics.offset_location_by_action(neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
                 if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    #if environment.env.debug: import pdb; pdb.set_trace()
                     return None
         else:
             return None
