@@ -518,6 +518,7 @@ class RunState():
         self.reset()
         self.debug_env = debug_env
         self.log_path = None
+        self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
             self.log_path = os.path.join(debug_env.savedir, "log.csv")
             with open(self.log_path, 'w') as log_file:
@@ -527,9 +528,18 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended']
 
-    def log(self):
+    def log_final_state(self, final_reward, ascended):
+        # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
+        self.update_reward(final_reward)
+        print_stats(True, self, self.blstats)
+        if self.scumming:
+            if not environment.env.debug:
+                raise Exception("Should not scum except to debug")
+            if not self.reward == 0:
+                # Weird to scum and get reward > 0
+                import pdb; pdb.set_trace()
         if not self.log_path:
             return
         with open(self.log_path, 'a') as log_file:
@@ -552,10 +562,13 @@ class RunState():
                 'score': self.reward,
                 'last_pray_time': self.character.last_pray_time,
                 'last_pray_reason': str(self.character.last_pray_reason),
+                'scummed': self.scumming,
+                'ascended': ascended,
             })
 
     def reset(self):
         self.reading_base_attributes = False
+        self.scumming = False
         self.character = None
         self.gods_by_alignment = {}
 
@@ -793,6 +806,10 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+
+        if done and run_state.step_count != 0:
+            raise Exception("The runner framework should have reset the run state")
+
         run_state.update_reward(reward)
 
         blstats = BLStats(observation['blstats'])
@@ -808,16 +825,10 @@ class CustomAgent(BatchedAgent):
             pass
             #if environment.env.debug: import pdb; pdb.set_trace()
         
-        if done:
-            print_stats(done, run_state, blstats)
-            run_state.log()
-            run_state.reset()
-            level_changed = True
+        if run_state.neighborhood is not None: # don't exceute on first turn
+            level_changed = (dcoord != run_state.neighborhood.dcoord)
         else:
-            if run_state.neighborhood is not None: # don't exceute on first turn
-                level_changed = (dcoord != run_state.neighborhood.dcoord)
-            else:
-                level_changed = True
+            level_changed = True
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
@@ -835,6 +846,8 @@ class CustomAgent(BatchedAgent):
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
+            if environment.env.debug and run_state.target_roles and run_state.character.character.base_class not in run_state.target_roles:
+                run_state.scumming = True
 
         #_inventory = inv.Inventory(observation)
 
@@ -948,6 +961,15 @@ class CustomAgent(BatchedAgent):
             run_state.reading_base_attributes = True
             dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
             run_state.log_action(retval, menu_plan=dummy_menu_plan)
+            return retval
+
+        if run_state.scumming:
+            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.QUIT]
+            scumming_menu_plan = menuplan.MenuPlan("scumming", self, [
+                menuplan.YesMenuResponse("Really quit?")
+            ])
+            run_state.set_menu_plan(scumming_menu_plan)
+            run_state.log_action(retval, menu_plan=scumming_menu_plan)
             return retval
 
         neighborhood = Neighborhood(
