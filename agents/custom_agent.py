@@ -926,10 +926,6 @@ class CustomAgent(BatchedAgent):
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)
 
-        if "You hear someone muttering an incantation" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
-
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
                 import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible

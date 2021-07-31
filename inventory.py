@@ -432,7 +432,7 @@ class PlayerInventory():
         self.inv_strs = observation['inv_strs'].copy()
         self.inv_letters = observation['inv_letters']
         self.inv_oclasses = observation['inv_oclasses']
-        self.inv_glyphs = observation['inv_glyphs']
+        self.inv_glyphs = observation['inv_glyphs'].copy()
 
         self.observation = observation
         self.global_identity_map = run_state.global_identity_map
