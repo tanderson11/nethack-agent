@@ -533,12 +533,13 @@ class WearEvenBlockedArmorAdvisor(Advisor):
                 return Advice(self.__class__, wear, menu_plan)
 
             else:
-                takeoff = nethack.actions.Command.TAKEOFF
-                menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
-                    menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0])),
-                ])
+                if blockers[0] and blockers[0].BUC != 'cursed':
+                    takeoff = nethack.actions.Command.TAKEOFF
+                    menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
+                        menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0].inventory_letter)),
+                    ])
 
-                return Advice(self.__class__, takeoff, menu_plan)
+                    return Advice(self.__class__, takeoff, menu_plan)
 
 class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):

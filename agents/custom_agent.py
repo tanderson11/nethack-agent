@@ -48,6 +48,9 @@ class BLStats():
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
 
+    def am_hallu(self):
+        return nethack.BL_MASK_HALLU & self.get('condition') == nethack.BL_MASK_HALLU
+
 class RecordedMonsterDeath(): 
     def __init__(self, square, time, monster_name):
         self.square = square # doesn't know about dungeon levels
@@ -896,7 +899,7 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-            print(message.message)
+            print(run_state.message_log[-2])
             # create the staircases (idempotent)
             if "You descend the" in run_state.message_log[-2]:
                 direction = ('down', 'up')

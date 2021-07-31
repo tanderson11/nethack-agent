@@ -360,17 +360,17 @@ class Slot():
     def __init__(self, name):
         self.name = name
         self.occupied = None
-        self.occupant_letter = None
+        self.occupant = None
 
-    def add_occupant(self, occupant_letter):
+    def add_occupant(self, occupant):
         self.occupied=True
-        self.occupant_letter=occupant_letter
+        self.occupant=occupant
 
     def __repr__(self):
         prefix = "{}:".format(self.name)
-        if self.occupant_letter is None:
+        if self.occupant is None:
             return prefix + 'nothing'
-        return prefix + chr(self.occupant_letter)
+        return prefix + chr(self.occupant)
 
 class SuitSlot(Slot):
     blockers = ['cloak']
@@ -391,16 +391,16 @@ class SlotCluster():
                     #print(occ_slot)
                     #print(occ_slot is not None)
                     if occ_slot is not None:
-                        slots[occ_slot].add_occupant(item.inventory_letter)
+                        slots[occ_slot].add_occupant(item)
 
         #pdb.set_trace()
         self.slots = slots
 
     def blocked_by_letters(self, slot, inventory):
-        blockers = [self.slots[block_name].occupant_letter for block_name in self.slots[slot.name].blockers if self.slots[block_name].occupied]
+        blockers = [self.slots[block_name].occupant for block_name in self.slots[slot.name].blockers if self.slots[block_name].occupied]
 
         if slot.occupied:
-            blockers.append(self.slots[slot.name].occupant_letter)
+            blockers.append(self.slots[slot.name].occupant)
         
         return blockers
 
@@ -477,12 +477,11 @@ class PlayerInventory():
                         max_desirability = desirability
                         most_desirable = item
 
-                current_letter = self.armaments.slots[slot].occupant_letter
-                if current_letter is not None:
-                    current_item = self.items_by_letter[current_letter]
-                    current_desirability = current_item.instance_desirability_to_wear(character)
+                current_occupant = self.armaments.slots[slot].occupant
+                if current_occupant is not None:
+                    current_desirability = current_occupant.instance_desirability_to_wear(character)
                 else:
-                    current_item = None
+                    current_occupant = None
                     current_desirability = 0
 
                 if max_desirability > current_desirability:
