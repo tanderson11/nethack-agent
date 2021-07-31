@@ -423,7 +423,9 @@ class PlayerInventory():
         'armaments': ArmamentSlots,
     }
 
-    def __init__(self, run_state, observation):
+    def __init__(self, run_state, observation, am_hallu):
+        self.am_hallu = am_hallu
+
         self.items_by_letter = {}
         self.items_by_class = {}
 
@@ -432,7 +434,7 @@ class PlayerInventory():
         self.inv_strs = observation['inv_strs'].copy()
         self.inv_letters = observation['inv_letters']
         self.inv_oclasses = observation['inv_oclasses']
-        self.inv_glyphs = observation['inv_glyphs']
+        self.inv_glyphs = observation['inv_glyphs'].copy()
 
         self.observation = observation
         self.global_identity_map = run_state.global_identity_map
@@ -511,7 +513,11 @@ class PlayerInventory():
                 item_str = ItemParser.decode_inventory_item(raw_string)
 
                 if item_str:
-                    item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=numeral, inventory_letter=letter)
+                    # if we're hallucinating, the glyph_numerals are garbage
+                    if self.am_hallu:
+                        item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=None, inventory_letter=letter)
+                    else:
+                        item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=numeral, inventory_letter=letter)
                     self.items_by_letter[letter] = item
                     class_contents.append(item)
 
