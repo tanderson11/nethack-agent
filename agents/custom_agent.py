@@ -851,10 +851,10 @@ class CustomAgent(BatchedAgent):
 
         # Two cases when we reset inventory: new run or something changed 
         if run_state.inventory is None:
-            run_state.inventory = inv.PlayerInventory(run_state, observation)
+            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
 
         if (observation['inv_strs'] != run_state.inventory.inv_strs).any():
-            run_state.inventory = inv.PlayerInventory(run_state, observation)
+            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:

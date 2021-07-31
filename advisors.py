@@ -598,9 +598,10 @@ class EatTopInventoryAdvisor(Advisor):
         eat = nethack.actions.Command.EAT
         food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
         if len(food) > 0:
-            letter = food[0].inventory_letter
-            menu_plan = self.make_menu_plan(letter)
-            return Advice(self.__class__, eat, menu_plan)
+            if food[0]:
+                letter = food[0].inventory_letter
+                menu_plan = self.make_menu_plan(letter)
+                return Advice(self.__class__, eat, menu_plan)
         return None
 
 class ReadTeleportAdvisor(Advisor):
@@ -609,7 +610,7 @@ class ReadTeleportAdvisor(Advisor):
         scrolls = inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
-            if scroll.identity and scroll.identity.name() == 'teleport':
+            if scroll and scroll.identity and scroll.identity.name() == 'teleport':
                 letter = scrolls.inventory_letter
                 menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
                     menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
@@ -623,7 +624,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
         wands = inventory.get_oclass(inv.Wand)
 
         for wand in wands:
-            if wand.identity and wand.identity.name() == 'teleportation':
+            if wand and wand.identity and wand.identity.name() == 'teleportation':
                 letter = wand.inventory_letter
                 menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                     menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
@@ -638,7 +639,7 @@ class DrinkHealingPotionAdvisor(Advisor):
         potions = inventory.get_oclass(inv.Potion)
 
         for potion in potions:
-            if potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+            if potion and potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
                 letter = potion.inventory_letter
                 menu_plan = menuplan.MenuPlan(
                     "drink healing potion", self, [
