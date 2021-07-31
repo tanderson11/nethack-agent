@@ -541,7 +541,43 @@ class WearEvenBlockedArmorAdvisor(Advisor):
 
                     return Advice(self.__class__, takeoff, menu_plan)
                 else:
-                    print("Blocking armor is cursed. Moving on")
+                    pass
+                    #print("Blocking armor is cursed. Moving on")
+
+class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
+        read = nethack.actions.Command.READ
+        scrolls = inventory.get_oclass(inv.Scroll)
+
+        found_identify = False
+        for scroll in scrolls:
+            if scroll.identity.name() == 'identify':
+                found_identify = True
+                break
+
+        if not found_identify:
+            return None
+
+        armor = inventory.get_oclass(inv.Armor)
+
+        found_magic = False
+        for item in armor:
+            # could it be magical?
+            if item.identity.magic().any():
+                found_magic = True
+                break
+
+        if not found_magic:
+            return None
+
+        menu_plan = menuplan.MenuPlan("identify magic armor", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, inventory, item.inventory_letter))
+
+        print("Trying to identify")
+        pdb.set_trace()
+        return Advice(self.__class__, read, menu_plan)
 
 class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):
