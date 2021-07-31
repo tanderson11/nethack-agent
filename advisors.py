@@ -541,8 +541,7 @@ class WearEvenBlockedArmorAdvisor(Advisor):
 
                     return Advice(self.__class__, takeoff, menu_plan)
                 else:
-                    print("Blocking armor is cursed. Aborting")
-                    return None
+                    print("Blocking armor is cursed. Moving on")
 
 class EatTopInventoryAdvisor(Advisor):
     def make_menu_plan(self, letter):
