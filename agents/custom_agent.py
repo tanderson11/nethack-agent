@@ -527,9 +527,9 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended']
 
-    def log_final_state(self, final_reward):
+    def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
         self.update_reward(final_reward)
         print_stats(True, self, self.blstats)
@@ -561,6 +561,8 @@ class RunState():
                 'score': self.reward,
                 'last_pray_time': self.character.last_pray_time,
                 'last_pray_reason': str(self.character.last_pray_reason),
+                'scummed': self.scumming,
+                'ascended': ascended,
             })
 
     def reset(self):

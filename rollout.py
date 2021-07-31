@@ -50,7 +50,7 @@ def run_batched_rollout(num_episodes, batched_env, agent):
         for done_idx in np.where(dones)[0]:
             if active_envs[done_idx]:
                 # We were 'counting' this episode
-                agent.run_states[done_idx].log_final_state(rewards[done_idx])
+                agent.run_states[done_idx].log_final_state(rewards[done_idx], infos[done_idx]["is_ascended"])
                 agent.run_states[done_idx].reset()
                 all_returns.append(returns[done_idx])
                 episode_count += 1

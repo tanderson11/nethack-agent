@@ -56,12 +56,6 @@ def evaluate():
 if __name__ == "__main__":
     results = evaluate()
 
-    print(
-        f"Ascensions: {results.ascensions} "
-        f"Median Score: {results.median_score}, "
-        f"Mean Score: {results.mean_score}"
-    )
-
     if results.log_path is not None:
         path = results.log_path
         files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
@@ -78,5 +72,15 @@ if __name__ == "__main__":
         with open(os.path.join(path, "joint_log.csv"), 'w') as f:
             df.to_csv(f)
 
-        if df['score_log'].median() != results.median_score:
-            import pdb; pdb.set_trace()
+        df = df[~df['scummed']]
+
+        print(
+            f"Runs: {len(df.index)}, "
+            f"Ascensions: {df['ascended'].sum()}, "
+            f"Median Score: {df['score_log'].median()}, "
+            f"Mean Score: {df['score_log'].mean()}, "
+            f"Min Score: {df['score_log'].min()}, "
+            f"Max Score: {df['score_log'].max()}, "
+            f"Max depth: {df['depth_log'].max()}, "
+            f"Max experience: {df['explevel'].max()}, "
+        )
