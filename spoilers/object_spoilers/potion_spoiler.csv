@@ -1,0 +1,27 @@
+NAME,JAPANESE_NAME,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,COST,WEIGHT,PROB
+acid,,2201,white,TRUE,potion,acid,250,20,10
+blindness,,2181,yellow,TRUE,potion,blindness,150,20,40
+booze,sake,2198,brown,TRUE,potion,booze,50.00,20,42
+confusion,,2180,orange,TRUE,potion,confusion,100,20,42
+enlightenment,,2191,swirly,TRUE,potion,enlightenment,200,20,20
+extra healing,,2189,puce,TRUE,potion,extra healing,100,20,47
+fruit juice,,2200,dark,TRUE,potion,fruit juice,50,20,42
+full healing,,2196,black,TRUE,potion,full healing,200,20,10
+gain ability,,2178,ruby,TRUE,potion,gain ability,300,20,42
+gain energy,,2194,cloudy,TRUE,potion,gain energy,150,20,42
+gain level,,2190,milky,TRUE,potion,gain level,300,20,20
+hallucination,,2185,sky blue,TRUE,potion,hallucination,100,20,40
+healing,,2188,purple-red,TRUE,potion,healing,100,20,57
+invisibility,,2186,brilliant blue,TRUE,potion,invisibility,150,20,40
+levitation,,2184,cyan,TRUE,potion,levitation,200,20,42
+monster detection,,2192,bubbly,TRUE,potion,monster detection,150,20,40
+object detection,,2193,smoky,TRUE,potion,object detection,150,20,42
+oil,,2202,murky,TRUE,potion,oil,250,20,30
+paralysis,,2182,emerald,TRUE,potion,paralysis,300,20,42
+polymorph,,2197,golden,TRUE,potion,polymorph,200,20,10
+restore ability,,2179,pink,TRUE,potion,restore ability,100,20,40
+see invisible,,2187,magenta,TRUE,potion,see invisible,50,20,42
+sickness,,2199,fizzy,TRUE,potion,sickness,50,20,42
+sleeping,,2195,effervescent,TRUE,potion,sleeping,100,20,42
+speed,,2183,dark green,TRUE,potion,speed,200,20,42
+water,,2203,clear,FALSE,,water,100,20,92

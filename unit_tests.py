@@ -1,6 +1,8 @@
 import unittest
 
 import menuplan
+import inventory as inv
+import glyphs as gd
 import agents.custom_agent
 
 class TestItemRegex(unittest.TestCase):
@@ -14,7 +16,7 @@ class TestItemRegex(unittest.TestCase):
         "a corroded +1 long sword (weapon in hand)": "long sword",
         "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
-        "a rusty thoroughly corroded +1 long sword (weapon in hand)",
+        "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
@@ -86,12 +88,57 @@ class TestAttributeScreen(unittest.TestCase):
         self.assertEqual("Offler", run_state.gods_by_alignment['chaotic'])
 
 
-'Something is written here in the dust.  You read: "\\ ad wa  here".'
-['', '', '', 'Something is written here in the dust.', 'You read: "Closed for inventory".']
-'You read: "Wizards are wimps".'
-'You read: "X < -- You ?re he e.".'
-'You read: "The? say ?hat a stethc?cope i? ro good ?f you ?an onlv hear you? hea\ntbeat.".'
-'There\'s some graffiti on the floor here.  You read: "We?l Come".'
+class TestObjectGlyphIdentities(unittest.TestCase):
+    global_identity_map = gd.GlobalIdentityMap()
+    def test_from_numeral(self):
+        test_values = {
+            # Amulets
+            2087: None, # shuffled
+            2094: "Amulet of Yendor",
+            # Armor
+            1981: "cornuthaum",
+            1985: None, # shuffled
+            # Food
+            2153: "glob of brown pudding",
+            2177: "tin",
+            # Gems
+            2341: "worthless piece of red glass",
+            2348: "luckstone",
+            # Potions
+            2184: None, # shuffled
+            2203: "water",
+            # Rings
+            2058: None, # shuffled
+            # Scrolls
+            2245: "blank paper",
+            2222: None, # shuffled
+            # Spellbooks,
+            2288: "Book of the Dead",
+            2287: "novel",
+            2286: "blank paper",
+            2271: None,
+            # Tools
+            2144: "Bell of Opening",
+            2143: "Candelabrum of Invocation",
+            2142: "unicorn horn",
+            2100: "bag of holding",
+            2101: "bag of tricks",
+            # Wands
+            2289: None, # shuffled
+            # Weapons
+            1909: "orcish arrow",
+            1965: "club",
+        }
+
+        for numeral, name in test_values.items():
+            identity = self.global_identity_map.identity_by_numeral[numeral]
+            self.assertEqual(name, identity.name())
+
+class TestItemParsing(unittest.TestCase):
+    global_identity_map = gd.GlobalIdentityMap()
+    def test_easy_case(self):
+        pass
+
 
 if __name__ == '__main__':
     unittest.main()

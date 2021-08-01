@@ -1,0 +1,12 @@
+GLYPH,APPEARANCE,NAME,SHUFFLED,SHUFFLE_CLASS,COST,WEIGHT,PROB,GEN_CURSED,SLOT,EAT
+2084,circular,amulet of ESP,TRUE,amulet,150,20,175,FALSE,amulet,TRUE
+2085,spherical,amulet of life saving,TRUE,amulet,150,20,75,FALSE,amulet,FALSE
+2086,oval,amulet of strangulation,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
+2087,triangular,amulet of restful sleep,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
+2088,pyramidal,amulet versus poison,TRUE,amulet,150,20,165,FALSE,amulet,TRUE
+2089,square,amulet of change,TRUE,amulet,150.00,20,130,TRUE,amulet,TRUE
+2090,concave,amulet of unchanging,TRUE,amulet,150,20,45,FALSE,amulet,TRUE
+2091,hexagonal,amulet of reflection,TRUE,amulet,150,20,75,FALSE,amulet,FALSE
+2092,octagonal,amulet of magical breathing,TRUE,amulet,150,20,65,FALSE,amulet,TRUE
+2093,Amulet of Yendor,cheap plastic imitation of the Amulet of Yendor,FALSE,,0,20,0,FALSE,amulet,FALSE
+2094,Amulet of Yendor,Amulet of Yendor,FALSE,,30000,20,0,FALSE,amulet,FALSE
