@@ -50,6 +50,9 @@ class BLStats():
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
 
+    def am_hallu(self):
+        return nethack.BL_MASK_HALLU & self.get('condition') == nethack.BL_MASK_HALLU
+
 class RecordedMonsterDeath(): 
     def __init__(self, square, time, monster_name):
         self.square = square # doesn't know about dungeon levels
@@ -382,6 +385,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # index of player in the full vision
         player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
 
+        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
+        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+        self.monster_present = extended_is_monster.any()
+
         # radius 1 box around player in vision glyphs
         neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         neighborhood_view = (neighborhood_rows, neighborhood_cols)
@@ -432,12 +439,13 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
-        self.is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), self.glyphs)
+        self.is_monster = extended_is_monster[neighborhood_view]
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
 
         # in the narrow sense
         self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
+        self.walkable[self.local_player_location] = False # in case we turn invisible
 
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
@@ -750,6 +758,9 @@ class RunState():
         self.time_did_advance = True
 
         self.neighborhood = None
+        self.inventory = None
+        self.global_identity_map = gd.GlobalIdentityMap()
+
         self.latest_monster_death = None
 
         self.menu_plan_log = []
@@ -762,7 +773,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'NkE2KQ=='
+        seed = b'w538zA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -888,6 +899,9 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
+        if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
+            self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+
         if message.feedback.nevermind or message.feedback.nothing_to_eat:
             eat_corpse_flag = False
             if self.advice_log[-1] is None:
@@ -912,7 +926,6 @@ class RunState():
         self.menu_plan_log.append(menu_plan)
         self.action_log.append(action)
         self.advice_log.append(advice)
-
 
         if action in range(0,8): #is a movement action; bad
             self.last_movement_action = action
@@ -1005,9 +1018,12 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
-        #_inventory = inv.Inventory(observation)
+        # Two cases when we reset inventory: new run or something changed 
+        if run_state.inventory is None:
+            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
 
-        inventory = observation # for now this is sufficient, we always access inv like inventory['inv...']
+        if (observation['inv_strs'] != run_state.inventory.inv_strs).any():
+            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -1055,7 +1071,7 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-            print(message.message)
+            print(run_state.message_log[-2])
             # create the staircases (idempotent)
             if "You descend the" in run_state.message_log[-2]:
                 direction = ('down', 'up')
@@ -1079,12 +1095,8 @@ class CustomAgent(BatchedAgent):
         if "corpse tastes" in message.message:
             print(message.message)
 
-        if "You finish your dressing maneuver" in message.message:
+        if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)
-
-        if "You hear someone muttering an incantation" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
 
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
@@ -1158,14 +1170,14 @@ class CustomAgent(BatchedAgent):
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-        flags = advs.Flags(blstats, inventory, neighborhood, message, run_state.character)
+        flags = advs.Flags(run_state, blstats, run_state.inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
             if advisor_level.check_level(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state.rng, run_state.character, blstats, inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state, run_state.rng, run_state.character, blstats, run_state.inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
@@ -1206,7 +1218,6 @@ class CustomAgent(BatchedAgent):
 
         if retval == utilities.ACTION_LOOKUP[nethack.actions.MiscDirection.WAIT]:
             if environment.env.debug: import pdb; pdb.set_trace() # maybe this happens when we travel?
-
 
         if environment.env.debug and retval in range(0,8): #cardinal
             new_loc = physics.offset_location_by_action(neighborhood.local_player_location, retval)

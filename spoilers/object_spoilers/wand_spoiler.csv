@@ -1,0 +1,28 @@
+ARBITRARY,GLYPH,SHUFFLED,SHUFFLE_CLASS,NAME,APPEARNCE,ENGRAVE_SELF_IDENTIFY,ENGRAVE_MESSAGE,DURABLE_ENGRAVING,COST,WEIGHT,PROB,CHARGES,DIRECTION
+0,2289,TRUE,wand,light,glass,TRUE,,FALSE,100.00,7,95,15,NODIR
+9,2290,TRUE,wand,secret door detection,balsa,FALSE,,FALSE,150,7,50,15,NODIR
+3,2291,TRUE,wand,enlightenment,crystal,TRUE,,FALSE,150,7,15,15,NODIR
+19,2292,TRUE,wand,create monster,maple,TRUE,,FALSE,200,7,45,15,NODIR
+23,2293,TRUE,wand,wishing,pine,TRUE,,FALSE,500,7,5,3!,NODIR
+1,2294,TRUE,wand,nothing,oak,FALSE,,FALSE,100,7,25,15,BEAM
+12,2295,TRUE,wand,striking,ebony,FALSE,The wand unsuccessfully fights your attempt to write!,FALSE,150,7,75,8,BEAM
+6,2296,TRUE,wand,make invisible,marble,FALSE,The engraving on the floor vanishes!,FALSE,150,7,45,8,BEAM
+10,2297,TRUE,wand,slow monster,tin,FALSE,The bugs on the floor slow down!,FALSE,150,7,50,8,BEAM
+11,2298,TRUE,wand,speed monster,brass,FALSE,The bugs on the floor speed up!,FALSE,150,7,50,8,BEAM
+13,2299,TRUE,wand,undead turning,copper,FALSE,,FALSE,150,7,50,8,BEAM
+20,2300,TRUE,wand,polymorph,silver,FALSE,The engraving now reads:,FALSE,200,7,45,8,BEAM
+18,2301,TRUE,wand,cancellation,platinum,FALSE,The engraving on the floor vanishes!,FALSE,200,7,45,8,BEAM
+21,2302,TRUE,wand,teleportation,iridium,FALSE,The engraving on the floor vanishes!,FALSE,200,7,45,8,BEAM
+7,2303,TRUE,wand,opening,zinc,FALSE,,FALSE,150,7,25,8,BEAM
+4,2304,TRUE,wand,locking,aluminum,FALSE,,FALSE,150,7,25,8,BEAM
+8,2305,TRUE,wand,probing,uranium,FALSE,,FALSE,150,7,30,8,BEAM
+2,2306,TRUE,wand,digging,iron,TRUE,,TRUE,150,7,55,8,RAY
+5,2307,TRUE,wand,magic missile,steel,FALSE,The floor is riddled by bullet holes!,FALSE,150,7,50,8,RAY
+15,2308,TRUE,wand,fire,hexagonal,TRUE,,TRUE,175,7,40,8,RAY
+14,2309,TRUE,wand,cold,short,FALSE,A few ice cubes drop from the wand,FALSE,175,7,40,8,RAY
+17,2310,TRUE,wand,sleep,runed,FALSE,The bugs on the floor stop moving!,FALSE,175,7,50,8,RAY
+22,2311,TRUE,wand,death,long,FALSE,The bugs on the floor stop moving!,FALSE,500,7,5,8,RAY
+16,2312,TRUE,wand,lightning,curved,TRUE,,TRUE,175,7,40,8,RAY
+24,2313,TRUE,wand,,forked,,,,,,,,
+25,2314,TRUE,wand,,spiked,,,,,,,,
+26,2315,TRUE,wand,,jeweled,,,,,,,,
