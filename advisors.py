@@ -514,7 +514,7 @@ class WearValidArmorAdvisor(ItemUseAdvisor):
     oclasses_used = ['ARMOR_CLASS']
 
     def use_item(self, rng, character, blstats, inventory, neighborhood, message, flags):
-        if (not character.character.body_armor_penalty()) and rng.random() < 0.01:
+        if (not character.body_armor_penalty()) and rng.random() < 0.01:
             wear = nethack.actions.Command.WEAR
 
             menu_plan = menuplan.MenuPlan("wear armor", self, [
