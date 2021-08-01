@@ -84,7 +84,7 @@ class Armor(Item):
 
     def instance_desirability_to_wear(self, character):
         body_armor_penalty = 0
-        if character.character.body_armor_penalty() and self.identity.slot == 'suit':
+        if character.body_armor_penalty() and self.identity.slot == 'suit':
             body_armor_penalty = -10
 
         if self.enhancement is None:
@@ -95,7 +95,7 @@ class Armor(Item):
         if self.BUC == 'blessed':
             buc_adjustment = 0.5
             raw_value = self.identity.converted_wear_value().max()
-        elif self.BUC == 'uncursed' or (character.character.base_class == 'Priest' and self.BUC == None):
+        elif self.BUC == 'uncursed' or (character.base_class == 'Priest' and self.BUC == None):
             buc_adjustment = 0
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
