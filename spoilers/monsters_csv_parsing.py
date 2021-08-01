@@ -4,6 +4,7 @@ from collections import defaultdict
 from typing import NamedTuple
 import re
 import numpy as np
+import enum
 
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
@@ -22,17 +23,63 @@ class MonsterSpoiler():
 
 		self.resists = resists
 
-class Resists(NamedTuple):
-	fire: bool
-	cold: bool
-	sleep: bool
-	disintegration: bool
-	electric: bool
-	poison: bool
-	acid: bool
-	stoning: bool
+	def expected_hp_loss_in_fight(self, character):
+		pass
 
-	resist_mapping = {'F': 'fire', 'C': 'cold', 'S': 'sleep', 'D': 'disintegration', 'E': 'electric', 'P': 'poison', 'A': 'acid', '*': 'stoning'}
+	def probability_to_hit_AC(self, AC):
+		# ignoring weapon bonuses/penalties
+		# ignoring multi-attack penalty
+
+		if AC >= 0:
+			target = 10 + AC + self.level
+		else:
+			# when AC is negative you get a random number between -1 and AC towards defense
+			target = 10 + (AC + (-1))/2 + self.level
+
+		if target < 1:
+			target = 1
+
+		probability = min((target-1)/20, 1)
+
+		return probability
+    
+	def actions_per_unit_time(self):
+		# assume player has speed 12
+		return self.speed / self.NORMAL_SPEED
+
+	def melee_dps(self, AC):
+		p = self.probability_to_hit_AC(AC)
+		#print("Hit prob:", p)
+
+		return self.melee_attack_bundle.expected_damage * p * self.actions_per_unit_time()
+
+
+	def dangerous_to_player(self, character):
+		# character: AC, HP, weapon, intrinsics. 
+		# precompute monster DPS vs all AC and intrinsics
+		pass
+
+class Resists(enum.Flag):
+	NONE = 0
+	fire = enum.auto()
+	cold = enum.auto()
+	sleep = enum.auto()
+	disintegration = enum.auto()
+	electricity = enum.auto()
+	poison = enum.auto()
+	acid = enum.auto()
+	stoning = enum.auto()
+
+RESIST_MAPPING = {
+	'F': Resists.fire,
+	'C': Resists.cold,
+	'S': Resists.sleep,
+	'D': Resists.disintegration,
+	'E': Resists.electricity,
+	'P': Resists.poison,
+	'A': Resists.acid,
+	'*': Resists.stoning
+}
 
 class AttackBundle():
 	matches_no_prefix = False
@@ -93,11 +140,11 @@ class AttackBundle():
 			'R': ('rust', True),
 			'S': ('sleep', True),
 			'V': ('drain', True),
-			'b': ('blind', True),
+			'b': ('blind', False),
 			'c': ('confusion', True),
 			'd': ('digest', True),
 			'e': ('energy', False),
-			'h': ('hallucination',True),
+			'h': ('hallucination',False),
 			'i': ('intrinsic', True),
 			'm': ('stick', True),
 			'r': ('rot', True),
@@ -106,7 +153,7 @@ class AttackBundle():
 			'w': ('wrap', True),
 			'x': ('prick', True),
 			'z': ('rider', True),
-			'.': ('paralysis', True),
+			'.': ('paralysis', False),
 			'+': ('spell', True),
 			'-': ('steal', True),
 			'"': ('disenchant', True),
@@ -184,6 +231,9 @@ monster_df=monster_df.set_index('SPECIES')
 #with open(os.path.join(os.path.dirname(__file__), "monsters_new.csv"), 'w') as f:
 #	monster_df.to_csv(f)
 
+dps_rows = {}
+ACs = [10, 5, 0, -5, -10, -15, -20, -25]
+
 MONSTERS_BY_NAME = {}
 for _, row in monster_df.iterrows():
 	name = row.name
@@ -203,16 +253,22 @@ for _, row in monster_df.iterrows():
 	speed = row['SPD']
 	MR = row['MR']
 
-	resists_dict = {r: False for r in Resists._fields}
-
+	resists = Resists.NONE
 	if row['RESISTS'] is not np.nan:
-		for c in row['RESISTS'].upper():
-			resists_dict[Resists.resist_mapping[c]] = True
-
-	resists = Resists(**resists_dict)
+		for character in row['RESISTS'].upper():
+			resists |= RESIST_MAPPING[character]
 
 	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists)
+	#print(name, resists)
 	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage)
 	#print(name, {k:v for k,v in zip(melee_bundle.damage_types._fields, melee_bundle.damage_types) if v==True})
 	MONSTERS_BY_NAME[name] = spoiler
 
+	# DPS scratch
+	dps_row = [spoiler.melee_dps(AC) for AC in ACs]
+	dps_rows[name] = dps_row
+
+dps_df = pd.DataFrame.from_dict(dps_rows, orient='index', columns=ACs)
+#import pdb; pdb.set_trace()
+with open(os.path.join(os.path.dirname(__file__), "dps.csv"), 'w') as f:
+	dps_df.to_csv(f)
