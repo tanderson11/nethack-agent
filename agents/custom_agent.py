@@ -1,8 +1,6 @@
 from pdb import run
 import base64
 import csv
-from dataclasses import dataclass
-import enum
 import os
 import re
 from typing import Optional
@@ -21,9 +19,8 @@ import utilities
 import physics
 import inventory as inv
 
-import functools
-
 from utilities import ARS
+from character import Character
 import glyphs as gd
 import environment
 
@@ -493,189 +490,6 @@ BackgroundMenuPlan = menuplan.MenuPlan(
         menuplan.EscapeMenuResponse("little trouble lifting"),
         menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
     ])
-
-
-class BaseRole(enum.Enum):
-    Archeologist = 'Archeologist'
-    Barbarian = 'Barbarian'
-    Caveperson = 'Caveperson'
-    Healer = 'Healer'
-    Knight = 'Knight'
-    Monk = 'Monk'
-    Priest = 'Priest'
-    Ranger = 'Ranger'
-    Rogue = 'Rogue'
-    Samurai = 'Samurai'
-    Tourist = 'Tourist'
-    Valkyrie = 'Valkyrie'
-    Wizard = 'Wizard'
-
-class BaseRace(enum.Enum):
-    dwarf = 'dwarf'
-    elf = 'elf'
-    gnome = 'gnome'
-    human = 'human'
-    orc = 'orc'
-
-class Intrinsics(enum.Flag):
-    NONE = 0
-    fire_resistance = enum.auto()
-    cold_resistance = enum.auto()
-    sleep_resistance = enum.auto()
-    disint_resistance = enum.auto()
-    shock_resistance = enum.auto()
-    poison_resistance = enum.auto()
-    regeneration = enum.auto()
-    searching = enum.auto()
-    see_invisible = enum.auto()
-    invisible = enum.auto()
-    teleportitis = enum.auto()
-    teleport_control = enum.auto()
-    polymorphitis = enum.auto()
-    levitation = enum.auto()
-    stealth = enum.auto()
-    aggravate_monster = enum.auto()
-    conflict = enum.auto()
-    protection = enum.auto()
-    protection_from_shape_changers = enum.auto()
-    warning = enum.auto()
-    hunger = enum.auto()
-    telepathy = enum.auto()
-    speed = enum.auto()
-    food_appraisal = enum.auto()
-    magical_breathing = enum.auto()
-    amphibiousness = enum.auto()
-    jumping = enum.auto()
-    infravision = enum.auto()
-
-ROLE_TO_INTRINSIC = {
-    BaseRole.Archeologist: {
-        1: Intrinsics.speed | Intrinsics.stealth,
-        10: Intrinsics.searching,
-    },
-    BaseRole.Barbarian: {
-        1: Intrinsics.poison_resistance,
-        7: Intrinsics.speed,
-        15: Intrinsics.stealth,
-    },
-    BaseRole.Caveperson: {
-        7: Intrinsics.speed,
-        15: Intrinsics.warning,
-    },
-    BaseRole.Healer: {
-        1: Intrinsics.poison_resistance,
-        15: Intrinsics.warning,
-    },
-    BaseRole.Knight: {
-        1: Intrinsics.jumping,
-        7: Intrinsics.speed,
-    },
-    BaseRole.Monk: {
-        1: Intrinsics.see_invisible | Intrinsics.sleep_resistance | Intrinsics.speed,
-        3: Intrinsics.poison_resistance,
-        5: Intrinsics.stealth,
-        7: Intrinsics.warning,
-        9: Intrinsics.searching,
-        11: Intrinsics.fire_resistance,
-        13: Intrinsics.cold_resistance,
-        15: Intrinsics.shock_resistance,
-        17: Intrinsics.teleport_control,
-    },
-    BaseRole.Priest: {
-        15: Intrinsics.warning,
-        10: Intrinsics.fire_resistance,
-    },
-    BaseRole.Ranger: {
-        1: Intrinsics.searching,
-        7: Intrinsics.stealth,
-        15: Intrinsics.see_invisible,
-    },
-    BaseRole.Rogue: {
-        1: Intrinsics.stealth,
-        10: Intrinsics.searching,
-    },
-    BaseRole.Samurai: {
-        1: Intrinsics.speed,
-        15: Intrinsics.stealth,
-    },
-    BaseRole.Tourist: {
-        10: Intrinsics.searching,
-        20: Intrinsics.poison_resistance,
-    },
-    BaseRole.Valkyrie: {
-        1: Intrinsics.cold_resistance | Intrinsics.stealth,
-        7: Intrinsics.speed,
-    },
-    BaseRole.Wizard: {
-        15: Intrinsics.warning,
-        17: Intrinsics.teleport_control,
-    },
-}
-
-RACE_TO_INTRINSIC = {
-    BaseRace.dwarf: {
-        1: Intrinsics.infravision,
-    },
-    BaseRace.elf: {
-        1: Intrinsics.infravision,
-        4: Intrinsics.sleep_resistance,
-    },
-    BaseRace.gnome: {
-        1: Intrinsics.infravision,
-    },
-    BaseRace.human: {},
-    BaseRace.orc: {
-        1: Intrinsics.infravision| Intrinsics.poison_resistance,
-    },
-}
-
-@dataclass
-class Character():
-    base_race: str
-    base_class: str
-    base_sex: str
-    base_alignment: str
-    last_pray_time: Optional[int] = None
-    last_pray_reason: Optional[str] = None
-    experience_level: int = 1
-    intrinsics: Intrinsics = Intrinsics.NONE
-    innate_intrinsics: Intrinsics = Intrinsics.NONE
-    noninnate_intrinsics: Intrinsics = Intrinsics.NONE
-
-    def set_innate_intrinsics(self):
-        new_intrinsics = Intrinsics.NONE
-        for level in range(1, self.experience_level + 1):
-            # TODO eventually use enums anywhere and skip the BaseRace[..] lookups
-            race_intrinsics = RACE_TO_INTRINSIC[BaseRace[self.base_race]].get(level, Intrinsics.NONE)
-            role_intrinsics = ROLE_TO_INTRINSIC[BaseRole[self.base_class]].get(level, Intrinsics.NONE)
-            new_intrinsics = new_intrinsics | race_intrinsics | role_intrinsics
-        self.innate_intrinsics = new_intrinsics
-        self.intrinsics = self.innate_intrinsics | self.noninnate_intrinsics
-
-    def update_from_observation(self, blstats):
-        old_experience_level = self.experience_level
-        self.experience_level = blstats.get('experience_level')
-        if not self.experience_level >= 1:
-            raise Exception("Surprising experience level")
-        if old_experience_level != self.experience_level: # Just to save us some effort
-            self.innate_intrinsics = self.set_innate_intrinsics()
-
-    def can_cannibalize(self):
-        if self.base_race == 'orc':
-            return False
-        if self.base_class == 'Caveperson':
-            return False
-        return True
-
-    def sick_from_tripe(self):
-        if self.base_class == 'Caveperson':
-            return False
-        return True
-
-    def body_armor_penalty(self):
-        if self.base_class == 'Monk':
-            return True
-        return False
 
 class RunState():
     def __init__(self, debug_env=None):

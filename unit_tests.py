@@ -1,5 +1,6 @@
 import unittest
 
+import constants
 import menuplan
 import inventory as inv
 import glyphs as gd
@@ -7,20 +8,25 @@ import agents.custom_agent
 
 class TestItemRegex(unittest.TestCase):
     test_values = {
-        "a +0 dagger (alternate weapon; not wielded)": "dagger",
-        "a blessed +1 quarterstaff (weapon in hands)": "quarterstaff",
-        "a puce potion": "puce potion",
-        "a scroll labeled README": "scroll labeled README",
-        "a scroll labeled NR 9": "scroll labeled NR 9",
+        #"a +0 dagger (alternate weapon; not wielded)": "dagger",
+        #"a blessed +1 quarterstaff (weapon in hands)": "staff",
+        #"a puce potion": "puce",
+        "a scroll labeled READ ME": "READ ME",
+        "a scroll labeled NR 9": "NR 9",
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
-        "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
+        "a thoroughly rusty +0 battle-axe (weapon in hands)": "double-headed axe",
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            self.assertEqual(value, menuplan.InteractiveInventoryMenu.MenuItem("foo", "a", False, key).item_appearance)
+            item = menuplan.InteractiveInventoryMenu.MenuItem(
+                agents.custom_agent.RunState(), None, "a", False, key
+            )
+            if item.item is None:
+                import pdb; pdb.set_trace()
+            self.assertEqual(value, item.item.glyph.appearance)
 
 class TestMonsterKill(unittest.TestCase):
     test_values = {
@@ -65,7 +71,7 @@ class TestAttributeScreen(unittest.TestCase):
         run_state.update_base_attributes(screen_content)
         self.assertEqual("dwarf", run_state.character.base_race)
         self.assertEqual("female", run_state.character.base_sex)
-        self.assertEqual("Cavewoman", run_state.character.base_class)
+        self.assertEqual("Caveperson", run_state.character.base_class)
         self.assertEqual("lawful", run_state.character.base_alignment)
         self.assertEqual("Ishtar", run_state.gods_by_alignment['neutral'])
         self.assertEqual("Anu", run_state.gods_by_alignment['lawful'])
@@ -138,6 +144,18 @@ class TestItemParsing(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
     def test_easy_case(self):
         pass
+
+class TestInnateIntrinsics(unittest.TestCase):
+    def test_monk_example(self):
+        character = agents.custom_agent.Character(
+            base_class='Monk',
+            base_race='human',
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_innate_intrinsics()
+        self.assertTrue(character.has_intrinsic(constants.Intrinsics.speed))
+        self.assertFalse(character.has_intrinsic(constants.Intrinsics.poison_resistance))
 
 
 if __name__ == '__main__':
