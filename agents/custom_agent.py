@@ -3,7 +3,7 @@ import base64
 import csv
 import os
 import re
-from typing import NamedTuple
+from typing import Optional
 
 import numpy as np
 import itertools
@@ -19,9 +19,8 @@ import utilities
 import physics
 import inventory as inv
 
-import functools
-
 from utilities import ARS
+from character import Character
 import glyphs as gd
 import environment
 
@@ -88,6 +87,7 @@ class Message():
         "There is a sink here.",
         "Pick up what?",
         "paperback book named",
+        "staircase down",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
 
@@ -492,35 +492,6 @@ BackgroundMenuPlan = menuplan.MenuPlan(
         menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
     ])
 
-class Character():
-    def __init__(self, character_data):
-        self.character = character_data
-        self.last_pray_time = None
-        self.last_pray_reason = None
-
-class CharacterData(NamedTuple):
-    base_race: str
-    base_class: str
-    base_sex: str
-    base_alignment: str
-
-    def can_cannibalize(self):
-        if self.base_race == 'orc':
-            return False
-        if self.base_class == 'Caveperson':
-            return False
-        return True
-
-    def sick_from_tripe(self):
-        if self.base_class == 'Caveperson':
-            return False
-        return True
-
-    def body_armor_penalty(self):
-        if self.base_class == 'Monk':
-            return True
-        return False
-
 class RunState():
     def __init__(self, debug_env=None):
         self.reset()
@@ -553,8 +524,8 @@ class RunState():
         with open(self.log_path, 'a') as log_file:
             writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
             writer.writerow({
-                'race': self.character.character.base_race,
-                'class': self.character.character.base_class,
+                'race': self.character.base_race,
+                'class': self.character.base_class,
                 'level': self.blstats.get('experience_level'),
                 'depth': self.blstats.get('depth'),
                 'branch': self.blstats.get('dungeon_number'),
@@ -617,7 +588,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'w538zA=='
+        # seed = b'w538zA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -659,15 +630,15 @@ class RunState():
             base_class = "Priest"
 
 
-        character = CharacterData(
+        self.character = Character(
             base_sex=base_sex,
             base_race = self.base_race_mapping[attribute_match_1[2]],
             base_class = base_class,
             base_alignment = attribute_match_2[1],
         )
-        self.character = Character(character)
+        self.character.set_innate_intrinsics()
 
-        self.gods_by_alignment[character.base_alignment] = attribute_match_2[2]
+        self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
         self.reading_base_attributes = False
@@ -859,7 +830,7 @@ class CustomAgent(BatchedAgent):
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
-            if environment.env.debug and run_state.target_roles and run_state.character.character.base_class not in run_state.target_roles:
+            if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
         # Two cases when we reset inventory: new run or something changed 
@@ -888,6 +859,9 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if run_state.character: # None until we C-X at the start of game
+            run_state.character.update_from_observation(blstats)
 
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
         if killed_monster_name:
