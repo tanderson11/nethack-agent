@@ -8,9 +8,9 @@ import agents.custom_agent
 
 class TestItemRegex(unittest.TestCase):
     test_values = {
-        #"a +0 dagger (alternate weapon; not wielded)": "dagger",
-        #"a blessed +1 quarterstaff (weapon in hands)": "staff",
-        #"a puce potion": "puce",
+        "a +0 dagger (alternate weapon; not wielded)": "dagger",
+        "a blessed +1 quarterstaff (weapon in hands)": "staff",
+        "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
