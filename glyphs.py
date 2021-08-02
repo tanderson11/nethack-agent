@@ -272,7 +272,7 @@ class FoodGlyph(ObjectGlyph):
         if identity is None:
             return False
 
-        if identity and character.character.sick_from_tripe() and identity.name() == "tripe ration":
+        if identity and character.sick_from_tripe() and identity.name() == "tripe ration":
             return False
 
         if identity and ("glob" in identity.name() or identity.name() == "egg"):
@@ -809,6 +809,9 @@ class WeaponIdentity(ObjectIdentity):
         if pd.isnull(second_slot):
             self.slot = [self.slot, second_slot]
 
+    def avg_melee_damage(self, monster):
+        # TK know about monster size
+        return self.find_values('SAVG')
 
 class UnimplementedObjectClassException(Exception):
     pass

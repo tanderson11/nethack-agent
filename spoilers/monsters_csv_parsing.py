@@ -53,11 +53,26 @@ class MonsterSpoiler():
 
 		return self.melee_attack_bundle.expected_damage * p * self.actions_per_unit_time()
 
+	def dangerous_to_player(self, character, hp_fraction_tolerance=0.3):
+		# TK know about fled monsters
 
-	def dangerous_to_player(self, character):
-		# character: AC, HP, weapon, intrinsics. 
-		# precompute monster DPS vs all AC and intrinsics
-		pass
+		# (time_to_kill, swings_to_kill, hits_to_kill)
+		ttk, stk, htk = character.average_time_to_kill_monster_in_melee(self)
+
+		excepted_hp_loss = self.melee_dps * ttk + self.passive_attack_bundle.expected_damage * stk + self.death_attack_bundle.expected_damage
+		
+		if excepted_hp_loss < hp_fraction_tolerance * current_hp:
+			return False
+		else:
+			return True
+
+	def average_hp(self):
+		# know about special things in https://nethackwiki.com/wiki/Hit_points#Monster
+		hit_dice = self.level
+		if hit_dice == 0:
+			return 2.5 # 1d4 hp if level 0
+		else:
+			return 4.5 * hit_dice # 1d8/level if level > 0
 
 class Resists(enum.Flag):
 	NONE = 0

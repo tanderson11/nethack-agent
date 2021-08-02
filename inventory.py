@@ -84,7 +84,7 @@ class Armor(Item):
 
     def instance_desirability_to_wear(self, character):
         body_armor_penalty = 0
-        if character.character.body_armor_penalty() and self.identity.slot == 'suit':
+        if character.body_armor_penalty() and self.identity.slot == 'suit':
             body_armor_penalty = -10
 
         if self.enhancement is None:
@@ -95,7 +95,7 @@ class Armor(Item):
         if self.BUC == 'blessed':
             buc_adjustment = 0.5
             raw_value = self.identity.converted_wear_value().max()
-        elif self.BUC == 'uncursed' or (character.character.base_class == 'Priest' and self.BUC == None):
+        elif self.BUC == 'uncursed' or (character.base_class == 'Priest' and self.BUC == None):
             buc_adjustment = 0
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
@@ -122,6 +122,13 @@ class Potion(Item):
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
+
+    def melee_damage(self, monster):
+        weapon_damage = self.identity.avg_melee_damage(monster)
+        weapon_damage += 0 or self.enhancement
+
+        # TK know about silver damage etc
+        return weapon_damage
 
 class AmbiguousItem(ItemLike):
     '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
@@ -531,3 +538,27 @@ class PlayerInventory():
             slots = self.__class__.slot_cluster_mapping[slot_cluster_name](self)
             self.slot_groups_by_name[slot_cluster_name] = slots
             return slots
+
+    @functools.cached_property
+    def wielded_weapon(self):
+        armaments = self.get_slots('armaments')
+        pdb.set_trace()
+        hand_occupant = armaments.slots.hand.occupant
+
+        if hand_occupant.equipped_status.status == 'wielded':
+            return hand_occupant
+        else:
+            if environment.env.debug: pdb.set_trace()
+
+    def to_hit_modifiers(self, character, monster):
+        weapon = self.wielded_weapon
+
+        to_hit = 0 or weapon.enhancement
+        # TK rings of increased accuracy
+        # TK monks and body armor
+        # TK monks and no weapon
+        # TK blessed good against undead etc
+        # TK weapon skills adjustments
+
+        return to_hit
+

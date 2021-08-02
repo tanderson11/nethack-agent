@@ -6,6 +6,7 @@ import enum
 import os
 import re
 from typing import Optional
+from typing import NamedTuple
 
 import numpy as np
 import itertools
@@ -37,7 +38,7 @@ ACCEPTABLE_CORPSE_AGE = 40
 
 class BLStats():
     bl_meaning = [
-        'hero_col', 'hero_row', 'strength_pct', 'strength', 'dexterity', 'constitution',
+        'hero_col', 'hero_row', 'strength_25', 'strength_125', 'dexterity', 'constitution',
         'intelligence', 'wisdom', 'charisma', 'score', 'hitpoints', 'max_hitpoints', 'depth', 
         'gold', 'energy', 'max_energy', 'armor_class', 'monster_level', 'experience_level', 
         'experience_points', 'time', 'hunger_state', 'encumberance', 'dungeon_number', 'level_number',
@@ -49,6 +50,33 @@ class BLStats():
 
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
+
+    def make_attributes(self):
+        strength_25 = self.get('strength_25')
+
+        if strength_25 != 25 and strength_25 not in range(3,20):
+            import pdb; pdb.set_trace()
+            raise Exception('Surprising strength_25')
+
+        strength_pct = 0
+        if strength_25 > 18:
+            strength_pct = self.get('strength_125') - 18
+
+        if strength_pct > 100:
+            raise Exception('Surprising strength pct')
+
+        attr_dict = {
+            'strength': min(strength_25, 18),
+            'strength_pct': strength_pct,
+            'dexterity': self.get('dexterity'),
+            'constitution': self.get('constitution'),
+            'intelligence': self.get('intelligence'),
+            'wisdom': self.get('wisdom'),
+            'charisma': self.get('charisma')
+        }
+
+        attributes = Attributes(**attr_dict)
+        return attributes
 
     def am_hallu(self):
         return nethack.BL_MASK_HALLU & self.get('condition') == nethack.BL_MASK_HALLU
@@ -214,13 +242,13 @@ class SecretDoorMap(FloodMap):
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
 
-    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
+    def __init__(self, character, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
         # take the section of the observed glyphs that is relevant
         self.glyph_grid = visible_glyphs
         self.raw_glyph_grid = raw_visible_glyphs
         self.player_location_in_glyph_grid = player_location_in_vision
 
-        self.calculate_threat()
+        self.calculate_threat(character)
         #self.calculate_implied_threat()
 
     @classmethod
@@ -259,7 +287,7 @@ class ThreatMap(FloodMap):
 
         return can_hit_mask
 
-    def calculate_threat(self):
+    def calculate_threat(self, character):
         melee_n_threat = np.zeros_like(self.glyph_grid)
         melee_damage_threat = np.zeros_like(self.glyph_grid)
 
@@ -279,8 +307,11 @@ class ThreatMap(FloodMap):
                     melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
                     melee_n_threat.fill(1) # we're only ever threatened once while swallowed
 
-                is_invis = isinstance(glyph, gd.InvisibleGlyph)
-                if isinstance(glyph, gd.MonsterGlyph) or is_invis:
+                if isinstance(glyph, gd.MonsterGlyph):
+                    #import pdb; pdb.set_trace()
+                    x = glyph.monster_spoiler.dangerous_to_player(character)
+
+                if isinstance(glyph, gd.MonsterGlyph) and glyph.monster_spoiler.dangerous_to_player(character):
                     if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
                         ### SHARED ###
                         can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
@@ -451,7 +482,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
         self.secret_door_map = SecretDoorMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
-        self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.threat_map = ThreatMap(character, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
 
 
         #########################################
@@ -516,6 +547,50 @@ class BaseRace(enum.Enum):
     gnome = 'gnome'
     human = 'human'
     orc = 'orc'
+
+class Attributes(NamedTuple):
+    strength: int
+    strength_pct: int
+    dexterity: int
+    constitution: int
+    intelligence: int
+    wisdom: int
+    charisma: int
+
+    @staticmethod
+    def strength_to_hit(strength, strength_pct):
+        if strength < 6: return -2
+        elif strength < 8: return -1
+        elif strength < 17: return 0
+        elif strength == 18 and strength_pct < 51: return +1
+        elif strength == 18 and strength_pct < 100: return +2
+        else: return +3
+
+    @staticmethod
+    def dexterity_to_hit(dexterity):
+        if dexterity < 4: return -3
+        elif dexterity < 6: return -2
+        elif dexterity < 8: return  -1
+        elif dexterity < 15: return 0
+        else: return dexterity-14 # increases by 1 each step from 15 and up
+
+    @staticmethod
+    def strength_damage(strength, strength_pct):
+        if strength < 6: return -1
+        elif strength < 16: return 0
+        elif strength < 18: return +1
+        elif strength == 18 and strength_pct == 0: return +2
+        elif strength == 18 and strength_pct < 76: return +3
+        elif strength == 18 and strength_pct < 91: return +4
+        elif strength == 18 and strength_pct < 100: return +5
+        else: return +6
+
+    def melee_to_hit_modifiers(self):
+        return self.strength_to_hit(self.strength, self.strength_pct) + self.dexterity_to_hit(self.dexterity)
+
+    def melee_damage_modifiers(self):
+        return self.strength_damage(self.strength)
+
 
 class Intrinsics(enum.Flag):
     NONE = 0
@@ -625,7 +700,7 @@ RACE_TO_INTRINSIC = {
     },
     BaseRace.human: {},
     BaseRace.orc: {
-        1: Intrinsics.infravision| Intrinsics.poison_resistance,
+        1: Intrinsics.infravision | Intrinsics.poison_resistance,
     },
 }
 
@@ -635,6 +710,10 @@ class Character():
     base_class: str
     base_sex: str
     base_alignment: str
+    current_hp: int = None
+    max_hp: int = None
+    inventory: inv.PlayerInventory = None
+    attributes: Attributes = None
     last_pray_time: Optional[int] = None
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
@@ -652,6 +731,12 @@ class Character():
         self.innate_intrinsics = new_intrinsics
         self.intrinsics = self.innate_intrinsics | self.noninnate_intrinsics
 
+    def set_attributes(self, attributes):
+        self.attributes = attributes
+
+    def set_inventory(self, inventory):
+        self.inventory = inventory
+
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
         self.experience_level = blstats.get('experience_level')
@@ -659,6 +744,19 @@ class Character():
             raise Exception("Surprising experience level")
         if old_experience_level != self.experience_level: # Just to save us some effort
             self.innate_intrinsics = self.set_innate_intrinsics()
+
+        old_attributes = self.attributes
+        new_attributes = blstats.make_attributes()
+        if new_attributes != old_attributes:
+            self.attributes = new_attributes
+
+        old_hp = self.current_hp
+        if old_hp != blstats.get('hitpoints'):
+            self.current_hp = blstats.get('hitpoints')
+
+        old_max_hp = self.max_hp
+        if old_max_hp != blstats.get('max_hitpoints'):
+            self.max_hp = blstats.get('max_hitpoints')
 
     def can_cannibalize(self):
         if self.base_race == 'orc':
@@ -676,6 +774,42 @@ class Character():
         if self.base_class == 'Monk':
             return True
         return False
+
+    def actions_per_unit_time(self):
+        base_speed = 12
+        speed = 16 if self.intrinsics.speed else base_speed
+
+        # TK boots of speed
+        return speed/base_speed
+
+    def melee_to_hit(self, monster):
+        to_hit = 1 # melee has base 1
+
+        to_hit += self.to_hit_modifiers()
+        to_hit += self.attributes.melee_to_hit_modifiers()
+        #to_hit += self.skills.to_hit_modifiers()
+        to_hit += self.inventory.to_hit_modifiers(self, monster)
+
+        return to_hit
+
+    def to_hit_modifiers(self):
+        to_hit = self.experience_level
+        if self.experience_level == 1 or self.experience_level == 2:
+            to_hit += 1
+
+        return to_hit
+
+    def average_time_to_kill_monster_in_melee(self, monster):
+        melee_hit_probability = max(self.melee_to_hit(monster)/20, 1)
+        melee_hit_probability = min(0, melee_hit_probability)
+
+        damage = self.inventory.wielded_weapon.melee_damage(monster)
+
+        hits_to_kill = monster.average_hp() / damage
+        swings_to_kill = hits_to_kill / melee_hit_probability
+        time_to_kill = swings_to_kill / self.actions_per_unit_time()
+
+        return (time_to_kill, swings_to_kill, hits_to_kill)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -758,7 +892,6 @@ class RunState():
         self.time_did_advance = True
 
         self.neighborhood = None
-        self.inventory = None
         self.global_identity_map = gd.GlobalIdentityMap()
 
         self.latest_monster_death = None
@@ -797,7 +930,7 @@ class RunState():
         'Valkyrie': 'female',
     }
 
-    def update_base_attributes(self, raw_screen_content):
+    def update_base_attributes(self, raw_screen_content, blstats):
         if not self.reading_base_attributes:
             raise Exception("Shouldn't be doing this")
         attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
@@ -822,6 +955,7 @@ class RunState():
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()
+        self.character.set_attributes(blstats.make_attributes())
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
@@ -1014,16 +1148,14 @@ class CustomAgent(BatchedAgent):
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
-            run_state.update_base_attributes(raw_screen_content)
+            run_state.update_base_attributes(raw_screen_content, blstats)
             if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
-        # Two cases when we reset inventory: new run or something changed 
-        if run_state.inventory is None:
-            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
-
-        if (observation['inv_strs'] != run_state.inventory.inv_strs).any():
-            run_state.inventory = inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu())
+        # Two cases when we reset inventory: new run or something changed
+        if run_state.character:
+            if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
+                run_state.character.set_inventory(inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu()))
 
         # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
         if run_state.glyphs is not None:
@@ -1047,6 +1179,10 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
+
+        if run_state.character and run_state.character.attributes.strength_pct > 0:
+            #import pdb; pdb.set_trace()
+            pass
 
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
         if killed_monster_name:
@@ -1170,14 +1306,14 @@ class CustomAgent(BatchedAgent):
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-        flags = advs.Flags(run_state, blstats, run_state.inventory, neighborhood, message, run_state.character)
+        flags = advs.Flags(run_state, blstats, run_state.character.inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
         for advisor_level in advisor_sets.small_advisors:
             if advisor_level.check_level(flags, run_state.rng):
                 #print(advisor_level, advisor_level.advisors)
                 advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state, run_state.rng, run_state.character, blstats, run_state.inventory, neighborhood, message, flags) for advisor in advisors]
+                all_advice = [advisor().advice(run_state, run_state.rng, run_state.character, blstats, run_state.character.inventory, neighborhood, message, flags) for advisor in advisors]
                 #print(all_advice)
                 try:
                     all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
