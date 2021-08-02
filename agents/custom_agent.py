@@ -87,6 +87,7 @@ class Message():
         "There is a sink here.",
         "Pick up what?",
         "paperback book named",
+        "staircase down",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
 
