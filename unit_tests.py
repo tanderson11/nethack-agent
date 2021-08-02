@@ -156,6 +156,13 @@ class TestInnateIntrinsics(unittest.TestCase):
         character.set_innate_intrinsics()
         self.assertTrue(character.has_intrinsic(constants.Intrinsics.speed))
         self.assertFalse(character.has_intrinsic(constants.Intrinsics.poison_resistance))
+        self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
+
+        character.experience_level = 3
+        character.set_innate_intrinsics()
+        self.assertTrue(character.has_intrinsic(constants.Intrinsics.speed))
+        self.assertTrue(character.has_intrinsic(constants.Intrinsics.poison_resistance))
+        self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
 
 
 if __name__ == '__main__':
