@@ -25,6 +25,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install poetry
         poetry install
+    - name: Run unit tests
+      run: |
+        poetry run python unit_tests.py
     - name: Run test_run.env
       run: |
         source test_run.env
