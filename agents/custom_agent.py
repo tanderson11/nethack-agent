@@ -9,6 +9,7 @@ from typing import Optional
 from typing import NamedTuple
 
 import numpy as np
+import pandas as pd
 import itertools
 
 from nle import nethack
@@ -59,10 +60,11 @@ class BLStats():
             raise Exception('Surprising strength_25')
 
         strength_pct = 0
-        if strength_25 > 18:
+        if strength_25 > 18 and strength_25 != 25:
             strength_pct = self.get('strength_125') - 18
 
         if strength_pct > 100:
+            if environment.env.debug: import pdb; pdb.set_trace()
             raise Exception('Surprising strength pct')
 
         attr_dict = {
@@ -208,7 +210,6 @@ class DLevelMap():
             self.staircases[location] = staircase
             return staircase
 
-
 class FloodMap():
     @staticmethod
     def flood_one_level_from_mask(mask):
@@ -307,10 +308,6 @@ class ThreatMap(FloodMap):
                     melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
                     melee_n_threat.fill(1) # we're only ever threatened once while swallowed
 
-                if isinstance(glyph, gd.MonsterGlyph):
-                    #import pdb; pdb.set_trace()
-                    x = glyph.monster_spoiler.dangerous_to_player(character)
-
                 if isinstance(glyph, gd.MonsterGlyph) and glyph.monster_spoiler.dangerous_to_player(character):
                     if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
                         ### SHARED ###
@@ -318,26 +315,17 @@ class ThreatMap(FloodMap):
                         ###
 
                         ### MELEE ###
-                        if is_invis or glyph.has_melee:
+                        if glyph.has_melee:
                             can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
 
                             melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
-                        
-                            if isinstance(glyph, gd.MonsterGlyph):
-                                melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
-
-                            if is_invis:
-                                melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?                
-                        ###
+                            melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
 
                         ### RANGED ###
-                        if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
+                        if glyph.has_ranged:
                             can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
                             ranged_n_threat[can_hit_mask] += 1
-                            if is_invis:
-                                ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
-                            else:
-                                ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
+                            ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
                         ###
 
         self.melee_n_threat = melee_n_threat
@@ -471,6 +459,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
+        self.is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character), self.glyphs)
 
         walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
 
@@ -483,7 +472,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         self.secret_door_map = SecretDoorMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
         self.threat_map = ThreatMap(character, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
-
 
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
@@ -589,7 +577,7 @@ class Attributes(NamedTuple):
         return self.strength_to_hit(self.strength, self.strength_pct) + self.dexterity_to_hit(self.dexterity)
 
     def melee_damage_modifiers(self):
-        return self.strength_damage(self.strength)
+        return self.strength_damage(self.strength, self.strength_pct)
 
 
 class Intrinsics(enum.Flag):
@@ -710,6 +698,7 @@ class Character():
     base_class: str
     base_sex: str
     base_alignment: str
+    AC: int = None
     current_hp: int = None
     max_hp: int = None
     inventory: inv.PlayerInventory = None
@@ -758,6 +747,10 @@ class Character():
         if old_max_hp != blstats.get('max_hitpoints'):
             self.max_hp = blstats.get('max_hitpoints')
 
+        old_AC = self.AC
+        if old_AC != blstats.get('armor_class'):
+            self.AC = blstats.get('armor_class')
+
     def can_cannibalize(self):
         if self.base_race == 'orc':
             return False
@@ -797,19 +790,47 @@ class Character():
         if self.experience_level == 1 or self.experience_level == 2:
             to_hit += 1
 
+        if self.base_class == BaseRole.Monk:
+            armaments = self.inventory.get_slots('armaments')
+            if not armaments.slots['suit'].occupied and not armaments.slots['off-hand'].occupied: # TK check if our off-hand is genuinely a shield
+                to_hit += self.experience_level / 3 + 2
+
         return to_hit
 
-    def average_time_to_kill_monster_in_melee(self, monster):
-        melee_hit_probability = max(self.melee_to_hit(monster)/20, 1)
-        melee_hit_probability = min(0, melee_hit_probability)
+    def average_time_to_kill_monster_in_melee(self, monster_spoiler):
+        melee_hit_probability = min(self.melee_to_hit(monster_spoiler)/20, 1)
+        melee_hit_probability = max(0, melee_hit_probability)
 
-        damage = self.inventory.wielded_weapon.melee_damage(monster)
+        weapon = self.inventory.wielded_weapon()
+        if weapon is None:
+            # Bare hands / martial arts logic NOT INCLUDING SKILLS, which should be covered later
+            if self.base_class == BaseRole.Monk or self.base_class == BaseRole.Samurai:
+                damage = 2.5
+            else:
+                damage = 1.5
+        else:
+            damage = weapon.melee_damage(monster_spoiler)
 
-        hits_to_kill = monster.average_hp() / damage
+        # TK damage from skills
+        damage += self.attributes.melee_damage_modifiers()
+
+        hits_to_kill = monster_spoiler.average_hp() / damage
         swings_to_kill = hits_to_kill / melee_hit_probability
         time_to_kill = swings_to_kill / self.actions_per_unit_time()
 
         return (time_to_kill, swings_to_kill, hits_to_kill)
+
+    def _dump_threatening_monsters(self):
+        danger_rows = []
+        columns = ["monster", "time_to_kill", "swings_to_kill", "hits_to_kill", "monster dps", "is dangerous"]
+        for n in gd.MonsterGlyph.numerals():
+            g = gd.GLYPH_NUMERAL_LOOKUP[n]
+            g.monster_spoiler.dangerous_to_player(self)
+            danger_row = [g.monster_spoiler.name] + list(self.average_time_to_kill_monster_in_melee(g.monster_spoiler)) + [g.monster_spoiler.melee_dps(self.AC), g.monster_spoiler.dangerous_to_player(self)]
+            danger_rows.append(danger_row)
+            #pdb.set_trace()
+
+        return pd.DataFrame(danger_rows, columns=columns)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -906,7 +927,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'w538zA=='
+        #seed = b'w538zA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -955,7 +976,7 @@ class RunState():
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()
-        self.character.set_attributes(blstats.make_attributes())
+        #self.character.set_attributes(blstats.make_attributes())
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
