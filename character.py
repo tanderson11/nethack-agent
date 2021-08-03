@@ -40,7 +40,7 @@ class Character():
         if not self.experience_level >= 1:
             raise Exception("Surprising experience level")
         if old_experience_level != self.experience_level: # Just to save us some effort
-            self.innate_intrinsics = self.set_innate_intrinsics()
+            self.set_innate_intrinsics()
 
         old_attributes = self.attributes
         new_attributes = blstats.make_attributes()
