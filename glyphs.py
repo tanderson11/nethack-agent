@@ -8,6 +8,7 @@ from nle import nethack
 import pandas as pd
 import numpy as np
 
+import constants
 import environment
 import utilities
 from utilities import ARS
@@ -112,14 +113,16 @@ class MonsterAlikeGlyph(Glyph):
             return False
 
         # For these remaining checks, maybe skip them if I'm hungry enough
-        if character.character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.character.base_race):
+        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race):
             return False
-        if character.character.can_cannibalize() and self.corpse_spoiler.aggravate:
+        if character.can_cannibalize() and self.corpse_spoiler.aggravate:
+            return False
+
+        if self.corpse_spoiler.poisonous and not character.has_intrinsic(constants.Intrinsics.poison_resistance):
             return False
 
         if any([
             self.corpse_spoiler.acidic,
-            self.corpse_spoiler.poisonous,
             self.corpse_spoiler.stun,
             self.corpse_spoiler.polymorph,
             self.corpse_spoiler.hallucination,
@@ -270,7 +273,7 @@ class FoodGlyph(ObjectGlyph):
         if identity is None:
             return False
 
-        if identity and character.character.sick_from_tripe() and identity.name() == "tripe ration":
+        if identity and character.sick_from_tripe() and identity.name() == "tripe ration":
             return False
 
         if identity and ("glob" in identity.name() or identity.name() == "egg"):

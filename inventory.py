@@ -95,7 +95,7 @@ class Armor(Item):
         if self.BUC == 'blessed':
             buc_adjustment = 0.5
             raw_value = self.identity.converted_wear_value().max()
-        elif self.BUC == 'uncursed' or (character.character.base_class == 'Priest' and self.BUC == None):
+        elif self.BUC == 'uncursed' or (character.base_class == 'Priest' and self.BUC == None):
             buc_adjustment = 0
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
