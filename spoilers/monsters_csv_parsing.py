@@ -56,8 +56,11 @@ class MonsterSpoiler():
 		excepted_hp_loss = self.melee_dps(character.AC) * ttk + self.passive_attack_bundle.expected_damage * stk + self.death_attack_bundle.expected_damage
 		return excepted_hp_loss
 
-	def dangerous_to_player(self, character, hp_fraction_tolerance=0.3):
-		# TK know about fled monsters
+	def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.3):
+		# if we've recently seen a monster of this type flee, let's assume it's not dangerous
+		if latest_monster_flight and (time - latest_monster_flight.time) < 15 and self.name == latest_monster_flight.monster_name:
+			return False
+
 		excepted_hp_loss = self.excepted_hp_loss_in_melee(character)
 		
 		#print("ttk, stk, htk, excepted_hp_loss")

@@ -84,25 +84,33 @@ class BLStats():
     def am_hallu(self):
         return nethack.BL_MASK_HALLU & self.get('condition') == nethack.BL_MASK_HALLU
 
-class RecordedMonsterDeath(): 
-    def __init__(self, square, time, monster_name):
-        self.square = square # doesn't know about dungeon levels
+class RecordedMonsterEvent():
+    def __init__(self, time, monster_name):
         self.time = time
         self.monster_name = monster_name
 
         self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
 
-        self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
-
-    death_log_line = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
-
     @classmethod
-    def killed_monster(cls, message):
-        match = re.search(cls.death_log_line, message)
+    def involved_monster(cls, message):
+        match = re.search(cls.pattern, message)
         if match is None:
             return None
-        monster_name = match[4]
+        monster_name = match[cls.name_field]
         return monster_name
+
+class RecordedMonsterFlight(RecordedMonsterEvent):
+    pattern = re.compile("(^|. +|! +)(The )?([a-zA-Z -]+?) turns to flee.")
+    name_field = 3
+
+class RecordedMonsterDeath(RecordedMonsterEvent):
+    pattern = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
+    name_field = 4
+
+    def __init__(self, square, time, monster_name):
+        self.square = square # doesn't know about dungeon levels
+        super().__init__(time, monster_name)
+        self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
 class Message():
     known_lost_messages = set([
@@ -158,7 +166,8 @@ class Message():
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
             if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                print(f"NLE missed this message: {potential_message}")
+                #print(f"NLE missed this message: {potential_message}")
+                pass
             self.message = potential_message
 
         self.feedback = self.__class__.Feedback(self)
@@ -245,13 +254,13 @@ class SecretDoorMap(FloodMap):
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
 
-    def __init__(self, character, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
+    def __init__(self, character, time, latest_monster_flight, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
         # take the section of the observed glyphs that is relevant
         self.glyph_grid = visible_glyphs
         self.raw_glyph_grid = raw_visible_glyphs
         self.player_location_in_glyph_grid = player_location_in_vision
 
-        self.calculate_threat(character)
+        self.calculate_threat(character, time, latest_monster_flight)
         #self.calculate_implied_threat()
 
     @classmethod
@@ -290,7 +299,7 @@ class ThreatMap(FloodMap):
 
         return can_hit_mask
 
-    def calculate_threat(self, character):
+    def calculate_threat(self, character, time, latest_monster_flight):
         melee_n_threat = np.zeros_like(self.glyph_grid)
         melee_damage_threat = np.zeros_like(self.glyph_grid)
 
@@ -310,7 +319,7 @@ class ThreatMap(FloodMap):
                     melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
                     melee_n_threat.fill(1) # we're only ever threatened once while swallowed
 
-                if isinstance(glyph, gd.MonsterGlyph) and glyph.monster_spoiler.dangerous_to_player(character):
+                if isinstance(glyph, gd.MonsterGlyph) and glyph.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight):
                     if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
                         ### SHARED ###
                         can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
@@ -374,7 +383,7 @@ class ThreatMap(FloodMap):
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 2
-    def __init__(self, absolute_player_location, observation, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, failed_moves_on_square, feedback):
+    def __init__(self, time, absolute_player_location, observation, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square, feedback):
         ###################
         ### COPY FIELDS ###
         ###################
@@ -412,7 +421,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         self.extended_is_monster = extended_is_monster
-        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character), extended_visible_glyphs)
+        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
 
@@ -481,7 +490,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
-        self.threat_map = ThreatMap(character, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.threat_map = ThreatMap(character, time, latest_monster_flight, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
 
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
@@ -496,7 +505,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
         self.fresh_corpse_on_square_glyph = None
-        if latest_monster_death and latest_monster_death.can_corpse and (blstats.get('time') - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
+        if latest_monster_death and latest_monster_death.can_corpse and (time - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
             try:
                 corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
                 corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
@@ -669,6 +678,7 @@ class RunState():
         self.global_identity_map = gd.GlobalIdentityMap()
 
         self.latest_monster_death = None
+        self.latest_monster_flight = None
 
         self.menu_plan_log = []
 
@@ -759,7 +769,6 @@ class RunState():
         self.time = new_time
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
-
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -889,6 +898,8 @@ class CustomAgent(BatchedAgent):
 
         blstats = BLStats(observation['blstats'])
 
+        time = blstats.get('time')
+
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         # Our previous run finished, we are now at the start of a new run
@@ -953,7 +964,7 @@ class CustomAgent(BatchedAgent):
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
 
-        killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
+        killed_monster_name = RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
@@ -966,13 +977,22 @@ class CustomAgent(BatchedAgent):
                 try:
                     recorded_death = RecordedMonsterDeath(
                         (player_location[0] + delta[0], player_location[1] + delta[1]),
-                        blstats.get('time'),
+                        time,
                         killed_monster_name
                     )
                     if recorded_death.can_corpse:
                         run_state.latest_monster_death = recorded_death
                 except Exception as e:
                     print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
+
+        fleeing_monster_name = RecordedMonsterFlight.involved_monster(message.message)
+        if fleeing_monster_name:
+            try:
+                recorded_flight = RecordedMonsterFlight(time, fleeing_monster_name)
+            except Exception as e:
+                print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
+
+            run_state.latest_monster_flight = recorded_flight
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
@@ -1005,7 +1025,8 @@ class CustomAgent(BatchedAgent):
 
         if "It's a wall" in message.message and environment.env.debug:
             if environment.env.debug:
-                import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+                pass
+                #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
                 # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
         ###################################################
@@ -1047,6 +1068,7 @@ class CustomAgent(BatchedAgent):
             return retval
 
         neighborhood = Neighborhood(
+            time,
             player_location,
             observation,
             dcoord,
@@ -1055,6 +1077,7 @@ class CustomAgent(BatchedAgent):
             run_state.last_movement_action,
             previous_glyph_on_player,
             run_state.latest_monster_death,
+            run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
             message.feedback
         )
@@ -1098,7 +1121,7 @@ class CustomAgent(BatchedAgent):
                     #if action == nethack.actions.Command.WEAR: print("wearing!")
                     #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
                     if action == nethack.actions.Command.PRAY:
-                        run_state.character.last_pray_time = blstats.get('time')
+                        run_state.character.last_pray_time = time
                         run_state.character.last_pray_reason = chosen_advice.advisor
 
                     menu_plan = chosen_advice.menu_plan

@@ -41,8 +41,23 @@ class TestMonsterKill(unittest.TestCase):
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            monster_name = agents.custom_agent.RecordedMonsterDeath.killed_monster(key)
+            monster_name = agents.custom_agent.RecordedMonsterDeath.involved_monster(key)
             self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath(None, None, monster_name).monster_name)
+
+class TestMonsterFlight(unittest.TestCase):
+    test_values = {
+        "You hit the straw golem!  The straw golem turns to flee.": "straw golem",
+        "You hit the gnome.  The gnome turns to flee.": "gnome",
+        "You hit the Green-elf.  The Green-elf turns to flee.": "Green-elf",
+        "You hit Croesus!  Croesus turns to flee.": "Croesus",
+        "Demogorgon turns to flee.": "Demogorgon", # is this optimistic ... maybe
+        #The invisible Demogorgon casts a spell!  A monster appears from nowhere!  The kitten turns to flee.  The fire elemental turns to flee.  The arch-lich casts a spell!--More--
+    }
+
+    def test_all_test_values(self):
+        for key, value in self.test_values.items():
+            monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
+            self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
 
 class TestAttributeScreen(unittest.TestCase):
     def test_easy_case(self):
