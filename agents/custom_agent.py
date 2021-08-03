@@ -631,7 +631,7 @@ class RunState():
         'Valkyrie': 'female',
     }
 
-    def update_base_attributes(self, raw_screen_content, blstats):
+    def update_base_attributes(self, raw_screen_content):
         if not self.reading_base_attributes:
             raise Exception("Shouldn't be doing this")
         attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
@@ -848,7 +848,7 @@ class CustomAgent(BatchedAgent):
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
-            run_state.update_base_attributes(raw_screen_content, blstats)
+            run_state.update_base_attributes(raw_screen_content)
 
             if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
