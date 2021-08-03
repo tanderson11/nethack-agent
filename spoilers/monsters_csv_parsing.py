@@ -200,7 +200,7 @@ class AttackBundle():
 
 			if a[0] in self.prefix_set or (re.match(self.digit_pattern, a[0]) and self.matches_no_prefix): # we care about this kind of attack
 				self.num_attacks += 1
-				suffix_match = re.search(self.suffix_pattern, a)	
+				suffix_match = re.search(self.suffix_pattern, a)
 				if suffix_match:
 					damage_type = suffix_match[1]
 					damage_types.append(damage_type)

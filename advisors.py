@@ -123,6 +123,14 @@ class Flags():
         return near_monster
 
     @functools.cached_property
+    def near_dangerous_monster(self):
+        return (self.neighborhood.is_dangerous_monster & ~self.neighborhood.player_location_mask).any()
+
+    @functools.cached_property
+    def near_more_than_one_monster(self):
+        return np.count_nonzero(self.neighborhood.is_monster & ~self.neighborhood.player_location_mask) > 1
+
+    @functools.cached_property
     def major_trouble(self):
         major_trouble = "You feel feverish." in self.message.message or "You are slowing down" in self.message.message
         return major_trouble
@@ -215,6 +223,22 @@ class AdjacentToMonsterAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.near_monster
 
+class AdjacentToMonsterAndLowHpAdvisorLevel(AdjacentToMonsterAdvisorLevel):
+    def check_flags(self, flags):
+        return super().check_flags(flags) and flags.am_low_hp
+
+class AdjacentToDangerousMonsterAdvisorLevel(AdjacentToMonsterAdvisorLevel):
+    def check_flags(self, flags):
+        return flags.near_dangerous_monster
+
+class AdjacentToDangerousMonsterAndLowHpAdvisorLevel(AdjacentToDangerousMonsterAdvisorLevel):
+    def check_flags(self, flags):
+        return super().check_flags(flags) and flags.am_low_hp
+
+class AdjacentToManyMonstersAdvisorLevel(AdvisorLevel):
+    def check_flags(self, flags):
+        return flags.near_more_than_one_monster
+
 class LowHPAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_low_hp
@@ -222,10 +246,6 @@ class LowHPAdvisorLevel(AdvisorLevel):
 class UnthreatenedLowHPAdvisorLevel(AdvisorLevel):
     def check_flags(self, flags):
         return flags.am_low_hp & (flags.neighborhood.n_threat[flags.neighborhood.player_location_mask] == 0)
-
-class AdjacentToMonsterAndLowHpAdvisorLevel(AdvisorLevel):
-    def check_flags(self, flags):
-        return flags.near_monster and flags.am_low_hp
 
 class Advisor(abc.ABC):
     def __init__(self):
@@ -662,13 +682,26 @@ class NoUnexploredSearchAdvisor(Advisor):
             return Advice(self.__class__, nethack.actions.Command.SEARCH, None)
         return None
 
-class RandomAttackAdvisor(Advisor):
+class MeleeAttackAdvisor(Advisor):
+    def get_target_monsters(self, neighborhood):
+        return neighborhood.is_monster & ~neighborhood.player_location_mask
+
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
+        targeted_monster_mask = self.get_target_monsters(neighborhood)
+        monster_directions = neighborhood.action_grid[targeted_monster_mask]
+
+        if monster_directions.any():
+            attack_direction = monster_directions[0]
+            return Advice(self.__class__, attack_direction, None)
+        return None
+
+class NonPeacefulMeleeAttackAdvisor(MeleeAttackAdvisor):
     def get_target_monsters(self, neighborhood):
         always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~always_peaceful
-        return targeted_monster_mask
+        return super().get_target_monsters(neighborhood) & ~always_peaceful
 
-    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
+class RandomNonPeacefulMeleeAttackAdvisor(NonPeacefulMeleeAttackAdvisor):
+    def advice(self, run_state, rng, character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
         monster_directions = neighborhood.action_grid[targeted_monster_mask]
         if monster_directions.any():
@@ -676,24 +709,17 @@ class RandomAttackAdvisor(Advisor):
             return Advice(self.__class__, attack_direction, None)
         return None
 
-class RandomSafeMeleeAttack(RandomAttackAdvisor):
-    def get_target_monsters(self, neighborhood):
-        always_peaceful = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, neighborhood.glyphs)
+class SafeMeleeAttackAdvisor(NonPeacefulMeleeAttackAdvisor):
+    def get_target_monsters(self, neighborhood,):
         has_passive_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_passive, neighborhood.glyphs)
         has_death_throes_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.has_death_throes, neighborhood.glyphs)
-        targeted_monster_mask = neighborhood.is_monster & ~neighborhood.player_location_mask & ~has_passive_mask & ~always_peaceful & ~has_death_throes_mask
-        return targeted_monster_mask
 
-class DeterministicSafeMeleeAttack(RandomSafeMeleeAttack):
-    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
-        targeted_monster_mask = self.get_target_monsters(neighborhood)
-        monster_directions = neighborhood.action_grid[targeted_monster_mask]
-        if monster_directions.any():
-            attack_direction = monster_directions[0]
-            return Advice(self.__class__, attack_direction, None)
-        return None
+        # attack if it's not dangerous, or if it doesn't have a passive
+        passive_considerations = ~neighborhood.is_dangerous_monster | (~has_passive_mask & ~has_death_throes_mask)
 
-class RandomRangedAttackAdvisor(RandomAttackAdvisor):
+        return super().get_target_monsters(neighborhood) & passive_considerations
+
+class RandomRangedAttackAdvisor(NonPeacefulMeleeAttackAdvisor):
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         targeted_monster_mask = self.get_target_monsters(neighborhood)
 

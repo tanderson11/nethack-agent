@@ -12,14 +12,15 @@ small_advisors = [
     MajorTroubleAdvisorLevel({PrayWhenMajorTroubleAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayWhenWeakAdvisor: 1,}),
-    AdjacentToMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
-    AdjacentToMonsterAdvisorLevel({DeterministicSafeMeleeAttack: 1,}),
+    AdjacentToManyMonstersAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
+    AdjacentToDangerousMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
+    AdjacentToMonsterAdvisorLevel({SafeMeleeAttackAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1,}), # we can't ranged attack, can we move to an unthreatened place?
     AdjacentToMonsterAdvisorLevel({MostNovelMoveAdvisor: 1,}), # okay can we just avoid it? 
     AdjacentToMonsterAdvisorLevel({
-        RandomAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged or move
-        FallbackSearchAdvisor: 40, # basically controls to probability we yolo attack floating eyes
+        RandomNonPeacefulMeleeAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged or move
+        FallbackSearchAdvisor: 10, # basically controls to probability we yolo attack floating eyes
         }),
     #SafeAdvisorLevel({IdentifyPotentiallyMagicArmorAdvisor: 1}),
     SafeAdvisorLevel({WearEvenBlockedArmorAdvisor: 1}),
