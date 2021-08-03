@@ -118,7 +118,7 @@ class MonsterAlikeGlyph(Glyph):
         if character.can_cannibalize() and self.corpse_spoiler.aggravate:
             return False
 
-        if self.corpse_spoiler.poisonous and not character.intrinsics.poison_resistance:
+        if self.corpse_spoiler.poisonous and not character.has_intrinsic(constants.Intrinsics.poison_resistance):
             return False
 
         if any([

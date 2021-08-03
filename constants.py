@@ -1,4 +1,5 @@
 import enum
+from typing import NamedTuple
 
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
@@ -21,6 +22,49 @@ class BaseRace(enum.Enum):
     gnome = 'gnome'
     human = 'human'
     orc = 'orc'
+
+class Attributes(NamedTuple):
+    strength: int
+    strength_pct: int
+    dexterity: int
+    constitution: int
+    intelligence: int
+    wisdom: int
+    charisma: int
+
+    @staticmethod
+    def strength_to_hit(strength, strength_pct):
+        if strength < 6: return -2
+        elif strength < 8: return -1
+        elif strength < 17: return 0
+        elif strength == 18 and strength_pct < 51: return +1
+        elif strength == 18 and strength_pct < 100: return +2
+        else: return +3
+
+    @staticmethod
+    def dexterity_to_hit(dexterity):
+        if dexterity < 4: return -3
+        elif dexterity < 6: return -2
+        elif dexterity < 8: return  -1
+        elif dexterity < 15: return 0
+        else: return dexterity-14 # increases by 1 each step from 15 and up
+
+    @staticmethod
+    def strength_damage(strength, strength_pct):
+        if strength < 6: return -1
+        elif strength < 16: return 0
+        elif strength < 18: return +1
+        elif strength == 18 and strength_pct == 0: return +2
+        elif strength == 18 and strength_pct < 76: return +3
+        elif strength == 18 and strength_pct < 91: return +4
+        elif strength == 18 and strength_pct < 100: return +5
+        else: return +6
+
+    def melee_to_hit_modifiers(self):
+        return self.strength_to_hit(self.strength, self.strength_pct) + self.dexterity_to_hit(self.dexterity)
+
+    def melee_damage_modifiers(self):
+        return self.strength_damage(self.strength, self.strength_pct)
 
 class Intrinsics(enum.Flag):
     NONE = 0

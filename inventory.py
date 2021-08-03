@@ -539,11 +539,12 @@ class PlayerInventory():
             self.slot_groups_by_name[slot_cluster_name] = slots
             return slots
 
-    @functools.cached_property
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
-        pdb.set_trace()
-        hand_occupant = armaments.slots.hand.occupant
+        hand_occupant = armaments.slots['hand'].occupant
+
+        if not hand_occupant:
+            return None
 
         if hand_occupant.equipped_status.status == 'wielded':
             return hand_occupant
@@ -551,9 +552,11 @@ class PlayerInventory():
             if environment.env.debug: pdb.set_trace()
 
     def to_hit_modifiers(self, character, monster):
-        weapon = self.wielded_weapon
-
-        to_hit = 0 or weapon.enhancement
+        weapon = self.wielded_weapon()
+        if weapon:
+            to_hit = 0 or weapon.enhancement
+        else:
+            to_hit = 0
         # TK rings of increased accuracy
         # TK monks and body armor
         # TK monks and no weapon
