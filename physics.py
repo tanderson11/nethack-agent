@@ -25,6 +25,8 @@ action_to_delta = {
     utilities.ACTION_LOOKUP[nethack.actions.CompassDirection.SE]: (1, 1),
 }
 
+delta_to_action = {v:k for k,v in action_to_delta.items()}
+
 action_deltas = action_to_delta.values()
 
 diagonal_moves = utilities.vectorized_map(lambda dir: utilities.ACTION_LOOKUP[dir] > 3 and utilities.ACTION_LOOKUP[dir] < 8, action_grid)

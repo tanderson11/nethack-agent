@@ -64,6 +64,14 @@ docs = ["sphinx"]
 tests = ["coverage[toml] (>=5.0.2)", "hypothesis", "pytest"]
 
 [[package]]
+name = "astar"
+version = "0.93"
+description = "A-* algorithm implementation"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
 name = "async-generator"
 version = "1.10"
 description = "Async generators and context managers for Python 3.5+"
@@ -1399,7 +1407,7 @@ pyzmq = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = ">=3.7.1,<3.10"
-content-hash = "9a51bcb0bafc6d2545dec5efa83d01324a378b0804c12ddd54c45288b425ded8"
+content-hash = "c03cab50eddc02c42b58c3fb83d10e333bf72e776f6e57e471b0e832d4d2e52a"
 
 [metadata.files]
 aicrowd-api = [
@@ -1439,6 +1447,9 @@ argon2-cffi = [
     {file = "argon2_cffi-20.1.0-pp36-pypy36_pp73-win32.whl", hash = "sha256:8282b84ceb46b5b75c3a882b28856b8cd7e647ac71995e71b6705ec06fc232c3"},
     {file = "argon2_cffi-20.1.0-pp37-pypy37_pp73-macosx_10_7_x86_64.whl", hash = "sha256:3aa804c0e52f208973845e8b10c70d8957c9e5a666f702793256242e9167c4e0"},
     {file = "argon2_cffi-20.1.0-pp37-pypy37_pp73-win_amd64.whl", hash = "sha256:36320372133a003374ef4275fbfce78b7ab581440dfca9f9471be3dd9a522428"},
+]
+astar = [
+    {file = "astar-0.93-py3-none-any.whl", hash = "sha256:5153c85f6d9d14607b47d6fbd5257e66a3f140c0dbeabe5a368f01c441e6f0c1"},
 ]
 async-generator = [
     {file = "async_generator-1.10-py3-none-any.whl", hash = "sha256:01c7bf666359b4967d2cda0000cc2e4af16a0ae098cbffcb8472fb9e8ad6585b"},

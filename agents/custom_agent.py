@@ -13,6 +13,9 @@ import itertools
 from nle import nethack
 from agents.base import BatchedAgent
 
+from astar import AStar
+import math
+
 import advisors as advs
 import advisor_sets
 
@@ -395,6 +398,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
         extended_visits = level_map.visits_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
+        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
+        self.extended_walkable_tile = extended_walkable_tile
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -402,14 +407,21 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         # index of player in the full vision
         player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
+        self.player_location_in_extended = player_location_in_extended
 
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+        self.extended_is_monster = extended_is_monster
+        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character), extended_visible_glyphs)
+        extended_is_dangerous_monster[player_location_in_extended] = False
+        self.extended_is_dangerous_monster = extended_is_dangerous_monster
+
         self.monster_present = extended_is_monster.any()
 
         # radius 1 box around player in vision glyphs
         neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         neighborhood_view = (neighborhood_rows, neighborhood_cols)
+        self.neighborhood_view = neighborhood_view
 
         ####################
         # SHOPKEEPER STUFF #
@@ -458,9 +470,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
-        self.is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character), self.glyphs)
+        self.is_dangerous_monster = extended_is_dangerous_monster[neighborhood_view]
 
-        walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), self.glyphs)
+        walkable_tile = extended_walkable_tile[neighborhood_view]
 
         # in the narrow sense
         self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
@@ -469,7 +481,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
-        self.secret_door_map = SecretDoorMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
         self.threat_map = ThreatMap(character, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
 
         #########################################
@@ -497,7 +508,69 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         if self.has_fresh_corpse[self.local_player_location]:
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
- 
+
+    def path_to_weak_monster(self):
+        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
+        weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
+
+        if weak_monsters.any():
+            pathfinder = Pathfinder(self.extended_walkable_tile | self.extended_is_monster) # pretend the distant monsters are walkable so we can actually reach them
+            it = np.nditer(weak_monsters, flags=['multi_index'])
+
+            shortest_path = None
+            shortest_length = None
+
+            for is_weak_monster in it:
+                if is_weak_monster:
+                    # start, goal
+                    path_iterator = pathfinder.astar(self.player_location_in_extended, it.multi_index)
+                    if path_iterator is None:
+                        path = None
+                        path_length = None
+                    else:
+                        path = list(path_iterator)
+                        path_length = len(path)
+                    if shortest_path is None or (shortest_length and shortest_length > path_length):
+                        shortest_path = path
+                        shortest_length = path_length
+
+            if shortest_path is None: # couldn't pathfind to any
+                return None
+            else:
+                first_square_in_path = shortest_path[1] # the 0th square is just your starting location
+                delta = (first_square_in_path[0]-self.player_location_in_extended[0], first_square_in_path[1]-self.player_location_in_extended[1])
+
+                try:
+                    path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
+                except KeyError:
+                    import pdb; pdb.set_trace()
+                return path_action
+
+
+class Pathfinder(AStar):
+    def __init__(self, walkable_mesh):
+        self.walkable_mesh = walkable_mesh
+
+    def neighbors(self, node):
+        box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
+        upper_left = (box_slices[0].start, box_slices[1].start)
+        box = self.walkable_mesh[box_slices]
+
+        neighboring_walkable_squares = []
+        it = np.nditer(box, flags=['multi_index'])
+        for walkable in it:
+
+            if walkable:
+                neighboring_walkable_squares.append((it.multi_index[0]+upper_left[0] , it.multi_index[1]+upper_left[1]))
+
+        return neighboring_walkable_squares
+
+    def distance_between(self, n1, n2):
+        return 1 # diagonal moves are strong!
+
+    def heuristic_cost_estimate(self, current, goal):
+        return math.hypot(current[0]-goal[0], current[1]-goal[1])
+
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
     "background", background_advisor, [
@@ -607,7 +680,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'w538zA=='
+        #seed = b'KQ/3GA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 

@@ -12,7 +12,7 @@ small_advisors = [
     MajorTroubleAdvisorLevel({PrayWhenMajorTroubleAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
     WeakWithHungerAdvisorLevel({PrayWhenWeakAdvisor: 1,}),
-    AdjacentToManyMonstersAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
+    #AdjacentToManyMonstersAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
     AdjacentToDangerousMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
     AdjacentToMonsterAdvisorLevel({SafeMeleeAttackAdvisor: 1,}),
     AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
@@ -23,6 +23,7 @@ small_advisors = [
         FallbackSearchAdvisor: 10, # basically controls to probability we yolo attack floating eyes
         }),
     #SafeAdvisorLevel({IdentifyPotentiallyMagicArmorAdvisor: 1}),
+    AdvisorLevel({HuntNearestWeakEnemyAdvisor: 1}),
     SafeAdvisorLevel({WearEvenBlockedArmorAdvisor: 1}),
     AmUnthreatenedAdvisorLevel({
         PickupFoodAdvisor: 1,

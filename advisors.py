@@ -259,6 +259,13 @@ class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         pass
 
+class HuntNearestWeakEnemyAdvisor(Advisor):
+    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
+        path_action = neighborhood.path_to_weak_monster()
+
+        if path_action is not None:
+            return Advice(self.__class__, path_action, None)
+
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
         if flags.can_move and flags.have_moves:
@@ -732,7 +739,7 @@ class RandomRangedAttackAdvisor(NonPeacefulMeleeAttackAdvisor):
             weapons = inventory.get_oclass(inv.Weapon)
             if len(weapons) > 1:
                 for w in weapons:
-                    if w.equipped_status is None or w.equipped_status.status != 'wielded':
+                    if w and (w.equipped_status is None or w.equipped_status.status != 'wielded'):
                         menu_plan = menuplan.MenuPlan(
                             "ranged attack", self, [
                                 menuplan.DirectionMenuResponse("In what direction?", attack_direction),
@@ -846,12 +853,13 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the"),
             menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
-            menuplan.MoreMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written here"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
+            menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
             menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.PhraseMenuResponse("For what do you wish?", "+2 blessed silver dragon scale mail"),
             menuplan.MoreMenuResponse("silver dragon scale mail"),

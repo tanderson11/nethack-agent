@@ -20,6 +20,7 @@ hydra-colorlog = "^1.1.0"
 flameprof = "^0.4"
 pandas = "^1.2.0"
 pytz = "^2021.1"
+astar = "^0.93"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"
