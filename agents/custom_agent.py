@@ -530,7 +530,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                     else:
                         path = list(path_iterator)
                         path_length = len(path)
-                    if shortest_path is None or (shortest_length and shortest_length > path_length):
+                    if shortest_path is None or (shortest_length and path_length and shortest_length > path_length):
                         shortest_path = path
                         shortest_length = path_length
 
@@ -818,7 +818,6 @@ class RunState():
                 eat_corpse_flag = True
 
             if eat_corpse_flag:
-                #print("Deleting record")
                 self.latest_monster_death = None
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message:
@@ -1008,8 +1007,6 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug:
                 import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
                 # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
-
-        #run_state.advice_log[-1].advisor.give_feedback(message.feedback, run_state) # maybe we want something more like this?
 
         ###################################################
         # We are done observing and ready to start acting #

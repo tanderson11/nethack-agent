@@ -23,7 +23,6 @@ small_advisors = [
         FallbackSearchAdvisor: 10, # basically controls to probability we yolo attack floating eyes
         }),
     #SafeAdvisorLevel({IdentifyPotentiallyMagicArmorAdvisor: 1}),
-    AdvisorLevel({HuntNearestWeakEnemyAdvisor: 1}),
     SafeAdvisorLevel({WearEvenBlockedArmorAdvisor: 1}),
     AmUnthreatenedAdvisorLevel({
         PickupFoodAdvisor: 1,
