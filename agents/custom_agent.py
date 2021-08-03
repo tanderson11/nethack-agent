@@ -23,9 +23,8 @@ import utilities
 import physics
 import inventory as inv
 
-import functools
-
 from utilities import ARS
+from character import Character
 import glyphs as gd
 import environment
 
@@ -120,6 +119,7 @@ class Message():
         "There is a sink here.",
         "Pick up what?",
         "paperback book named",
+        "staircase down",
         # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
 
@@ -512,7 +512,6 @@ BackgroundMenuPlan = menuplan.MenuPlan(
         menuplan.EscapeMenuResponse("little trouble lifting"),
         menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
     ])
-
 
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
@@ -976,7 +975,6 @@ class RunState():
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()
-        #self.character.set_attributes(blstats.make_attributes())
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
@@ -1170,6 +1168,7 @@ class CustomAgent(BatchedAgent):
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content, blstats)
+
             if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
@@ -1200,10 +1199,6 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
-
-        if run_state.character and run_state.character.attributes.strength_pct > 0:
-            #import pdb; pdb.set_trace()
-            pass
 
         killed_monster_name = RecordedMonsterDeath.killed_monster(message.message)
         if killed_monster_name:

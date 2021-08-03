@@ -8,6 +8,7 @@ from nle import nethack
 import pandas as pd
 import numpy as np
 
+import constants
 import environment
 import utilities
 from utilities import ARS
