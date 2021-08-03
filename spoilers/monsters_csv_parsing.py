@@ -9,7 +9,7 @@ import enum
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
 	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists):
-		self.name = ''
+		self.name = name
 		self.melee_attack_bundle = melee_attack_bundle
 		self.ranged_attack_bundle = ranged_attack_bundle
 		self.death_attack_bundle = death_attack_bundle
@@ -22,9 +22,6 @@ class MonsterSpoiler():
 		self.MR = MR
 
 		self.resists = resists
-
-	def expected_hp_loss_in_fight(self, character):
-		pass
 
 	def probability_to_hit_AC(self, AC):
 		# ignoring weapon bonuses/penalties
@@ -53,15 +50,19 @@ class MonsterSpoiler():
 
 		return self.melee_attack_bundle.expected_damage * p * self.actions_per_unit_time()
 
-	def dangerous_to_player(self, character, hp_fraction_tolerance=0.3):
-		# TK know about fled monsters
-
+	def excepted_hp_loss_in_melee(self, character):
 		# (time_to_kill, swings_to_kill, hits_to_kill)
 		ttk, stk, htk = character.average_time_to_kill_monster_in_melee(self)
+		excepted_hp_loss = self.melee_dps(character.AC) * ttk + self.passive_attack_bundle.expected_damage * stk + self.death_attack_bundle.expected_damage
+		return excepted_hp_loss
 
-		excepted_hp_loss = self.melee_dps * ttk + self.passive_attack_bundle.expected_damage * stk + self.death_attack_bundle.expected_damage
+	def dangerous_to_player(self, character, hp_fraction_tolerance=0.3):
+		# TK know about fled monsters
+		excepted_hp_loss = self.excepted_hp_loss_in_melee(character)
 		
-		if excepted_hp_loss < hp_fraction_tolerance * current_hp:
+		#print("ttk, stk, htk, excepted_hp_loss")
+		#print(ttk, stk, htk, excepted_hp_loss)
+		if excepted_hp_loss < hp_fraction_tolerance * character.current_hp:
 			return False
 		else:
 			return True
@@ -168,16 +169,16 @@ class AttackBundle():
 			'w': ('wrap', True),
 			'x': ('prick', True),
 			'z': ('rider', True),
-			'.': ('paralysis', False),
+			'.': ('paralysis', True),
 			'+': ('spell', True),
 			'-': ('steal', True),
 			'"': ('disenchant', True),
 			'&': ('seduce', True),
 			'<': ('slow', True),
-			'!I': ('int_drain', False),
-			'!C': ('con_drain', False),
-			'!S': ('str_drain', False),
-			'!D': ('dex_drain', False),
+			'!I': ('int_drain', False), # mind flayers are only doing int drain with tentacles
+			'!C': ('con_drain', True), # rabid rats are actually doing damage
+			'!S': ('str_drain', True), # this doesn't actually exist ... just normal poison
+			'!D': ('dex_drain', True), # quasits also do real damage
 			'#': ('disease', True),
 			'$': ('gold', True),
 			'*': ('stone', True),
@@ -193,17 +194,21 @@ class AttackBundle():
 
 		damage_types = []
 		for a in attack_strs:
-			if a[0] in self.__class__.prefix_set or (re.match(self.__class__.digit_pattern, a[0]) and self.__class__.matches_no_prefix): # we care about this kind of attack
+			if "(" in a and "(" in self.prefix_set:
+				#import pdb; pdb.set_trace()
+				pass
+
+			if a[0] in self.prefix_set or (re.match(self.digit_pattern, a[0]) and self.matches_no_prefix): # we care about this kind of attack
 				self.num_attacks += 1
-				suffix_match = re.search(self.__class__.suffix_pattern, a)	
+				suffix_match = re.search(self.suffix_pattern, a)	
 				if suffix_match:
 					damage_type = suffix_match[1]
 					damage_types.append(damage_type)
-					attack_does_physical_damage = self.__class__.DamageTypes.suffix_mapping[damage_type][1]
+					attack_does_physical_damage = self.DamageTypes.suffix_mapping[damage_type][1]
 				else:
 					attack_does_physical_damage = True # no suffix is normal attack
 
-				damage_dice_match = re.search(self.__class__.dice_pattern, a)
+				damage_dice_match = re.search(self.dice_pattern, a)
 				if not damage_dice_match:
 					import pdb; pdb.set_trace()
 
@@ -218,9 +223,9 @@ class AttackBundle():
 		keys = [f for f in self.__class__.DamageTypes._fields]
 		damage_type_dict = {k: False for k in keys}
 		for t in damage_types:
-			damage_type_dict[self.__class__.DamageTypes.suffix_mapping[t][0]] = True
+			damage_type_dict[self.DamageTypes.suffix_mapping[t][0]] = True
 
-		self.damage_types = self.__class__.DamageTypes(**damage_type_dict)
+		self.damage_types = self.DamageTypes(**damage_type_dict)
 
 class RangedAttackBundle(AttackBundle):
 	prefix_set = set(['B', 'W', 'M', 'G', 'S'])
@@ -275,15 +280,14 @@ for _, row in monster_df.iterrows():
 
 	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists)
 	#print(name, resists)
-	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage)
+	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage, passive_bundle.max_damage, death_bundle.max_damage)
 	#print(name, {k:v for k,v in zip(melee_bundle.damage_types._fields, melee_bundle.damage_types) if v==True})
 	MONSTERS_BY_NAME[name] = spoiler
 
 	# DPS scratch
-	dps_row = [spoiler.melee_dps(AC) for AC in ACs]
-	dps_rows[name] = dps_row
+	#dps_row = [spoiler.melee_dps(AC) for AC in ACs]
+	#dps_rows[name] = dps_row
 
-dps_df = pd.DataFrame.from_dict(dps_rows, orient='index', columns=ACs)
-#import pdb; pdb.set_trace()
-with open(os.path.join(os.path.dirname(__file__), "dps.csv"), 'w') as f:
-	dps_df.to_csv(f)
+#dps_df = pd.DataFrame.from_dict(dps_rows, orient='index', columns=ACs)
+#with open(os.path.join(os.path.dirname(__file__), "dps.csv"), 'w') as f:
+#	dps_df.to_csv(f)

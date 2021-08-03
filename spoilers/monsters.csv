@@ -27,7 +27,7 @@ winter wolf,d,7,12,4,20,C,2d6 B2d6C
 hell hound pup,d,7,12,4,20,F,2d6 B2d6F
 hell hound,d,12,14,2,20,F,3d6 B3d6F
 gas spore,e,1,3,10,0,,[X4d6]
-floating eye,e,2,1,9,10,,(0d70.)
+floating eye,e,2,1,9,10,,(3d70.)
 freezing sphere,e,6,13,4,0,C,X4d6C
 flaming sphere,e,6,13,4,0,F,X4d6F
 shocking sphere,e,6,13,4,0,E,X4d6E
@@ -54,8 +54,8 @@ imp,i,3,12,2,20,,1d4
 lemure,i,3,3,7,0,Sp,1d3
 quasit,i,3,15,2,20,P,1d2!D 1d2!D 1d4
 tengu,i,6,13,5,30,P,1d7
-blue jelly,j,4,0,8,10,CP,(0d6C)
-spotted jelly,j,5,0,8,10,a*,(0d6A)
+blue jelly,j,4,0,8,10,CP,(5d6C)
+spotted jelly,j,5,0,8,10,a*,(6d6A)
 ochre jelly,j,6,3,8,20,a*,E3d6A (3d6A)
 kobold,k,0,6,10,0,p,W1d4
 large kobold,k,1,6,10,0,p,W1d6
@@ -107,9 +107,9 @@ warhorse,u,7,24,4,0,,1d10 1d4
 fog cloud,v,3,1,0,0,sp*,E1d6
 dust vortex,v,4,20,2,30,sp*,E2d8b
 ice vortex,v,5,20,2,30,csp*,E1d6C
-energy vortex,v,6,20,2,30,sdep*,E1d6E E0d0e (0d4E)
+energy vortex,v,6,20,2,30,sdep*,E1d6E E0d0e (7d4E)
 steam vortex,v,7,22,2,30,fsp*,E1d8F
-fire vortex,v,8,22,2,30,fsp*,E1d10F (0d4F)
+fire vortex,v,8,22,2,30,fsp*,E1d10F (9d4F)
 baby long worm,w,8,3,5,0,,1d6
 baby purple worm,w,8,3,5,0,,1d6
 long worm,w,8,3,5,10,,1d4
@@ -151,14 +151,14 @@ green dragon,D,15,9,-1,20,P,B4d6P 3d8 1d4 1d4
 yellow dragon,D,15,9,-1,20,a*,B4d6A 3d8 1d4 1d4
 stalker,E,8,12,3,0,,4d4
 air elemental,E,8,36,2,30,p*,E1d10
-fire elemental,E,8,12,2,30,fp*,3d6F (0d4F)
+fire elemental,E,8,12,2,30,fp*,3d6F (9d4F)
 earth elemental,E,8,6,2,30,fcp*,4d6
 water elemental,E,8,6,2,30,p*,5d6
 lichen,F,0,1,9,0,,0d0m
-brown mold,F,1,0,9,0,CP,(0d6C)
+brown mold,F,1,0,9,0,CP,(2d6C)
 yellow mold,F,1,0,9,0,P,(0d4s)
-green mold,F,1,0,9,0,a*,(0d4A)
-red mold,F,1,0,9,0,FP,(0d4F)
+green mold,F,1,0,9,0,a*,(2d4A)
+red mold,F,1,0,9,0,FP,(2d4F)
 shrieker,F,3,1,7,0,P,
 violet fungus,F,3,1,7,0,P,1d4 0d0m
 gnome,G,1,6,10,4,,W1d6
@@ -270,7 +270,7 @@ nurse,@,11,6,0,0,P,2d6H
 shopkeeper,@,12,18,0,50,,W4d4 W4d4
 guard,@,12,12,10,40,,W4d10
 prisoner,@,12,12,10,0,,W1d6
-Oracle,@,12,0,0,50,,(0d4M)
+Oracle,@,12,0,0,50,,(13d4M)
 aligned priest,@,12,12,10,50,e,W4d10 1d4 M0d0+
 high priest,@,25,15,7,70,fsep,W4d10 2d8 M2d8+ M2d8+
 soldier,@,6,10,10,0,,W1d8
