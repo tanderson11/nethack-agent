@@ -445,6 +445,13 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
+        for f in failed_moves_on_square:
+            failed_target = physics.offset_location_by_action(self.local_player_location, f)
+            try:
+                self.walkable[failed_target] = False
+            except IndexError:
+                if environment.env.debug: import pdb; pdb.set_trace()
+
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
@@ -977,13 +984,6 @@ class CustomAgent(BatchedAgent):
         ############################
         run_state.update_neighborhood(neighborhood)
         ############################
-
-        for f in run_state.failed_moves_on_square:
-            failed_target = physics.offset_location_by_action(neighborhood.local_player_location, f)
-            try:
-                neighborhood.walkable[failed_target] = False
-            except IndexError:
-                if environment.env.debug: import pdb; pdb.set_trace()
 
         flags = advs.Flags(run_state, blstats, run_state.inventory, neighborhood, message, run_state.character)
 
