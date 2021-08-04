@@ -261,10 +261,14 @@ class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu
 
 class HuntNearestWeakEnemyAdvisor(Advisor):
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
-        path_action = neighborhood.path_to_weak_monster()
+        tup = neighborhood.path_to_weak_monster()
+        if tup is not None:
+            path_action, delta = tup
+            desired_square = (neighborhood.local_player_location[0] + delta[0], neighborhood.local_player_location[1] + delta[1])
 
-        if path_action is not None:
-            return Advice(self.__class__, path_action, None)
+            # to avoid retreating from dangerous monsters and then running back into them, don't move into dangerous threat
+            if neighborhood.n_threat[desired_square] == 0:
+                return Advice(self.__class__, path_action, None)
 
 class MoveAdvisor(Advisor): # this should be some kind of ABC as well, just don't know quite how to chain them # should be ABC over find_agreeable_moves
     def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
