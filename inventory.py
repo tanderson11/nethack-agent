@@ -85,7 +85,7 @@ class Armor(Item):
     def instance_desirability_to_wear(self, character):
         body_armor_penalty = 0
         if character.body_armor_penalty() and self.identity.slot == 'suit':
-            body_armor_penalty = -10
+            body_armor_penalty = -25
 
         if self.enhancement is None:
             best_case_enhancement = 5
