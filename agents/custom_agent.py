@@ -408,7 +408,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visits = level_map.visits_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
         extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
-        self.extended_walkable_tile = extended_walkable_tile
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -487,6 +486,19 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
+        for f in failed_moves_on_square:
+            failed_target = physics.offset_location_by_action(self.local_player_location, f)
+            try:
+                self.walkable[failed_target] = False
+            except IndexError:
+                if environment.env.debug: import pdb; pdb.set_trace()
+
+
+        # we're not calculating the true walkable mesh in extended vision, but we can at least add our local calculation
+        # to help with pathfinding (which depends on an extended walkable mesh)
+        extended_walkable_tile[neighborhood_view] = self.walkable
+        self.extended_walkable = extended_walkable_tile
+
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
@@ -523,7 +535,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
 
         if weak_monsters.any():
-            pathfinder = Pathfinder(self.extended_walkable_tile | self.extended_is_monster) # pretend the distant monsters are walkable so we can actually reach them
+            pathfinder = Pathfinder(self.extended_walkable | self.extended_is_monster) # pretend the distant monsters are walkable so we can actually reach them
             it = np.nditer(weak_monsters, flags=['multi_index'])
 
             shortest_path = None
@@ -549,11 +561,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 first_square_in_path = shortest_path[1] # the 0th square is just your starting location
                 delta = (first_square_in_path[0]-self.player_location_in_extended[0], first_square_in_path[1]-self.player_location_in_extended[1])
 
-                try:
-                    path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
-                except KeyError:
-                    import pdb; pdb.set_trace()
-                return path_action
+                path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
+                return path_action, delta
 
 
 class Pathfinder(AStar):
@@ -1087,13 +1096,6 @@ class CustomAgent(BatchedAgent):
         ############################
         run_state.update_neighborhood(neighborhood)
         ############################
-
-        for f in run_state.failed_moves_on_square:
-            failed_target = physics.offset_location_by_action(neighborhood.local_player_location, f)
-            try:
-                neighborhood.walkable[failed_target] = False
-            except IndexError:
-                if environment.env.debug: import pdb; pdb.set_trace()
 
         flags = advs.Flags(run_state, blstats, run_state.character.inventory, neighborhood, message, run_state.character)
 
