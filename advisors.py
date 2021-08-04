@@ -612,6 +612,7 @@ class EatTopInventoryAdvisor(Advisor):
             menuplan.NoMenuResponse("here; eat"),
             menuplan.CharacterMenuResponse("want to eat?", chr(letter)),
             menuplan.MoreMenuResponse("You succeed in opening the tin."),
+            menuplan.MoreMenuResponse("Using your tin opener you try to open the tin"),
             menuplan.MoreMenuResponse("smells like"),
             menuplan.MoreMenuResponse("It contains"),
             menuplan.YesMenuResponse("Eat it?"),
@@ -868,7 +869,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
-            menuplan.MoreMenuResponse("You wipe out the message that was written here"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),

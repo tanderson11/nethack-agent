@@ -382,7 +382,7 @@ class ThreatMap(FloodMap):
         return can_hit_mask
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
-    extended_vision = 2
+    extended_vision = 3
     def __init__(self, time, absolute_player_location, observation, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square, feedback):
         ###################
         ### COPY FIELDS ###
