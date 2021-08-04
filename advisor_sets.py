@@ -31,6 +31,8 @@ small_advisors = [
         WearUnblockedArmorAdvisor: 1,
         EngraveTestWandsAdvisor: 1,
     }),
+    AdvisorLevel({HuntNearestWeakEnemyAdvisor: 1}),
+    #AdvisorLevel({TravelToUnexploredSquareAdvisor: 1,}, skip_probability=0.96),
     UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
     AdvisorLevel({OpenClosedDoorAdvisor: 1,}),
     DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
