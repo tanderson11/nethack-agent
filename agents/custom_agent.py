@@ -690,7 +690,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'KQ/3GA=='
+        #seed = b'FLog8g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -989,10 +989,9 @@ class CustomAgent(BatchedAgent):
         if fleeing_monster_name:
             try:
                 recorded_flight = RecordedMonsterFlight(time, fleeing_monster_name)
+                run_state.latest_monster_flight = recorded_flight
             except Exception as e:
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
-
-            run_state.latest_monster_flight = recorded_flight
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
