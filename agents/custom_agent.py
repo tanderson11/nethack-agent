@@ -530,6 +530,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         if self.has_fresh_corpse[self.local_player_location]:
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
+    class PathStep(NamedTuple):
+        path_action: int
+        delta: tuple
+
     def path_to_weak_monster(self):
         weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
         weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
@@ -562,7 +566,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 delta = (first_square_in_path[0]-self.player_location_in_extended[0], first_square_in_path[1]-self.player_location_in_extended[1])
 
                 path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
-                return path_action, delta
+                return PathStep(path_action, delta)
 
 
 class Pathfinder(AStar):
@@ -1097,60 +1101,26 @@ class CustomAgent(BatchedAgent):
         run_state.update_neighborhood(neighborhood)
         ############################
 
-        flags = advs.Flags(run_state, blstats, run_state.character.inventory, neighborhood, message, run_state.character)
+        oracle = advs.Flags(run_state, blstats, run_state.character.inventory, neighborhood, message, run_state.character)
 
         #if environment.env.debug: pdb.set_trace()
-        for advisor_level in advisor_sets.small_advisors:
-            if advisor_level.check_level(flags, run_state.rng):
-                #print(advisor_level, advisor_level.advisors)
-                advisors = advisor_level.advisors.keys()
-                all_advice = [advisor().advice(run_state, run_state.rng, run_state.character, blstats, run_state.character.inventory, neighborhood, message, flags) for advisor in advisors]
-                #print(all_advice)
-                try:
-                    all_advice = [advice for advice in all_advice if advice and (game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence)]
-                except TypeError:
-                    if environment.env.debug: pdb.set_trace()
-                if all_advice:
-                    chosen_advice = run_state.rng.choices(
-                        all_advice,
-                        weights=map(lambda x: advisor_level.advisors[x.advisor], all_advice)
-                    )[0]
-                    action = chosen_advice.action
+        for advisor in advisor_sets.new_advisors:
+            advice = advisor.advice(run_state.rng, run_state, run_state.character, oracle)
 
-                    #if action == nethack.actions.Command.QUAFF: print("quaffing!")
-                    #if action == nethack.actions.Command.FIRE: print("firing!")
-                    #if action == nethack.actions.Command.WEAR: print("wearing!")
-                    #if action == nethack.actions.Command.EAT: print("eating!", chosen_advice.advisor)
-                    if action == nethack.actions.Command.PRAY:
-                        run_state.character.last_pray_time = time
-                        run_state.character.last_pray_reason = chosen_advice.advisor
+            if advice is not None:
+                if advice.action.action_value == utilities.ACTION_BY_ENUM[nethack.actions.Command.PRAY]:
+                    run_state.character.last_pray_time = time
+                    run_state.character.last_pray_reason = chosen_advice.advisor
 
-                    menu_plan = chosen_advice.menu_plan
-                    break
+                menu_plan = advice.menu_plan
+                break
 
-        try:
-            retval = utilities.ACTION_LOOKUP[action]
-        except UnboundLocalError:
-            print("WARNING: somehow fell all the way out of advisors. Could mean fallbacks failed to advance game time due to intrinsic speed.")
+        retval = advice.action.index_value
 
-            chosen_advice = advs.Advice(None, utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH], None)
-            retval = chosen_advice.action
-            menu_plan = chosen_advice.menu_plan
-            #if environment.env.debug: pdb.set_trace()
-
-        run_state.log_action(retval, advice=chosen_advice) # don't log menu plan because this wasn't a menu plan action
+        run_state.log_action(retval, advice=advice) # don't log menu plan because this wasn't a menu plan action
 
         if menu_plan is not None:
             run_state.set_menu_plan(menu_plan)
-
-        if retval == utilities.ACTION_LOOKUP[nethack.actions.MiscDirection.WAIT]:
-            if environment.env.debug: import pdb; pdb.set_trace() # maybe this happens when we travel?
-
-        if environment.env.debug and retval in range(0,8): #cardinal
-            new_loc = physics.offset_location_by_action(neighborhood.local_player_location, retval)
-            if neighborhood.threatened[new_loc] and not neighborhood.is_monster[new_loc]:
-                print("Moved into threat")
-                #import pdb; pdb.set_trace()
 
         return retval
 
