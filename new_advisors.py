@@ -3,29 +3,6 @@ from typing import NamedTuple
 
 import numpy as np
 
-class Action(NamedTuple):
-	name: str
-	index_value: int
-	action_value: int
-
-	def __hash__(self):
-		return hash(self.action_value)
-
-	@classmethod
-	def action_from_index(cls, index_value):
-		action = nethack.ACTIONS[index_value]
-		return cls(action.name, index_value, action)
-
-	@classmethod
-	def action_from_action_value(cls, action_value):
-		index_value = utilities.ACTION_LOOKUP[action_value]
-		action = nethack.ACTIONS[index_value]
-		name = action.name
-		return cls(name, index_value, action_value)
-
-ACTIONS_BY_INDEX = {}
-ACTIONS_BY_ENUM = {}
-
 class Advice():
     def __init__(self, advisor, action, menu_plan):
         self.advisor = advisor
@@ -36,12 +13,12 @@ class Advice():
         return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action.name, self.advisor, self.menu_plan)
 
 class Advisor(abc.ABC):
-	def __init__(self, flags=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
-		self.flags = flags
+	def __init__(self, oracle_consultation=lambda o: True, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
+		self.consult = oracle_consultation
 		self.threat_tolerance = threat_tolerance,
 		self.no_adjacent_monsters = no_adjacent_monsters
 
-	def check_conditions(self, run_state, character, flag_checker):
+	def check_conditions(self, run_state, character, oracle):
 		if self.threat_tolerance and run_state.neighborhood.threat_on_player > character.current_hp * self.threat_tolerance:
 			return False
 
@@ -51,26 +28,26 @@ class Advisor(abc.ABC):
 		if self.no_adjacent_monsters == True and run_state.neighborhood.is_monster.any():
 			return False
 
-		if self.flags and flag_checker.check(self.flags) == False:
+		if self.consult(oracle) == False:
 			return False
 
 		return True
 
 	@abc.abstractmethod
-	def advice(self, rng, run_state, character, flag_checker):
+	def advice(self, rng, run_state, character, oracle):
 		pass
 
 class CompositeAdvisor(Advisor):
-	def __init__(advisors=None, flags=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(advisors=None, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		self.advisors = advisors
-		super().__init__(flags=flags, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold)
+		super().__init__(oracle_consultation=oracle_consultation, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold)
 
 class RandomCompositeAdvisor(CompositeAdvisor):
-	def advice(self, rng, run_state, character, flag_checker):
+	def advice(self, rng, run_state, character, oracle):
 		all_advice = []
 		weights = []
 		for advisor, weight in self.advisors.items():
-			advice = advisor.advice(rng, run_state, character, flag_checker)
+			advice = advisor.advice(rng, run_state, character, oracle)
 			if advice is not None:
 				all_advice.append(advice)
 				weights.append(weight)
@@ -78,24 +55,24 @@ class RandomCompositeAdvisor(CompositeAdvisor):
 		return rng.choice(all_advice, weights=weights)
 
 class SequentialCompositeAdvisor(CompositeAdvisor):
-	def advice(self, run_state, character, flag_checker):
+	def advice(self, run_state, character, oracle):
 		for advisor, odds in self.advisors:
-			advice = advisor.advice(run_state, character, flag_checker)
+			advice = advisor.advice(run_state, character, oracle)
 			if advice is not None:
 				return advice
 
 class WaitAdvisor(Advisor):
-	def advice(self, rng, run_state, character, flag_checker):
+	def advice(self, rng, run_state, character, oracle):
 		wait = utilities.ACTION_BY_ENUM[nethack.actions.MiscDirection.WAIT]
 		return Advice(self, wait, None)
 
 class GoUpstairsAdvisor(Advisor):
-	def advice(self, rng, run_state, character, flag_checker):
+	def advice(self, rng, run_state, character, oracle):
 		up = utilities.ACTION_BY_ENUM[nethack.actions.MiscDirection.UP]
 		return Advice(self, up, None)
 
 class DrinkHealingPotionAdvisor(Advisor):
-    def advice(self, run_state, character, flag_checker):
+    def advice(self, run_state, character, oracle):
         quaff = utilities.ACTION_BY_ENUM[nethack.actions.Command.QUAFF]
         potions = inventory.get_oclass(inv.Potion)
 
@@ -114,12 +91,12 @@ class DrinkHealingPotionAdvisor(Advisor):
 class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [DrinkHealingPotionAdvisor]
 
-	def __init__(flags=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		advisors = [adv() for adv in self.sequential_advisors]
-		super().__init__(advisors, flags, threat_tolerance, threat_threshold)
+		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
 class ZapTeleportOnSelfAdvisor(Advisor):
-    def advice(self, run_state, character, flag_checker):
+    def advice(self, run_state, character, oracle):
         zap = utilities.ACTION_BY_ENUM[nethack.actions.Command.ZAP]
         wands = inventory.get_oclass(inv.Wand)
 
@@ -134,7 +111,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
         return None
 
 class ReadTeleportAdvisor(Advisor):
-    def advice(self, run_state, character, flag_checker):
+    def advice(self, run_state, character, oracle):
         read = utilities.ACTION_BY_ENUM[nethack.actions.Command.READ]
         scrolls = inventory.get_oclass(inv.Scroll)
 
@@ -150,12 +127,12 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
-	def __init__(flags=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		advisors = [adv() for adv in self.sequential_advisors]
-		super().__init__(advisors, flags, threat_tolerance, threat_threshold)
+		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
 class EnhanceSkillsAdvisor(Advisor):
-    def advice(self, rng, run_state, character, flag_checker):
+    def advice(self, rng, run_state, character, oracle):
         enhance = utilities.ACTION_BY_ENUM[nethack.actions.Command.ENHANCE]
         menu_plan = menuplan.MenuPlan(
             "enhance skills",
@@ -181,26 +158,26 @@ class InventoryEatAdvisor(Advisor):
         ])
         return menu_plan
 
-    def check_comestible(self, comestible, rng, run_state, character, flag_checker):
+    def check_comestible(self, comestible, rng, run_state, character, oracle):
     	return True
 
-    def advice(self, rng, run_state, character, flag_checker):
+    def advice(self, rng, run_state, character, oracle):
 		eat = utilities.ACTION_BY_ENUM[nethack.actions.Command.EAT]
         food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
 
         for comestible in food:
-        	if comestible and self.check_comestible(comestible, rng, run_state, character, flag_checker):
-                letter = comestible.inventory_letter
+        	if comestible and self.check_comestible(comestible, rng, run_state, character, oracle):
+				letter = comestible.inventory_letter
                 menu_plan = self.make_menu_plan(letter)
-                return Advice(self.__class__, eat, menu_plan)
+                return Advice(self, eat, menu_plan)
         return None
 
 class CombatEatAdvisor(Advisor):
-	def check_comestible(self, comestible, rng, run_state, character, flag_checker):
+	def check_comestible(self, comestible, rng, run_state, character, oracle):
 		return comestible.identity and comestible.identity.name() != 'tin'
 
 class PrayerAdvisor(Advisor):
-    def advice(self, rng, run_state, character, flag_checker):
+    def advice(self, rng, run_state, character, oracle):
         if character.last_pray_time is None and blstats.get('time') <= 300:
             return None
         if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
@@ -229,43 +206,43 @@ class PrayForLesserMajorTroubleAdvisor(PrayerAdvisor):
 
 # CURRENTLY DON'T ATTACK INVISIBLE_ETC
 class DumbMeleeAttackAdvisor(Advisor):
-	def satisfactory_monster(self, monster, rng, run_state, character, flag_checker):
+	def satisfactory_monster(self, monster, rng, run_state, character, oracle):
 		'''Returns True if this is a monster the advisor is willing to target. False otherwise.
 
 		Only called on a monster glyph  as identified by the neighborhood (ex. InvisibleGlyph)'''
 		return True
 
-	def prioritize_target(self, monsters, rng, run_state, character, flag_checker):
+	def prioritize_target(self, monsters, rng, run_state, character, oracle):
 		return 0
 
-	def get_monsters(self, rng, run_state, character, flag_checker):
-		it = np.nditer(run_state.neighborhood.is_monster, flags=['multi_index'])
+	def get_monsters(self, rng, run_state, character, oracle):
+		it = np.nditer(run_state.neighborhood.is_monster, oracle_consultation=['multi_index'])
 		monsters = []
 		monster_squares = []
 		for is_monster in it:
 			glyph = run_state.neighborhood.glyphs[it.multi_index]
-			if is_monster and self.satisfactory_monster(glyph, rng, run_state, character, flag_checker):
+			if is_monster and self.satisfactory_monster(glyph, rng, run_state, character, oracle):
 				monsters.append(glyph)
 				monster_squares.append(it.multi_index)
 
 		return monsters, monster_squares
 
-	def advice(self, rng, run_state, character, flag_checker):
-		monsters, monster_squares = self.get_monsters(rng, run_state, character, flag_checker)
+	def advice(self, rng, run_state, character, oracle):
+		monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
 
 		if len(monsters) > 0:
-			target_index = self.prioritize_target(monsters, rng, run_state, character, flag_checker)
+			target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
 			target_square = monster_squares[target_index]
 	        attack_direction = neighborhood.action_grid[target_square]
 	        return Advice(self, attack_direction, None)
 	    return None
 
 class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
-    def advice(self, run_state, rng,character, blstats, inventory, neighborhood, message, flags):
-    	monsters, monster_squares = self.get_monsters(rng, run_state, character, flag_checker)
+    def advice(self, rng, run_state, character, oracle):
+    	monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
 
         if len(monsters) > 0:
-			target_index = self.prioritize_target(monsters, rng, run_state, character, flag_checker)
+			target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
 			target_square = monster_squares[target_index]
 	        attack_direction = neighborhood.action_grid[target_square]
 
@@ -287,13 +264,13 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
 	    return None
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-	def satisfactory_monster(self, monster, rng, run_state, character, flag_checker):
+	def satisfactory_monster(self, monster, rng, run_state, character, oracle):
 		if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
 			return True
 		else:
 			return False
 
-	def prioritize_target(self, monsters, rng, run_state, character, flag_checker):
+	def prioritize_target(self, monsters, rng, run_state, character, oracle):
 		max_damage = 0
 		target_monster = None
 		# prioritize by maximum passive damage
@@ -307,7 +284,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 		return target_monster
 
 class LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor(DumbMeleeAttackAdvisor):
-	def prioritize_target(self, monsters, rng, run_state, character, flag_checker):
+	def prioritize_target(self, monsters, rng, run_state, character, oracle):
 		if len(m) == 1:
 			return m[0]
 		else:
@@ -330,7 +307,7 @@ class UnsafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
 
 class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
 	unsafe_hp_loss_fraction = 0.5
-	def satisfactory_monster(self, monster, rng, run_state, character, flag_checker):
+	def satisfactory_monster(self, monster, rng, run_state, character, oracle):
 		spoiler = monster.monster_spoiler
 		trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
 
@@ -340,25 +317,25 @@ class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
 		return True
 
 class MoveAdvisor(Advisor):
-	def __init__(self, flags=None, no_adjacent_monsters=True, square_threat_tolerance=None):
+	def __init__(self, oracle_consultation=None, no_adjacent_monsters=True, square_threat_tolerance=None):
 		self.square_threat_tolerance = square_threat_tolerance
-		super().__init__(self, flags=flags, no_adjacent_monsters=no_adjacent_monsters)
+		super().__init__(self, oracle_consultation=oracle_consultation, no_adjacent_monsters=no_adjacent_monsters)
 
-	def would_move_squares(self, rng, run_state, character, flag_checker):
+	def would_move_squares(self, rng, run_state, character, oracle):
 		move_mask  = run_state.neighborhood.walkable
 		# don't move into intolerable threat
 		move_mask &= run_state.neighborhood.threat <= self.square_threat_tolerance * character.current_hp
 		return move_mask
 
 class RandomMoveAdvisor():
-	def advice(self, rng, run_state, character, flag_checker):
-		move_mask = self.would_move_squares(self, rng, run_state, character, flag_checker)
+	def advice(self, rng, run_state, character, oracle):
+		move_mask = self.would_move_squares(self, rng, run_state, character, oracle)
 		possible_actions = neighborhood.action_grid[move_mask]
 
 		return Advice(self, rng.choice(possible_actions), None)
 
 class HuntNearestWeakEnemyAdvisor(Advisor):
-    def advice(self, rng, run_state, character, flag_checker):
+    def advice(self, rng, run_state, character, oracle):
         path_step = neighborhood.path_to_weak_monster()
 
         if path_step is not None:

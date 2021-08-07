@@ -2,11 +2,11 @@ from advisors import *
 
 new_advisors = [
     # FREE IMPROVEMENT
-    SequentialCompositeAdvisor(advisors=[EnhanceSkillsAdvisor(),]),
+    EnhanceSkillsAdvisor(),
     # STONING ILL ETC
-    SequentialCompositeAdvisor(flags=flags.UrgentMajorTrouble, advisors=[PrayForUrgentMajorTroubleAdvisor()]),
+    PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.UrgentMajorTrouble),
     # CRITICALLY INJURED
-    SequentialCompositeAdvisor(flags=flags.CriticallyInjured or flags.LifeThreatened, advisors=[ # dumb, doesn't work
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.CriticallyInjured or o.LifeThreatened, advisors=[ # oracle_consultation=dumb, doesn't work
         WaitAdvisor(threat_tolerance=0.),
         GoUpstairsAdvisor(carried_threat_tolerance=0.),
         DoCombatHealingAdvisor(),
@@ -16,33 +16,33 @@ new_advisors = [
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
     # WEAK
-    SequentialCompositeAdvisor(flags=flags.WeakWithHunger, advisors=[CombatEatAdvisor(threat_tolerance=0.05)]),
+    CombatEatAdvisor(oracle_consultation=lambda o: o.WeakWithHunger, threat_tolerance=0.05),
     # HIGHLY THREATENED
-    #SequentialCompositeAdvisor(threat_threshold=0.4, advisors=[PathfindToSafetyAdvisor()]),
+    PathfindToSafetyAdvisor(threat_threshold=0.4),
     # IN GNOMISH MINES
-    SequentialCompositeAdvisor(flags=flags.InGnomishMines, advisors=[GoUpstairsAdvisor()]),
+    GoUpstairsAdvisor(oracle_consultation=lambda o: o.InGnomishMines),
     # COMBAT
-    SequentialCompositeAdvisor(flags=flags.AdjacentToMonster, advisors=[
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.AdjacentToMonster, advisors=[
         SafeMeleeAttackAdvisor(),
         RandomMoveAdvisor(square_threat_tolerance=0.),
         PassiveMonsterRangedAttackAdvisor(),
-        UnsafeMeleeAttackAdvisor(flags=flags.NoMoves),
+        UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.NoMoves),
         ]),
     # WEAK
-    SequentialCompositeAdvisor(flags=flags.WeakWithHunger, advisors=[
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.WeakWithHunger, advisors=[
         InventoryEatAdvisor(threat_tolerance=0.05),
         PrayForNutritionAdvisor(),
         ]),
     # LYCANTHROPY PUNISHED ETC
-    SequentialCompositeAdvisor(flags=flags.MajorTrouble, advisors=[PrayForLesserMajorTroubleAdvisor()]),
+    PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.MajorTrouble),
     # DISTANT THREAT
-    SequentialCompositeAdvisor(flags=flags.AmThreatened, advisors=[
-        RandomMoveAdvisor(square_threat_tolerance=0.),
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.AmThreatened, advisors=[
         HuntNearestEnemyPathAdvisor(),
+        RandomMoveAdvisor(square_threat_tolerance=0.),
         ]),
     ###### OUT OF DANGER ###### ()
     # WHEN SAFE IMPROVEMENTS
-    SequentialCompositeAdvisor(flags=flags.AmSafe, advisors=[
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.AmSafe, advisors=[
         AnyWardrobeChangeAdvisor(),
         ReadUnidenifiedScrollAdvisor()
         ]),
@@ -54,22 +54,22 @@ new_advisors = [
         EngraveTestWandsAdvisor(),
         ]),
     # HUNT
-    SequentialCompositeAdvisor(advisors=[HuntNearestWeakEnemyPathAdvisor(path_threat_tolerance=0.1)]),
+    HuntNearestWeakEnemyPathAdvisor(path_threat_tolerance=0.1),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
         OpenClosedDoorAdvisor(),
-        KickLockedDoorAdvisor(flags=flags.InDungeonsOfDoom),
+        KickLockedDoorAdvisor(oracle_consultation=lambda o: o.InDungeonsOfDoom),
         TraverseUnknownUpstairsAdvisor(),
         ]),
     # MOVE TO DESIRABLE
-    SequentialCompositeAdvisor(flags=, advisors=[
+    SequentialCompositeAdvisor(advisors=[
         FreshCorpseMoveAdvisor(square_threat_tolerance=0.),
         DesirableObjectMoveAdvisor(square_threat_tolerance=0.),
         ]),
     # EXPLORE
-    SequentialCompositeAdvisor(advisors=[SearchForSecretDoorAdvisor()]),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 5,
+        SearchForSecretDoorAdvisor(): 3,
         RandomMoveAdvisor(square_threat_tolerance=0.): 1,
         })
 ]
