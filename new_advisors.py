@@ -4,13 +4,13 @@ from typing import NamedTuple
 import numpy as np
 
 class Advice():
-    def __init__(self, advisor, action, menu_plan):
-        self.advisor = advisor
-        self.action = action
-        self.menu_plan = menu_plan
+	def __init__(self, advisor, action, menu_plan):
+		self.advisor = advisor
+		self.action = action
+		self.menu_plan = menu_plan
 
-    def __repr__(self):
-        return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action.name, self.advisor, self.menu_plan)
+	def __repr__(self):
+		return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action.name, self.advisor, self.menu_plan)
 
 class Advisor(abc.ABC):
 	def __init__(self, oracle_consultation=lambda o: True, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
@@ -72,21 +72,21 @@ class GoUpstairsAdvisor(Advisor):
 		return Advice(self, up, None)
 
 class DrinkHealingPotionAdvisor(Advisor):
-    def advice(self, run_state, character, oracle):
-        quaff = nethack.actions.Command.QUAFF
-        potions = inventory.get_oclass(inv.Potion)
+	def advice(self, run_state, character, oracle):
+		quaff = nethack.actions.Command.QUAFF
+		potions = inventory.get_oclass(inv.Potion)
 
-        for potion in potions:
-            if potion and potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
-                letter = potion.inventory_letter
-                menu_plan = menuplan.MenuPlan(
-                    "drink healing potion", self, [
-                        menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
-                        menuplan.NoMenuResponse("Drink from the fountain?"),
-                        menuplan.NoMenuResponse("Drink from the sink?"),
-                    ])
-                return Advice(self, quaff, menu_plan)
-        return None
+		for potion in potions:
+			if potion and potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+				letter = potion.inventory_letter
+				menu_plan = menuplan.MenuPlan(
+					"drink healing potion", self, [
+						menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
+						menuplan.NoMenuResponse("Drink from the fountain?"),
+						menuplan.NoMenuResponse("Drink from the sink?"),
+					])
+				return Advice(self, quaff, menu_plan)
+		return None
 
 class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [DrinkHealingPotionAdvisor]
@@ -96,33 +96,33 @@ class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
 		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
 class ZapTeleportOnSelfAdvisor(Advisor):
-    def advice(self, run_state, character, oracle):
-        zap = nethack.actions.Command.ZAP
-        wands = inventory.get_oclass(inv.Wand)
+	def advice(self, run_state, character, oracle):
+		zap = nethack.actions.Command.ZAP
+		wands = inventory.get_oclass(inv.Wand)
 
-        for wand in wands:
-            if wand and wand.identity and wand.identity.name() == 'teleportation':
-                letter = wand.inventory_letter
-                menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
-                    menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
-                    menuplan.DirectionMenuResponse("In what direction?", neighborhood.action_grid[neighborhood.local_player_location]),
-                ])
-                return Advice(self, zap, menu_plan)
-        return None
+		for wand in wands:
+			if wand and wand.identity and wand.identity.name() == 'teleportation':
+				letter = wand.inventory_letter
+				menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
+					menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
+					menuplan.DirectionMenuResponse("In what direction?", neighborhood.action_grid[neighborhood.local_player_location]),
+				])
+				return Advice(self, zap, menu_plan)
+		return None
 
 class ReadTeleportAdvisor(Advisor):
-    def advice(self, run_state, character, oracle):
-        read = nethack.actions.Command.READ
-        scrolls = inventory.get_oclass(inv.Scroll)
+	def advice(self, run_state, character, oracle):
+		read = nethack.actions.Command.READ
+		scrolls = inventory.get_oclass(inv.Scroll)
 
-        for scroll in scrolls:
-            if scroll and scroll.identity and scroll.identity.name() == 'teleport':
-                letter = scrolls.inventory_letter
-                menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
-                ])
-                return Advice(self, read, menu_plan)
-        return None
+		for scroll in scrolls:
+			if scroll and scroll.identity and scroll.identity.name() == 'teleport':
+				letter = scrolls.inventory_letter
+				menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
+					menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
+				])
+				return Advice(self, read, menu_plan)
+		return None
 
 class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
@@ -132,61 +132,61 @@ class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
 		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
 class EnhanceSkillsAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        enhance = nethack.actions.Command.ENHANCE
-        menu_plan = menuplan.MenuPlan(
-            "enhance skills",
-            self,
-            [],
-            interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(run_state),
-        )
+	def advice(self, rng, run_state, character, oracle):
+		enhance = nethack.actions.Command.ENHANCE
+		menu_plan = menuplan.MenuPlan(
+			"enhance skills",
+			self,
+			[],
+			interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(run_state),
+		)
 
-        return Advice(self, enhance, menu_plan)
+		return Advice(self, enhance, menu_plan)
 
 class InventoryEatAdvisor(Advisor):
 	def make_menu_plan(self, letter):
-        menu_plan = menuplan.MenuPlan("eat from inventory", self, [
-            menuplan.NoMenuResponse("here; eat"),
-            menuplan.CharacterMenuResponse("want to eat?", chr(letter)),
-            menuplan.MoreMenuResponse("You succeed in opening the tin."),
-            menuplan.MoreMenuResponse("Using your tin opener you try to open the tin"),
-            menuplan.MoreMenuResponse("smells like"),
-            menuplan.MoreMenuResponse("It contains"),
-            menuplan.YesMenuResponse("Eat it?"),
-            menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
-            menuplan.NoMenuResponse("Continue eating"),
-        ])
-        return menu_plan
+		menu_plan = menuplan.MenuPlan("eat from inventory", self, [
+			menuplan.NoMenuResponse("here; eat"),
+			menuplan.CharacterMenuResponse("want to eat?", chr(letter)),
+			menuplan.MoreMenuResponse("You succeed in opening the tin."),
+			menuplan.MoreMenuResponse("Using your tin opener you try to open the tin"),
+			menuplan.MoreMenuResponse("smells like"),
+			menuplan.MoreMenuResponse("It contains"),
+			menuplan.YesMenuResponse("Eat it?"),
+			menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
+			menuplan.NoMenuResponse("Continue eating"),
+		])
+		return menu_plan
 
-    def check_comestible(self, comestible, rng, run_state, character, oracle):
-    	return True
+	def check_comestible(self, comestible, rng, run_state, character, oracle):
+		return True
 
-    def advice(self, rng, run_state, character, oracle):
+	def advice(self, rng, run_state, character, oracle):
 		eat = nethack.actions.Command.EAT
-        food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
+		food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
 
-        for comestible in food:
-        	if comestible and self.check_comestible(comestible, rng, run_state, character, oracle):
+		for comestible in food:
+			if comestible and self.check_comestible(comestible, rng, run_state, character, oracle):
 				letter = comestible.inventory_letter
-                menu_plan = self.make_menu_plan(letter)
-                return Advice(self, eat, menu_plan)
-        return None
+				menu_plan = self.make_menu_plan(letter)
+				return Advice(self, eat, menu_plan)
+		return None
 
 class CombatEatAdvisor(Advisor):
 	def check_comestible(self, comestible, rng, run_state, character, oracle):
 		return comestible.identity and comestible.identity.name() != 'tin'
 
 class PrayerAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        if character.last_pray_time is None and blstats.get('time') <= 300:
-            return None
-        if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
-            return None
-        pray = nethack.actions.Command.PRAY
-        menu_plan = menuplan.MenuPlan("yes pray", self, [
-            menuplan.YesMenuResponse("Are you sure you want to pray?")
-        ])
-        return Advice(self, pray, menu_plan)
+	def advice(self, rng, run_state, character, oracle):
+		if character.last_pray_time is None and blstats.get('time') <= 300:
+			return None
+		if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
+			return None
+		pray = nethack.actions.Command.PRAY
+		menu_plan = menuplan.MenuPlan("yes pray", self, [
+			menuplan.YesMenuResponse("Are you sure you want to pray?")
+		])
+		return Advice(self, pray, menu_plan)
 
 class PrayForUrgentMajorTroubleAdvisor(PrayerAdvisor):
 	pass
@@ -233,35 +233,35 @@ class DumbMeleeAttackAdvisor(Advisor):
 		if len(monsters) > 0:
 			target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
 			target_square = monster_squares[target_index]
-	        attack_direction = neighborhood.action_grid[target_square]
-	        return Advice(self, attack_direction, None)
-	    return None
+			attack_direction = neighborhood.action_grid[target_square]
+			return Advice(self, attack_direction, None)
+		return None
 
 class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
-    def advice(self, rng, run_state, character, oracle):
-    	monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
+	def advice(self, rng, run_state, character, oracle):
+		monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
 
-        if len(monsters) > 0:
+		if len(monsters) > 0:
 			target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
 			target_square = monster_squares[target_index]
-	        attack_direction = neighborhood.action_grid[target_square]
+			attack_direction = neighborhood.action_grid[target_square]
 
-	        fire = nethack.actions.Command.FIRE
+			fire = nethack.actions.Command.FIRE
 
-	        weapons = inventory.get_oclass(inv.Weapon)
-            for w in weapons:
-                if w and (w.equipped_status is None or w.equipped_status.status != 'wielded'):
-                    menu_plan = menuplan.MenuPlan(
-                        "ranged attack", self, [
-                            menuplan.DirectionMenuResponse("In what direction?", attack_direction.action_value),
-                            menuplan.MoreMenuResponse("You have no ammunition"),
-                            menuplan.MoreMenuResponse("You ready"),
-                            # note throw: means we didn't have anything quivered
-                            menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
-                        ],
-                    )
-                    return Advice(self, fire, menu_plan)
-	    return None
+			weapons = inventory.get_oclass(inv.Weapon)
+			for w in weapons:
+				if w and (w.equipped_status is None or w.equipped_status.status != 'wielded'):
+					menu_plan = menuplan.MenuPlan(
+						"ranged attack", self, [
+							menuplan.DirectionMenuResponse("In what direction?", attack_direction.action_value),
+							menuplan.MoreMenuResponse("You have no ammunition"),
+							menuplan.MoreMenuResponse("You ready"),
+							# note throw: means we didn't have anything quivered
+							menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
+						],
+					)
+					return Advice(self, fire, menu_plan)
+		return None
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 	def satisfactory_monster(self, monster, rng, run_state, character, oracle):
@@ -335,11 +335,11 @@ class RandomMoveAdvisor():
 		return Advice(self, rng.choice(possible_actions), None)
 
 class HuntNearestWeakEnemyAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        path_step = neighborhood.path_to_weak_monster()
+	def advice(self, rng, run_state, character, oracle):
+		path_step = neighborhood.path_to_weak_monster()
 
-        if path_step is not None:
-	        desired_square = (neighborhood.local_player_location[0] + path_step.delta[0], neighborhood.local_player_location[1] + path_step.delta[1])
-	        return Advice(self, path_step.path_action, None)
+		if path_step is not None:
+			desired_square = (neighborhood.local_player_location[0] + path_step.delta[0], neighborhood.local_player_location[1] + path_step.delta[1])
+			return Advice(self, path_step.path_action, None)
 
 
