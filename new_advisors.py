@@ -63,17 +63,17 @@ class SequentialCompositeAdvisor(CompositeAdvisor):
 
 class WaitAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
-		wait = utilities.ACTION_BY_ENUM[nethack.actions.MiscDirection.WAIT]
+		wait = nethack.actions.MiscDirection.WAIT
 		return Advice(self, wait, None)
 
 class GoUpstairsAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
-		up = utilities.ACTION_BY_ENUM[nethack.actions.MiscDirection.UP]
+		up = nethack.actions.MiscDirection.UP
 		return Advice(self, up, None)
 
 class DrinkHealingPotionAdvisor(Advisor):
     def advice(self, run_state, character, oracle):
-        quaff = utilities.ACTION_BY_ENUM[nethack.actions.Command.QUAFF]
+        quaff = nethack.actions.Command.QUAFF
         potions = inventory.get_oclass(inv.Potion)
 
         for potion in potions:
@@ -97,7 +97,7 @@ class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
 
 class ZapTeleportOnSelfAdvisor(Advisor):
     def advice(self, run_state, character, oracle):
-        zap = utilities.ACTION_BY_ENUM[nethack.actions.Command.ZAP]
+        zap = nethack.actions.Command.ZAP
         wands = inventory.get_oclass(inv.Wand)
 
         for wand in wands:
@@ -112,7 +112,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
 
 class ReadTeleportAdvisor(Advisor):
     def advice(self, run_state, character, oracle):
-        read = utilities.ACTION_BY_ENUM[nethack.actions.Command.READ]
+        read = nethack.actions.Command.READ
         scrolls = inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
@@ -133,7 +133,7 @@ class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        enhance = utilities.ACTION_BY_ENUM[nethack.actions.Command.ENHANCE]
+        enhance = nethack.actions.Command.ENHANCE
         menu_plan = menuplan.MenuPlan(
             "enhance skills",
             self,
@@ -162,7 +162,7 @@ class InventoryEatAdvisor(Advisor):
     	return True
 
     def advice(self, rng, run_state, character, oracle):
-		eat = utilities.ACTION_BY_ENUM[nethack.actions.Command.EAT]
+		eat = nethack.actions.Command.EAT
         food = inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
 
         for comestible in food:
@@ -182,7 +182,7 @@ class PrayerAdvisor(Advisor):
             return None
         if character.last_pray_time is not None and (blstats.get('time') - character.last_pray_time) < 250:
             return None
-        pray = utilities.ACTION_BY_ENUM[nethack.actions.Command.PRAY]
+        pray = nethack.actions.Command.PRAY
         menu_plan = menuplan.MenuPlan("yes pray", self, [
             menuplan.YesMenuResponse("Are you sure you want to pray?")
         ])
@@ -246,7 +246,7 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
 			target_square = monster_squares[target_index]
 	        attack_direction = neighborhood.action_grid[target_square]
 
-	        fire = utilities.ACTION_BY_ENUM[nethack.actions.Command.FIRE]
+	        fire = nethack.actions.Command.FIRE
 
 	        weapons = inventory.get_oclass(inv.Weapon)
             for w in weapons:
