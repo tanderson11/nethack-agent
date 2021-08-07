@@ -1,8 +1,6 @@
 import nle.nethack as nethack
 import glyphs as gd
 import numpy as np
-from typing import NamedTuple
-from enum import Enum
 
 class ActiveRunState():
     def __init__(self):
@@ -13,31 +11,10 @@ class ActiveRunState():
 
 ARS = ActiveRunState()
 
-class Action(NamedTuple):
-    name: str
-    index_value: int
-    ord_value: int
-    nle_enum: Enum
+ACTION_LOOKUP = {}
 
-    def __hash__(self):
-        return hash(self.ord_value)
-
-    @classmethod
-    def action_from_index(cls, index_value):
-        action = nethack.ACTIONS[index_value]
-        return cls(action.name, index_value, action.value, action)
-
-    @classmethod
-    def actions(cls):
-        all_actions = []
-        for i in range(len(nethack.ACTIONS)):
-            all_actions.append(cls.action_from_index(i))
-
-        return all_actions
-
-
-ACTION_LOOKUP = {a.ord_value:a for a in Action.actions()}
-print(ACTION_LOOKUP)
+for i, action in enumerate(nethack.ACTIONS):
+    ACTION_LOOKUP[action] = i
 
 def keypress_action(ascii_ord):
     action = ACTION_LOOKUP[ascii_ord]
