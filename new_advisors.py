@@ -38,7 +38,7 @@ class Advisor(abc.ABC):
 		pass
 
 class CompositeAdvisor(Advisor):
-	def __init__(advisors=None, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(self, advisors=None, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		self.advisors = advisors
 		super().__init__(oracle_consultation=oracle_consultation, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold)
 
@@ -91,7 +91,7 @@ class DrinkHealingPotionAdvisor(Advisor):
 class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [DrinkHealingPotionAdvisor]
 
-	def __init__(oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		advisors = [adv() for adv in self.sequential_advisors]
 		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
@@ -127,7 +127,7 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
 	sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
-	def __init__(oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
+	def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
 		advisors = [adv() for adv in self.sequential_advisors]
 		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
