@@ -84,8 +84,10 @@ class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
     def instance_desirability_to_wear(self, character):
+        body_armor_penalty = 0
         if character.body_armor_penalty() and self.identity.slot == 'suit':
-            return -1
+            body_armor_penalty = -20
+            return -20 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
             best_case_enhancement = 5
@@ -104,7 +106,7 @@ class Armor(Item):
             # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
             raw_value = self.identity.converted_wear_value().min()
 
-        desirability = raw_value + best_case_enhancement
+        desirability = raw_value + best_case_enhancement + body_armor_penalty
         #pdb.set_trace()
         return desirability
 
@@ -485,7 +487,7 @@ class PlayerInventory():
                 max_desirability = None
                 for item in unequipped_in_slot:
                     desirability = item.instance_desirability_to_wear(character)
-                    if max_desirability is None or (desirability > max_desirability and desirability > 0):
+                    if max_desirability is None or desirability > max_desirability:
                         max_desirability = desirability
                         most_desirable = item
 
