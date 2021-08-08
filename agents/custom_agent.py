@@ -733,7 +733,7 @@ class RunState():
 	def make_seeded_rng(self):
 		import random
 		seed = base64.b64encode(os.urandom(4))
-		#seed = b'+TKaKA=='
+		#seed = b'RML4KA=='
 		print(f"Seeding Agent's RNG {seed}")
 		return random.Random(seed)
 
@@ -895,7 +895,7 @@ class RunState():
 
 	def check_gamestate_advancement(self, neighborhood):
 		game_did_advance = True
-		if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 3: # time_hung > 3 is a bandaid for fast characters
+		if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
 			if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
 				neighborhood_diverged = self.neighborhood.absolute_player_location != neighborhood.absolute_player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
 				#pdb.set_trace()

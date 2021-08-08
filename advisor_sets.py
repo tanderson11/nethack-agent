@@ -40,6 +40,7 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
         RandomMoveAdvisor(square_threat_tolerance=0.),
         HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
+        RandomMoveAdvisor(), # sometimes we can't find our way to the enemy and we can't get out of threat
         ]),
     ###### OUT OF DANGER ###### ()
     # WHEN SAFE IMPROVEMENTS
@@ -69,6 +70,7 @@ new_advisors = [
         #DesirableObjectMoveAdvisor(square_threat_tolerance=0.),
         ]),
     # EXPLORE
+    UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
