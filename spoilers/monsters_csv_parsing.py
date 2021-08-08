@@ -65,7 +65,7 @@ class MonsterSpoiler():
 
 		return excepted_hp_loss, kill_trajectory
 
-	def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.3):
+	def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.6):
 		# if we've recently seen a monster of this type flee, let's assume it's not dangerous
 		if latest_monster_flight and (time - latest_monster_flight.time) < 15 and self.name == latest_monster_flight.monster_name:
 			return False

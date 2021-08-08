@@ -56,7 +56,7 @@ new_advisors = [
         EngraveTestWandsAdvisor(),
         ]),
     # HUNT WEAK
-    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.1),
+    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(),
