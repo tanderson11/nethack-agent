@@ -511,7 +511,8 @@ class MoveAdvisor(Advisor):
 	def would_move_squares(self, rng, run_state, character, oracle):
 		move_mask  = run_state.neighborhood.walkable
 		# don't move into intolerable threat
-		move_mask &= run_state.neighborhood.threat <= (self.square_threat_tolerance * character.current_hp)
+		if self.square_threat_tolerance is not None:
+			return move_mask & (run_state.neighborhood.threat <= (self.square_threat_tolerance * character.current_hp))
 		return move_mask
 
 	def advice(self, rng, run_state, character, oracle):
