@@ -733,7 +733,7 @@ class RunState():
 	def make_seeded_rng(self):
 		import random
 		seed = base64.b64encode(os.urandom(4))
-		#seed = b'y7RxDA=='
+		#seed = b'+TKaKA=='
 		print(f"Seeding Agent's RNG {seed}")
 		return random.Random(seed)
 
@@ -873,10 +873,11 @@ class RunState():
 				self.latest_monster_death = None
 
 		if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message:
-			if self.last_movement_action and self.last_movement_action == self.last_non_menu_action:
+			if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
 				assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
 				self.failed_moves_on_square.append(self.last_movement_action)
 			else:
+				if environment.env.debug: import pdb; pdb.set_trace()
 				print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
 	def log_action(self, action, menu_plan=None, advice=None):
