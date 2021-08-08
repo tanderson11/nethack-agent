@@ -53,7 +53,7 @@ new_advisors = [
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
-        #EngraveTestWandsAdvisor(),
+        EngraveTestWandsAdvisor(),
         ]),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.1),

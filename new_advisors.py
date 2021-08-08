@@ -524,7 +524,6 @@ class MoveAdvisor(Advisor):
 
 class RandomMoveAdvisor(MoveAdvisor):
 	def get_move(self, move_mask, rng, run_state, character, oracle):
-		move_mask = self.would_move_squares(rng, run_state, character, oracle)
 		possible_actions = run_state.neighborhood.action_grid[move_mask]
 
 		if possible_actions.any():
@@ -532,7 +531,6 @@ class RandomMoveAdvisor(MoveAdvisor):
 
 class MostNovelMoveAdvisor(MoveAdvisor):
 	def get_move(self, move_mask, rng, run_state, character, oracle):
-		move_mask = self.would_move_squares(rng, run_state, character, oracle)
 		visits = run_state.neighborhood.visits[move_mask]
 
 		possible_actions = run_state.neighborhood.action_grid[move_mask]
@@ -541,6 +539,18 @@ class MostNovelMoveAdvisor(MoveAdvisor):
 			most_novel = possible_actions[visits == visits.min()]
 
 			return rng.choice(most_novel)
+
+class UnvisitedSquareMoveAdvisor(MoveAdvisor):
+	def get_move(self, move_mask, rng, run_state, character, oracle):
+		visits = run_state.neighborhood.visits[move_mask]
+
+		possible_actions = run_state.neighborhood.action_grid[move_mask]
+
+		if possible_actions.any():
+			unvisited = possible_actions[visits == 0]
+
+			if unvisited.any():
+				return rng.choice(unvisited)
 
 class PathAdvisor(Advisor):
 	def __init__(self, oracle_consultation=None, no_adjacent_monsters=True, path_threat_tolerance=None):
@@ -748,6 +758,7 @@ class HuntNearestWeakEnemyAdvisor(PathAdvisor):
 
 class HuntNearestEnemyAdvisor(PathAdvisor):
 	def find_path(self, rng, run_state, character, oracle):
+		#import pdb; pdb.set_trace()
 		return run_state.neighborhood.path_to_nearest_monster()
 
 class FallbackSearchAdvisor(Advisor):
@@ -801,4 +812,46 @@ class WearEvenBlockedArmorAdvisor(Advisor):
 
 class AnyWardrobeChangeAdvisor(PrebakedSequentialCompositeAdvisor):
 	sequential_advisors = [WearEvenBlockedArmorAdvisor]
+
+class EngraveTestWandsAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		engrave = nethack.actions.Command.ENGRAVE
+		wands = character.inventory.get_oclass(inv.Wand)
+		letter = None
+		for w in wands:
+			if w and not w.identity.is_identified() and not w.identity.listened_actions.get(utilities.ACTION_LOOKUP[engrave], False):
+				letter = w.inventory_letter
+				break
+
+		if letter is None:
+			return None
+
+		menu_plan = menuplan.MenuPlan("engrave test wand", self, [
+			menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
+			menuplan.MoreMenuResponse("You write in the dust with"),
+			menuplan.MoreMenuResponse("A lit field surrounds you!"),
+			menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
+			menuplan.MoreMenuResponse("is a wand of digging!"),
+			menuplan.MoreMenuResponse("is a wand of fire!"),
+			menuplan.MoreMenuResponse("You engrave in the"),
+			menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
+			menuplan.MoreMenuResponse("You burn into the"),
+			menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
+			menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+			menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
+			menuplan.MoreMenuResponse("Your intelligence is"),
+			menuplan.MoreMenuResponse("You wipe out the message that was written"),
+			menuplan.MoreMenuResponse("The feeling subsides"),
+			menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
+			menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
+			menuplan.MoreMenuResponse("You may wish for an object"),
+			menuplan.PhraseMenuResponse("For what do you wish?", "+2 blessed silver dragon scale mail"),
+			menuplan.MoreMenuResponse("silver dragon scale mail"),
+			menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+			menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+			menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+		], listening_item=w)
+
+		#pdb.set_trace()
+		return Advice(self, engrave, menu_plan)
 
