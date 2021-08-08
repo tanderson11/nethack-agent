@@ -877,8 +877,9 @@ class RunState():
 				assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
 				self.failed_moves_on_square.append(self.last_movement_action)
 			else:
-				if environment.env.debug: import pdb; pdb.set_trace()
-				print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
+				if self.last_non_menu_action != utilities.ACTION_LOOKUP[nethack.actions.Command.TRAVEL]:
+					if environment.env.debug: import pdb; pdb.set_trace()
+					print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
 	def log_action(self, action, menu_plan=None, advice=None):
 		self.menu_plan_log.append(menu_plan)
