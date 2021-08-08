@@ -539,7 +539,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
             corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
             # is corpse nearby?
-            if corpse_relative_location[0] in range(action_grid_rows.start, action_grid_rows.stop) and corpse_relative_location[1] in range(action_grid_cols.start, action_grid_cols.stop):
+            if corpse_relative_location[0] in range(0, action_grid_rows.stop-action_grid_rows.start) and corpse_relative_location[1] in range(0, action_grid_cols.stop-action_grid_cols.start):
                 self.has_fresh_corpse[corpse_relative_location] = True
 
         if self.has_fresh_corpse[self.local_player_location]:
