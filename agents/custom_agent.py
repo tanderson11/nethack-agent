@@ -536,16 +536,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
         self.fresh_corpse_on_square_glyph = None
         if latest_monster_death and latest_monster_death.can_corpse and (time - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
-            try:
-                corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
-                corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
-                #print(corpse_relative_location)
-
+            corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
+            corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
+            # is corpse nearby?
+            if corpse_relative_location[0] in range(action_grid_rows.start, action_grid_rows.stop) and corpse_relative_location[1] in range(action_grid_cols.start, action_grid_cols.stop):
                 self.has_fresh_corpse[corpse_relative_location] = True
-            except IndexError: # we are far away from the corpse
-                pass
 
         if self.has_fresh_corpse[self.local_player_location]:
+            #import pdb; pdb.set_trace()
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
     class Path(NamedTuple):
@@ -1073,6 +1071,10 @@ class CustomAgent(BatchedAgent):
                 pass
                 #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
                 # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
+
+        if "don't have anything to eat" in message.message and environment.env.debug:
+            #import pdb; pdb.set_trace()
+            pass
 
         ###################################################
         # We are done observing and ready to start acting #
