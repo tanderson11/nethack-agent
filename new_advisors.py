@@ -223,12 +223,6 @@ class SearchForSecretDoorAdvisor(Advisor):
 			return Advice(self, search, None)
 		return None
 
-class GoUpstairsAdvisor(Advisor):
-	def advice(self, rng, run_state, character, oracle):
-		if oracle.can_move and oracle.on_upstairs:
-			up = nethack.actions.MiscDirection.UP
-			return Advice(self, up, None)
-
 class DrinkHealingPotionAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
 		quaff = nethack.actions.Command.QUAFF
@@ -645,6 +639,30 @@ class GoDownstairsAdvisor(DownstairsAdvisor):
 			willing_to_descend = self.check_willingness_to_descend(run_state.blstats, character.inventory, run_state.neighborhood)
 			if willing_to_descend:
 				return Advice(self, nethack.actions.MiscDirection.DOWN, None)
+
+class UpstairsAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		if oracle.can_move and oracle.on_upstairs:
+			willing_to_ascend = self.willing_to_ascend(rng, run_state, character, oracle)
+			if willing_to_ascend:
+				menu_plan = menuplan.MenuPlan("go upstairs", self, [
+					  menuplan.NoMenuResponse("Beware, there will be no return!  Still climb? [yn] (n)"),
+				  ])
+				return Advice(self, nethack.actions.MiscDirection.UP, None)
+			return None
+		return None
+
+	def willing_to_ascend(self, rng, run_state, character, oracle):
+		return True 
+
+class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
+	def willing_to_ascend(self, rng, run_state, character, oracle):
+		try:
+			# if we know about this staircase, we're not interested
+			staircase = run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
+			return False
+		except:
+			return True
 
 class OpenClosedDoorAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):

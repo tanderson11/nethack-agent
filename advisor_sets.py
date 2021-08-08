@@ -9,7 +9,7 @@ new_advisors = [
     # CRITICALLY INJURED
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[ # oracle_consultation=dumb, doesn't work
         WaitAdvisor(threat_tolerance=0.),
-        GoUpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
+        UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
@@ -21,7 +21,7 @@ new_advisors = [
     # HIGHLY THREATENED
     #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
     # IN GNOMISH MINES
-    GoUpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
+    UpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
     # COMBAT
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         SafeMeleeAttackAdvisor(),
@@ -60,7 +60,7 @@ new_advisors = [
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(),
         OpenClosedDoorAdvisor(),
-        #TraverseUnknownUpstairsAdvisor(),
+        TraverseUnknownUpstairsAdvisor(),
         ]),
     GoDownstairsAdvisor(),
     # MOVE TO DESIRABLE
