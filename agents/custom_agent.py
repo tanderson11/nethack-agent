@@ -872,7 +872,7 @@ class RunState():
 			if eat_corpse_flag:
 				self.latest_monster_death = None
 
-		if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message:
+		if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
 			if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
 				assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
 				self.failed_moves_on_square.append(self.last_movement_action)
