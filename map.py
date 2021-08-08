@@ -6,9 +6,6 @@ import physics
 import utilities
 
 class DMap():
-    dungeon_number_to_name = {
-        0: "dungeons of doom"
-    }
     def __init__(self):
         self.dlevels = {}
 
@@ -18,19 +15,17 @@ class DMap():
 
         # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
         if dungeon_number == 0 and level_number == 1:
-            # EARTH PLANE DCOORD = ?
-            EARTH_PLANE_DNUM = -1
-            lmap.add_staircase(initial_player_location, new_dcoord=(EARTH_PLANE_DNUM, 1), direction='up')
+            lmap.add_feature(initial_player_location, gd.get_by_name(gd.CMapGlyph, 'upstair'))
 
         return lmap
 
 class Staircase():
-    def __init__(self, dcoord, location, new_dcoord=None, new_location=None, direction=None):
+    def __init__(self, dcoord, location, to_dcoord, to_location, direction):
         self.start_dcoord = dcoord
         self.start_location = location
 
-        self.end_dcoord = new_dcoord
-        self.end_location = new_location
+        self.end_dcoord = to_dcoord
+        self.end_location = to_location
 
         self.direction = direction
 
@@ -71,11 +66,19 @@ class DLevelMap():
     def add_feature(self, location, glyph):
         self.dungeon_feature_map[location] = glyph.numeral
 
-    def add_staircase(self, location, **kwargs):
+    def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
             return self.staircases[location]
         except KeyError:
-            staircase = Staircase((self.dungeon_number, self.level_number), location, **kwargs)
+            if direction != 'up' and direction != 'down':
+                raise Exception("Strange direction " + direction)
+            staircase = Staircase(
+                (self.dungeon_number, self.level_number),
+                location,
+                to_dcoord,
+                to_location,
+                direction)
+            self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
             self.staircases[location] = staircase
             return staircase
 

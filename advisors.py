@@ -111,27 +111,11 @@ class Oracle():
 
     @functools.cached_property
     def on_downstairs(self):
-        previous_is_downstairs = self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_downstairs
-        try:
-            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
-            direction = staircase.direction
-        except KeyError:
-            direction = None
-
-        on_downstairs = "staircase down here" in self.message.message or direction == 'down' or previous_is_downstairs
-        return on_downstairs
+        return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_downstairs
 
     @functools.cached_property
     def on_upstairs(self):
-        previous_is_upstairs = self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
-        try:
-            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
-            direction = staircase.direction
-        except KeyError:
-            direction = None
-
-        on_upstairs = "staircase up here" in self.message.message or direction == 'up' or previous_is_upstairs
-        return on_upstairs
+        return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
 
 class Advice():
     def __init__(self, advisor, action, menu_plan):
@@ -667,10 +651,14 @@ class UpstairsAdvisor(Advisor):
         return None
 
     def willing_to_ascend(self, rng, run_state, character, oracle):
+        if oracle.blstats.get('depth') == 1:
+            return False
         return True 
 
 class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
     def willing_to_ascend(self, rng, run_state, character, oracle):
+        if oracle.blstats.get('depth') == 1:
+            return False
         try:
             # if we know about this staircase, we're not interested
             staircase = run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
