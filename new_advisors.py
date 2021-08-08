@@ -73,6 +73,13 @@ class Oracle():
 		return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
 
 	@functools.cached_property
+	def desirable_object_on_space(self):
+		prev_glyph = self.neighborhood.previous_glyph_on_player
+		desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
+
+		return desirable_object_on_space
+
+	@functools.cached_property
 	def have_moves(self):
 		have_moves = self.neighborhood.walkable.any() # at least one square is walkable
 		return have_moves
@@ -140,10 +147,14 @@ class Advisor(abc.ABC):
 		self.no_adjacent_monsters = no_adjacent_monsters
 
 	def check_conditions(self, run_state, character, oracle):
-		if self.threat_tolerance and run_state.neighborhood.threat_on_player > character.current_hp * self.threat_tolerance:
+		if self.threat_tolerance == 0. and (oracle.critically_injured or oracle.life_threatened):
+			#import pdb; pdb.set_trace()
+			pass
+
+		if self.threat_tolerance is not None and run_state.neighborhood.threat_on_player > (character.current_hp * self.threat_tolerance):
 			return False
 
-		if self.threat_threshold and run_state.neighborhood.threat_on_player <= character.current_hp * self.threat_threshold:
+		if self.threat_threshold is not None and run_state.neighborhood.threat_on_player <= (character.current_hp * self.threat_threshold):
 			return False
 
 		if self.no_adjacent_monsters == True and run_state.neighborhood.is_monster.any():
@@ -193,6 +204,13 @@ class SequentialCompositeAdvisor(CompositeAdvisor):
 			if advice is not None:
 				return advice
 
+class PrebakedSequentialCompositeAdvisor(SequentialCompositeAdvisor):
+	sequential_advisors = []
+
+	def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
+		advisors = [adv() for adv in self.sequential_advisors]
+		super().__init__(advisors, oracle_consultation=oracle_consultation, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold)
+
 class WaitAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
 		wait = nethack.actions.MiscDirection.WAIT
@@ -212,7 +230,7 @@ class GoUpstairsAdvisor(Advisor):
 			return Advice(self, up, None)
 
 class DrinkHealingPotionAdvisor(Advisor):
-	def advice(self, run_state, character, oracle):
+	def advice(self, rng, run_state, character, oracle):
 		quaff = nethack.actions.Command.QUAFF
 		potions = character.inventory.get_oclass(inv.Potion)
 
@@ -228,15 +246,11 @@ class DrinkHealingPotionAdvisor(Advisor):
 				return Advice(self, quaff, menu_plan)
 		return None
 
-class DoCombatHealingAdvisor(SequentialCompositeAdvisor):
+class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
 	sequential_advisors = [DrinkHealingPotionAdvisor]
 
-	def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
-		advisors = [adv() for adv in self.sequential_advisors]
-		super().__init__(advisors, oracle_consultation=oracle_consultation, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold)
-
 class ZapTeleportOnSelfAdvisor(Advisor):
-	def advice(self, run_state, character, oracle):
+	def advice(self, rng, run_state, character, oracle):
 		zap = nethack.actions.Command.ZAP
 		wands = character.inventory.get_oclass(inv.Wand)
 
@@ -251,7 +265,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
 		return None
 
 class ReadTeleportAdvisor(Advisor):
-	def advice(self, run_state, character, oracle):
+	def advice(self, rng, run_state, character, oracle):
 		read = nethack.actions.Command.READ
 		scrolls = character.inventory.get_oclass(inv.Scroll)
 
@@ -264,12 +278,8 @@ class ReadTeleportAdvisor(Advisor):
 				return Advice(self, read, menu_plan)
 		return None
 
-class UseEscapeItemAdvisor(SequentialCompositeAdvisor):
+class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
 	sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
-
-	def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None):
-		advisors = [adv() for adv in self.sequential_advisors]
-		super().__init__(advisors, oracle_consultation, threat_tolerance, threat_threshold)
 
 class EnhanceSkillsAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
@@ -343,7 +353,10 @@ class InventoryEatAdvisor(Advisor):
 
 class CombatEatAdvisor(InventoryEatAdvisor):
 	def check_comestible(self, comestible, rng, run_state, character, oracle):
-		return comestible.identity and comestible.identity.name() != 'tin'
+		if comestible.identity: # if statement = bandaid for lack of corpse identities
+			return comestible.identity and comestible.identity.name() != 'tin'
+		else:
+			return True
 
 class PrayerAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
@@ -504,7 +517,7 @@ class MoveAdvisor(Advisor):
 	def would_move_squares(self, rng, run_state, character, oracle):
 		move_mask  = run_state.neighborhood.walkable
 		# don't move into intolerable threat
-		move_mask &= run_state.neighborhood.threat <= self.square_threat_tolerance * character.current_hp
+		move_mask &= run_state.neighborhood.threat <= (self.square_threat_tolerance * character.current_hp)
 		return move_mask
 
 	def advice(self, rng, run_state, character, oracle):
@@ -547,7 +560,7 @@ class PathAdvisor(Advisor):
 		path = self.find_path(rng, run_state, character, oracle)
 
 		if path is not None:
-			if self.path_threat_tolerance and path.threat > self.path_threat_tolerance * character.current_hp:
+			if self.path_threat_tolerance is not None and path.threat > (self.path_threat_tolerance * character.current_hp):
 				return None
 
 			desired_square = (run_state.neighborhood.local_player_location[0] + path.delta[0], run_state.neighborhood.local_player_location[1] + path.delta[1])
@@ -681,6 +694,35 @@ class KickLockedDoorAdvisor(Advisor):
 			])
 			return Advice(self, kick, menu_plan)
 
+class PickupFoodAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		if oracle.desirable_object_on_space:
+			menu_plan = menuplan.MenuPlan(
+				"pick up comestibles and safe corpses",
+				self,
+				[],
+				interactive_menu=menuplan.InteractivePickupMenu(run_state, 'comestibles'),
+			)
+			#print("Food pickup")
+			return Advice(self, nethack.actions.Command.PICKUP, menu_plan)
+		return None
+
+class PickupArmorAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		if oracle.desirable_object_on_space: #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
+			menu_plan = menuplan.MenuPlan(
+				"pick up armor",
+				self,
+				[],
+				interactive_menu=menuplan.InteractivePickupMenu(run_state, 'armor'),
+			)
+			#print("Armor pickup")
+			return Advice(self, nethack.actions.Command.PICKUP, menu_plan)
+		return None
+
+class PickupDesirableItems(PrebakedSequentialCompositeAdvisor):
+	sequential_advisors = [PickupFoodAdvisor, PickupArmorAdvisor]
+
 class HuntNearestWeakEnemyAdvisor(PathAdvisor):
 	def find_path(self, rng, run_state, character, oracle):
 		return run_state.neighborhood.path_to_nearest_weak_monster()
@@ -693,4 +735,51 @@ class FallbackSearchAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
 		search = nethack.actions.Command.SEARCH
 		return Advice(self, search, None)
+
+class WearUnblockedArmorAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		proposed_items, proposal_blockers = character.inventory.proposed_attire_changes(character)
+
+		for item, blockers in zip(proposed_items, proposal_blockers):
+			if len(blockers) == 0:
+				wear = nethack.actions.Command.WEAR
+
+				menu_plan = menuplan.MenuPlan("wear armor", self, [
+					menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+				], listening_item=item)
+
+				return Advice(self, wear, menu_plan)
+		return None
+
+class UnblockedWardrobeChangesAdvisor(PrebakedSequentialCompositeAdvisor):
+	sequential_advisors = [WearUnblockedArmorAdvisor]
+
+class WearEvenBlockedArmorAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		proposed_items, proposal_blockers = character.inventory.proposed_attire_changes(character)
+
+		for item, blockers in zip(proposed_items, proposal_blockers):
+			if len(blockers) == 0:
+				wear = nethack.actions.Command.WEAR
+
+				menu_plan = menuplan.MenuPlan("wear armor", self, [
+					menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
+				], listening_item=item)
+
+				return Advice(self, wear, menu_plan)
+
+			else:
+				if blockers[0].BUC != 'cursed':
+					takeoff = nethack.actions.Command.TAKEOFF
+					menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
+						menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0].inventory_letter)),
+					])
+
+					return Advice(self, takeoff, menu_plan)
+				else:
+					pass
+					#print("Blocking armor is cursed. Moving on")
+
+class AnyWardrobeChangeAdvisor(PrebakedSequentialCompositeAdvisor):
+	sequential_advisors = [WearEvenBlockedArmorAdvisor]
 

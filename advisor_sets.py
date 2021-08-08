@@ -12,7 +12,7 @@ new_advisors = [
         GoUpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
-        PrayForHPAdvisor(),
+        PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
         #EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
@@ -44,14 +44,14 @@ new_advisors = [
     ###### OUT OF DANGER ###### ()
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
-        #AnyWardrobeChangeAdvisor(),
+        AnyWardrobeChangeAdvisor(),
         #ReadUnidenifiedScrollAdvisor()
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
-        #PickupDesirableItems(),
+        PickupDesirableItems(),
         EatCorpseAdvisor(),
-        #UnblockedWardrobeChangesAdvisor(),
+        UnblockedWardrobeChangesAdvisor(),
         #EngraveTestWandsAdvisor(),
         ]),
     # HUNT WEAK
