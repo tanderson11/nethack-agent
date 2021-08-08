@@ -141,7 +141,7 @@ class EndOfMenu(Exception):
 class InteractiveMenu():
     menu_item_pattern = re.compile("([a-zA-Z]) (-|\+) (.+)$")
     terminator_pattern = re.compile("\(([0-9]+) of ([0-9]+)\)")
-    header_rows = 0
+    first_page_header_rows = 0
     # We define selectors here so that their implementation is close to the MenuItem implementation
     selectors = {}
     # How should the menu plan know that we're now in the interactive menu.
@@ -163,6 +163,7 @@ class InteractiveMenu():
         #if environment.env.debug: pdb.set_trace()
         self.run_state = run_state
         self.rendered_rows = []
+        self.header_rows = self.first_page_header_rows
         self.vertical_offset = 0
         self.active_category = None
         self.offset = None
@@ -173,6 +174,7 @@ class InteractiveMenu():
 
     def flip_page(self):
         self.vertical_offset = 0
+        self.header_rows = 0
 
     def search_through_rows(self, tty_chars):
         text_rows = [bytes(row).decode('ascii') for row in tty_chars]
@@ -217,7 +219,7 @@ class InteractiveMenu():
             # We should not fall through the menu
 
 class InteractiveEnhanceSkillsMenu(InteractiveMenu):
-    header_rows = 2
+    first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = 'Pick a skill to advance:'
 
@@ -245,6 +247,6 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.item = inv.ItemParser.parse_inventory_item(run_state.global_identity_map, item_text, category=category)
 
 class InteractivePickupMenu(InteractiveInventoryMenu):
-    header_rows = 2
+    first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
