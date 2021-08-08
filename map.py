@@ -12,8 +12,14 @@ class DMap():
         self.dlevels = {}
 
     def make_level_map(self, dungeon_number, level_number, glyphs, initial_player_location):
-        lmap = DLevelMap(dungeon_number, level_number, glyphs, initial_player_location)
+        lmap = DLevelMap(dungeon_number, level_number, glyphs)
         self.dlevels[(dungeon_number, level_number)] = lmap
+
+        # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
+        if dungeon_number == 0 and level_number == 1:
+            # EARTH PLANE DCOORD = ?
+            EARTH_PLANE_DNUM = -1
+            lmap.add_staircase(initial_player_location, new_dcoord=(EARTH_PLANE_DNUM, 1), direction='up')
 
         return lmap
 
@@ -28,19 +34,41 @@ class Staircase():
         self.direction = direction
 
 class DLevelMap():
-    def __init__(self, dungeon_number, level_number, glyphs, initial_player_location):
+    @staticmethod
+    def glyphs_to_dungeon_features(glyphs, default=None):
+        if default is None:
+            default = np.zeros_like(glyphs)
+        return np.where(
+            (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
+            glyphs,
+            default
+        )
+
+    def __init__(self, dungeon_number, level_number, glyphs):
         self.dungeon_number = dungeon_number
         self.level_number = level_number
 
-        self.visits_map = np.zeros_like(glyphs)
-        self.visits_map[initial_player_location] += 1
-
+        # These are our map layers
+        self.update_counter = 0
+        self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs)
+        self.visits_count_map = np.zeros_like(glyphs)
         self.staircases = {}
         self.warning_engravings = {}
 
     
-    def update(self, player_location):
-        self.visits_map[player_location] += 1
+    def update(self, player_location, glyphs):
+        self.update_counter += 1
+        self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
+        self.visits_count_map[player_location] += 1
+
+    def get_dungeon_glyph(self, location):
+        loc = self.dungeon_feature_map[location]
+        if loc:
+            return gd.GLYPH_NUMERAL_LOOKUP[loc]
+        return None
+
+    def add_feature(self, location, glyph):
+        self.dungeon_feature_map[location] = glyph.numeral
 
     def add_staircase(self, location, **kwargs):
         try:
