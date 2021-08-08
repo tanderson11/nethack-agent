@@ -602,22 +602,50 @@ class GoDownstairsAdvisor(DownstairsAdvisor):
 class OpenClosedDoorAdvisor(Advisor):
 	def advice(self, rng, run_state, character, oracle):
 		# coarse check
-		if flags.on_warning_engraving:
+		if oracle.on_warning_engraving:
 			return None
 
 		# don't open diagonally so we can be better about warning engravings
-		door_directions = ~run_state.neighborhood.diagonal_moves & run_state.neighborhood.action_grid[utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, neighborhood.glyphs)]
+		door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
+		door_directions = run_state.neighborhood.action_grid[door_mask]
 		if len(door_directions > 0):
 			a = rng.choice(door_directions)
 			# another check: don't want to open doors if they are adjacent to an engraving
-			for location in neighborhood.level_map.warning_engravings.keys():
-				door_loc = physics.offset_location_by_action(neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+			for location in run_state.neighborhood.level_map.warning_engravings.keys():
+				door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
 				if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
 					return None
 
 			return Advice(self, a, None)
 		else:
 			return None
+
+class KickLockedDoorAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		# don't kick outside dungeons of doom
+		if oracle.blstats.get('dungeon_number') != 0:
+			return None
+		if oracle.on_warning_engraving:
+			return None
+		if not "This door is locked" in oracle.message.message:
+			return None
+		kick = nethack.actions.Command.KICK
+		door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
+		door_directions = run_state.neighborhood.action_grid[door_mask]
+		if len(door_directions) > 0:
+			a = rng.choice(door_directions)
+			for location in run_state.neighborhood.level_map.warning_engravings.keys():
+				door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+				# another check: don't want to kick doors if they are adjacent to an engraving
+				if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
+					return None
+		else: # we got the locked door message but didn't find a door
+			a = None
+		if a is not None:
+			menu_plan = menuplan.MenuPlan("kick locked door", self, [
+				menuplan.DirectionMenuResponse("In what direction?", a),
+			])
+			return Advice(self, kick, menu_plan)
 
 class HuntNearestWeakEnemyAdvisor(PathAdvisor):
 	def find_path(self, rng, run_state, character, oracle):
@@ -627,5 +655,8 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 	def find_path(self, rng, run_state, character, oracle):
 		return run_state.neighborhood.path_to_nearest_monster()
 
-
+class FallbackSearchAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		search = nethack.actions.Command.SEARCH
+		return Advice(self, search, None)
 

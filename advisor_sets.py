@@ -58,8 +58,8 @@ new_advisors = [
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.1),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
+        KickLockedDoorAdvisor(),
         OpenClosedDoorAdvisor(),
-        KickLockedDoorAdvisor(oracle_consultation=lambda o: o.InDungeonsOfDoom),
         #TraverseUnknownUpstairsAdvisor(),
         ]),
     GoDownstairsAdvisor(),
@@ -74,5 +74,6 @@ new_advisors = [
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
         TravelToDownstairsAdvisor(): 1,
-        })
+        }),
+    FallbackSearchAdvisor(),
 ]
