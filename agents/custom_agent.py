@@ -124,27 +124,34 @@ class RecordedMonsterDeath(RecordedMonsterEvent):
 class Message():
     known_lost_messages = set([
         "Things that are here:",
-        "There is a doorway here.",
-        "There is an open door here.",
         "Things that you feel here:",
         "Other things that are here:",
-        "There is a staircase up here.",
-        "There is a staircase down here.",
         "Other things that you feel here:",
         "Hello Agent, welcome to NetHack!  You are a neutral female gnomish", # see issue_report_1
-        "There is a fountain here.",
-        "There is a grave here.",
-        "There is a broken door here.",
-        "There is a sink here.",
         "Pick up what?",
         "paperback book named",
         "staircase down",
-        # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
+
+    # TODO. It's grunt work, but should learn all the trap messages in
+    # # https://github.com/facebookresearch/nle/blob/ceee6396797c5fe00eac66aa909af48e5ee8b04d/src/trap.c
+    match_to_feature = {
+        "There is a doorway here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
+        "There is a broken door here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
+        "There is an open door here.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
+        "There is a staircase up here.": gd.get_by_name(gd.CMapGlyph, 'upstair'),
+        "There is a staircase down here.": gd.get_by_name(gd.CMapGlyph, 'dnstair'),
+        "There is a fountain here.": gd.get_by_name(gd.CMapGlyph, 'fountain'),
+        "There is a grave here.": gd.get_by_name(gd.CMapGlyph, 'grave'),
+        "There is a sink here.": gd.get_by_name(gd.CMapGlyph, 'sink'),
+        "There is an altar to ": gd.get_by_name(gd.CMapGlyph, 'altar'),
+    }
 
     class Feedback():
         def __init__(self, message):
             self.diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+            if environment.env.debug and self.diagonal_out_of_doorway_message:
+                import pdb; pdb.set_trace()
             self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
             self.collapse_message = "You collapse under your load" in message.message
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
@@ -156,6 +163,14 @@ class Message():
             #self.failed_move =  self.diagonal_into_doorway_message or self.collapse_message or self.boulder_in_vain_message
             self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
+
+
+    def get_dungeon_feature_here(self, raw_message):
+        if not " here" in raw_message:
+            return
+        for k, v in self.match_to_feature.items():
+            if k in raw_message:
+                return v
 
     def __init__(self, message, tty_chars, misc_observation):
         self.raw_message = message
@@ -172,12 +187,17 @@ class Message():
                 if environment.env.debug: pdb.set_trace()
 
         ascii_top_line = bytes(tty_chars[0]).decode('ascii')
+
+        nle_missed_message = False
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
-            if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                #print(f"NLE missed this message: {potential_message}")
-                pass
+            nle_missed_message = True
             self.message = potential_message
+
+        self.dungeon_feature_here = self.get_dungeon_feature_here(self.message)
+
+        if nle_missed_message and not (self.dungeon_feature_here or self.has_more or self.message.startswith("You read: ") or self.message in self.known_lost_messages):
+            print(f"NLE missed this message: {potential_message}")
 
         self.feedback = self.__class__.Feedback(self)
 
@@ -197,8 +217,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.absolute_player_location = absolute_player_location
         self.dcoord = dcoord
         self.level_map = level_map
+        self.dungeon_glyph_on_player = self.level_map.get_dungeon_glyph(absolute_player_location)
 
-        on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
+
+        on_doorway = self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
         #############################
         ### FULL EXTENT OF VISION ###
@@ -208,7 +230,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = level_map.visits_map[row_vision, col_vision]
+        extended_visits = level_map.visits_count_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
         extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
 
@@ -534,7 +556,6 @@ class RunState():
 
         # for mapping purposes
         self.dmap = DMap()
-        #self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
         self.glyphs = None
 
     def make_seeded_rng(self):
@@ -773,13 +794,7 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
 
-            # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
-            if dungeon_number == 0 and level_number == 1:
-                # EARTH PLANE DCOORD = ?
-                EARTH_PLANE_DNUM = -1
-                level_map.add_staircase(player_location, new_dcoord=(EARTH_PLANE_DNUM, 1), direction='up')
-
-        level_map.update(player_location)
+        level_map.update(player_location, observation['glyphs'])
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
@@ -798,11 +813,9 @@ class CustomAgent(BatchedAgent):
             if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
                 run_state.glyph_under_player = None
             else:
-                previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
-
-                # Don't forget dungeon features just because we're now standing on them
-                if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
-                    run_state.glyph_under_player = previous_glyph_on_player
+                raw_previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
+                if not isinstance(raw_previous_glyph_on_player, gd.MonsterGlyph):
+                    run_state.glyph_under_player = raw_previous_glyph_on_player
         previous_glyph_on_player = run_state.glyph_under_player
 
         run_state.update_observation(observation) # moved after previous glyph futzing
@@ -812,6 +825,8 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+        if message.dungeon_feature_here:
+            level_map.add_feature(player_location, message.dungeon_feature_here)
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)

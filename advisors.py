@@ -75,7 +75,10 @@ class Oracle():
     @functools.cached_property
     def desirable_object_on_space(self):
         prev_glyph = self.neighborhood.previous_glyph_on_player
-        desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
+        desirable_object_on_space = (
+            (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and
+            prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
+        )
 
         return desirable_object_on_space
 
@@ -108,7 +111,7 @@ class Oracle():
 
     @functools.cached_property
     def on_downstairs(self):
-        previous_is_downstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_downstairs
+        previous_is_downstairs = self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_downstairs
         try:
             staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
             direction = staircase.direction
@@ -120,7 +123,7 @@ class Oracle():
 
     @functools.cached_property
     def on_upstairs(self):
-        previous_is_upstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_upstairs
+        previous_is_upstairs = self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
         try:
             staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
             direction = staircase.direction
