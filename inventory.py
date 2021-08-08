@@ -76,6 +76,7 @@ class Item(ItemLike):
             self.identity = global_identity_map.identity_by_numeral[glyph_numeral]
         except KeyError:
             print("No identity found for {}".format(glyph_numeral))
+            self.identity = None
 
         super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
 
@@ -85,7 +86,7 @@ class Armor(Item):
     def instance_desirability_to_wear(self, character):
         body_armor_penalty = 0
         if character.body_armor_penalty() and self.identity.slot == 'suit':
-            body_armor_penalty = -10
+            body_armor_penalty = -25
 
         if self.enhancement is None:
             best_case_enhancement = 5
@@ -393,12 +394,15 @@ class SlotCluster():
             class_contents = inventory.get_oclass(oclass)
 
             for item in class_contents:
-                if item.equipped_status is not None:
-                    occ_slot = item.equipped_status.slot
-                    #print(occ_slot)
-                    #print(occ_slot is not None)
-                    if occ_slot is not None:
-                        slots[occ_slot].add_occupant(item)
+                if item is None:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                else:
+                    if item.equipped_status is not None:
+                        occ_slot = item.equipped_status.slot
+                        #print(occ_slot)
+                        #print(occ_slot is not None)
+                        if occ_slot is not None:
+                            slots[occ_slot].add_occupant(item)
 
         #pdb.set_trace()
         self.slots = slots
