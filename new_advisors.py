@@ -32,6 +32,10 @@ class Oracle():
 		return self.blstats.get('hunger_state') > 2
 
 	@functools.cached_property
+	def am_satiated(self):
+		return self.blstats.get('hunger_state') == 0
+
+	@functools.cached_property
 	def can_pray_for_hp(self):
 		level = self.character.experience_level
 		current_hp = self.character.current_hp
@@ -282,6 +286,32 @@ class EnhanceSkillsAdvisor(Advisor):
 
 		return Advice(self, enhance, menu_plan)
 
+class EatCorpseAdvisor(Advisor):
+	def advice(self, rng, run_state, character, oracle):
+		if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
+			return None
+
+		if not run_state.neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
+			return None
+
+		if oracle.am_satiated:
+			return None
+
+		eat = nethack.actions.Command.EAT
+
+		menu_plan = menuplan.MenuPlan(
+			"eat corpse on square", self,
+			[
+				menuplan.YesMenuResponse(f"{run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat"),
+				menuplan.NoMenuResponse("here; eat"),
+				menuplan.EscapeMenuResponse("want to eat?"),
+				menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
+				#menuplan.MoreMenuResponse("You resume your meal"),
+				menuplan.NoMenuResponse("Continue eating"),
+			])
+
+		return Advice(self, eat, menu_plan)
+
 class InventoryEatAdvisor(Advisor):
 	def make_menu_plan(self, letter):
 		menu_plan = menuplan.MenuPlan("eat from inventory", self, [
@@ -433,6 +463,10 @@ class LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor(DumbMeleeAttackAdvisor):
 			target_index = None
 			best_reduction_rate = 0
 			for i, m in enumerate(monsters):
+				# prioritize invisible / swallow / whatever immediately as a patch
+				if not isinstance(m, gd.MonsterGlyph):
+					target_index = i
+					break
 				untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
 				kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
 

@@ -8,6 +8,7 @@ import enum
 
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
+
 	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists):
 		self.name = name
 		self.melee_attack_bundle = melee_attack_bundle
@@ -46,25 +47,31 @@ class MonsterSpoiler():
 
 	def melee_dps(self, AC):
 		p = self.probability_to_hit_AC(AC)
-		#print("Hit prob:", p)
-
 		return self.melee_attack_bundle.expected_damage * p * self.actions_per_unit_time()
 
-	def excepted_hp_loss_in_melee(self, character):
-		# (time_to_kill, swings_to_kill, hits_to_kill)
-		ttk, stk, htk = character.average_time_to_kill_monster_in_melee(self)
-		excepted_hp_loss = self.melee_dps(character.AC) * ttk + self.passive_attack_bundle.expected_damage * stk + self.death_attack_bundle.expected_damage
+	def passive_damage_over_encounter(self, character, kill_trajectory):
+		return self.passive_attack_bundle.expected_damage * kill_trajectory.swings_to_kill
+
+	def death_damage_over_encounter(self, character):
+		return self.death_attack_bundle.expected_damage
+
+	def excepted_hp_loss_in_melee(self, character, kill_trajectory):
+		excepted_hp_loss = self.melee_dps(character.AC) * kill_trajectory.time_to_kill + self.passive_damage_over_encounter(character, kill_trajectory) + self.death_damage_over_encounter(character)
 		return excepted_hp_loss
+
+	def fight_outcome(self, character):
+		kill_trajectory = character.average_time_to_kill_monster_in_melee(self)
+		excepted_hp_loss = self.excepted_hp_loss_in_melee(character, kill_trajectory)
+
+		return excepted_hp_loss, kill_trajectory
 
 	def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.3):
 		# if we've recently seen a monster of this type flee, let's assume it's not dangerous
 		if latest_monster_flight and (time - latest_monster_flight.time) < 15 and self.name == latest_monster_flight.monster_name:
 			return False
 
-		excepted_hp_loss = self.excepted_hp_loss_in_melee(character)
-		
-		#print("ttk, stk, htk, excepted_hp_loss")
-		#print(ttk, stk, htk, excepted_hp_loss)
+		excepted_hp_loss, kill_trajectory = self.fight_outcome(character)
+
 		if excepted_hp_loss < hp_fraction_tolerance * character.current_hp:
 			return False
 		else:

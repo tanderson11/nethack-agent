@@ -13,10 +13,12 @@ import itertools
 from nle import nethack
 from agents.base import BatchedAgent
 
+from typing import NamedTuple
+
 from astar import AStar
 import math
 
-import advisors as advs
+import new_advisors as advs
 import advisor_sets
 
 import menuplan
@@ -81,8 +83,11 @@ class BLStats():
         attributes = constants.Attributes(**attr_dict)
         return attributes
 
+    def check_condition(self, bit_mask):
+        return (bit_mask & self.get('condition')) == bit_mask
+
     def am_hallu(self):
-        return nethack.BL_MASK_HALLU & self.get('condition') == nethack.BL_MASK_HALLU
+        return (nethack.BL_MASK_HALLU & self.get('condition')) == nethack.BL_MASK_HALLU
 
 class RecordedMonsterEvent():
     def __init__(self, time, monster_name):
@@ -139,8 +144,8 @@ class Message():
             self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
             self.collapse_message = "You collapse under your load" in message.message
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
-            #boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
-            #carrying_too_much_message = "You are carrying too much to get through." in message.message
+            self.boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
+            self.carrying_too_much_message = "You are carrying too much to get through." in message.message
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
@@ -349,8 +354,8 @@ class ThreatMap(FloodMap):
     def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid):
         it = np.nditer(can_occupy_mask, flags=['multi_index'])
         masks = []
-        for b in it: 
-            if b:
+        for can_occupy in it: 
+            if can_occupy:
                 can_hit_from_loc = cls.raytrace_threat(it.multi_index, glyph_grid)
                 masks.append(can_hit_from_loc)
         return np.logical_or.reduce(masks)
@@ -401,7 +406,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### FULL EXTENT OF VISION ###
         #############################
         row_vision, col_vision = utilities.centered_slices_bounded_on_array(
-            absolute_player_location, (self.__class__.extended_vision, self.__class__.extended_vision), observation['glyphs']
+            absolute_player_location, (self.extended_vision, self.extended_vision), observation['glyphs']
         )
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
@@ -458,7 +463,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         action_grid_view = (action_grid_rows, action_grid_cols)
 
         self.action_grid = physics.action_grid[action_grid_view]
-        diagonal_moves = physics.diagonal_moves[action_grid_view]
+        self.diagonal_moves = physics.diagonal_moves[action_grid_view]
 
         ########################################
         ### RELATIVE POSITION IN ACTION GRID ###
@@ -483,7 +488,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         walkable_tile = extended_walkable_tile[neighborhood_view]
 
         # in the narrow sense
-        self.walkable = walkable_tile & ~(diagonal_moves & is_open_door) & ~(diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
+        self.walkable = walkable_tile & ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
         for f in failed_moves_on_square:
@@ -503,14 +508,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
         self.threat_map = ThreatMap(character, time, latest_monster_flight, extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
+        self.extended_n_threat = self.threat_map.melee_n_threat + self.threat_map.ranged_n_threat
 
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
         #########################################
-        self.n_threat = self.threat_map.melee_n_threat[neighborhood_view]# + self.threat_map.ranged_n_threat[neighborhood_view]
-        self.damage_threat = self.threat_map.melee_damage_threat[neighborhood_view]# + self.threat_map.ranged_damage_threat[neighborhood_view]
-        self.threatened = self.n_threat > 0
+        self.n_threat = self.extended_n_threat[neighborhood_view]
+        self.threat = self.extended_threat[neighborhood_view]
 
+        self.threat_on_player = self.threat[self.local_player_location]
         ####################
         ### CORPSE STUFF ###
         ####################
@@ -530,23 +537,21 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         if self.has_fresh_corpse[self.local_player_location]:
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
-    class PathStep(NamedTuple):
+    class Path(NamedTuple):
         path_action: int
         delta: tuple
+        threat: float
 
-    def path_to_weak_monster(self):
-        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
-        weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
-
-        if weak_monsters.any():
-            pathfinder = Pathfinder(self.extended_walkable | self.extended_is_monster) # pretend the distant monsters are walkable so we can actually reach them
-            it = np.nditer(weak_monsters, flags=['multi_index'])
+    def path_to_targets(self, target_mask):
+        if target_mask.any():
+            pathfinder = Pathfinder(self.extended_walkable | target_mask) # pretend the targets are walkable so we can actually reach them in pathfinding
+            it = np.nditer(target_mask, flags=['multi_index'])
 
             shortest_path = None
             shortest_length = None
 
-            for is_weak_monster in it:
-                if is_weak_monster:
+            for is_target in it:
+                if is_target:
                     # start, goal
                     path_iterator = pathfinder.astar(self.player_location_in_extended, it.multi_index)
                     if path_iterator is None:
@@ -565,8 +570,23 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 first_square_in_path = shortest_path[1] # the 0th square is just your starting location
                 delta = (first_square_in_path[0]-self.player_location_in_extended[0], first_square_in_path[1]-self.player_location_in_extended[1])
 
+                threat = 0.
+                for square in shortest_path:
+                    threat += self.extended_threat[square]
+
                 path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
-                return PathStep(path_action, delta)
+                return self.Path(path_action, delta, threat)
+
+    def path_to_nearest_monster(self):
+        monsters = self.extended_is_monster.copy()
+        monsters[self.neighborhood_view] = False
+        return self.path_to_targets(monsters)
+
+    def path_to_nearest_weak_monster(self):
+        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
+        weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
+
+        return self.path_to_targets(weak_monsters)
 
 
 class Pathfinder(AStar):
@@ -703,7 +723,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'FLog8g=='
+        #seed = b'y7RxDA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -842,11 +862,10 @@ class RunState():
             if eat_corpse_flag:
                 self.latest_monster_death = None
 
-        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message:
-            if self.advice_log[-1]:
-                move = utilities.ACTION_LOOKUP[self.advice_log[-1].action]
-                assert move in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
-                self.failed_moves_on_square.append(move)
+        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message:
+            if self.last_movement_action and self.last_movement_action == self.last_non_menu_action:
+                assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
+                self.failed_moves_on_square.append(self.last_movement_action)
             else:
                 print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
@@ -1101,21 +1120,26 @@ class CustomAgent(BatchedAgent):
         run_state.update_neighborhood(neighborhood)
         ############################
 
-        oracle = advs.Flags(run_state, blstats, run_state.character.inventory, neighborhood, message, run_state.character)
+        oracle = advs.Oracle(run_state, run_state.character, neighborhood, message, blstats)
 
-        #if environment.env.debug: pdb.set_trace()
         for advisor in advisor_sets.new_advisors:
-            advice = advisor.advice(run_state.rng, run_state, run_state.character, oracle)
-
+            advice = advisor.advice_on_conditions(run_state.rng, run_state, run_state.character, oracle)
             if advice is not None:
-                if advice.action.action_value == utilities.ACTION_BY_ENUM[nethack.actions.Command.PRAY]:
+                #print(advice)
+                if advice.action == nethack.actions.Command.PRAY:
                     run_state.character.last_pray_time = time
-                    run_state.character.last_pray_reason = chosen_advice.advisor
+                    run_state.character.last_pray_reason = advice.advisor # advice.advisor because we want to be more specific inside composite advisors
 
                 menu_plan = advice.menu_plan
-                break
 
-        retval = advice.action.index_value
+                if game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence:
+                    break
+
+        if isinstance(advice.advisor, advs.FallbackSearchAdvisor):
+            #if environment.env.debug: import pdb; pdb.set_trace()
+            print("WARNING: Fell through advisors to fallback search")
+
+        retval = utilities.ACTION_LOOKUP[advice.action]
 
         run_state.log_action(retval, advice=advice) # don't log menu plan because this wasn't a menu plan action
 

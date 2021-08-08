@@ -1,4 +1,5 @@
 from typing import Optional
+from typing import NamedTuple
 
 from dataclasses import dataclass
 
@@ -111,6 +112,11 @@ class Character():
 
         return to_hit
 
+    class KillTrajectory(NamedTuple):
+        time_to_kill: float
+        swings_to_kill: float
+        hits_to_kill: float
+
     def average_time_to_kill_monster_in_melee(self, monster_spoiler):
         melee_hit_probability = min(self.melee_to_hit(monster_spoiler)/20, 1)
         melee_hit_probability = max(0, melee_hit_probability)
@@ -132,7 +138,7 @@ class Character():
         swings_to_kill = hits_to_kill / melee_hit_probability
         time_to_kill = swings_to_kill / self.actions_per_unit_time()
 
-        return (time_to_kill, swings_to_kill, hits_to_kill)
+        return self.KillTrajectory(time_to_kill, swings_to_kill, hits_to_kill)
 
     def _dump_threatening_monsters(self):
         danger_rows = []

@@ -19,7 +19,7 @@ new_advisors = [
     # WEAK
     CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, threat_tolerance=0.05),
     # HIGHLY THREATENED
-    #PathfindToSafetyAdvisor(threat_threshold=0.4),
+    #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
     # IN GNOMISH MINES
     GoUpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
     # COMBAT
@@ -50,7 +50,7 @@ new_advisors = [
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
         #PickupDesirableItems(),
-        #EatCorpseAdvisor(),
+        EatCorpseAdvisor(),
         #UnblockedWardrobeChangesAdvisor(),
         #EngraveTestWandsAdvisor(),
         ]),
