@@ -29,6 +29,7 @@ import constants
 
 from utilities import ARS
 from character import Character
+import constants
 import glyphs as gd
 import environment
 
@@ -774,11 +775,12 @@ class RunState():
         if base_class == "Priest" or base_class == "Priestess":
             base_class = "Priest"
 
+        base_race = self.base_race_mapping[attribute_match_1[2]]
 
         self.character = Character(
             base_sex=base_sex,
-            base_race = self.base_race_mapping[attribute_match_1[2]],
-            base_class = base_class,
+            base_race = constants.BaseRace[base_race],
+            base_class = constants.BaseRole[base_class],
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()

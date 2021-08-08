@@ -27,8 +27,8 @@ class Character():
         new_intrinsics = constants.Intrinsics.NONE
         for level in range(1, self.experience_level + 1):
             # TODO eventually use enums anywhere and skip the BaseRace[..] lookups
-            race_intrinsics = constants.RACE_TO_INTRINSIC[constants.BaseRace[self.base_race]].get(level, constants.Intrinsics.NONE)
-            role_intrinsics = constants.ROLE_TO_INTRINSIC[constants.BaseRole[self.base_class]].get(level, constants.Intrinsics.NONE)
+            race_intrinsics = constants.RACE_TO_INTRINSIC[self.base_race].get(level, constants.Intrinsics.NONE)
+            role_intrinsics = constants.ROLE_TO_INTRINSIC[self.base_class].get(level, constants.Intrinsics.NONE)
             new_intrinsics = new_intrinsics | race_intrinsics | role_intrinsics
         self.innate_intrinsics = new_intrinsics
 
@@ -67,14 +67,14 @@ class Character():
         self.inventory = inventory
 
     def can_cannibalize(self):
-        if self.base_race == 'orc':
+        if self.base_race == constants.BaseRace.orc:
             return False
-        if self.base_class == 'Caveperson':
+        if self.base_class == constants.BaseRole.Caveperson:
             return False
         return True
 
     def sick_from_tripe(self):
-        if self.base_class == 'Caveperson':
+        if self.base_class == constants.BaseRole.Caveperson:
             return False
         return True
 
