@@ -33,6 +33,8 @@ import constants
 import glyphs as gd
 import environment
 
+from collections import Counter
+
 if environment.env.debug:
     import pdb
 
@@ -643,7 +645,8 @@ class RunState():
         self.log_path = None
         self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
-            self.log_path = os.path.join(debug_env.savedir, "log.csv")
+            self.log_root = debug_env.savedir
+            self.log_path = os.path.join(self.log_root, "log.csv")
             with open(self.log_path, 'w') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
                 writer.writeheader()
@@ -688,6 +691,26 @@ class RunState():
                 'scummed': self.scumming,
                 'ascended': ascended,
             })
+
+        #import pdb; pdb.set_trace()
+
+        self.update_counter_json("message_counter.json", self.message_log)
+        self.update_counter_json("advisor_counter.json", [advice.advisor.__class__.__name__ for advice in self.advice_log if advice is not None])
+
+    def update_counter_json(self, filename, counter_list):
+        import json
+        try:
+            with open(os.path.join(self.log_root, filename), 'r') as counter_file:
+                state = json.load(counter_file)
+        except FileNotFoundError:
+            state = {}
+
+        counter = Counter(state)
+        additional_counter = Counter(counter_list)
+        counter.update(additional_counter)
+
+        with open(os.path.join(self.log_root, filename), 'w') as counter_file:
+            json.dump(counter, counter_file)
 
     def reset(self):
         self.reading_base_attributes = False
