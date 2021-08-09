@@ -157,8 +157,8 @@ def parse_dir(dr, outpath=None):
     print(df.groupby("killer").count().sort_values("score", ascending=False))
     print('Status when dead')
     print(df.groupby("status").count().sort_values("score", ascending=False))
-    print("Mean score by role")
-    print(df.groupby("role")["score"].mean().sort_values(ascending=False))
+    print("Score by role")
+    print(df.groupby("role")["score"].describe().sort_values("mean", ascending=False))
 
     if outpath is not None:
         with open(outpath, 'wb') as f:
