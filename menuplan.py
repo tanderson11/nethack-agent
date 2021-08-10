@@ -58,10 +58,18 @@ class FirstLetterChoiceMenuResponse(MenuResponse):
         return nethack.ACTIONS.index(nethack.actions.Command.ESC)
 
 class MoreMenuResponse(MenuResponse):
+    def __init__(self, match_str, always_necessary=True):
+        super().__init__(match_str)
+        self.always_necessary = always_necessary # will this message always require a more?
+
     def value(self, message_obj):
-        if not message_obj.has_more and environment.env.debug:
+        if self.always_necessary and not message_obj.has_more and environment.env.debug:
             pdb.set_trace()
-        return utilities.keypress_action(ord(' '))
+
+        if not message_obj.has_more:
+            return None
+        else:
+            return utilities.keypress_action(ord(' '))
 
 class DirectionMenuResponse(MenuResponse):
     def __init__(self, match_str, direction):
@@ -128,6 +136,9 @@ class MenuPlan():
                 return action
 
         return None
+
+    def add_responses(self, menu_plan):
+        self.menu_responses = self.menu_responses + menu_plan.menu_responses
 
     def __repr__(self):
         return self.name

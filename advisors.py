@@ -265,7 +265,7 @@ class ReadTeleportAdvisor(Advisor):
 
         for scroll in scrolls:
             if scroll and scroll.identity and scroll.identity.name() == 'teleport':
-                letter = scrolls.inventory_letter
+                letter = scroll.inventory_letter
                 menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
                     menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
                 ])
@@ -274,6 +274,84 @@ class ReadTeleportAdvisor(Advisor):
 
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
+
+
+class IdentifyAdvisor(Advisor):    
+    @classmethod
+    def craft_menu_plan(letter):
+        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, inventory, item.inventory_letter))
+
+class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        scrolls = inventory.get_oclass(inv.Scroll)
+
+        found_identify = False
+        for scroll in scrolls:
+            if scroll.identity.name() == 'identify':
+                found_identify = True
+                break
+
+        if not found_identify:
+            return None
+
+        armor = inventory.get_oclass(inv.Armor)
+
+        found_magic = False
+        for item in armor:
+            # could it be magical?
+            if item.identity.magic().any():
+                found_magic = True
+                break
+
+        if not found_magic:
+            return None
+
+
+
+        print("Trying to identify")
+        pdb.set_trace()
+        return Advice(self.__class__, read, menu_plan)
+
+class ReadUnidentifiedScrolls(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        scrolls = character.inventory.get_oclass(inv.Scroll)
+
+        for scroll in scrolls:
+            if not scroll.identity.is_identified():
+                letter = scroll.inventory_letter
+
+                menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+                    menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
+                    menuplan.PhraseMenuResponse("Where do you want to center the", "uuuu."),
+                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a"),
+                    menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
+                    menuplan.MoreMenuResponse("You have found a scroll of"),
+                    menuplan.EscapeMenuResponse("What do you want to charge?"),
+                ])
+                return Advice(self, read, menu_plan)
+
+class ReadKnownBeneficialScrolls(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        scrolls = character.inventory.get_oclass(inv.Scroll)
+
+        for scroll in scrolls:
+            if (scroll and scroll.identity and
+                (scroll.BUC is not None and scroll.BUC != 'cursed') and
+                (scroll.identity.name() == 'enchant armor' or scroll.identity.name() == 'enchant weapon')
+                ):
+                letter = scroll.inventory_letter
+
+                menu_plan = menuplan.MenuPlan("read enchant scroll", self, [
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
+                ])
+                return Advice(self, read, menu_plan)
+
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
