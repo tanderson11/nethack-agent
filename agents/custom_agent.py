@@ -18,7 +18,7 @@ from typing import NamedTuple
 from astar import AStar
 import math
 
-import new_advisors as advs
+import advisors as advs
 import advisor_sets
 
 import menuplan

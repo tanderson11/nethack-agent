@@ -1,5 +1,5 @@
 #from advisors import *
-from  new_advisors import *
+from  advisors import *
 
 new_advisors = [
     # FREE IMPROVEMENT
