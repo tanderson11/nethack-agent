@@ -122,9 +122,12 @@ class MenuPlan():
             except EndOfPage:
                 self.interactive_menu.flip_page()
                 return utilities.keypress_action(ord('>'))
+            except MadeSelection:
+                self.in_interactive_menu = False
+                return utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
 
             if selected_item is not None:
-                if not self.interactive_menu.multi_select:
+                if not self.interactive_menu.multi_select and not self.interactive_menu.confirm_choice:
                     self.in_interactive_menu = False
                 return utilities.keypress_action(ord(selected_item.character))
 
@@ -149,6 +152,9 @@ class EndOfPage(Exception):
 class EndOfMenu(Exception):
     pass
 
+class MadeSelection(Exception):
+    pass
+
 class InteractiveMenu():
     menu_item_pattern = re.compile("([a-zA-Z]) (-|\+) (.+)$")
     terminator_pattern = re.compile("\(([0-9]+) of ([0-9]+)\)")
@@ -162,9 +168,11 @@ class InteractiveMenu():
     trigger_phrase = None
     # Is this an interactive menu where we can select many items?
     multi_select = False
+    confirm_choice = False
 
     class MenuItem():
-        def __init__(self, run_state, category, character, selected, item_text):
+        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
+            self.interactive_menu = interactive_menu
             self.category = category
             self.character = character
             self.selected = selected
@@ -216,7 +224,15 @@ class InteractiveMenu():
                 )
                 self.rendered_rows.append(next_item)
 
+                if next_item.selected:
+                    if self.confirm_choice:
+                        raise MadeSelection()
+
+                    if not self.multi_select:
+                        raise Exception("made selection but not multi_select")
+
                 if not next_item.selected and self.item_selector(next_item):
+                    print("SELECTED")
                     return next_item
 
             else:
@@ -262,12 +278,12 @@ class InteractivePickupMenu(InteractiveInventoryMenu):
     trigger_action = None
     trigger_phrase = "Pick up what?"
 
-class InteractivePlayerInventoryMenu(InteractiveMenu):
+class InteractivePlayerInventoryMenu(InteractiveInventoryMenu):
     def __init__(self, run_state, inventory, desired_letter):
         super().__init__(run_state)
         self.inventory = inventory
         self.desired_letter = desired_letter
-        self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == self.desired_letter
+        self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == ord(self.desired_letter)
 
     class MenuItem:
         def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
@@ -282,9 +298,9 @@ class InteractivePlayerInventoryMenu(InteractiveMenu):
             except KeyError:
                 print("In interactive player inventory menu and haven't loaded class that letter {} belongs to".format(self.character))
                 self.item = None
-            pdb.set_trace()
 
 class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
     trigger_phrase = "What would you like to identify first?"
     header_rows = 2
     trigger_action = None
+    confirm_choice = True

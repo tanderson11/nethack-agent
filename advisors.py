@@ -276,17 +276,19 @@ class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
 
-class IdentifyAdvisor(Advisor):    
-    @classmethod
-    def craft_menu_plan(letter):
-        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+class IdentifyAdvisor(Advisor):
+    @staticmethod
+    def craft_menu_plan(run_state, character, advisor, letter):
+        menu_plan = menuplan.MenuPlan("identify boilerplate", advisor, [
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, inventory, item.inventory_letter))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, letter))
+
+        return menu_plan
 
 class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
-        scrolls = inventory.get_oclass(inv.Scroll)
+        scrolls = character.inventory.get_oclass(inv.Scroll)
 
         found_identify = False
         for scroll in scrolls:
@@ -297,23 +299,26 @@ class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
         if not found_identify:
             return None
 
-        armor = inventory.get_oclass(inv.Armor)
+        armor = character.inventory.get_oclass(inv.Armor)
 
         found_magic = False
         for item in armor:
             # could it be magical?
-            if item.identity.magic().any():
+            if item.identity.name() is None and item.identity.magic().any():
                 found_magic = True
                 break
 
         if not found_magic:
             return None
 
-
-
         print("Trying to identify")
-        pdb.set_trace()
-        return Advice(self.__class__, read, menu_plan)
+        
+        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, chr(item.inventory_letter)))
+
+        return Advice(self, read, menu_plan)
 
 class ReadUnidentifiedScrolls(Advisor):
     def advice(self, rng, run_state, character, oracle):
