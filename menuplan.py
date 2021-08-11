@@ -207,6 +207,7 @@ class InteractiveMenu():
                 if not self.active_category:
                     if environment.env.debug: pdb.set_trace()
                 next_item = self.MenuItem(
+                    self,
                     self.run_state,
                     self.active_category,
                     item_match[1],
@@ -248,7 +249,8 @@ class InteractiveInventoryMenu(InteractiveMenu):
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
 
-        def __init__(self, run_state, category, character, selected, item_text):
+        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
+            self.interactive_menu = interactive_menu
             self.category = category
             self.character = character
             self.selected = selected
@@ -259,3 +261,30 @@ class InteractivePickupMenu(InteractiveInventoryMenu):
     header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
+
+class InteractivePlayerInventoryMenu(InteractiveMenu):
+    def __init__(self, run_state, inventory, desired_letter):
+        super().__init__(run_state)
+        self.inventory = inventory
+        self.desired_letter = desired_letter
+        self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == self.desired_letter
+
+    class MenuItem:
+        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
+            self.interactive_menu = interactive_menu
+            self.category = category
+            self.character = character
+            self.selected = selected
+            #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
+
+            try:
+                self.item = self.interactive_menu.inventory.items_by_letter[ord(self.character)]
+            except KeyError:
+                print("In interactive player inventory menu and haven't loaded class that letter {} belongs to".format(self.character))
+                self.item = None
+            pdb.set_trace()
+
+class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
+    trigger_phrase = "What would you like to identify first?"
+    header_rows = 2
+    trigger_action = None

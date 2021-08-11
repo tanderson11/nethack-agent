@@ -627,7 +627,8 @@ class Pathfinder(AStar):
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
     "background", background_advisor, [
-        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
+        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Agent"),
+        menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
         menuplan.EscapeMenuResponse("Call a "),
         menuplan.EscapeMenuResponse("Call an "),
         menuplan.NoMenuResponse("Really attack"),
