@@ -1,48 +1,81 @@
-from advisors import *
+#from advisors import *
+from  advisors import *
 
-small_advisors = [
-    FreeImprovementAdvisorLevel({EnhanceSkillsAdvisor: 1,}),
-    CriticallyInjuredAndUnthreatenedAdvisorLevel({FallbackSearchAdvisor: 1,}),
-    CriticallyInjuredAdvisorLevel({
-        DrinkHealingPotionAdvisor: 1,
-        ZapTeleportOnSelfAdvisor: 1,
-        ReadTeleportAdvisor: 1,
-    }),
-    CriticallyInjuredAdvisorLevel({PrayWhenCriticallyInjuredAdvisor: 1,}),
-    MajorTroubleAdvisorLevel({PrayWhenMajorTroubleAdvisor: 1,}),
-    WeakWithHungerAdvisorLevel({EatTopInventoryAdvisor: 1,}),
-    WeakWithHungerAdvisorLevel({PrayWhenWeakAdvisor: 1,}),
-    AdjacentToMonsterAndLowHpAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1}),
-    AdjacentToMonsterAdvisorLevel({DeterministicSafeMeleeAttack: 1,}),
-    AdjacentToMonsterAdvisorLevel({RandomRangedAttackAdvisor: 1,}),
-    AdjacentToMonsterAdvisorLevel({RandomUnthreatenedMoveAdvisor: 1,}), # we can't ranged attack, can we move to an unthreatened place?
-    AdjacentToMonsterAdvisorLevel({MostNovelMoveAdvisor: 1,}), # okay can we just avoid it? 
-    AdjacentToMonsterAdvisorLevel({
-        RandomAttackAdvisor: 1, # even unsafe, only reach if we can't melee or ranged or move
-        FallbackSearchAdvisor: 40, # basically controls to probability we yolo attack floating eyes
+new_advisors = [
+    # FREE IMPROVEMENT
+    EnhanceSkillsAdvisor(),
+    # STONING ILL ETC
+    PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
+    # CRITICALLY INJURED
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[ # oracle_consultation=dumb, doesn't work
+        WaitAdvisor(threat_tolerance=0.),
+        UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
+        DoCombatHealingAdvisor(),
+        UseEscapeItemAdvisor(),
+        PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
+        #EngraveElberethAdvisor(),
+        #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
+        ]),
+    # WEAK
+    CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, threat_tolerance=0.05),
+    # HIGHLY THREATENED
+    #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
+    # IN GNOMISH MINES
+    UpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
+    # COMBAT
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
+        SafeMeleeAttackAdvisor(),
+        RandomMoveAdvisor(square_threat_tolerance=0.),
+        PassiveMonsterRangedAttackAdvisor(),
+        UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
+        ]),
+    # WEAK
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
+        InventoryEatAdvisor(threat_tolerance=0.05),
+        PrayForNutritionAdvisor(),
+        ]),
+    # LYCANTHROPY PUNISHED ETC
+    PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
+    # DISTANT THREAT
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
+        RandomMoveAdvisor(square_threat_tolerance=0.),
+        HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
+        RandomMoveAdvisor(), # sometimes we can't find our way to the enemy and we can't get out of threat
+        ]),
+    ###### OUT OF DANGER ###### ()
+    # WHEN SAFE IMPROVEMENTS
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
+        AnyWardrobeChangeAdvisor(),
+        #ReadUnidenifiedScrollAdvisor()
+        ]),
+    # IMPROVEMENTS
+    SequentialCompositeAdvisor(advisors=[
+        PickupDesirableItems(),
+        EatCorpseAdvisor(),
+        UnblockedWardrobeChangesAdvisor(),
+        EngraveTestWandsAdvisor(),
+        ]),
+    # HUNT WEAK
+    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
+    # OPEN PATHS
+    SequentialCompositeAdvisor(advisors=[
+        KickLockedDoorAdvisor(),
+        OpenClosedDoorAdvisor(),
+        TraverseUnknownUpstairsAdvisor(),
+        ]),
+    GoDownstairsAdvisor(),
+    # MOVE TO DESIRABLE
+    SequentialCompositeAdvisor(advisors=[
+        #FreshCorpseMoveAdvisor(square_threat_tolerance=0.),
+        #DesirableObjectMoveAdvisor(square_threat_tolerance=0.),
+        ]),
+    # EXPLORE
+    UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
+    RandomCompositeAdvisor(advisors={
+        MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
+        RandomMoveAdvisor(square_threat_tolerance=0.): 2,
+        TravelToDownstairsAdvisor(): 1,
         }),
-    #SafeAdvisorLevel({IdentifyPotentiallyMagicArmorAdvisor: 1}),
-    SafeAdvisorLevel({WearEvenBlockedArmorAdvisor: 1}),
-    AmUnthreatenedAdvisorLevel({
-        PickupFoodAdvisor: 1,
-        PickupArmorAdvisor: 1,
-        EatCorpseAdvisor: 1,
-        WearUnblockedArmorAdvisor: 1,
-        EngraveTestWandsAdvisor: 1,
-    }),
-    UnthreatenedLowHPAdvisorLevel({FallbackSearchAdvisor: 1,}),
-    AdvisorLevel({OpenClosedDoorAdvisor: 1,}),
-    DungeonsOfDoomAdvisorLevel({KickLockedDoorAdvisor: 1,}),
-    AdvisorLevel({TraverseUnknownUpstairsAdvisor: 1,}),
-    GnomishMinesAdvisorLevel({UpstairsAdvisor: 1,}),
-    AdvisorLevel({TakeDownstairsAdvisor: 1,}),
-    AdvisorLevel({FreshCorpseMoveAdvisor: 1,}),
-    AdvisorLevel({VisitUnvisitedSquareAdvisor: 1}),
-    AdvisorLevel({
-        MostNovelUnthreatenedMoveAdvisor: 10,
-        NoUnexploredSearchAdvisor: 6,
-        RandomUnthreatenedMoveAdvisor: 2,
-        DesirableObjectMoveAdvisor: 2,
-        TravelToDownstairsAdvisor: 1,
-    }),
+    FallbackSearchAdvisor(),
 ]

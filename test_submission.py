@@ -74,13 +74,13 @@ if __name__ == "__main__":
 
         df = df[~df['scummed']]
 
-        print(
-            f"Runs: {len(df.index)}, "
-            f"Ascensions: {df['ascended'].sum()}, "
-            f"Median Score: {df['score_log'].median()}, "
-            f"Mean Score: {df['score_log'].mean()}, "
-            f"Min Score: {df['score_log'].min()}, "
-            f"Max Score: {df['score_log'].max()}, "
-            f"Max depth: {df['depth_log'].max()}, "
-            f"Max experience: {df['explevel'].max()}, "
-        )
+    print(
+        f"Runs: {len(df.index)}, "
+        f"Ascensions: {df['ascended'].sum()}, "
+        f"Median Score: {df['score_log'].median()}, "
+        f"Mean Score: {df['score_log'].mean()}, "
+        f"Min Score: {df['score_log'].min()}, "
+        f"Max Score: {df['score_log'].max()}, "
+        f"Max depth: {df['depth_log'].max()}, "
+        f"Max experience: {df['explevel'].max()}, "
+    )

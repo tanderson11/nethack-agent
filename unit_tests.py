@@ -36,14 +36,29 @@ class TestMonsterKill(unittest.TestCase):
         "You kill the newt!  The grid bug bites!  You get zapped!": "newt",
         "You kill the poor little dog!": "little dog",
         "You kill the incubus of Kos!": "incubus",
-        "You kill the invisible hill orc!": "hill orc",
+        #"You kill the invisible hill orc!": "hill orc",
         "You kill the saddled pony!": "pony",
     }
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            monster_name = agents.custom_agent.RecordedMonsterDeath.killed_monster(key)
+            monster_name = agents.custom_agent.RecordedMonsterDeath.involved_monster(key)
             self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath(None, None, monster_name).monster_name)
+
+class TestMonsterFlight(unittest.TestCase):
+    test_values = {
+        "You hit the straw golem!  The straw golem turns to flee.": "straw golem",
+        "You hit the gnome.  The gnome turns to flee.": "gnome",
+        "You hit the Green-elf.  The Green-elf turns to flee.": "Green-elf",
+        "You hit Croesus!  Croesus turns to flee.": "Croesus",
+        "Demogorgon turns to flee.": "Demogorgon", # is this optimistic ... maybe
+        #The invisible Demogorgon casts a spell!  A monster appears from nowhere!  The kitten turns to flee.  The fire elemental turns to flee.  The arch-lich casts a spell!--More--
+    }
+
+    def test_all_test_values(self):
+        for key, value in self.test_values.items():
+            monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
+            self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
 
 class TestAttributeScreen(unittest.TestCase):
     def test_easy_case(self):
@@ -54,8 +69,8 @@ class TestAttributeScreen(unittest.TestCase):
         run_state = agents.custom_agent.RunState()
         run_state.reading_base_attributes = True
         run_state.update_base_attributes(screen_content)
-        self.assertEqual("Barbarian", run_state.character.base_class)
-        self.assertEqual("human", run_state.character.base_race)
+        self.assertEqual(constants.BaseRole.Barbarian, run_state.character.base_class)
+        self.assertEqual(constants.BaseRace.human, run_state.character.base_race)
         self.assertEqual("female", run_state.character.base_sex)
         self.assertEqual("neutral", run_state.character.base_alignment)
         self.assertEqual("Crom", run_state.gods_by_alignment['neutral'])
@@ -70,9 +85,9 @@ class TestAttributeScreen(unittest.TestCase):
         run_state = agents.custom_agent.RunState()
         run_state.reading_base_attributes = True
         run_state.update_base_attributes(screen_content)
-        self.assertEqual("dwarf", run_state.character.base_race)
+        self.assertEqual(constants.BaseRace.dwarf, run_state.character.base_race)
         self.assertEqual("female", run_state.character.base_sex)
-        self.assertEqual("Caveperson", run_state.character.base_class)
+        self.assertEqual(constants.BaseRole.Caveperson, run_state.character.base_class)
         self.assertEqual("lawful", run_state.character.base_alignment)
         self.assertEqual("Ishtar", run_state.gods_by_alignment['neutral'])
         self.assertEqual("Anu", run_state.gods_by_alignment['lawful'])
@@ -86,9 +101,9 @@ class TestAttributeScreen(unittest.TestCase):
         run_state = agents.custom_agent.RunState()
         run_state.reading_base_attributes = True
         run_state.update_base_attributes(screen_content)
-        self.assertEqual("human", run_state.character.base_race)
+        self.assertEqual(constants.BaseRace.human, run_state.character.base_race)
         self.assertEqual("male", run_state.character.base_sex)
-        self.assertEqual("Tourist", run_state.character.base_class)
+        self.assertEqual(constants.BaseRole.Tourist, run_state.character.base_class)
         self.assertEqual("neutral", run_state.character.base_alignment)
         self.assertEqual("The Lady", run_state.gods_by_alignment['neutral'])
         self.assertEqual("Blind Io", run_state.gods_by_alignment['lawful'])
@@ -146,11 +161,32 @@ class TestItemParsing(unittest.TestCase):
     def test_easy_case(self):
         pass
 
+class TestSpecialRoleAttributes(unittest.TestCase):
+    def test_body_armor_penalty(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Monk,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+
+        self.assertTrue(character.body_armor_penalty())
+
+    def test_can_eat_tripe(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Caveperson,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+
+        self.assertFalse(character.sick_from_tripe())
+
 class TestInnateIntrinsics(unittest.TestCase):
     def test_monk_example(self):
         character = agents.custom_agent.Character(
-            base_class='Monk',
-            base_race='human',
+            base_class=constants.BaseRole.Monk,
+            base_race=constants.BaseRace.human,
             base_sex='male',
             base_alignment='lawful'
         )

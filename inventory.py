@@ -76,6 +76,7 @@ class Item(ItemLike):
             self.identity = global_identity_map.identity_by_numeral[glyph_numeral]
         except KeyError:
             print("No identity found for {}".format(glyph_numeral))
+            self.identity = None
 
         super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
 
@@ -85,7 +86,8 @@ class Armor(Item):
     def instance_desirability_to_wear(self, character):
         body_armor_penalty = 0
         if character.body_armor_penalty() and self.identity.slot == 'suit':
-            body_armor_penalty = -10
+            body_armor_penalty = -20
+            return -20 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
             best_case_enhancement = 5
@@ -122,6 +124,13 @@ class Potion(Item):
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
+
+    def melee_damage(self, monster):
+        weapon_damage = self.identity.avg_melee_damage(monster)
+        weapon_damage += 0 or self.enhancement
+
+        # TK know about silver damage etc
+        return weapon_damage
 
 class AmbiguousItem(ItemLike):
     '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
@@ -387,12 +396,15 @@ class SlotCluster():
             class_contents = inventory.get_oclass(oclass)
 
             for item in class_contents:
-                if item.equipped_status is not None:
-                    occ_slot = item.equipped_status.slot
-                    #print(occ_slot)
-                    #print(occ_slot is not None)
-                    if occ_slot is not None:
-                        slots[occ_slot].add_occupant(item)
+                if item is None:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                else:
+                    if item.equipped_status is not None:
+                        occ_slot = item.equipped_status.slot
+                        #print(occ_slot)
+                        #print(occ_slot is not None)
+                        if occ_slot is not None:
+                            slots[occ_slot].add_occupant(item)
 
         #pdb.set_trace()
         self.slots = slots
@@ -532,3 +544,30 @@ class PlayerInventory():
             slots = self.__class__.slot_cluster_mapping[slot_cluster_name](self)
             self.slot_groups_by_name[slot_cluster_name] = slots
             return slots
+
+    def wielded_weapon(self):
+        armaments = self.get_slots('armaments')
+        hand_occupant = armaments.slots['hand'].occupant
+
+        if not hand_occupant:
+            return None
+
+        if hand_occupant.equipped_status.status == 'wielded':
+            return hand_occupant
+        else:
+            if environment.env.debug: pdb.set_trace()
+
+    def to_hit_modifiers(self, character, monster):
+        weapon = self.wielded_weapon()
+        if weapon:
+            to_hit = 0 or weapon.enhancement
+        else:
+            to_hit = 0
+        # TK rings of increased accuracy
+        # TK monks and body armor
+        # TK monks and no weapon
+        # TK blessed good against undead etc
+        # TK weapon skills adjustments
+
+        return to_hit
+

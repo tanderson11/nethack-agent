@@ -1,5 +1,6 @@
 from typing import NamedTuple
 import os
+import constants
 
 class EnvironmentVariable(NamedTuple):
     num_environments: int
@@ -16,7 +17,8 @@ def try_cast(type, var):
 def parse_target_roles(raw_str):
     if not raw_str:
         return set()
-    return set(raw_str.split(','))
+
+    return set([constants.BaseRole[s] for s in raw_str.split(',')])
 
 env = EnvironmentVariable(
     num_environments=try_cast(int, os.getenv("NLE_DEV_NUM_ENVIRONMENTS")),
