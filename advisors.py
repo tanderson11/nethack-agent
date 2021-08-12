@@ -318,7 +318,7 @@ class ReadUnidentifiedScrolls(Advisor):
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
-            if scroll and scroll.identity and not scroll.identity.is_identified():
+            if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != 'cursed':
                 letter = scroll.inventory_letter
 
                 interactive_menus = [
