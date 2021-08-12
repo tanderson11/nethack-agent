@@ -508,11 +508,6 @@ class PlayerInventory():
         return proposed_items, proposal_blockers
 
 
-    def make_identify_target_generator(self):
-
-        target_generator = (item for items_by_desire_to_identify)
-        return target_generator
-
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
