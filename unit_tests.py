@@ -18,6 +18,7 @@ class TestItemRegex(unittest.TestCase):
         "a thoroughly rusty +0 battle-axe (weapon in hands)": "double-headed axe",
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
+        "a heavy iron ball (chained to you)": "heavy iron ball",
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
