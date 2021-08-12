@@ -13,6 +13,7 @@ import menuplan
 import utilities
 from utilities import ARS
 import inventory as inv
+import re
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -267,7 +268,8 @@ class ReadTeleportAdvisor(Advisor):
             if scroll and scroll.identity and scroll.identity.name() == 'teleport':
                 letter = scroll.inventory_letter
                 menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+                    menuplan.YesMenuResponse("Do you wish to teleport?"),
                 ])
                 return Advice(self, read, menu_plan)
         return None
@@ -275,24 +277,14 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
-
-class IdentifyAdvisor(Advisor):
-    @staticmethod
-    def craft_menu_plan(run_state, character, advisor, letter):
-        menu_plan = menuplan.MenuPlan("identify boilerplate", advisor, [
-            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, letter))
-
-        return menu_plan
-
-class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
+class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
         found_identify = False
         for scroll in scrolls:
-            if scroll.identity.name() == 'identify':
+            if scroll.identity and scroll.identity.name() == 'identify':
                 found_identify = True
                 break
 
@@ -304,7 +296,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
         found_magic = False
         for item in armor:
             # could it be magical?
-            if item.identity.name() is None and item.identity.magic().any():
+            if item.identity and item.identity.name() is None and item.identity.magic().any():
                 found_magic = True
                 break
 
@@ -316,7 +308,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(IdentifyAdvisor):
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, chr(item.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(item.inventory_letter)))
 
         return Advice(self, read, menu_plan)
 
@@ -329,15 +321,28 @@ class ReadUnidentifiedScrolls(Advisor):
             if not scroll.identity.is_identified():
                 letter = scroll.inventory_letter
 
+                interactive_menus = [
+                    menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+                    #menuplan.InteractiveValidPlacementMenu(run_state, pick_last=True) # get farthest possible valid square for fireballs
+                ]
+
                 menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
                     menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
                     menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
-                    menuplan.PhraseMenuResponse("Where do you want to center the", "uuuu."),
+                    menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
+                    menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
+                    # open interactive menu of valid placements for fireballs; NLE very stupidly doesn't give a better message match than this
+                    menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=utilities.keypress_action(ord('.'))),
                     menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a"),
                     menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
+                    menuplan.MoreMenuResponse("This is a scroll of"),
+                    menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
                     menuplan.MoreMenuResponse("You have found a scroll of"),
                     menuplan.EscapeMenuResponse("What do you want to charge?"),
-                ])
+                    menuplan.NoMenuResponse("Do you wish to teleport?"),
+                ], interactive_menu=interactive_menus)
+
+                #import pdb; pdb.set_trace()
                 return Advice(self, read, menu_plan)
 
 class ReadKnownBeneficialScrolls(Advisor):
@@ -813,7 +818,7 @@ class PickupFoodAdvisor(Advisor):
                 "pick up comestibles and safe corpses",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'comestibles'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='comestibles'),
             )
             #print("Food pickup")
             return Advice(self, nethack.actions.Command.PICKUP, menu_plan)
@@ -826,7 +831,7 @@ class PickupArmorAdvisor(Advisor):
                 "pick up armor",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'armor'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='armor'),
             )
             #print("Armor pickup")
             return Advice(self, nethack.actions.Command.PICKUP, menu_plan)
