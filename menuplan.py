@@ -284,7 +284,6 @@ class InteractiveMenu():
                             raise Exception("already made selection but not multi_select")
 
                     if not next_item.selected and self.item_selector(next_item):
-                        import pdb; pdb.set_trace()
                         print("SELECTED")
                         return next_item
 
