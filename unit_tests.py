@@ -22,7 +22,7 @@ class TestItemRegex(unittest.TestCase):
     def test_all_test_values(self):
         for key, value in self.test_values.items():
             item = menuplan.InteractiveInventoryMenu.MenuItem(
-                agents.custom_agent.RunState(), None, "a", False, key
+                None, agents.custom_agent.RunState(), None, "a", False, key
             )
             if item.item is None:
                 import pdb; pdb.set_trace()
