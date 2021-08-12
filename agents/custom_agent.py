@@ -1096,7 +1096,7 @@ class CustomAgent(BatchedAgent):
                 #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
                 # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
-        if "don't have anything to eat" in message.message and environment.env.debug:
+        if "enough tries" in message.message and environment.env.debug:
             #import pdb; pdb.set_trace()
             pass
 
