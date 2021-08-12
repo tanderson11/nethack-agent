@@ -284,7 +284,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
 
         found_identify = False
         for scroll in scrolls:
-            if scroll.identity and scroll.identity.name() == 'identify':
+            if scroll and scroll.identity and scroll.identity.name() == 'identify':
                 found_identify = True
                 break
 
@@ -318,7 +318,7 @@ class ReadUnidentifiedScrolls(Advisor):
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
-            if not scroll.identity.is_identified():
+            if scroll and scroll.identity and not scroll.identity.is_identified():
                 letter = scroll.inventory_letter
 
                 interactive_menus = [
@@ -333,7 +333,7 @@ class ReadUnidentifiedScrolls(Advisor):
                     menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
                     # open interactive menu of valid placements for fireballs; NLE very stupidly doesn't give a better message match than this
                     menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=utilities.keypress_action(ord('.'))),
-                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a"),
+                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=utilities.keypress_action(ord('\r'))),
                     menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
                     menuplan.MoreMenuResponse("This is a scroll of"),
                     menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
