@@ -7,6 +7,7 @@ import numpy as np
 
 import functools
 
+import map
 import physics
 import environment
 import menuplan
@@ -600,7 +601,7 @@ class DownstairsAdvisor(Advisor):
             # see if we know about this staircase
             staircase = neighborhood.level_map.staircases[neighborhood.absolute_player_location]
             # don't descend if it leads to the mines
-            if staircase.end_dcoord[0] == 2:
+            if staircase.end_dcoord[0] == map.Branches.GnomishMines.value:
                 return False
         except KeyError:
             pass
@@ -661,7 +662,7 @@ class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
             return False
         try:
             # if we know about this staircase, we're not interested
-            staircase = run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
+            run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
             return False
         except:
             return True

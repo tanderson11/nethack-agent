@@ -1,9 +1,20 @@
+import enum
+
 import numpy as np
 
 import environment
 import glyphs as gd
 import physics
 import utilities
+
+class Branches(enum.Enum):
+    DungeonsOfDoom = 0
+    GnomishMines = 2
+
+INDEX_TO_BRANCH = {
+    Branches.DungeonsOfDoom.value: Branches.DungeonsOfDoom,
+    Branches.GnomishMines.value: Branches.GnomishMines,
+}
 
 class DMap():
     def __init__(self):
@@ -34,6 +45,8 @@ class DLevelMap():
     def glyphs_to_dungeon_features(glyphs, default=None):
         if default is None:
             default = np.zeros_like(glyphs)
+        # This treats the gd.CMapGlyph.OFFSET as unobserved. No way, AFAICT, to
+        # distinguish between solid stone that we've seen with our own eyes vs. not
         return np.where(
             (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
             glyphs,
@@ -42,10 +55,11 @@ class DLevelMap():
 
     def __init__(self, dungeon_number, level_number, glyphs):
         self.dungeon_number = dungeon_number
+        if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
+            import pdb; pdb.set_trace()
         self.level_number = level_number
 
         # These are our map layers
-        self.update_counter = 0
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
         self.staircases = {}
@@ -53,7 +67,6 @@ class DLevelMap():
 
     
     def update(self, player_location, glyphs):
-        self.update_counter += 1
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
         self.visits_count_map[player_location] += 1
 
@@ -64,6 +77,8 @@ class DLevelMap():
         return None
 
     def add_feature(self, location, glyph):
+        if not isinstance(glyph, gd.CMapGlyph):
+            raise Exception("Bad feature glyph")
         self.dungeon_feature_map[location] = glyph.numeral
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):

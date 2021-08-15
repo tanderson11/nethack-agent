@@ -871,7 +871,8 @@ class CustomAgent(BatchedAgent):
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
-            previous_level_map.add_traversed_staircase(run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0]) # start, end, end
+            previous_level_map.add_traversed_staircase(
+                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0]) # start, end, end
             # staircase it's implied we've arrived on (probably breaks in the Valley)
             level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))

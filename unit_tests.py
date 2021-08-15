@@ -1,6 +1,9 @@
 import unittest
 
+import numpy as np
+
 import constants
+import map
 import menuplan
 import inventory as inv
 import glyphs as gd
@@ -201,6 +204,41 @@ class TestInnateIntrinsics(unittest.TestCase):
         self.assertTrue(character.has_intrinsic(constants.Intrinsics.poison_resistance))
         self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
 
+def make_glyphs(vals = {}):
+    glyphs = np.full((21, 79), 2359)
+    for k, v in vals.items():
+        glyphs[k] = v
+    return glyphs
+
+class TestDLevelMap(unittest.TestCase):
+    def setUp(self):
+        self.lmap = map.DLevelMap(0, 1, make_glyphs())
+
+    def test_update(self):
+        upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
+        monster = gd.get_by_name(gd.MonsterAlikeGlyph, 'fire ant')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+        self.lmap.update((1,1), make_glyphs({(0, 0): upstair.numeral}))
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+        self.lmap.update((1,1), make_glyphs({(0, 0): monster.numeral}))
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+
+    def test_add_feature(self):
+        upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.lmap.add_feature((0,0), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+
+    def test_add_traversed_staircase(self):
+        downstair = gd.get_by_name(gd.CMapGlyph, 'dnstair')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.lmap.add_traversed_staircase((0,0), (0, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
+        staircase = self.lmap.staircases[(0,0)]
+        self.assertEqual((0,0), staircase.start_location)
 
 if __name__ == '__main__':
     unittest.main()
