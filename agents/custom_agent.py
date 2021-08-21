@@ -463,7 +463,7 @@ BackgroundMenuPlan = menuplan.MenuPlan(
     "background",
     background_advisor,
     normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
-    )
+)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -481,7 +481,7 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -517,6 +517,9 @@ class RunState():
                 'last_pray_reason': str(self.character.last_pray_reason),
                 'scummed': self.scumming,
                 'ascended': ascended,
+                'step_count': self.step_count,
+                'l1_advised_step_count': self.l1_advised_step_count,
+                'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
             })
 
         #import pdb; pdb.set_trace()
@@ -546,6 +549,8 @@ class RunState():
         self.gods_by_alignment = {}
 
         self.step_count = 0
+        self.l1_advised_step_count = 0
+        self.l1_need_downstairs_step_count = 0
         self.reward = 0
         self.time = None
 
@@ -993,6 +998,11 @@ class CustomAgent(BatchedAgent):
         ############################
         run_state.update_neighborhood(neighborhood)
         ############################
+
+        if blstats.get('depth') == 1:
+            run_state.l1_advised_step_count += 1
+            if level_map.need_downstairs:
+                run_state.l1_need_downstairs_step_count += 1
 
         oracle = advs.Oracle(run_state, run_state.character, neighborhood, message, blstats)
 

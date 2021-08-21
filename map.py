@@ -46,15 +46,13 @@ class Staircase():
 
 class DLevelMap():
     @staticmethod
-    def glyphs_to_dungeon_features(glyphs, default=None):
-        if default is None:
-            default = np.zeros_like(glyphs)
+    def glyphs_to_dungeon_features(glyphs, prior):
         # This treats the gd.CMapGlyph.OFFSET as unobserved. No way, AFAICT, to
         # distinguish between solid stone that we've seen with our own eyes vs. not
         return np.where(
             (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
             glyphs,
-            default
+            prior
         )
 
     def __init__(self, dungeon_number, level_number, glyphs):
@@ -62,9 +60,11 @@ class DLevelMap():
         if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
             import pdb; pdb.set_trace()
         self.level_number = level_number
+        self.need_downstairs = True
+        self.need_upstairs = True
 
         # These are our map layers
-        self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs)
+        self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
         self.staircases = {}
         self.warning_engravings = {}
@@ -72,6 +72,14 @@ class DLevelMap():
     
     def update(self, player_location, glyphs):
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
+        # This is expensive. If we don't get long-term utility from these, should delete it
+        if self.need_downstairs or self.need_upstairs:
+            unique, counts = np.unique(self.dungeon_feature_map, return_counts=True)
+            counted_elements = dict(zip(unique, counts))
+            if self.need_upstairs and counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'upstair').numeral, None):
+                self.need_upstairs = False
+            if self.need_downstairs and counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'dnstair').numeral, None):
+                self.need_downstairs = False
         self.visits_count_map[player_location] += 1
 
     def get_dungeon_glyph(self, location):
@@ -84,6 +92,10 @@ class DLevelMap():
         if not isinstance(glyph, gd.CMapGlyph):
             raise Exception("Bad feature glyph")
         self.dungeon_feature_map[location] = glyph.numeral
+        if glyph.is_downstairs:
+            self.need_downstairs = False
+        elif glyph.is_upstairs:
+            self.need_upstairs = False
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
