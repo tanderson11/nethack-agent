@@ -153,15 +153,13 @@ class InteractiveMenu():
     multi_select = False
 
     class MenuItem():
-        def __init__(self, run_state, category, character, selected, item_text):
+        def __init__(self, ambient_menu, category, character, selected, item_text):
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
 
-    def __init__(self, run_state, selector_name=None):
-        #if environment.env.debug: pdb.set_trace()
-        self.run_state = run_state
+    def __init__(self, selector_name=None):
         self.rendered_rows = []
         self.header_rows = self.first_page_header_rows
         self.vertical_offset = 0
@@ -198,7 +196,7 @@ class InteractiveMenu():
                 if not self.active_category:
                     if environment.env.debug: pdb.set_trace()
                 next_item = self.MenuItem(
-                    self.run_state,
+                    self,
                     self.active_category,
                     item_match[1],
                     item_match[2] == "+",
@@ -223,7 +221,7 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
     trigger_action = None
     trigger_phrase = 'Pick a skill to advance:'
 
-class InteractiveInventoryMenu(InteractiveMenu):
+class ParsingInventoryMenu(InteractiveMenu):
     selectors = {
         'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleport'),
         'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
@@ -234,19 +232,29 @@ class InteractiveInventoryMenu(InteractiveMenu):
         'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
     }
 
+    def __init__(self, run_state, selector_name=None):
+        self.run_state = run_state
+        super().__init__(selector_name=selector_name)
+
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
 
-        def __init__(self, run_state, category, character, selected, item_text):
+        def __init__(self, ambient_menu, category, character, selected, item_text):
+            run_state = ambient_menu.run_state
             self.category = category
             self.character = character
             self.selected = selected
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
             self.item = inv.ItemParser.parse_inventory_item(run_state.global_identity_map, item_text, category=category)
 
-class InteractivePickupMenu(InteractiveInventoryMenu):
+class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
+
+class WizmodeIdentifyMenu(InteractiveMenu):
+    first_page_header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Debug Identify -- unidentified or partially identified items"
