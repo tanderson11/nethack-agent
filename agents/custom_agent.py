@@ -107,15 +107,20 @@ class RecordedMonsterEvent():
         if match is None:
             return None
         monster_name = match[cls.name_field]
+        # Blind and don't know what's going on
+        if monster_name == 'it':
+            return None
         return monster_name
 
+MONSTER_REGEX = '((T|t)he )?(poor )?(invisible )?(saddled )?([a-zA-Z -]+?)( of .+?)?'
+
 class RecordedMonsterFlight(RecordedMonsterEvent):
-    pattern = re.compile("(^|. +|! +)(The )?([a-zA-Z -]+?) turns to flee.")
-    name_field = 3
+    pattern = re.compile(f"(^|. +|! +){MONSTER_REGEX} turns to flee.")
+    name_field = 7
 
 class RecordedMonsterDeath(RecordedMonsterEvent):
-    pattern = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
-    name_field = 4
+    pattern = re.compile(f"You kill {MONSTER_REGEX}!")
+    name_field = 6
 
     def __init__(self, square, time, monster_name):
         self.square = square # doesn't know about dungeon levels

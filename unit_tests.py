@@ -42,7 +42,7 @@ class TestMonsterKill(unittest.TestCase):
         "You kill the newt!  The grid bug bites!  You get zapped!": "newt",
         "You kill the poor little dog!": "little dog",
         "You kill the incubus of Kos!": "incubus",
-        #"You kill the invisible hill orc!": "hill orc",
+        "You kill the invisible hill orc!": "hill orc",
         "You kill the saddled pony!": "pony",
     }
 
@@ -63,6 +63,7 @@ class TestMonsterFlight(unittest.TestCase):
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
+            print(value)
             monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
             self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
 
