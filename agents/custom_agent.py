@@ -33,6 +33,7 @@ import constants
 import glyphs as gd
 from map import DMap, ThreatMap
 import environment
+from wizmode_prep import WizmodePrep
 
 from collections import Counter
 
@@ -565,6 +566,8 @@ class RunState():
         self.latest_monster_flight = None
 
         self.menu_plan_log = []
+        self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
+        self.stall_detection_on = False
 
         # for mapping purposes
         self.dmap = DMap()
@@ -644,7 +647,8 @@ class RunState():
         # Potentially useful for checking stalls
         new_time = blstats.get('time')
         if self.time == new_time:
-            self.time_hung += 1
+            if self.stall_detection_on:
+                self.time_hung += 1
         else:
             self.time_hung = 0
         if self.time_hung > 50:
@@ -949,6 +953,17 @@ class CustomAgent(BatchedAgent):
             run_state.set_menu_plan(scumming_menu_plan)
             run_state.log_action(retval, menu_plan=scumming_menu_plan)
             return retval
+
+        if run_state.wizmode_prep:
+            if not run_state.wizmode_prep.prepped:
+                run_state.stall_detection_on = False
+                action, menu_plan = run_state.wizmode_prep.next_action()
+                retval = utilities.ACTION_LOOKUP[action]
+                run_state.set_menu_plan(menu_plan)
+                run_state.log_action(retval, menu_plan=menu_plan)
+                return retval
+            else:
+                run_state.stall_detection_on = True
 
         neighborhood = Neighborhood(
             time,

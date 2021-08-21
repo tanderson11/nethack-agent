@@ -79,8 +79,8 @@ class PhraseMenuResponse(MenuResponse):
         self.phrase = phrase
         self.next_index = 0
 
-    def value(self, message_obj):
-        if not message_obj.getline and environment.env.debug:
+    def value(self, message_obj, expect_getline=True):
+        if expect_getline and not message_obj.getline and environment.env.debug:
             pdb.set_trace()
         if self.next_index == len(self.phrase):
             self.next_index = 0
@@ -89,6 +89,14 @@ class PhraseMenuResponse(MenuResponse):
         self.next_index += 1
         return utilities.keypress_action(ord(character))
 
+class ExtendedCommandResponse(PhraseMenuResponse):
+        def __init__(self, phrase):
+            super().__init__("#", phrase)
+
+        def value(self, message_obj):
+            if not message_obj.message.startswith('# ') and environment.env.debug:
+                pdb.set_trace()
+            return super().value(message_obj, expect_getline=False)
 
 class MenuPlan():
     def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None, listening_item=None):
