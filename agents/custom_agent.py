@@ -431,19 +431,31 @@ class Pathfinder(AStar):
     def heuristic_cost_estimate(self, current, goal):
         return math.hypot(current[0]-goal[0], current[1]-goal[1])
 
+normal_background_menu_plan_options = [
+    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
+    menuplan.EscapeMenuResponse("Call a "),
+    menuplan.EscapeMenuResponse("Call an "),
+    menuplan.NoMenuResponse("Really attack"),
+    menuplan.NoMenuResponse("Shall I remove"),
+    menuplan.NoMenuResponse("Would you wear it for me?"),
+    menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
+    menuplan.EscapeMenuResponse("trouble lifting"),
+    menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
+]
+
+wizard_background_menu_plan_options = [
+    menuplan.YesMenuResponse("Die?"),
+    menuplan.NoMenuResponse("Force the gods to be pleased?"),
+    menuplan.NoMenuResponse("Advance skills without practice?"),
+    menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
+]
+
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
-    "background", background_advisor, [
-        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
-        menuplan.EscapeMenuResponse("Call a "),
-        menuplan.EscapeMenuResponse("Call an "),
-        menuplan.NoMenuResponse("Really attack"),
-        menuplan.NoMenuResponse("Shall I remove"),
-        menuplan.NoMenuResponse("Would you wear it for me?"),
-        menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
-        menuplan.EscapeMenuResponse("little trouble lifting"),
-        menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
-    ])
+    "background",
+    background_advisor,
+    normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
+    )
 
 class RunState():
     def __init__(self, debug_env=None):

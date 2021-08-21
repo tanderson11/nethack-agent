@@ -8,6 +8,7 @@ class EnvironmentVariable(NamedTuple):
     debug: bool
     log_runs: bool
     target_roles: set[str]
+    wizard: bool
 
 def try_cast(type, var):
     if var is None:
@@ -26,4 +27,5 @@ env = EnvironmentVariable(
     debug=(os.getenv("NLE_DEV_DEBUG") == "true"),
     log_runs=((os.getenv("NLE_DEV_DEBUG") == "true") or (os.getenv("NLE_DEV_LOG_RUNS") == "true")),
     target_roles=parse_target_roles(os.getenv("NLE_DEV_TARGET_ROLES")),
+    wizard=(os.getenv("NLE_DEV_WIZARD") == "true"),
 )
