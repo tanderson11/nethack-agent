@@ -7,6 +7,7 @@ import numpy as np
 
 import functools
 
+import map
 import physics
 import environment
 import menuplan
@@ -75,7 +76,10 @@ class Oracle():
     @functools.cached_property
     def desirable_object_on_space(self):
         prev_glyph = self.neighborhood.previous_glyph_on_player
-        desirable_object_on_space = (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
+        desirable_object_on_space = (
+            (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and
+            prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
+        )
 
         return desirable_object_on_space
 
@@ -108,27 +112,11 @@ class Oracle():
 
     @functools.cached_property
     def on_downstairs(self):
-        previous_is_downstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_downstairs
-        try:
-            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
-            direction = staircase.direction
-        except KeyError:
-            direction = None
-
-        on_downstairs = "staircase down here" in self.message.message or direction == 'down' or previous_is_downstairs
-        return on_downstairs
+        return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_downstairs
 
     @functools.cached_property
     def on_upstairs(self):
-        previous_is_upstairs = isinstance(self.neighborhood.previous_glyph_on_player, gd.CMapGlyph) and self.neighborhood.previous_glyph_on_player.is_upstairs
-        try:
-            staircase = self.neighborhood.level_map.staircases[self.neighborhood.absolute_player_location]
-            direction = staircase.direction
-        except KeyError:
-            direction = None
-
-        on_upstairs = "staircase up here" in self.message.message or direction == 'up' or previous_is_upstairs
-        return on_upstairs
+        return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
 
 class Advice():
     def __init__(self, advisor, action, menu_plan):
@@ -613,7 +601,7 @@ class DownstairsAdvisor(Advisor):
             # see if we know about this staircase
             staircase = neighborhood.level_map.staircases[neighborhood.absolute_player_location]
             # don't descend if it leads to the mines
-            if staircase.end_dcoord[0] == 2:
+            if staircase.end_dcoord[0] == map.Branches.GnomishMines.value:
                 return False
         except KeyError:
             pass
@@ -664,13 +652,17 @@ class UpstairsAdvisor(Advisor):
         return None
 
     def willing_to_ascend(self, rng, run_state, character, oracle):
+        if oracle.blstats.get('depth') == 1:
+            return False
         return True 
 
 class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
     def willing_to_ascend(self, rng, run_state, character, oracle):
+        if oracle.blstats.get('depth') == 1:
+            return False
         try:
             # if we know about this staircase, we're not interested
-            staircase = run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
+            run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
             return False
         except:
             return True
