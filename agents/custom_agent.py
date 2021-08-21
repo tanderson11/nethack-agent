@@ -454,6 +454,8 @@ wizard_background_menu_plan_options = [
     menuplan.NoMenuResponse("Force the gods to be pleased?"),
     menuplan.NoMenuResponse("Advance skills without practice?"),
     menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
+    menuplan.EscapeMenuResponse("Create what kind of monster?"),
+    menuplan.EscapeMenuResponse("To what level do you want to teleport?"),
 ]
 
 background_advisor = advs.BackgroundActionsAdvisor()
