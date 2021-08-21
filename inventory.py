@@ -11,54 +11,16 @@ from utilities import ARS
 
 
 class ItemLike():
-    class EquippedStatus():
-        def __init__(self, item, parenthetical_status):
-            self.status = None
-            self.slot = None
-            if parenthetical_status is not None:
-                if "being worn" in parenthetical_status:
-                    self.status = 'worn'
-                    self.slot = item.identity.slot
-
-                elif "weapon in hand" in parenthetical_status:
-                    self.status = 'wielded'
-
-                    if parenthetical_status == "(weapon in hands)":
-                        self.slot = ['hand', 'off_hand']
-                    else:
-                        self.slot = 'hand'
-
-                elif "wielded in other hand" in parenthetical_status:
-                    self.status = 'alt-wielded'
-                    self.slot = 'off_hand'
-
-                elif "on right hand" in parenthetical_status:
-                    self.status = 'worn'
-                    self.slot = 'right_ring'
-
-                elif "on left hand" in parenthetical_status:
-                    self.status = 'worn'
-                    self.slot = 'left_ring'
-
-                elif "in quiver" in parenthetical_status:
-                    self.status = 'quivered'
-                    self.slot = 'quiver'
-
-
-   
-    def __init__(self, quantity, BUC, parenthetical_status, condition, enhancement, description=None):
-        self.quantity = quantity
-        self.BUC = BUC
-
-        self._description = description
-
-        self.parenthetical_status = parenthetical_status
-        self.condition = condition
-        self.enhancement = enhancement
-
-        self.equipped_status = self.__class__.EquippedStatus(self, parenthetical_status)
-        if self.equipped_status.slot is None and self.equipped_status.status is None:
-            self.equipped_status = None
+    def __init__(self, identity, instance_attributes, inventory_letter=None):
+        # copy fields
+        self.identity = identity
+        self.quantity = instance_attributes.quantity
+        self.enhancement = instance_attributes.enhancement
+        self.BUC = instance_attributes.BUC
+        self.condition = instance_attributes.condition
+        self.equipped_status = instance_attributes.equipped_status
+        # optional arguments
+        self.inventory_letter = inventory_letter
 
     def process_message(self, *args):
         self.identity.process_message(*args)
@@ -67,18 +29,7 @@ class ItemLike():
         return None
 
 class Item(ItemLike):
-     #global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter
-    def __init__(self, global_identity_map, glyph_numeral, quantity, BUC, parenthetical_status, condition, enhancement, inventory_letter=None, description=None):
-        self.inventory_letter = inventory_letter
-        self.glyph = gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral]
-
-        try:
-            self.identity = global_identity_map.identity_by_numeral[glyph_numeral]
-        except KeyError:
-            print("No identity found for {}".format(glyph_numeral))
-            self.identity = None
-
-        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
+    pass
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -144,6 +95,39 @@ class AmbiguousItem(ItemLike):
 class UnimplementedItemClassException(Exception):
     pass
 
+class EquippedStatus():
+    def __init__(self, item, parenthetical_status):
+        self.status = None
+        self.slot = None
+        if parenthetical_status is not None:
+            if "being worn" in parenthetical_status:
+                self.status = 'worn'
+                self.slot = item.identity.slot
+
+            elif "weapon in hand" in parenthetical_status:
+                self.status = 'wielded'
+
+                if parenthetical_status == "(weapon in hands)":
+                    self.slot = ['hand', 'off_hand']
+                else:
+                    self.slot = 'hand'
+
+            elif "wielded in other hand" in parenthetical_status:
+                self.status = 'alt-wielded'
+                self.slot = 'off_hand'
+
+            elif "on right hand" in parenthetical_status:
+                self.status = 'worn'
+                self.slot = 'right_ring'
+
+            elif "on left hand" in parenthetical_status:
+                self.status = 'worn'
+                self.slot = 'left_ring'
+
+            elif "in quiver" in parenthetical_status:
+                self.status = 'quivered'
+                self.slot = 'quiver'
+
 class ItemParser():
     item_pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
     
@@ -200,6 +184,8 @@ class ItemParser():
         'Iron balls': gd.BallGlyph,
     }
 
+    category_by_glyph_class = {v:k for k,v in glyph_class_by_category}
+
     #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}
 
     @staticmethod
@@ -208,37 +194,24 @@ class ItemParser():
         return decoded
 
     @classmethod
-    def match_name_from_class(cls, global_identity_map, glyph_class, description, numeral=None):
-        possible_glyphs = []
-        defuzzed_name = None # passed only if we identify the object by name
-        key_error = False
-        id_pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
-        id_class_pattern_match = re.search(id_pattern, description)
+    def extract_name_from_description_given_numeral(cls, global_identity_map, description, numeral):
+        oclass = type(gd.GLYPH_NUMERAL_LOOKUP[numeral])
 
-        if id_class_pattern_match:
-            defuzzed_name = id_class_pattern_match[1]
+        pattern = cls.defuzzing_identified_class_patterns.get(oclass, re.compile('([a-zA-Z -]+)'))
+        match = re.search(pattern, description)
 
-            # we look to see if the name is in the class
-            try:
-                # should never have more than one match for name
-                possible_glyphs = [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)].glyph]
-            except KeyError:
-                # we couldn't find the name in the identities table, suggesting it doesn't belong to this class, unless ...
-                # we're currently looking at a Japanese name
-                key_error = True
-                try:
-                    possible_glyphs = [global_identity_map.identity_by_japanese_name[(glyph_class, defuzzed_name)].glyph]
-                    key_error = False
-                except KeyError:
-                    pass
+        no_name_found = True
+        if match:
+            # we defuzz using the appropriate pattern
+            defuzzed_name = match[1]
+            
+            class_names    = global_identity_map.identity_by_glyph_class[oclass].names()
+            japanese_names = global_identity_map.identity_by_glyph_class[oclass].japanese_names()
 
-        if key_error and numeral:
-            global_identity_map.try_name_correspondence(defuzzed_name, glyph_class, numeral)
-            possible_glyphs += [global_identity_map.identity_by_name[(glyph_class, defuzzed_name)].glyph]
-            pass
-
-        #if len(possible_glyphs) == 0 and environment.env.debug: pdb.set_trace()
-        return defuzzed_name, possible_glyphs
+            if defuzzed_name not in class_names and defuzzed_name not in japanese_names:
+                return None
+            else:
+                return defuzzed_name
 
     @classmethod
     def attempt_to_match_to_glyph_class(cls, global_identity_map, glyph_class, description):
@@ -272,10 +245,29 @@ class ItemParser():
         return defuzzed_appearance, defuzzed_name, set(possible_glyphs) # set because sometimes both the name and unidentified appearance are the same, and we'll double match
 
     @classmethod
-    def parse_inventory_item(cls, global_identity_map ,string, glyph_numeral=None, inventory_letter=None, category=None):
-        match = re.match(cls.item_pattern, string)
-        glyph_class = None
-        defuzzed_name = None
+    def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string):
+        match_components = cls.parse_inventory_item_string(item_string)
+        identity = global_identity_map.identity_by_numeral[item_glyph]
+        oclass = type(gd.GLYPH_NUMERAL_LOOKUP[item_glyph])
+
+        if identity.name() is None:
+            name = cls.extract_name_from_description_given_numeral(global_identity_map, match_components.description, item_glyph)
+            if name is not None:
+                global_identity_map.associate_identity_and_name(identity, name)
+
+        return Item(identity, match_components)
+
+    class MatchComponents(NamedTuple):
+        description: str
+        quantity: int
+        enhancement: int
+        equipped_status: str
+        BUC: str
+        condition: str
+
+    @classmethod
+    def parse_inventory_item_string(cls, item_string):
+        match = re.match(cls.item_pattern, item_string)
 
         if match:
             quantity_match = match[1]
@@ -296,58 +288,49 @@ class ItemParser():
 
             description = match[8]
             
-            appearance = None
-
             equipped_status = match[9]
-        else: # our governing regex failed to find
-            if environment.env.debug: pdb.set_trace()
-            return None
 
-        if glyph_numeral:
-            glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[glyph_numeral])
-            try:
-                identity = global_identity_map.identity_by_numeral[glyph_numeral]
-                if identity and identity.is_shuffled:
-                    _, _, = cls.match_name_from_class(global_identity_map, glyph_class, description, numeral=glyph_numeral)
-                    #print(defuzzed_name)
-            except KeyError:
-                print("Couldn't find identity for " + str(glyph_numeral))
-        # if we don't have the numeral, we should still always be able to pull the glyph_class from the appearance somehow
+            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition)
+
         else:
-            # for starters, if we are given the category, as we are in big stacks of items, we can use that to help
-            if category:
-                possible_glyph_classes = cls.glyph_class_by_category[category]
-                if type(possible_glyph_classes) != list:
-                    possible_glyph_classes = [possible_glyph_classes]
+            raise Exception("couldn't match item string")
 
-                for klass in possible_glyph_classes:
-                    appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
+    @classmethod
+    def parse_inventory_item(cls, global_identity_map, string, glyph_numeral=None, inventory_letter=None, category=None):
+        # for starters, if we are given the category, as we are in big stacks of items, we can use that to help
+        if category:
+            possible_glyph_classes = cls.glyph_class_by_category[category]
+            if type(possible_glyph_classes) != list:
+                possible_glyph_classes = [possible_glyph_classes]
 
-                    # the description resides in the glyph class
-                    if len(possible_glyphs) > 0:
-                        glyph_class = klass
-                        break
-                
-                if len(possible_glyphs) == 0:
-                    #if environment.env.debug: pdb.set_trace()
-                    if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
-                    #if environment.env.debug: pdb.set_trace()
-                    return None
+            for klass in possible_glyph_classes:
+                appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
-            # if we don't have the category, we have nothing better to do than try every class's defuzzing approach
-            else:
-                for klass in gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES:
-                    appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
+                # the description resides in the glyph class
+                if len(possible_glyphs) > 0:
+                    glyph_class = klass
+                    break
+            
+            if len(possible_glyphs) == 0:
+                #if environment.env.debug: pdb.set_trace()
+                if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
+                #if environment.env.debug: pdb.set_trace()
+                return None
 
-                    if len(possible_glyphs) > 0:
-                        glyph_class = klass
-                        break
+        # if we don't have the category, we have nothing better to do than try every class's defuzzing approach
+        else:
+            for klass in gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES:
+                appearance, defuzzed_name, possible_glyphs = cls.attempt_to_match_to_glyph_class(global_identity_map, klass, description)
 
-                if len(possible_glyphs) == 0:
-                    #if environment.env.debug: pdb.set_trace()
-                    if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
-                    #if environment.environment.debug: pdb.set_trace()
-                    return None
+                if len(possible_glyphs) > 0:
+                    glyph_class = klass
+                    break
+
+            if len(possible_glyphs) == 0:
+                #if environment.env.debug: pdb.set_trace()
+                if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
+                #if environment.environment.debug: pdb.set_trace()
+                return None
 
         if not glyph_numeral and len(possible_glyphs) == 1:
             glyph_numeral = next(iter(possible_glyphs)).numeral # because possible_glyphs is a set
@@ -566,7 +549,7 @@ class PlayerInventory():
         # TK rings of increased accuracy
         # TK monks and body armor
         # TK monks and no weapon
-        # TK blessed good against undead etc
+        # TK blessed against undead etc
         # TK weapon skills adjustments
 
         return to_hit
