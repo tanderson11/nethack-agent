@@ -110,7 +110,7 @@ class MenuPlan():
                 selected_item = self.interactive_menu.search_through_rows(message_obj.tty_chars)
             except EndOfMenu:
                 self.in_interactive_menu = False
-                return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+                return utilities.keypress_action(ord('\r'))
             except EndOfPage:
                 self.interactive_menu.flip_page()
                 return utilities.keypress_action(ord('>'))
