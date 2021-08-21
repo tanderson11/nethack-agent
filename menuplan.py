@@ -244,7 +244,7 @@ class InteractiveInventoryMenu(InteractiveMenu):
             self.character = character
             self.selected = selected
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
-            self.item = inv.ItemParser.parse_inventory_item(run_state.global_identity_map, item_text, category=category)
+            self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
 
 class InteractivePickupMenu(InteractiveInventoryMenu):
     first_page_header_rows = 2

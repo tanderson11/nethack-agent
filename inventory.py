@@ -18,7 +18,11 @@ class ItemLike():
         self.enhancement = instance_attributes.enhancement
         self.BUC = instance_attributes.BUC
         self.condition = instance_attributes.condition
-        self.equipped_status = instance_attributes.equipped_status
+
+        if instance_attributes.equipped_status_str is not None:
+            self.equipped_status = EquippedStatus(self, instance_attributes.equipped_status_str)
+        else:
+            self.equipped_status = None
         # optional arguments
         self.inventory_letter = inventory_letter
 
@@ -243,21 +247,25 @@ class ItemParser():
                 return cls.AppearanceMatch(defuzzed_appearance, possible_glyphs)
 
     @classmethod
-    def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string):
+    def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         match_components = cls.parse_inventory_item_string(item_string)
-        identity = global_identity_map.identity_by_numeral[item_glyph]
+        try:
+            identity = global_identity_map.identity_by_numeral[item_glyph]
+        except KeyError:
+            print(f"UNIMPLEMENTED ITEM {item_glyph}")
+            identity = None
         glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[item_glyph])
 
-        if identity.name() is None:
+        if identity is not None and identity.name() is None:
             name = cls.extract_name_from_description_given_numeral(global_identity_map, match_components.description, item_glyph)
             if name is not None:
                 global_identity_map.associate_identity_and_name(identity, name)
 
         item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
-        return item_class(identity, match_components)
+        return item_class(identity, match_components, inventory_letter=inventory_letter)
 
     @classmethod
-    def make_item_with_string(cls, global_identity_map, item_str, category=None):
+    def make_item_with_string(cls, global_identity_map, item_str, category=None, inventory_letter=None):
         match_components = cls.parse_inventory_item_string(item_str)
         description = match_components.description
 
@@ -268,7 +276,7 @@ class ItemParser():
                 possible_glyph_classes = [possible_glyph_classes]
         # otherwise we'll have to comb through every class
         else:
-            possible_glyph_classes = inv.ObjectSpoilers.OBJECT_GLYPH_CLASSES
+            possible_glyph_classes = gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES
 
         possible_glyphs = []
         identity = None
@@ -304,7 +312,7 @@ class ItemParser():
         if len(possible_glyphs) != 0 or identity is not None:
             item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
             if identity is not None:
-                return item_class(identity, match_components)
+                return item_class(identity, match_components, inventory_letter=inventory_letter)
             else:
                 if len(possible_glyphs) == 1:
                     glyph_numeral = next(iter(possible_glyphs)) # since it's a set
@@ -313,7 +321,7 @@ class ItemParser():
                     identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
                     identity = identity_class(possible_glyphs)
 
-            return item_class(identity, match_components)
+            return item_class(identity, match_components, inventory_letter=inventory_letter)
         elif len(possible_glyphs) == 0:
             if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
             return None
@@ -322,7 +330,7 @@ class ItemParser():
         description: str
         quantity: int
         enhancement: int
-        equipped_status: str
+        equipped_status_str: str
         BUC: str
         condition: str
 
@@ -519,9 +527,9 @@ class PlayerInventory():
                 if item_str:
                     # if we're hallucinating, the glyph_numerals are garbage
                     if self.am_hallu:
-                        item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=None, inventory_letter=letter)
+                        item = ItemParser.make_item_with_string(self.global_identity_map, item_str, inventory_letter=letter)
                     else:
-                        item = ItemParser.parse_inventory_item(self.global_identity_map, item_str, glyph_numeral=numeral, inventory_letter=letter)
+                        item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
                     self.items_by_letter[letter] = item
                     class_contents.append(item)
 

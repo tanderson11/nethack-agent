@@ -796,6 +796,7 @@ class WearEvenBlockedArmorAdvisor(Advisor):
                     menuplan.CharacterMenuResponse("What do you want to wear?", chr(item.inventory_letter)),
                 ], listening_item=item)
 
+                #import pdb; pdb.set_trace()
                 return Advice(self, wear, menu_plan)
 
             else:
