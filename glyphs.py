@@ -676,36 +676,22 @@ class ObjectIdentity():
 
     @classmethod
     def japanese_names(cls):
-        return cls.data.JAPANESE_NAME
+        if 'JAPANESE_NAME' in cls.data.columns:
+            return cls.data.JAPANESE_NAME
+        else:
+            return pd.Series(dtype=str)
 
-    def __init__(self, numeral=None, name=None, appearance=None):
-        numeral = numeral
-        self.glyph = GLYPH_NUMERAL_LOOKUP[numeral]
-
-        try:
-            data = OBJECT_SPOILERS.object_spoilers_by_class[type(self.glyph)] # TK switch to class attribute
-        except KeyError:
-            raise(UnimplementedObjectClassException)
-
-        self.idx = None # get idx into table of items: can be a range of values or something?
-        if numeral is not None:
-            try:
-                spoiler_row = self.data.loc[numeral]
-            except KeyError:
-                if environment.env.debug: pdb.set_trace()
-                raise(Exception)
-
-            if not spoiler_row['SHUFFLED']:
-                # if it's not shuffled, the numeral accurately picks out the object
-                self.idx = [numeral]
-                self.is_shuffled = False
-            else:
-                # if it is shuffled, it could be any object in the shuffled class
-                same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
-                self.idx = same_shuffle_class.index[same_shuffle_class]
-                self.is_shuffled = True
-
+    def __init__(self, idx):
+        self.idx = idx
         self.listened_actions = {}
+
+    @classmethod
+    def identity_from_name(cls, name):
+        # make an identity that represents the information you know from seeing the object
+        matches_name = (cls.data.NAME == name)
+        idx = matches_name.index[matches_name]
+
+        return cls(idx)
 
     def give_name(self, name):
         matches_name = self.data.loc[self.idx].NAME == name
@@ -790,8 +776,8 @@ class WandIdentity(ObjectIdentity):
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
-    def __init__(self, numeral=None, name=None, appearance=None):
-        super().__init__(numeral, name, appearance)
+    def __init__(self, idx):
+        super().__init__(idx)
 
         try:
             self.slot = self.find_values('SLOT')
@@ -817,8 +803,8 @@ class ArmorIdentity(ObjectIdentity):
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
 
-    def __init__(self, numeral=None, name=None, appearance=None):
-        super().__init__(numeral, name, appearance)
+    def __init__(self, idx):
+        super().__init__(idx)
 
         self.slot = self.find_values('SLOT')
 
@@ -829,9 +815,6 @@ class WeaponIdentity(ObjectIdentity):
     def avg_melee_damage(self, monster):
         # TK know about monster size
         return self.find_values('SAVG')
-
-class UnimplementedObjectClassException(Exception):
-    pass
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
@@ -860,13 +843,28 @@ class GlobalIdentityMap():
 
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]
-
             identity_class = self.identity_by_glyph_class.get(type(glyph), ObjectIdentity)
 
+            identity = None # if the class hasn't been implemented, we won't futz with its identity
+            idx = [numeral]
             try:
-                identity = identity_class(glyph.numeral, glyph.name, glyph.appearance)
-            except UnimplementedObjectClassException:
-                identity = None
+                data = identity_class.data
+            except AttributeError:
+                data = None
+
+            if data is not None:
+                spoiler_row = data.loc[numeral]
+
+                if not spoiler_row['SHUFFLED']:
+                    # if it's not shuffled, the numeral accurately picks out the object information
+                    # from the spreadsheet
+                    idx = [numeral]
+                else:
+                    # if it is shuffled, it could be any object in the shuffled class
+                    same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
+                    idx = same_shuffle_class.index[same_shuffle_class]
+
+                identity = identity_class(idx)
 
             self.identity_by_numeral[numeral] = identity
 

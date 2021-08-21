@@ -89,15 +89,6 @@ class Tool(Item):
 class Gem(Item):
     glyph_class = gd.GemGlyph
 
-class AmbiguousItem(ItemLike):
-    '''An item found (by string) outside our inventory that we are not able to uniquely pin to a glyph/numeral, but still need to make decisions about.'''
-
-    def __init__(self, global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, parenthetical_status, condition, enhancement, description=None):
-        self.identity = None
-        self.glyph_numeral = None
-        self.possible_glyphs = possible_glyphs
-        super().__init__(quantity, BUC, parenthetical_status, condition, enhancement, description)
-
 class UnimplementedItemClassException(Exception):
     pass
 
@@ -153,6 +144,7 @@ class ItemParser():
         gd.PotionGlyph: re.compile('([a-zA-Z -]+) potions?$'),
         gd.ScrollGlyph: re.compile('scrolls? labeled ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls. TK unlabeled scroll(s)
         gd.SpellbookGlyph: re.compile('([a-zA-Z ]+) spellbook$'),
+        gd.GemGlyph: re.compile('([a-zA-Z ]+) (?:gem|stone)s?')
     }
     defuzzing_identified_class_patterns = {
         gd.WandGlyph: re.compile('wand of ([a-zA-Z ]+)$'),
@@ -171,6 +163,8 @@ class ItemParser():
         gd.ScrollGlyph: Scroll,
         gd.PotionGlyph: Potion,
         gd.WeaponGlyph: Weapon,
+        gd.ToolGlyph: Tool,
+        gd.GemGlyph: Gem,
     }
 
     glyph_class_by_category = {
@@ -226,6 +220,10 @@ class ItemParser():
         glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[numeral])
         return cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
 
+    class AppearanceMatch(NamedTuple):
+        appearance: str
+        possible_glyphs: list
+
     @classmethod
     def appearance_from_description_given_glyph_class(cls, global_identity_map, description, glyph_class):
         pattern = cls.defuzzing_unidentified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
@@ -234,32 +232,32 @@ class ItemParser():
         possible_glyphs = []
         if match:
             defuzzed_appearance = match[1]
-
             identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
             class_appearances = identity_class.appearances()
 
             if defuzzed_appearance not in class_appearances.unique():
-                return None, None
+                return None
             else:
                 #import pdb; pdb.set_trace()
                 possible_glyphs = class_appearances[class_appearances == defuzzed_appearance].index
-                return defuzzed_appearance, possible_glyphs
+                return cls.AppearanceMatch(defuzzed_appearance, possible_glyphs)
 
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string):
         match_components = cls.parse_inventory_item_string(item_string)
         identity = global_identity_map.identity_by_numeral[item_glyph]
-        oclass = type(gd.GLYPH_NUMERAL_LOOKUP[item_glyph])
+        glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[item_glyph])
 
         if identity.name() is None:
             name = cls.extract_name_from_description_given_numeral(global_identity_map, match_components.description, item_glyph)
             if name is not None:
                 global_identity_map.associate_identity_and_name(identity, name)
 
-        return Item(identity, match_components)
+        item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
+        return item_class(identity, match_components)
 
     @classmethod
-    def make_item_with_description(cls, global_identity_map, item_str, category=None):
+    def make_item_with_string(cls, global_identity_map, item_str, category=None):
         match_components = cls.parse_inventory_item_string(item_str)
         description = match_components.description
 
@@ -273,59 +271,52 @@ class ItemParser():
             possible_glyph_classes = inv.ObjectSpoilers.OBJECT_GLYPH_CLASSES
 
         possible_glyphs = []
+        identity = None
         for glyph_class in possible_glyph_classes:
-            appearance, _possible_glyphs = cls.appearance_from_description_given_glyph_class(global_identity_map, description, glyph_class)
+            if glyph_class != gd.CorpseGlyph:
+                appearance_match = cls.appearance_from_description_given_glyph_class(global_identity_map, description, glyph_class)
 
-            if appearance is not None:
-                # TK TK
+                if appearance_match is not None:
+                    possible_glyphs.extend(list(appearance_match.possible_glyphs))
+
+                name = cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
                 #import pdb; pdb.set_trace()
-                possible_glyphs.extend(list(_possible_glyphs))
+                if name is not None:
+                    # add the possibilities found by name
+                    # name-finding function should return None if this name doesn't belong to glyph_class
+                    try:
+                        glyph_for_name = global_identity_map.identity_by_name[(glyph_class, name)].idx
+                        possible_glyphs.extend(glyph_for_name)
+                    except KeyError:
+                        # we've seen an identified item that we haven't entered into our state about discoveries
+                        # we generate an identity object to pass to our item to capture this extra information
+                        identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
+                        identity = identity_class.identity_from_name(name)
+                        break
 
-            name = cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
-            #import pdb; pdb.set_trace()
-            if name is not None:
-                # add the possibilities found by name
-                # name-finding function should return None if this name doesn't belong to glyph_class
-                possible_glyphs_for_name = global_identity_map.identity_by_name[(glyph_class, name)].idx
-                if len(possible_glyphs_for_name) > 1:
-                    # in this case, we should be adding the identity information to shrink idx to len 1
-                    # (recall, name only exists for identified items)
-                    # but we can't do so because we are in a context that lacks the glyph
-                    print("WARNING: discovered but unmapped item in container/stack")
-                    possible_glyphs.extend(possible_glyphs_by_name)
-                elif len(possible_glyphs_for_name) == 1:
-                    possible_glyphs.extend(possible_glyphs_for_name)
-                else:
-                    raise Exception(f"surprising idx size < 1 for {description}")
-
-            if len(possible_glyphs) > 0:
-                break # we can only ever match in one class by nethack logic, so break if any matches found
+                if len(possible_glyphs) > 0:
+                    break # we can only ever match in one class by nethack logic, so break if any matches found
             
         # we add glyphs both when we match by name and when we match by appearance
         # so we want to remove duplicates
-        possible_glyphs = set(possible_glyphs)    
-        import pdb; pdb.set_trace()
-        
-        if len(possible_glyphs) == 0:
-            #if environment.env.debug: pdb.set_trace()
+        possible_glyphs = set(possible_glyphs)
+
+        if len(possible_glyphs) != 0 or identity is not None:
+            item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
+            if identity is not None:
+                return item_class(identity, match_components)
+            else:
+                if len(possible_glyphs) == 1:
+                    glyph_numeral = next(iter(possible_glyphs)) # since it's a set
+                    identity = global_identity_map.identity_by_numeral[glyph_numeral]
+                else:
+                    identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
+                    identity = identity_class(possible_glyphs)
+
+            return item_class(identity, match_components)
+        elif len(possible_glyphs) == 0:
             if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
             return None
-
-        if not glyph_numeral and len(possible_glyphs) == 1:
-            glyph_numeral = next(iter(possible_glyphs)).numeral # because possible_glyphs is a set
-
-
-        # now we are in a state where we know glyph_class and we might know glyph_numeral
-        # if we know glyph_numeral, we want to instantiate a real Item
-        # if we don't know glyph_numeral, we want to make an AmbiguousItem
-        if glyph_numeral:
-            item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
-
-            return item_class(global_identity_map, glyph_numeral, quantity, BUC, equipped_status, condition, enhancement, inventory_letter, description=description)
-        else:
-            print("Ambiguous Item found: " + description)
-            #if environment.env.debug: pdb.set_trace()
-            return AmbiguousItem(global_identity_map, glyph_class, possible_glyphs, appearance, quantity, BUC, equipped_status, condition, enhancement, description=description)
 
     class MatchComponents(NamedTuple):
         description: str
