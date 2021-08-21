@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import MagicMock
 
 import numpy as np
 
@@ -22,11 +23,13 @@ class TestItemRegex(unittest.TestCase):
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
         "a heavy iron ball (chained to you)": "heavy iron ball",
+        "a blessed fireproof +10 ornamental cope": "ornamental cope", # You'd actually know the cloak
+        "the blessed +7 silver saber": "silver saber", # Change to a Grayswandir test at some point
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            item = menuplan.InteractiveInventoryMenu.MenuItem(
-                agents.custom_agent.RunState(), None, "a", False, key
+            item = menuplan.ParsingInventoryMenu.MenuItem(
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key
             )
             if item.item is None:
                 import pdb; pdb.set_trace()
