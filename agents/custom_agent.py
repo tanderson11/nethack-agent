@@ -574,7 +574,7 @@ class RunState():
 
         self.menu_plan_log = []
         self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
-        self.stall_detection_on = False
+        self.stall_detection_on = True
 
         # for mapping purposes
         self.dmap = DMap()
