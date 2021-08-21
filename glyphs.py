@@ -662,8 +662,24 @@ class ObjectIdentity():
 
     Listens to messages to gain knowledge about the identity of the object.
     '''
+    @classmethod
+    def appearances(cls):
+        return cls.data.APPEARANCE
+
+    @classmethod
+    def names(cls):
+        return cls.data.NAME
+
+    @classmethod
+    def japanese_name_to_english(cls, japanese_name):
+        return cls.data[cls.data.JAPANESE_NAME == japanese_name]['NAME'].iloc[0]
+
+    @classmethod
+    def japanese_names(cls):
+        return cls.data.JAPANESE_NAME
+
     def __init__(self, numeral=None, name=None, appearance=None):
-        self.numeral = numeral
+        numeral = numeral
         self.glyph = GLYPH_NUMERAL_LOOKUP[numeral]
 
         try:
@@ -875,20 +891,9 @@ class GlobalIdentityMap():
 
         #print(self.identity_by_numeral)
 
-    def try_name_correspondence(self, name, glyph_class, glyph_numeral):
-        print("Trying to give name {} to {} (class {})".format(name, glyph_numeral, glyph_class))
-        identity = self.identity_by_numeral[glyph_numeral]
-        if name in OBJECT_SPOILERS.object_names_by_class[glyph_class]:
-            self.identity_by_name[(glyph_class, name)] = identity
-            identity.give_name(name)
-            print("Successfully giving name to {}".format(identity))
-        else:
-            print("And failing to give name ...")
-
-    def update(self, glyph):
-        # call whenever we update an identity in a way that might cause it be `is_identified`
-        pass
-
+    def associate_identity_and_name(self, identity, name):
+        self.identity_by_name[name] = identity
+        identity.give_name(name)
 
 #####################
 # UTILITY FUNCTIONS #
