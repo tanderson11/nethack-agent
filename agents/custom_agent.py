@@ -57,6 +57,10 @@ class BLStats():
     def make_attributes(self):
         strength_25 = self.get('strength_25')
 
+        if strength_25 not in range(3,26):
+            import pdb; pdb.set_trace()
+            raise Exception('Surprising strength_25')
+
         strength_pct = 0
         if strength_25 > 18 and strength_25 != 25:
             strength_pct = self.get('strength_125') - 18
