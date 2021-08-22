@@ -14,6 +14,7 @@ import menuplan
 import utilities
 from utilities import ARS
 import inventory as inv
+import re
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -253,9 +254,10 @@ class ReadTeleportAdvisor(Advisor):
 
         for scroll in scrolls:
             if scroll and scroll.identity and scroll.identity.name() == 'teleport':
-                letter = scrolls.inventory_letter
+                letter = scroll.inventory_letter
                 menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter))
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+                    menuplan.YesMenuResponse("Do you wish to teleport?"),
                 ])
                 return Advice(self, read, menu_plan)
         return None
@@ -722,7 +724,7 @@ class PickupFoodAdvisor(Advisor):
                 "pick up comestibles and safe corpses",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'comestibles'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='comestibles'),
             )
             #print("Food pickup")
             return Advice(self, nethack.actions.Command.PICKUP, menu_plan)
@@ -735,7 +737,7 @@ class PickupArmorAdvisor(Advisor):
                 "pick up armor",
                 self,
                 [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, 'armor'),
+                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='armor'),
             )
             #print("Armor pickup")
             return Advice(self, nethack.actions.Command.PICKUP, menu_plan)

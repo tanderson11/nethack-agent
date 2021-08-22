@@ -438,7 +438,8 @@ class Pathfinder(AStar):
         return math.hypot(current[0]-goal[0], current[1]-goal[1])
 
 normal_background_menu_plan_options = [
-    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
+    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Agent"),
+    menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
     menuplan.EscapeMenuResponse("Call a "),
     menuplan.EscapeMenuResponse("Call an "),
     menuplan.NoMenuResponse("Really attack"),
@@ -583,7 +584,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'G931Kg=='
+        #seed = b'2jHKfA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -861,19 +862,19 @@ class CustomAgent(BatchedAgent):
             if not run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.FIRE]:
                 try:
                     delta = physics.action_to_delta[run_state.last_non_menu_action]
+
+                    try:
+                        recorded_death = RecordedMonsterDeath(
+                            (player_location[0] + delta[0], player_location[1] + delta[1]),
+                            time,
+                            killed_monster_name
+                        )
+                        if recorded_death.can_corpse:
+                            run_state.latest_monster_death = recorded_death
+                    except Exception as e:
+                        print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
                 except:
                     if environment.env.debug: import pdb; pdb.set_trace()
-
-                try:
-                    recorded_death = RecordedMonsterDeath(
-                        (player_location[0] + delta[0], player_location[1] + delta[1]),
-                        time,
-                        killed_monster_name
-                    )
-                    if recorded_death.can_corpse:
-                        run_state.latest_monster_death = recorded_death
-                except Exception as e:
-                    print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
 
         fleeing_monster_name = RecordedMonsterFlight.involved_monster(message.message)
         if fleeing_monster_name:
@@ -919,7 +920,7 @@ class CustomAgent(BatchedAgent):
                 #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
                 # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
-        if "don't have anything to eat" in message.message and environment.env.debug:
+        if "enough tries" in message.message and environment.env.debug:
             #import pdb; pdb.set_trace()
             pass
 
