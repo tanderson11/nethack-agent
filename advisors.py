@@ -208,7 +208,7 @@ class WaitAdvisor(Advisor):
 class SearchForSecretDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         to_search_count = np.count_nonzero(run_state.neighborhood.local_possible_secret_mask)
-        if to_search_count > 0:
+        if to_search_count == 0:
             return None
         return Advice(self, nethack.actions.Command.SEARCH, None)
 
