@@ -20,7 +20,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### COPY FIELDS ###
         ###################
 
-        self.last_movement_action = last_movement_action
         self.previous_glyph_on_player = previous_glyph_on_player
         self.absolute_player_location = absolute_player_location
         self.dcoord = dcoord
@@ -56,8 +55,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
-
-        self.monster_present = extended_is_monster.any()
 
         # radius 1 box around player in vision glyphs
         neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
@@ -98,20 +95,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ########################################
 
         self.local_player_location = (1-action_grid_rows.start, 1-action_grid_cols.start) # not always guranteed to be (1,1) if we're at the edge of the map
-        self.player_location_mask = np.full_like(self.action_grid, False, dtype='bool')
-        self.player_location_mask[self.local_player_location] = True
 
         #######################
         ### THE LOCAL STUFF ###
         #######################
 
-        self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
-        self.is_dangerous_monster = extended_is_dangerous_monster[neighborhood_view]
 
         walkable_tile = extended_walkable_tile[neighborhood_view]
 
@@ -137,29 +130,26 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
-        self.extended_n_threat = self.threat_map.melee_n_threat + self.threat_map.ranged_n_threat
 
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
         #########################################
-        self.n_threat = self.extended_n_threat[neighborhood_view]
         self.threat = self.extended_threat[neighborhood_view]
-
         self.threat_on_player = self.threat[self.local_player_location]
         ####################
         ### CORPSE STUFF ###
         ####################
         
-        self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
+        has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
         self.fresh_corpse_on_square_glyph = None
         if latest_monster_death and latest_monster_death.can_corpse and (time - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
             corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
             corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
             # is corpse nearby?
             if corpse_relative_location[0] in range(0, action_grid_rows.stop-action_grid_rows.start) and corpse_relative_location[1] in range(0, action_grid_cols.stop-action_grid_cols.start):
-                self.has_fresh_corpse[corpse_relative_location] = True
+                has_fresh_corpse[corpse_relative_location] = True
 
-        if self.has_fresh_corpse[self.local_player_location]:
+        if has_fresh_corpse[self.local_player_location]:
             #import pdb; pdb.set_trace()
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
