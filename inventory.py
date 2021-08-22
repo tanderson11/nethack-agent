@@ -11,7 +11,7 @@ from utilities import ARS
 
 
 class ItemLike():
-    def __init__(self, identity, instance_attributes, inventory_letter=None):
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
         self.identity = identity
         self.quantity = instance_attributes.quantity
@@ -25,6 +25,8 @@ class ItemLike():
             self.equipped_status = None
         # optional arguments
         self.inventory_letter = inventory_letter
+
+        self._seen_as = seen_as
 
     def process_message(self, *args):
         self.identity.process_message(*args)
@@ -259,7 +261,9 @@ class ItemParser():
         except KeyError:
             print(f"UNIMPLEMENTED ITEM {item_glyph}")
             identity = None
-        glyph_class = type(gd.GLYPH_NUMERAL_LOOKUP[item_glyph])
+
+        glyph = gd.GLYPH_NUMERAL_LOOKUP[item_glyph]
+        glyph_class = type(glyph)
 
         if identity is not None and identity.name() is None:
             name = cls.extract_name_from_description_given_numeral(global_identity_map, match_components.description, item_glyph)
@@ -292,11 +296,13 @@ class ItemParser():
                 appearance_match = cls.appearance_from_description_given_glyph_class(global_identity_map, description, glyph_class)
 
                 if appearance_match is not None:
+                    seen_as = appearance_match.appearance
                     possible_glyphs.extend(list(appearance_match.possible_glyphs))
 
                 name = cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
                 #import pdb; pdb.set_trace()
                 if name is not None:
+                    seen_as = name
                     # add the possibilities found by name
                     # name-finding function should return None if this name doesn't belong to glyph_class
                     try:
@@ -319,7 +325,7 @@ class ItemParser():
         if len(possible_glyphs) != 0 or identity is not None:
             item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
             if identity is not None:
-                return item_class(identity, match_components, inventory_letter=inventory_letter)
+                pass
             else:
                 if len(possible_glyphs) == 1:
                     glyph_numeral = next(iter(possible_glyphs)) # since it's a set
@@ -328,7 +334,7 @@ class ItemParser():
                     identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
                     identity = identity_class(possible_glyphs)
 
-            return item_class(identity, match_components, inventory_letter=inventory_letter)
+            return item_class(identity, match_components, inventory_letter=inventory_letter, seen_as=seen_as)
         elif len(possible_glyphs) == 0:
             if environment.env.debug: print("WARNING: Failed to find possible glyphs for " + description)
             return None

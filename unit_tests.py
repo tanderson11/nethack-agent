@@ -14,30 +14,30 @@ import agents.custom_agent
 class SpecialValues(enum.Enum):
     same_name = "SAME NAME"
 
-'''
 class TestItemRegex(unittest.TestCase):
     test_values = {
         "a +0 dagger (alternate weapon; not wielded)": "dagger",
-        "a blessed +1 quarterstaff (weapon in hands)": "staff",
+        "a blessed +1 quarterstaff (weapon in hands)": "quarterstaff",
         "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
-        "a thoroughly rusty +0 battle-axe (weapon in hands)": "double-headed axe",
+        "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
         "a heavy iron ball (chained to you)": "heavy iron ball",
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
+            print(key)
             item = menuplan.InteractiveInventoryMenu.MenuItem(
                 agents.custom_agent.RunState(), None, "a", False, key
             )
             if item.item is None:
                 import pdb; pdb.set_trace()
-            self.assertEqual(value, item.item.glyph.appearance)
-'''
+            #self.assertEqual(value, item.item.glyph.appearance)
+            self.assertEqual(value, item.item._seen_as)
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
@@ -126,6 +126,7 @@ class TestItemParsing(unittest.TestCase):
     def test_recognition_with_category(self):
         #return
         for inputs, values in self.test_values.items():
+            print(inputs)
             global_identity_map = gd.GlobalIdentityMap()
             category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
