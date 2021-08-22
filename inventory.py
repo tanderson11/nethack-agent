@@ -93,6 +93,9 @@ class Tool(Item):
 class Gem(Item):
     glyph_class = gd.GemGlyph
 
+class Rock(Item):
+    glyph_class = gd.RockGlyph
+
 class UnimplementedItemClassException(Exception):
     pass
 
@@ -237,7 +240,7 @@ class ItemParser():
         if match:
             defuzzed_appearance = match[1]
 
-            identity_class = global_identity_map.identity_by_glyph_class.get(glyph_class)
+            identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
 
             class_appearances = identity_class.appearances()
 

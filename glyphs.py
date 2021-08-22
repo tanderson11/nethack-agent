@@ -635,7 +635,7 @@ class ObjectSpoilers():
         WandGlyph: 'wand_spoiler.csv',
         CoinGlyph: '',
         GemGlyph: 'gem_spoiler.csv',
-        RockGlyph: '',
+        RockGlyph: 'rock_spoiler.csv',
         BallGlyph: '',
         ChainGlyph: '',
         VenomGlyph: '',
@@ -759,6 +759,9 @@ class ToolIdentity(ObjectIdentity):
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
 
+class RockIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
+
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
     def process_message(self, message_obj, action):
@@ -837,6 +840,7 @@ class GlobalIdentityMap():
         ToolGlyph: ToolIdentity,
         SpellbookGlyph: SpellbookIdentity,
         ScrollGlyph: ScrollIdentity,
+        RockGlyph: RockIdentity,
     }
 
     def __init__(self):
