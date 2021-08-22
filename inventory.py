@@ -236,7 +236,9 @@ class ItemParser():
         possible_glyphs = []
         if match:
             defuzzed_appearance = match[1]
-            identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
+
+            identity_class = global_identity_map.identity_by_glyph_class.get(glyph_class)
+
             class_appearances = identity_class.appearances()
 
             if defuzzed_appearance not in class_appearances.unique():
@@ -276,7 +278,9 @@ class ItemParser():
                 possible_glyph_classes = [possible_glyph_classes]
         # otherwise we'll have to comb through every class
         else:
-            possible_glyph_classes = gd.ObjectSpoilers.OBJECT_GLYPH_CLASSES
+            # these are the classes we've implemented with data, so they're the only ones
+            # that we should check
+            possible_glyph_classes = gd.GlobalIdentityMap.identity_by_glyph_class.keys()
 
         possible_glyphs = []
         identity = None

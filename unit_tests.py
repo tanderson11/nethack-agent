@@ -113,10 +113,11 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(2181, "2 cursed yellow potions"): ItemTestValues(inv.Potion, None),
         ItemTestInputs(2181, "3 uncursed potions of healing"): ItemTestValues(inv.Potion, "healing"),
         ItemTestInputs(2349, "an uncursed gray stone"): ItemTestValues(inv.Gem, "loadstone", name_in_stack=None),
+        ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
     }
 
     def test_recognition_with_numeral(self):
-        return
+        #return
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
@@ -128,7 +129,17 @@ class TestItemParsing(unittest.TestCase):
             global_identity_map = gd.GlobalIdentityMap()
             category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
-            print(item)
+            #print(item)
+            self.assertTrue(isinstance(item, values.oclass))
+            if values.name_in_stack == SpecialValues.same_name:
+                self.assertEqual(values.name_in_inventory, item.identity.name())
+            else:
+                self.assertEqual(item.identity.name(), values.name_in_stack)
+
+    def test_recognition_with_only_str(self):
+        for inputs, values in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str)
             self.assertTrue(isinstance(item, values.oclass))
             if values.name_in_stack == SpecialValues.same_name:
                 self.assertEqual(values.name_in_inventory, item.identity.name())
