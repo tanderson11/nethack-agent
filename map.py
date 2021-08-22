@@ -10,11 +10,13 @@ import utilities
 class Branches(enum.Enum):
     DungeonsOfDoom = 0
     GnomishMines = 2
+    Quest = 3
     Sokoban = 4
 
 INDEX_TO_BRANCH = {
     Branches.DungeonsOfDoom.value: Branches.DungeonsOfDoom,
     Branches.GnomishMines.value: Branches.GnomishMines,
+    Branches.Quest.value: Branches.Quest,
     Branches.Sokoban.value: Branches.Sokoban,
 }
 

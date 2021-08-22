@@ -273,7 +273,7 @@ class EnhanceSkillsAdvisor(Advisor):
             "enhance skills",
             self,
             [],
-            interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(run_state),
+            interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(),
         )
 
         return Advice(self, enhance, menu_plan)

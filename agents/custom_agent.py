@@ -33,6 +33,7 @@ import constants
 import glyphs as gd
 from map import DMap, ThreatMap
 import environment
+from wizmode_prep import WizmodePrep
 
 from collections import Counter
 
@@ -106,15 +107,20 @@ class RecordedMonsterEvent():
         if match is None:
             return None
         monster_name = match[cls.name_field]
+        # Blind and don't know what's going on
+        if monster_name == 'it':
+            return None
         return monster_name
 
+MONSTER_REGEX = '((T|t)he )?(poor )?(invisible )?(saddled )?([a-zA-Z -]+?)( of .+?)?'
+
 class RecordedMonsterFlight(RecordedMonsterEvent):
-    pattern = re.compile("(^|. +|! +)(The )?([a-zA-Z -]+?) turns to flee.")
-    name_field = 3
+    pattern = re.compile(f"(^|. +|! +){MONSTER_REGEX} turns to flee.")
+    name_field = 7
 
 class RecordedMonsterDeath(RecordedMonsterEvent):
-    pattern = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
-    name_field = 4
+    pattern = re.compile(f"You kill {MONSTER_REGEX}!")
+    name_field = 6
 
     def __init__(self, square, time, monster_name):
         self.square = square # doesn't know about dungeon levels
@@ -431,19 +437,33 @@ class Pathfinder(AStar):
     def heuristic_cost_estimate(self, current, goal):
         return math.hypot(current[0]-goal[0], current[1]-goal[1])
 
+normal_background_menu_plan_options = [
+    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
+    menuplan.EscapeMenuResponse("Call a "),
+    menuplan.EscapeMenuResponse("Call an "),
+    menuplan.NoMenuResponse("Really attack"),
+    menuplan.NoMenuResponse("Shall I remove"),
+    menuplan.NoMenuResponse("Would you wear it for me?"),
+    menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
+    menuplan.EscapeMenuResponse("trouble lifting"),
+    menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
+]
+
+wizard_background_menu_plan_options = [
+    menuplan.YesMenuResponse("Die?"),
+    menuplan.NoMenuResponse("Force the gods to be pleased?"),
+    menuplan.NoMenuResponse("Advance skills without practice?"),
+    menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
+    menuplan.EscapeMenuResponse("Create what kind of monster?"),
+    menuplan.EscapeMenuResponse("To what level do you want to teleport?"),
+]
+
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
-    "background", background_advisor, [
-        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
-        menuplan.EscapeMenuResponse("Call a "),
-        menuplan.EscapeMenuResponse("Call an "),
-        menuplan.NoMenuResponse("Really attack"),
-        menuplan.NoMenuResponse("Shall I remove"),
-        menuplan.NoMenuResponse("Would you wear it for me?"),
-        menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
-        menuplan.EscapeMenuResponse("little trouble lifting"),
-        menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
-    ])
+    "background",
+    background_advisor,
+    normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
+    )
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -553,6 +573,8 @@ class RunState():
         self.latest_monster_flight = None
 
         self.menu_plan_log = []
+        self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
+        self.stall_detection_on = True
 
         # for mapping purposes
         self.dmap = DMap()
@@ -632,7 +654,8 @@ class RunState():
         # Potentially useful for checking stalls
         new_time = blstats.get('time')
         if self.time == new_time:
-            self.time_hung += 1
+            if self.stall_detection_on:
+                self.time_hung += 1
         else:
             self.time_hung = 0
         if self.time_hung > 50:
@@ -937,6 +960,17 @@ class CustomAgent(BatchedAgent):
             run_state.set_menu_plan(scumming_menu_plan)
             run_state.log_action(retval, menu_plan=scumming_menu_plan)
             return retval
+
+        if run_state.wizmode_prep:
+            if not run_state.wizmode_prep.prepped:
+                run_state.stall_detection_on = False
+                action, menu_plan = run_state.wizmode_prep.next_action()
+                retval = utilities.ACTION_LOOKUP[action]
+                run_state.set_menu_plan(menu_plan)
+                run_state.log_action(retval, menu_plan=menu_plan)
+                return retval
+            else:
+                run_state.stall_detection_on = True
 
         neighborhood = Neighborhood(
             time,

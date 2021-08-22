@@ -56,20 +56,3 @@ class BatchedEnv:
         observation = [env.reset() for env in self.envs]
         [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation
-
-
-if __name__ == '__main__':
-
-    num_envs = 4
-    batched_env = BatchedEnv(
-        env_make_fn=lambda:aicrowd_gym.make('NetHackChallenge-v0'), 
-        num_envs=4
-    )
-    
-    observations = batched_env.batch_reset()
-    num_actions = batched_env.envs[0].action_space.n
-    for _ in range(50):
-        actions = np.random.randint(num_actions, size=num_envs)
-        observations, rewards, dones, infos = batched_env.apply_batch_actions(actions)
-        for done_idx in np.where(dones)[0]:
-            observations[done_idx] = batched_env.single_env_reset(done_idx) 
