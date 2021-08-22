@@ -4,6 +4,7 @@ from astar import AStar
 import math
 from nle import nethack
 import numpy as np
+import scipy.signal
 
 import environment
 import glyphs as gd
@@ -152,10 +153,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             #import pdb; pdb.set_trace()
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
-    def count_possible_secret_doors(self, search_threshold):
-        secret_door_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door, self.glyphs)
-        search_mask = self.level_map.searches_count_map[self.neighborhood_view] < search_threshold
-        return np.count_nonzero(secret_door_mask & search_mask)
+    def count_adjacent_searches(self, search_threshold):
+        secret_door_mask = utilities.vectorized_map(
+            lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
+            self.extended_glyphs
+        )
+        below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold
+        adjacencies = scipy.signal.convolve2d(secret_door_mask & below_threshold_mask, np.ones((3,3)), mode='same')
+        return adjacencies[self.neighborhood_view]
 
     class Path(NamedTuple):
         path_action: int

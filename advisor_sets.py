@@ -71,11 +71,13 @@ new_advisors = [
         ]),
     # EXPLORE
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
+    MoveToBetterSearchAdvisor(square_threat_tolerance=0.),
+    SearchForSecretDoorAdvisor(),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
+        TravelToUnexploredSquareAdvisor(): 2,
         TravelToDownstairsAdvisor(): 1,
-        }),
+    }),
     FallbackSearchAdvisor(),
 ]

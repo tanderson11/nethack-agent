@@ -15,6 +15,8 @@ import utilities
 from utilities import ARS
 import inventory as inv
 
+SEARCH_THRESHOLD = 20
+
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
         self.run_state = run_state
@@ -207,7 +209,8 @@ class WaitAdvisor(Advisor):
 class SearchForSecretDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         search = nethack.actions.Command.SEARCH
-        if run_state.neighborhood.count_possible_secret_doors(100):
+        search_adjacencies = run_state.neighborhood.count_adjacent_searches(SEARCH_THRESHOLD)
+        if search_adjacencies[run_state.neighborhood.local_player_location] > 0:
             return Advice(self, search, None)
         return None
 
@@ -510,6 +513,16 @@ class MoveAdvisor(Advisor):
         if move_action is not None:
             return Advice(self, move_action, None)
 
+class MoveToBetterSearchAdvisor(MoveAdvisor):
+    def get_move(self, move_mask, rng, run_state, character, oracle):
+        search_adjacencies = run_state.neighborhood.count_adjacent_searches(SEARCH_THRESHOLD)
+        if search_adjacencies[run_state.neighborhood.local_player_location] != 1:
+            return # If zero, no idea where to go. If 2+ this is a good place to search
+        priority_mask = (search_adjacencies > 1) & move_mask
+        possible_actions = run_state.neighborhood.action_grid[priority_mask]
+        if possible_actions.any():
+            return rng.choice(possible_actions)
+
 class RandomMoveAdvisor(MoveAdvisor):
     def get_move(self, move_mask, rng, run_state, character, oracle):
         possible_actions = run_state.neighborhood.action_grid[move_mask]
@@ -631,6 +644,18 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
      
             return Advice(self, travel, menu_plan)
         return None
+
+class TravelToUnexploredSquareAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+         travel = nethack.actions.Command.TRAVEL
+
+         menu_plan = menuplan.MenuPlan(
+             "travel down", self, [
+                 menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
+             ],
+             fallback=utilities.keypress_action(ord('.')))
+
+         return Advice(self.__class__, travel, menu_plan)
 
 class GoDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, run_state, character, oracle):
