@@ -60,12 +60,17 @@ class DLevelMap():
         if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
             import pdb; pdb.set_trace()
         self.level_number = level_number
+        self.dcoord = (self.dungeon_number, self.level_number)
         self.need_downstairs = True
         self.need_upstairs = True
+
+        self.player_location = None
+        self.player_location_mask = np.full_like(glyphs, False, dtype='bool')
 
         # These are our map layers
         self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
+        self.searches_count_map = np.zeros_like(glyphs)
         self.staircases = {}
         self.warning_engravings = {}
 
@@ -80,7 +85,12 @@ class DLevelMap():
                 self.need_upstairs = False
             if self.need_downstairs and counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'dnstair').numeral, None):
                 self.need_downstairs = False
-        self.visits_count_map[player_location] += 1
+        old_player_location = self.player_location
+        self.player_location = player_location
+        self.visits_count_map[self.player_location] += 1
+        self.player_location_mask[old_player_location] = False
+        self.player_location_mask[player_location] = True
+
 
     def get_dungeon_glyph(self, location):
         loc = self.dungeon_feature_map[location]
@@ -104,7 +114,7 @@ class DLevelMap():
             if direction != 'up' and direction != 'down':
                 raise Exception("Strange direction " + direction)
             staircase = Staircase(
-                (self.dungeon_number, self.level_number),
+                self.dcoord,
                 location,
                 to_dcoord,
                 to_location,
@@ -112,6 +122,14 @@ class DLevelMap():
             self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
             self.staircases[location] = staircase
             return staircase
+
+    def log_search(self, player_location):
+        if player_location != self.player_location:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+            raise Exception("Player locations should match")
+        search_mask = FloodMap.flood_one_level_from_mask(self.player_location_mask)
+        self.searches_count_map[search_mask] += 1
 
 
 class FloodMap():

@@ -6,7 +6,7 @@ import numpy as np
 import constants
 import map
 import menuplan
-import inventory as inv
+import neighborhood
 import glyphs as gd
 import agents.custom_agent
 
@@ -243,6 +243,47 @@ class TestDLevelMap(unittest.TestCase):
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
         staircase = self.lmap.staircases[(0,0)]
         self.assertEqual((0,0), staircase.start_location)
+
+    def test_search_counter(self):
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 0)
+        self.lmap.update((0, 0), make_glyphs())
+        self.lmap.log_search((0, 0))
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 1)
+        self.lmap.update((1, 1), make_glyphs())
+        self.lmap.log_search((1, 1))
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,1)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(0,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,0)], 1)
+
+class TestNeighborhood(unittest.TestCase):
+    def setUp(self):
+        glyphs = make_glyphs()
+        self.neighborhood = neighborhood.Neighborhood(
+            10,
+            (0, 0),
+            glyphs,
+            map.DLevelMap(0, 1, glyphs),
+            None,
+            None,
+            None,
+            None,
+            [],
+        )
+
+    def test_attributes(self):
+        self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
 
 if __name__ == '__main__':
     unittest.main()

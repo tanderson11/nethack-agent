@@ -135,6 +135,7 @@ class Message():
         "There is a doorway here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
         "There is a broken door here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
         "There is an open door here.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
+        "You can't move diagonally out of an intact doorway.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
         "There is a staircase up here.": gd.get_by_name(gd.CMapGlyph, 'upstair'),
         "There is a staircase down here.": gd.get_by_name(gd.CMapGlyph, 'dnstair'),
         "There is a fountain here.": gd.get_by_name(gd.CMapGlyph, 'fountain'),
@@ -744,15 +745,12 @@ class CustomAgent(BatchedAgent):
             time,
             player_location,
             observation['glyphs'],
-            dcoord,
             level_map,
             run_state.character,
-            run_state.last_movement_action,
             previous_glyph_on_player,
             run_state.latest_monster_death,
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
-            message.feedback
         )
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
 
@@ -776,6 +774,8 @@ class CustomAgent(BatchedAgent):
                 if advice.action == nethack.actions.Command.PRAY:
                     run_state.character.last_pray_time = time
                     run_state.character.last_pray_reason = advice.advisor # advice.advisor because we want to be more specific inside composite advisors
+                elif advice.action == nethack.actions.Command.SEARCH:
+                    level_map.log_search(player_location)
 
                 menu_plan = advice.menu_plan
 

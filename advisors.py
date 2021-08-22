@@ -207,7 +207,7 @@ class WaitAdvisor(Advisor):
 class SearchForSecretDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         search = nethack.actions.Command.SEARCH
-        if (utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door, run_state.neighborhood.glyphs)).any():
+        if run_state.neighborhood.count_possible_secret_doors(100):
             return Advice(self, search, None)
         return None
 

@@ -15,29 +15,28 @@ ACCEPTABLE_CORPSE_AGE = 40
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 3
-    def __init__(self, time, absolute_player_location, glyphs, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square, feedback):
+    def __init__(self, time, absolute_player_location, glyphs, level_map, character, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square):
         ###################
         ### COPY FIELDS ###
         ###################
 
         self.previous_glyph_on_player = previous_glyph_on_player
         self.absolute_player_location = absolute_player_location
-        self.dcoord = dcoord
+        self.dcoord = level_map.dcoord
         self.level_map = level_map
         self.dungeon_glyph_on_player = self.level_map.get_dungeon_glyph(absolute_player_location)
 
-
-        on_doorway = self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
+        on_doorway = bool(self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door)
 
         #############################
         ### FULL EXTENT OF VISION ###
         #############################
-        row_vision, col_vision = utilities.centered_slices_bounded_on_array(
+        self.vision = utilities.centered_slices_bounded_on_array(
             absolute_player_location, (self.extended_vision, self.extended_vision), glyphs
         )
-        extended_visible_raw_glyphs = glyphs[row_vision, col_vision]
+        extended_visible_raw_glyphs = glyphs[self.vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = level_map.visits_count_map[row_vision, col_vision]
+        extended_visits = level_map.visits_count_map[self.vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
         extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
 
@@ -46,7 +45,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ###################################
 
         # index of player in the full vision
-        player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
+        player_location_in_extended = (absolute_player_location[0]-self.vision[0].start, absolute_player_location[1]-self.vision[1].start)
         self.player_location_in_extended = player_location_in_extended
 
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
@@ -57,8 +56,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
 
         # radius 1 box around player in vision glyphs
-        neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
-        neighborhood_view = (neighborhood_rows, neighborhood_cols)
+        neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         self.neighborhood_view = neighborhood_view
 
         ####################
@@ -100,6 +98,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### THE LOCAL STUFF ###
         #######################
 
+        self.extended_glyphs = extended_visible_glyphs
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
@@ -152,6 +151,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         if has_fresh_corpse[self.local_player_location]:
             #import pdb; pdb.set_trace()
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
+
+    def count_possible_secret_doors(self, search_threshold):
+        secret_door_mask = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door, self.glyphs)
+        search_mask = self.level_map.searches_count_map[self.neighborhood_view] < search_threshold
+        return np.count_nonzero(secret_door_mask & search_mask)
 
     class Path(NamedTuple):
         path_action: int
