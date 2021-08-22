@@ -55,6 +55,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
+        self.extended_possible_secret_mask = utilities.vectorized_map(
+            lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
+            extended_visible_glyphs
+        )
 
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
@@ -99,7 +103,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### THE LOCAL STUFF ###
         #######################
 
-        self.extended_glyphs = extended_visible_glyphs
+        self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
@@ -154,12 +158,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
 
     def count_adjacent_searches(self, search_threshold):
-        secret_door_mask = utilities.vectorized_map(
-            lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
-            self.extended_glyphs
-        )
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold
-        adjacencies = scipy.signal.convolve2d(secret_door_mask & below_threshold_mask, np.ones((3,3)), mode='same')
+        adjacencies = scipy.signal.convolve2d(self.extended_possible_secret_mask & below_threshold_mask, np.ones((3,3)), mode='same')
         return adjacencies[self.neighborhood_view]
 
     class Path(NamedTuple):

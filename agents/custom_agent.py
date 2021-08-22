@@ -245,7 +245,7 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -284,9 +284,13 @@ class RunState():
                 'step_count': self.step_count,
                 'l1_advised_step_count': self.l1_advised_step_count,
                 'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
+                'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log),
             })
 
-        #import pdb; pdb.set_trace()
+        with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
+            writer = csv.writer(search_log_file)
+            for line in self.search_log:
+                writer.writerow(list(line[0]) + [line[1]])
 
         self.update_counter_json("message_counter.json", self.message_log)
         self.update_counter_json("advisor_counter.json", [advice.advisor.__class__.__name__ for advice in self.advice_log if advice is not None])
@@ -303,7 +307,7 @@ class RunState():
         additional_counter = Counter(counter_list)
         counter.update(additional_counter)
 
-        with open(os.path.join(self.log_root, filename), 'w') as counter_file:
+        with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(counter, counter_file)
 
     def reset(self):
@@ -322,6 +326,7 @@ class RunState():
         self.message_log = []
         self.action_log = []
         self.advice_log = []
+        self.search_log = []
         self.actions_without_consequence = []
 
         self.last_non_menu_action = None
@@ -753,6 +758,14 @@ class CustomAgent(BatchedAgent):
             run_state.failed_moves_on_square,
         )
         game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+
+        if run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]:
+            search_succeeded = False
+            old_count = np.count_nonzero(run_state.neighborhood.extended_possible_secret_mask[run_state.neighborhood.neighborhood_view])
+            new_count = np.count_nonzero(neighborhood.extended_possible_secret_mask[neighborhood.neighborhood_view])
+            if new_count < old_count:
+                search_succeeded = True
+            run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
         ############################
         ### NEIGHBORHOOD UPDATED ###
