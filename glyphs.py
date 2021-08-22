@@ -809,8 +809,16 @@ class WeaponIdentity(ObjectIdentity):
         self.slot = self.find_values('SLOT')
 
         second_slot = self.find_values('SECOND_SLOT')
-        if pd.isnull(second_slot):
+        if isinstance(second_slot, np.ndarray):
+            has_second_slot = pd.isnull(second_slot).any()
+            second_slot = set(second_slot).pop()
+        else:
+            has_second_slot = pd.isnull(second_slot)
+
+
+        if has_second_slot:
             self.slot = [self.slot, second_slot]
+
 
     def avg_melee_damage(self, monster):
         # TK know about monster size
