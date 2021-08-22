@@ -1,6 +1,8 @@
 import enum
 from typing import NamedTuple
 
+GLYPHS_SHAPE = (21, 79)
+
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
     Barbarian = 'Barbarian'

@@ -79,14 +79,11 @@ class DLevelMap():
         self.staircases = {}
         self.warning_engravings = {}
 
-    def need_downstairs(self):
-        return (self.downstairs_count < self.downstairs_target)
-
-    def need_upstairs(self):
-        return (self.upstairs_count < self.upstairs_target)
+    def need_egress(self):
+        return (self.downstairs_count < self.downstairs_target) or (self.upstairs_count < self.upstairs_target)
 
     def update_stair_counts(self):
-        if self.need_downstairs() or self.need_upstairs():
+        if self.need_egress():
             # If we're missing stairs let's count and try to find them
             unique, counts = np.unique(self.dungeon_feature_map, return_counts=True)
             counted_elements = dict(zip(unique, counts))
@@ -126,7 +123,11 @@ class DLevelMap():
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
-            return self.staircases[location]
+            existing = self.staircases[location]
+            if existing.direction != direction:
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
+                raise Exception("Conflicting staircases")
         except KeyError:
             if direction != 'up' and direction != 'down':
                 raise Exception("Strange direction " + direction)

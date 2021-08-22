@@ -194,7 +194,8 @@ class Message():
         self.dungeon_feature_here = self.get_dungeon_feature_here(self.message)
 
         if nle_missed_message and not (self.dungeon_feature_here or self.has_more or self.message.startswith("You read: ") or self.message in self.known_lost_messages):
-            print(f"NLE missed this message: {potential_message}")
+            # print(f"NLE missed this message: {potential_message}")
+            pass
 
         self.feedback = self.__class__.Feedback(self)
 
@@ -284,7 +285,7 @@ class RunState():
                 'step_count': self.step_count,
                 'l1_advised_step_count': self.l1_advised_step_count,
                 'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
-                'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log),
+                'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
@@ -560,6 +561,8 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+        if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
+            raise Exception("Bad glyphs shape")
 
         if done and run_state.step_count != 0:
             raise Exception("The runner framework should have reset the run state")
@@ -572,14 +575,9 @@ class CustomAgent(BatchedAgent):
 
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
-        # Our previous run finished, we are now at the start of a new run
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
         dcoord = (dungeon_number, level_number)
-
-        if dungeon_number != 0:
-            pass
-            #if environment.env.debug: import pdb; pdb.set_trace()
 
         if run_state.neighborhood is not None: # don't exceute on first turn
             level_changed = (dcoord != run_state.neighborhood.dcoord)
@@ -775,7 +773,7 @@ class CustomAgent(BatchedAgent):
 
         if blstats.get('depth') == 1:
             run_state.l1_advised_step_count += 1
-            if level_map.need_downstairs():
+            if level_map.need_egress():
                 run_state.l1_need_downstairs_step_count += 1
 
         oracle = advs.Oracle(run_state, run_state.character, neighborhood, message, blstats)

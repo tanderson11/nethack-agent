@@ -1,11 +1,14 @@
 from typing import NamedTuple
 
+import enum
+
 from astar import AStar
 import math
 from nle import nethack
 import numpy as np
 import scipy.signal
 
+import constants
 import environment
 import glyphs as gd
 from map import ThreatMap
@@ -14,8 +17,23 @@ import utilities
 
 ACCEPTABLE_CORPSE_AGE = 40
 
+class ViewField(enum.Enum):
+    Local = enum.auto()
+    Extended = enum.auto()
+
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 3
+
+    def zoom_glyph_alike(self, glyph_alike, zoom_to):
+        if glyph_alike.shape != constants.GLYPHS_SHAPE:
+            raise Exception("Bad glyph alike")
+        if zoom_to == ViewField.Local:
+            return glyph_alike[self.vision][self.neighborhood_view]
+        elif zoom_to == ViewField.Extended:
+            return glyph_alike[self.vision]
+        else:
+            raise Exception("Bad view field")
+
     def __init__(self, time, absolute_player_location, glyphs, level_map, character, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square):
         ###################
         ### COPY FIELDS ###
@@ -109,6 +127,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         is_open_door = extended_open_door[neighborhood_view]
         shop = extended_shop[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
+        self.local_possible_secret_mask = self.extended_possible_secret_mask[self.neighborhood_view]
 
         walkable_tile = extended_walkable_tile[neighborhood_view]
 

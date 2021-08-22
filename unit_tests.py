@@ -209,7 +209,7 @@ class TestInnateIntrinsics(unittest.TestCase):
         self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
 
 def make_glyphs(vals = {}):
-    glyphs = np.full((21, 79), 2359)
+    glyphs = np.full(constants.GLYPHS_SHAPE, 2359)
     for k, v in vals.items():
         glyphs[k] = v
     return glyphs
@@ -266,6 +266,22 @@ class TestDLevelMap(unittest.TestCase):
         self.assertEqual(self.lmap.searches_count_map[(2,2)], 1)
         self.assertEqual(self.lmap.searches_count_map[(0,2)], 1)
         self.assertEqual(self.lmap.searches_count_map[(2,0)], 1)
+
+    def test_need_egress(self):
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((1,1), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), False)
+
+    def test_need_egress_at_mine_branch(self):
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((1,1), (map.Branches.GnomishMines.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((2,2), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), False)
 
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):
