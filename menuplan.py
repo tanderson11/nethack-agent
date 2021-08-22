@@ -1,6 +1,8 @@
 import pdb
 import re
 
+from collections import OrderedDict
+
 import environment
 import glyphs as gd
 import utilities
@@ -12,15 +14,34 @@ import nle.nethack as nethack
 from utilities import ARS
 
 class MenuResponse:
+    follow_with = None
     def __init__(self, match_str):
-        self.match_str = match_str
+        if not isinstance(match_str, str) and not isinstance(match_str, re.Pattern):
+            raise TypeError()
+
+        if isinstance(match_str, str):
+            self.match_str = match_str
+        elif isinstance(match_str, re.Pattern):
+            self.match_pattern = match_str
+            self.match_str = None
 
     def action_message(self, message_obj):
-        if not self.match_str in message_obj.message:
-            return None
+        if self.match_str is not None:
+            if not self.match_str in message_obj.message:
+                return None
+        else:
+            match = re.search(self.match_pattern, message_obj.message)
+            if match is None:
+                return None
 
         val = self.value(message_obj)
         return val
+
+    def __repr__(self):
+        if self.match_str is not None:
+            return self.match_str
+        else:
+            return str(self.match_pattern)
 
 class EscapeMenuResponse(MenuResponse):
     def value(self, message_obj):
@@ -41,9 +62,10 @@ class NoMenuResponse(MenuResponse):
         return utilities.keypress_action(ord('n'))
 
 class CharacterMenuResponse(MenuResponse):
-    def __init__(self, match_str, character):
+    def __init__(self, match_str, character, follow_with=None):
         super().__init__(match_str)
         self.character = character
+        self.follow_with = follow_with
 
     def value(self, message_obj):
         return utilities.keypress_action(ord(self.character))
@@ -58,10 +80,18 @@ class FirstLetterChoiceMenuResponse(MenuResponse):
         return nethack.ACTIONS.index(nethack.actions.Command.ESC)
 
 class MoreMenuResponse(MenuResponse):
+    def __init__(self, match_str, always_necessary=True):
+        super().__init__(match_str)
+        self.always_necessary = always_necessary # will this message always require a more?
+
     def value(self, message_obj):
-        if not message_obj.has_more and environment.env.debug:
+        if self.always_necessary and not message_obj.has_more and environment.env.debug:
             pdb.set_trace()
-        return utilities.keypress_action(ord(' '))
+
+        if not message_obj.has_more:
+            return None
+        else:
+            return utilities.keypress_action(ord(' '))
 
 class DirectionMenuResponse(MenuResponse):
     def __init__(self, match_str, direction):
@@ -76,18 +106,17 @@ class DirectionMenuResponse(MenuResponse):
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
         super().__init__(match_str)
-        self.phrase = phrase
-        self.next_index = 0
+        self.phrase = (c for c in phrase)
 
     def value(self, message_obj, expect_getline=True):
         if expect_getline and not message_obj.getline and environment.env.debug:
             pdb.set_trace()
-        if self.next_index == len(self.phrase):
-            self.next_index = 0
+
+        try:
+            next_chr = next(self.phrase)
+            return utilities.keypress_action(ord(next_chr))
+        except StopIteration:
             return utilities.keypress_action(ord('\r'))
-        character = self.phrase[self.next_index]
-        self.next_index += 1
-        return utilities.keypress_action(ord(character))
 
 class ExtendedCommandResponse(PhraseMenuResponse):
         def __init__(self, phrase):
@@ -103,39 +132,66 @@ class MenuPlan():
         self.name = name
         self.advisor = advisor
         self.menu_responses = menu_responses
-        self.fallback = fallback
+        self.fallback = fallback # carried out in custom_agent after our first failure to match
         self.interactive_menu = interactive_menu
+        self.current_interactive_menu = None
         self.in_interactive_menu = False
         self.listening_item = listening_item
 
     def interact(self, message_obj):
         if message_obj.message is None:
             raise Exception("That's not right")
-        if self.interactive_menu and self.interactive_menu.trigger_phrase == message_obj.message:
+
+        if isinstance(self.interactive_menu, list):
+            for interactive_menu in self.interactive_menu:
+                if interactive_menu.trigger_phrase == message_obj.message:
+                    self.in_interactive_menu = True
+                    self.current_interactive_menu = interactive_menu
+        elif self.interactive_menu and self.interactive_menu.trigger_phrase == message_obj.message:
             self.in_interactive_menu = True
+            self.current_interactive_menu = self.interactive_menu
+
         if self.in_interactive_menu:
             try:
-                selected_item = self.interactive_menu.search_through_rows(message_obj.tty_chars)
+                selected_item = self.current_interactive_menu.search_through_rows(message_obj.tty_chars)
             except EndOfMenu:
                 self.in_interactive_menu = False
+                self.current_interactive_menu = None
                 return utilities.keypress_action(ord('\r'))
             except EndOfPage:
-                self.interactive_menu.flip_page()
+                self.current_interactive_menu.flip_page()
                 return utilities.keypress_action(ord('>'))
+            except MadeSelection:
+                self.in_interactive_menu = False
+                self.current_interactive_menu = None
+                return utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
 
             if selected_item is not None:
-                if not self.interactive_menu.multi_select:
+                if not self.current_interactive_menu.multi_select and not self.current_interactive_menu.confirm_choice:
                     self.in_interactive_menu = False
+                    self.current_interactive_menu = None
                 return utilities.keypress_action(ord(selected_item.character))
 
         for response in self.menu_responses:
             action = response.action_message(message_obj)
             if action is not None:
-                if self.interactive_menu and self.interactive_menu.trigger_action == action:
+                if response.follow_with is not None:
+                    self.fallback = response.follow_with
+
+                if isinstance(self.interactive_menu, list):
+                    for interactive_menu in self.interactive_menu:
+                        if interactive_menu.trigger_action == action:
+                            self.interactive_menu = True
+                            self.current_interactive_menu = interactive_menu
+                elif self.interactive_menu and self.interactive_menu.trigger_action == action:
                     self.in_interactive_menu = True
+                    self.current_interactive_menu = self.interactive_menu
                 return action
 
         return None
+
+    def add_responses(self, menu_plan):
+        self.menu_responses = self.menu_responses + menu_plan.menu_responses
 
     def __repr__(self):
         return self.name
@@ -144,6 +200,10 @@ class EndOfPage(Exception):
     pass
 
 class EndOfMenu(Exception):
+    def __init__(self, last_item):
+        self.last_item = last_item
+
+class MadeSelection(Exception):
     pass
 
 class InteractiveMenu():
@@ -159,6 +219,7 @@ class InteractiveMenu():
     trigger_phrase = None
     # Is this an interactive menu where we can select many items?
     multi_select = False
+    confirm_choice = False
 
     class MenuItem():
         def __init__(self, ambient_menu, category, character, selected, item_text):
@@ -167,7 +228,7 @@ class InteractiveMenu():
             self.selected = selected
             self.item_text = item_text
 
-    def __init__(self, selector_name=None):
+    def __init__(self, selector_name=None, pick_last=False):
         self.rendered_rows = []
         self.header_rows = self.first_page_header_rows
         self.vertical_offset = 0
@@ -178,6 +239,8 @@ class InteractiveMenu():
         else:
             self.item_selector = lambda x: True
 
+        self.pick_last = pick_last
+
     def flip_page(self):
         self.vertical_offset = 0
         self.header_rows = 0
@@ -187,42 +250,73 @@ class InteractiveMenu():
         if not self.offset:
             self.offset = re.search("[^ ]", text_rows[0]).start()
         # Skip header rows plus ones already parsed
-        for row in text_rows[(self.header_rows + self.vertical_offset):]:
-            potential_menu = row[self.offset:].rstrip(' ')
-            terminator = re.match(self.terminator_pattern, potential_menu)
-            if terminator:
-                if terminator[1] == terminator[2]:
-                    raise EndOfMenu()
+        try:
+            for row in text_rows[(self.header_rows + self.vertical_offset):]:
+                potential_menu = row[self.offset:].rstrip(' ')
+                terminator = re.match(self.terminator_pattern, potential_menu)
+                if terminator:
+                    if terminator[1] == terminator[2]:
+                        try:
+                            raise EndOfMenu(next_item)
+                        except UnboundLocalError:
+                            import pdb; pdb.set_trace()
+                    else:
+                        raise EndOfPage()
+
+                if potential_menu == '(end)':
+                    try:
+                        raise EndOfMenu(next_item)
+                    except UnboundLocalError:
+                        import pdb; pdb.set_trace()
+
+                item_match = re.match(self.menu_item_pattern, potential_menu)
+                if item_match:
+                    if not self.active_category:
+                        if environment.env.debug: pdb.set_trace()
+
+                    #import pdb; pdb.set_trace()
+                    next_item = self.MenuItem(
+                        self,
+                        self.active_category,
+                        item_match[1],
+                        item_match[2] == "+",
+                        item_match[3]
+                    )
+
+                    self.rendered_rows.append(next_item)
+
+                    if next_item.selected:
+                        if self.confirm_choice:
+                            raise MadeSelection()
+
+                        if not self.multi_select:
+                            if environment.env.debug: import pdb; pdb.set_trace()
+                            raise Exception("already made selection but not multi_select")
+
+                    if not next_item.selected and self.item_selector(next_item):
+                        return next_item
                 else:
-                    raise EndOfPage()
-
-            if potential_menu == '(end)':
-                raise EndOfMenu()
-
-            item_match = re.match(self.menu_item_pattern, potential_menu)
-            if item_match:
-                if not self.active_category:
-                    if environment.env.debug: pdb.set_trace()
-                next_item = self.MenuItem(
-                    self,
-                    self.active_category,
-                    item_match[1],
-                    item_match[2] == "+",
-                    item_match[3]
-                )
-                self.rendered_rows.append(next_item)
-
-                if not next_item.selected and self.item_selector(next_item):
-                    return next_item
-
+                    self.active_category = potential_menu
+                
+                self.vertical_offset += 1
+        except EndOfMenu as e:
+            if self.pick_last:
+                return next_item
             else:
-                self.active_category = potential_menu
-            
-            self.vertical_offset += 1
+                raise EndOfMenu(None)
 
         if environment.env.debug:
             pdb.set_trace()
             # We should not fall through the menu
+
+class InteractiveLocationPickerMenu(InteractiveMenu):
+    pass
+
+class InteractiveValidPlacementMenu(InteractiveLocationPickerMenu):
+    header_rows = 2
+    trigger_action = None
+    trigger_phrase = 'Pick a valid location'
+    pick_last = True
 
 class InteractiveEnhanceSkillsMenu(InteractiveMenu):
     first_page_header_rows = 2
@@ -248,7 +342,6 @@ class ParsingInventoryMenu(InteractiveMenu):
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
-
         def __init__(self, ambient_menu, category, character, selected, item_text):
             run_state = ambient_menu.run_state
             self.category = category
@@ -261,6 +354,43 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
+
+class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
+    def __init__(self, run_state, inventory, selector_name=None, desired_letter=None):
+        super().__init__(run_state, selector_name=selector_name)
+        self.inventory = inventory
+
+        if desired_letter is not None:
+            self.desired_letter = desired_letter
+            self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == ord(self.desired_letter)
+
+    class MenuItem:
+        def __init__(self, interactive_menu, category, character, selected, item_text):
+            self.interactive_menu = interactive_menu
+            self.category = category
+            self.character = character
+            self.selected = selected
+            #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
+
+            try:
+                self.item = self.interactive_menu.inventory.items_by_letter[ord(self.character)]
+            except KeyError:
+                print("In interactive player inventory menu and haven't loaded class that letter {} belongs to".format(self.character))
+                self.item = None
+
+class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
+    trigger_phrase = "What would you like to identify first?"
+    first_page_header_rows = 2
+    trigger_action = None
+    confirm_choice = True
+
+    ranked_selectors = OrderedDict({
+        'unidentified_potentially_magic_armor': lambda x: (isinstance(x, inv.Armor)) and (x.item.identity is not None and x.item.identity.name() is None and x.item.identity.magic().any()),
+        'unidentified_scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() is None),
+        'unidentified_potions': lambda x: (isinstance(x, inv.Potion)) and (x.item.identity is not None and x.item.identity.name() is None),
+        'unidentified_amulets': lambda x: (isinstance(x, inv.Amulet)) and (x.item.identity is not None and x.item.identity.name() is None),
+        'unidentified_wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() is None),
+    })
 
 class WizmodeIdentifyMenu(InteractiveMenu):
     first_page_header_rows = 2
