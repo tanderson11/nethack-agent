@@ -160,6 +160,8 @@ class Message():
             #self.failed_move =  self.diagonal_into_doorway_message or self.collapse_message or self.boulder_in_vain_message
             self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
+            self.trouble_lifting = "trouble lifting" in message.message
+            self.nothing_to_pickup = "There is nothing here to pick up." in message.message
 
 
     def get_dungeon_feature_here(self, raw_message):
@@ -501,7 +503,6 @@ class RunState():
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
-                assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
                 self.failed_moves_on_square.append(self.last_movement_action)
             else:
                 if self.last_non_menu_action != utilities.ACTION_LOOKUP[nethack.actions.Command.TRAVEL]:
@@ -520,7 +521,15 @@ class RunState():
             self.last_non_menu_action = action
             self.last_non_menu_action_timestamp = self.time
 
-    def check_gamestate_advancement(self, neighborhood):
+    def check_gamestate_advancement(self, neighborhood, feedback):
+        if feedback.trouble_lifting or feedback.nothing_to_pickup:
+            if not self.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.PICKUP]:
+                if environment.env.debug: import pdb; pdb.set_trace()
+            self.actions_without_consequence.append(self.last_non_menu_action)
+            return False
+
+        # if self.last_non_menu_action in self.actions_without_consequence:
+        #    return False
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
@@ -755,7 +764,7 @@ class CustomAgent(BatchedAgent):
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
         )
-        game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+        game_did_advance = run_state.check_gamestate_advancement(neighborhood, message.feedback)
 
         if run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]:
             search_succeeded = False
