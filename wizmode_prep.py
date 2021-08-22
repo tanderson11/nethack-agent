@@ -8,18 +8,6 @@ class WizmodePrepAdvisor(advisors.Advisor): # dummy advisor to hold background m
     def advice(self, rng, run_state, character, oracle):
         pass
 
-normal_background_menu_plan_options = [
-    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Val"),
-    menuplan.EscapeMenuResponse("Call a "),
-    menuplan.EscapeMenuResponse("Call an "),
-    menuplan.NoMenuResponse("Really attack"),
-    menuplan.NoMenuResponse("Shall I remove"),
-    menuplan.NoMenuResponse("Would you wear it for me?"),
-    menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
-    menuplan.EscapeMenuResponse("trouble lifting"),
-    
-]
-
 class WizmodePrep():
     wishlist = [
         'blessed +10 silver dragon scale mail',
