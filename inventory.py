@@ -145,7 +145,7 @@ class UnimplementedItemClassException(Exception):
     pass
 
 class ItemParser():
-    item_pattern = re.compile("^(a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #
@@ -279,7 +279,7 @@ class ItemParser():
 
         if match:
             quantity_match = match[1]
-            if quantity_match == "a" or quantity_match == "an":
+            if quantity_match == "a" or quantity_match == "an" or quantity_match == "the":
                 quantity = 1
             else:
                 quantity = int(match[1])

@@ -108,8 +108,8 @@ class PhraseMenuResponse(MenuResponse):
         super().__init__(match_str)
         self.phrase = (c for c in phrase)
 
-    def value(self, message_obj):
-        if not message_obj.getline and environment.env.debug:
+    def value(self, message_obj, expect_getline=True):
+        if expect_getline and not message_obj.getline and environment.env.debug:
             pdb.set_trace()
 
         try:
@@ -117,6 +117,15 @@ class PhraseMenuResponse(MenuResponse):
             return utilities.keypress_action(ord(next_chr))
         except StopIteration:
             return utilities.keypress_action(ord('\r'))
+
+class ExtendedCommandResponse(PhraseMenuResponse):
+        def __init__(self, phrase):
+            super().__init__("#", phrase)
+
+        def value(self, message_obj):
+            if not message_obj.message.startswith('# ') and environment.env.debug:
+                pdb.set_trace()
+            return super().value(message_obj, expect_getline=False)
 
 class MenuPlan():
     def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None, listening_item=None):
@@ -148,7 +157,7 @@ class MenuPlan():
             except EndOfMenu:
                 self.in_interactive_menu = False
                 self.current_interactive_menu = None
-                return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+                return utilities.keypress_action(ord('\r'))
             except EndOfPage:
                 self.current_interactive_menu.flip_page()
                 return utilities.keypress_action(ord('>'))
@@ -213,16 +222,13 @@ class InteractiveMenu():
     confirm_choice = False
 
     class MenuItem():
-        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
-            self.interactive_menu = interactive_menu
+        def __init__(self, ambient_menu, category, character, selected, item_text):
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
 
-    def __init__(self, run_state, selector_name=None, pick_last=False,):
-        #if environment.env.debug: pdb.set_trace()
-        self.run_state = run_state
+    def __init__(self, selector_name=None, pick_last=False):
         self.rendered_rows = []
         self.header_rows = self.first_page_header_rows
         self.vertical_offset = 0
@@ -267,14 +273,16 @@ class InteractiveMenu():
                 if item_match:
                     if not self.active_category:
                         if environment.env.debug: pdb.set_trace()
+
+                    #import pdb; pdb.set_trace()
                     next_item = self.MenuItem(
                         self,
-                        self.run_state,
                         self.active_category,
                         item_match[1],
                         item_match[2] == "+",
                         item_match[3]
                     )
+
                     self.rendered_rows.append(next_item)
 
                     if next_item.selected:
@@ -286,9 +294,7 @@ class InteractiveMenu():
                             raise Exception("already made selection but not multi_select")
 
                     if not next_item.selected and self.item_selector(next_item):
-                        print("SELECTED")
                         return next_item
-
                 else:
                     self.active_category = potential_menu
                 
@@ -317,7 +323,7 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
     trigger_action = None
     trigger_phrase = 'Pick a skill to advance:'
 
-class InteractiveInventoryMenu(InteractiveMenu):
+class ParsingInventoryMenu(InteractiveMenu):
     selectors = {
         'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleport'),
         'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
@@ -328,28 +334,28 @@ class InteractiveInventoryMenu(InteractiveMenu):
         'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
     }
 
-    multi_select = True
+    def __init__(self, run_state, selector_name=None):
+        self.run_state = run_state
+        super().__init__(selector_name=selector_name)
 
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
         # 'a rusty corroded +1 long sword (weapon in hand)'
         # 'an uncursed very rusty +0 ring mail (being worn)'
-
-        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
-            self.interactive_menu = interactive_menu
+        def __init__(self, ambient_menu, category, character, selected, item_text):
+            run_state = ambient_menu.run_state
             self.category = category
             self.character = character
             self.selected = selected
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
             self.item = inv.ItemParser.parse_inventory_item(run_state.global_identity_map, item_text, category=category)
 
-
-class InteractivePickupMenu(InteractiveInventoryMenu):
+class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
 
-class InteractivePlayerInventoryMenu(InteractiveInventoryMenu):
+class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, run_state, inventory, selector_name=None, desired_letter=None):
         super().__init__(run_state, selector_name=selector_name)
         self.inventory = inventory
@@ -359,7 +365,7 @@ class InteractivePlayerInventoryMenu(InteractiveInventoryMenu):
             self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == ord(self.desired_letter)
 
     class MenuItem:
-        def __init__(self, interactive_menu, run_state, category, character, selected, item_text):
+        def __init__(self, interactive_menu, category, character, selected, item_text):
             self.interactive_menu = interactive_menu
             self.category = category
             self.character = character
@@ -374,7 +380,7 @@ class InteractivePlayerInventoryMenu(InteractiveInventoryMenu):
 
 class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
     trigger_phrase = "What would you like to identify first?"
-    header_rows = 2
+    first_page_header_rows = 2
     trigger_action = None
     confirm_choice = True
 
@@ -385,3 +391,8 @@ class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
         'unidentified_amulets': lambda x: (isinstance(x, inv.Amulet)) and (x.item.identity is not None and x.item.identity.name() is None),
         'unidentified_wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() is None),
     })
+
+class WizmodeIdentifyMenu(InteractiveMenu):
+    first_page_header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Debug Identify -- unidentified or partially identified items"

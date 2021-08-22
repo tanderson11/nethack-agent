@@ -1,6 +1,10 @@
 import unittest
+from unittest.mock import MagicMock
+
+import numpy as np
 
 import constants
+import map
 import menuplan
 import inventory as inv
 import glyphs as gd
@@ -19,11 +23,13 @@ class TestItemRegex(unittest.TestCase):
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
         "a heavy iron ball (chained to you)": "heavy iron ball",
+        "a blessed fireproof +10 ornamental cope": "ornamental cope", # You'd actually know the cloak
+        "the blessed +7 silver saber": "silver saber", # Change to a Grayswandir test at some point
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            item = menuplan.InteractiveInventoryMenu.MenuItem(
-                None, agents.custom_agent.RunState(), None, "a", False, key
+            item = menuplan.ParsingInventoryMenu.MenuItem(
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key
             )
             if item.item is None:
                 import pdb; pdb.set_trace()
@@ -36,7 +42,7 @@ class TestMonsterKill(unittest.TestCase):
         "You kill the newt!  The grid bug bites!  You get zapped!": "newt",
         "You kill the poor little dog!": "little dog",
         "You kill the incubus of Kos!": "incubus",
-        #"You kill the invisible hill orc!": "hill orc",
+        "You kill the invisible hill orc!": "hill orc",
         "You kill the saddled pony!": "pony",
     }
 
@@ -57,6 +63,7 @@ class TestMonsterFlight(unittest.TestCase):
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
+            print(value)
             monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
             self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
 
@@ -201,6 +208,41 @@ class TestInnateIntrinsics(unittest.TestCase):
         self.assertTrue(character.has_intrinsic(constants.Intrinsics.poison_resistance))
         self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
 
+def make_glyphs(vals = {}):
+    glyphs = np.full((21, 79), 2359)
+    for k, v in vals.items():
+        glyphs[k] = v
+    return glyphs
+
+class TestDLevelMap(unittest.TestCase):
+    def setUp(self):
+        self.lmap = map.DLevelMap(0, 1, make_glyphs())
+
+    def test_update(self):
+        upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
+        monster = gd.get_by_name(gd.MonsterAlikeGlyph, 'fire ant')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+        self.lmap.update((1,1), make_glyphs({(0, 0): upstair.numeral}))
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+        self.lmap.update((1,1), make_glyphs({(0, 0): monster.numeral}))
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
+
+    def test_add_feature(self):
+        upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.lmap.add_feature((0,0), upstair)
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
+
+    def test_add_traversed_staircase(self):
+        downstair = gd.get_by_name(gd.CMapGlyph, 'dnstair')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
+        self.lmap.add_traversed_staircase((0,0), (0, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
+        staircase = self.lmap.staircases[(0,0)]
+        self.assertEqual((0,0), staircase.start_location)
 
 if __name__ == '__main__':
     unittest.main()

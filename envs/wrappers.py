@@ -2,10 +2,12 @@ import aicrowd_gym
 import nle
 from gym.wrappers import TimeLimit
 
+from environment import env
+
 
 def create_env():
     """This is the environment that will be assessed by AIcrowd."""
-    return aicrowd_gym.make("NetHackChallenge-v0", savedir='')
+    return aicrowd_gym.make("NetHackChallenge-v0", savedir='', wizard=env.wizard)
 
 
 def addtimelimitwrapper_fn():

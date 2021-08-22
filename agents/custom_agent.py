@@ -31,7 +31,9 @@ from utilities import ARS
 from character import Character
 import constants
 import glyphs as gd
+from map import DMap, ThreatMap
 import environment
+from wizmode_prep import WizmodePrep
 
 from collections import Counter
 
@@ -105,15 +107,20 @@ class RecordedMonsterEvent():
         if match is None:
             return None
         monster_name = match[cls.name_field]
+        # Blind and don't know what's going on
+        if monster_name == 'it':
+            return None
         return monster_name
 
+MONSTER_REGEX = '((T|t)he )?(poor )?(invisible )?(saddled )?([a-zA-Z -]+?)( of .+?)?'
+
 class RecordedMonsterFlight(RecordedMonsterEvent):
-    pattern = re.compile("(^|. +|! +)(The )?([a-zA-Z -]+?) turns to flee.")
-    name_field = 3
+    pattern = re.compile(f"(^|. +|! +){MONSTER_REGEX} turns to flee.")
+    name_field = 7
 
 class RecordedMonsterDeath(RecordedMonsterEvent):
-    pattern = re.compile("You kill the (poor )?(invisible )?(saddled )?(.+?)( of .+?)?!")
-    name_field = 4
+    pattern = re.compile(f"You kill {MONSTER_REGEX}!")
+    name_field = 6
 
     def __init__(self, square, time, monster_name):
         self.square = square # doesn't know about dungeon levels
@@ -123,27 +130,34 @@ class RecordedMonsterDeath(RecordedMonsterEvent):
 class Message():
     known_lost_messages = set([
         "Things that are here:",
-        "There is a doorway here.",
-        "There is an open door here.",
         "Things that you feel here:",
         "Other things that are here:",
-        "There is a staircase up here.",
-        "There is a staircase down here.",
         "Other things that you feel here:",
         "Hello Agent, welcome to NetHack!  You are a neutral female gnomish", # see issue_report_1
-        "There is a fountain here.",
-        "There is a grave here.",
-        "There is a broken door here.",
-        "There is a sink here.",
         "Pick up what?",
         "paperback book named",
         "staircase down",
-        # Implement There is an altar to Chih Sung-tzu (neutral) here.
         ])
+
+    # TODO. It's grunt work, but should learn all the trap messages in
+    # # https://github.com/facebookresearch/nle/blob/ceee6396797c5fe00eac66aa909af48e5ee8b04d/src/trap.c
+    match_to_feature = {
+        "There is a doorway here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
+        "There is a broken door here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
+        "There is an open door here.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
+        "There is a staircase up here.": gd.get_by_name(gd.CMapGlyph, 'upstair'),
+        "There is a staircase down here.": gd.get_by_name(gd.CMapGlyph, 'dnstair'),
+        "There is a fountain here.": gd.get_by_name(gd.CMapGlyph, 'fountain'),
+        "There is a grave here.": gd.get_by_name(gd.CMapGlyph, 'grave'),
+        "There is a sink here.": gd.get_by_name(gd.CMapGlyph, 'sink'),
+        "There is an altar to ": gd.get_by_name(gd.CMapGlyph, 'altar'),
+    }
 
     class Feedback():
         def __init__(self, message):
             self.diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
+            if environment.env.debug and self.diagonal_out_of_doorway_message:
+                import pdb; pdb.set_trace()
             self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
             self.collapse_message = "You collapse under your load" in message.message
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
@@ -155,6 +169,14 @@ class Message():
             #self.failed_move =  self.diagonal_into_doorway_message or self.collapse_message or self.boulder_in_vain_message
             self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
+
+
+    def get_dungeon_feature_here(self, raw_message):
+        if not " here" in raw_message:
+            return
+        for k, v in self.match_to_feature.items():
+            if k in raw_message:
+                return v
 
     def __init__(self, message, tty_chars, misc_observation):
         self.raw_message = message
@@ -171,233 +193,22 @@ class Message():
                 if environment.env.debug: pdb.set_trace()
 
         ascii_top_line = bytes(tty_chars[0]).decode('ascii')
+
+        nle_missed_message = False
         potential_message = ascii_top_line.strip(' ')
         if not self.message and potential_message:
-            if not (self.has_more or potential_message.startswith("You read: ") or potential_message in self.__class__.known_lost_messages):
-                #print(f"NLE missed this message: {potential_message}")
-                pass
+            nle_missed_message = True
             self.message = potential_message
+
+        self.dungeon_feature_here = self.get_dungeon_feature_here(self.message)
+
+        if nle_missed_message and not (self.dungeon_feature_here or self.has_more or self.message.startswith("You read: ") or self.message in self.known_lost_messages):
+            print(f"NLE missed this message: {potential_message}")
 
         self.feedback = self.__class__.Feedback(self)
 
     def __bool__(self):
         return bool(self.message)
-
-class DMap():
-    dungeon_number_to_name = {
-        0: "dungeons of doom"
-    }
-    def __init__(self):
-        self.dlevels = {}
-
-    def make_level_map(self, dungeon_number, level_number, glyphs, initial_player_location):
-        lmap = DLevelMap(dungeon_number, level_number, glyphs, initial_player_location)
-        self.dlevels[(dungeon_number, level_number)] = lmap
-
-        return lmap
-
-class Staircase():
-    def __init__(self, dcoord, location, new_dcoord=None, new_location=None, direction=None):
-        self.start_dcoord = dcoord
-        self.start_location = location
-
-        self.end_dcoord = new_dcoord
-        self.end_location = new_location
-
-        self.direction = direction
-
-class DLevelMap():
-    def __init__(self, dungeon_number, level_number, glyphs, initial_player_location):
-        self.dungeon_number = dungeon_number
-        self.level_number = level_number
-
-        self.visits_map = np.zeros_like(glyphs)
-        self.visits_map[initial_player_location] += 1
-
-        self.staircases = {}
-        self.warning_engravings = {}
-
-    
-    def update(self, player_location):
-        self.visits_map[player_location] += 1
-
-    def add_staircase(self, location, **kwargs):
-        try:
-            return self.staircases[location]
-        except KeyError:
-            staircase = Staircase((self.dungeon_number, self.level_number), location, **kwargs)
-            self.staircases[location] = staircase
-            return staircase
-
-class FloodMap():
-    @staticmethod
-    def flood_one_level_from_mask(mask):
-        flooded_mask = np.full_like(mask, False, dtype='bool')
-
-        # for every square
-        it = np.nditer(mask, flags=['multi_index'])
-        for b in it: 
-            # if we occupy it
-            if b: 
-                # take a radius one box around it
-                row_slice, col_slice = utilities.centered_slices_bounded_on_array(it.multi_index, (1, 1), flooded_mask)
-                # and flood all those squares
-                flooded_mask[row_slice, col_slice] = True
-
-        return flooded_mask
-
-class SecretDoorMap(FloodMap):
-    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
-        self.raw_glyph_grid = raw_visible_glyphs
-        self.glyph_grid = visible_glyphs
-        self.player_location_in_glyph_grid = player_location_in_vision
-
-        self.secret_door_adjacent_mask = self.calculate_secret_door_adjacencies()
-
-    def calculate_secret_door_adjacencies(self):
-        can_hold_secret_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door, self.glyph_grid)
-        secret_door_adjacent = self.__class__.flood_one_level_from_mask(can_hold_secret_door)
-        return secret_door_adjacent
-
-class ThreatMap(FloodMap):
-    INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
-
-    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
-        # take the section of the observed glyphs that is relevant
-        self.glyph_grid = visible_glyphs
-        self.raw_glyph_grid = raw_visible_glyphs
-        self.player_location_in_glyph_grid = player_location_in_vision
-
-        self.calculate_threat()
-        #self.calculate_implied_threat()
-
-    @classmethod
-    def calculate_can_occupy(cls, monster, start, glyph_grid):
-        #print(monster)
-        if isinstance(monster, gd.MonsterGlyph):
-            free_moves = np.ceil(monster.monster_spoiler.speed / monster.monster_spoiler.__class__.NORMAL_SPEED) - 1 # -1 because we are interested in move+hit turns not just move turns
-            #print("speed, free_moves:", monster.monster_spoiler.speed, free_moves)
-        elif isinstance(monster, gd.InvisibleGlyph):
-            free_moves = 0
-        
-        mons_square_mask = np.full_like(glyph_grid, False, dtype='bool')
-        mons_square_mask[start] = True
-        can_occupy_mask = mons_square_mask
-
-        if free_moves > 0: # if we can move+attack, we need to know where we can move
-            walkable = utilities.vectorized_map(lambda g: g.walkable(monster), glyph_grid)
-            already_checked_mask = np.full_like(glyph_grid, False, dtype='bool')
-
-        while free_moves > 0:
-            # flood from newly identified squares that we can occupy
-            flooded_mask = cls.flood_one_level_from_mask(can_occupy_mask & ~already_checked_mask)
-            # remember where we've already looked (for efficiency, not correctness)
-            already_checked_mask = can_occupy_mask
-            # add new squares that are also walkable to places we can occupy
-            can_occupy_mask = can_occupy_mask | (flooded_mask & walkable)
-            # use up a move
-            free_moves -= 1
-            #pdb.set_trace()
-
-        return can_occupy_mask  
-
-    @classmethod
-    def calculate_melee_can_hit(cls, can_occupy_mask):
-        can_hit_mask = cls.flood_one_level_from_mask(can_occupy_mask)
-
-        return can_hit_mask
-
-    def calculate_threat(self):
-        melee_n_threat = np.zeros_like(self.glyph_grid)
-        melee_damage_threat = np.zeros_like(self.glyph_grid)
-
-        ranged_n_threat = np.zeros_like(self.glyph_grid)
-        ranged_damage_threat = np.zeros_like(self.glyph_grid)
-
-        it = np.nditer(self.raw_glyph_grid, flags=['multi_index'])
-        for g in it: # iterate over glyph grid
-            glyph = self.glyph_grid[it.multi_index]
-            if it.multi_index != self.player_location_in_glyph_grid:
-                try:
-                    isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee
-                except AttributeError:
-                    if environment.env.debug: import pdb; pdb.set_trace() # probably a long worm tail lol
-
-                if isinstance(glyph, gd.SwallowGlyph):
-                    melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
-                    melee_n_threat.fill(1) # we're only ever threatened once while swallowed
-
-                is_invis = isinstance(glyph, gd.InvisibleGlyph)
-                if isinstance(glyph, gd.MonsterGlyph) or is_invis:
-                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
-                        ### SHARED ###
-                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
-                        ###
-
-                        ### MELEE ###
-                        if is_invis or glyph.has_melee:
-                            can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
-
-                            melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
-                        
-                            if isinstance(glyph, gd.MonsterGlyph):
-                                melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
-
-                            if is_invis:
-                                melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
-                        ###
-
-                        ### RANGED ###
-                        if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
-                            can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
-                            ranged_n_threat[can_hit_mask] += 1
-                            if is_invis:
-                                ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
-                            else:
-                                ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
-                        ###
-
-        self.melee_n_threat = melee_n_threat
-        self.melee_damage_threat = melee_damage_threat
-
-        self.ranged_n_threat = ranged_n_threat
-        self.ranged_damage_threat = ranged_damage_threat
-
-    @classmethod
-    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid):
-        it = np.nditer(can_occupy_mask, flags=['multi_index'])
-        masks = []
-        for b in it: 
-            if b:
-                can_hit_from_loc = cls.raytrace_threat(it.multi_index, glyph_grid)
-                masks.append(can_hit_from_loc)
-        return np.logical_or.reduce(masks)
-
-    @staticmethod
-    def raytrace_threat(source, glyph_grid):
-        row_lim = glyph_grid.shape[0]
-        col_lim = glyph_grid.shape[1]
-
-        ray_offsets = physics.action_deltas
-
-        masks = []
-        for offset in ray_offsets:
-            ray_mask = np.full_like(glyph_grid, False, dtype='bool')
-
-            current = source
-            current = (current[0]+2*offset[0], current[1]+2*offset[1]) # initial bump so that ranged attacks don't threaten adjacent squares
-            while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
-                glyph = glyph_grid[current]
-                if isinstance(glyph, gd.CMapGlyph) and glyph.is_wall: # is this the full extent of what blocks projectiles/rays?
-                    break # should we do anything with bouncing rays
-                ray_mask[current] = True
-
-                current = (current[0]+offset[0], current[1]+offset[1])
-
-            masks.append(ray_mask)
-
-        can_hit_mask = np.logical_or.reduce(masks)
-        return can_hit_mask
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 3
@@ -412,8 +223,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.absolute_player_location = absolute_player_location
         self.dcoord = dcoord
         self.level_map = level_map
+        self.dungeon_glyph_on_player = self.level_map.get_dungeon_glyph(absolute_player_location)
 
-        on_doorway = isinstance(previous_glyph_on_player, gd.CMapGlyph) and previous_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
+
+        on_doorway = self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
 
         #############################
         ### FULL EXTENT OF VISION ###
@@ -423,7 +236,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = level_map.visits_map[row_vision, col_vision]
+        extended_visits = level_map.visits_count_map[row_vision, col_vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
         extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
 
@@ -624,20 +437,34 @@ class Pathfinder(AStar):
     def heuristic_cost_estimate(self, current, goal):
         return math.hypot(current[0]-goal[0], current[1]-goal[1])
 
+normal_background_menu_plan_options = [
+    menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Agent"),
+    menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
+    menuplan.EscapeMenuResponse("Call a "),
+    menuplan.EscapeMenuResponse("Call an "),
+    menuplan.NoMenuResponse("Really attack"),
+    menuplan.NoMenuResponse("Shall I remove"),
+    menuplan.NoMenuResponse("Would you wear it for me?"),
+    menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
+    menuplan.EscapeMenuResponse("trouble lifting"),
+    menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
+]
+
+wizard_background_menu_plan_options = [
+    menuplan.YesMenuResponse("Die?"),
+    menuplan.NoMenuResponse("Force the gods to be pleased?"),
+    menuplan.NoMenuResponse("Advance skills without practice?"),
+    menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
+    menuplan.EscapeMenuResponse("Create what kind of monster?"),
+    menuplan.EscapeMenuResponse("To what level do you want to teleport?"),
+]
+
 background_advisor = advs.BackgroundActionsAdvisor()
 BackgroundMenuPlan = menuplan.MenuPlan(
-    "background", background_advisor, [
-        menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Agent"),
-        menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
-        menuplan.EscapeMenuResponse("Call a "),
-        menuplan.EscapeMenuResponse("Call an "),
-        menuplan.NoMenuResponse("Really attack"),
-        menuplan.NoMenuResponse("Shall I remove"),
-        menuplan.NoMenuResponse("Would you wear it for me?"),
-        menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
-        menuplan.EscapeMenuResponse("little trouble lifting"),
-        menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
-    ])
+    "background",
+    background_advisor,
+    normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
+    )
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -747,10 +574,11 @@ class RunState():
         self.latest_monster_flight = None
 
         self.menu_plan_log = []
+        self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
+        self.stall_detection_on = True
 
         # for mapping purposes
         self.dmap = DMap()
-        #self.dmap = type('DMap', (), {"dungeon_number":0, "level_number":0,})()
         self.glyphs = None
 
     def make_seeded_rng(self):
@@ -827,7 +655,8 @@ class RunState():
         # Potentially useful for checking stalls
         new_time = blstats.get('time')
         if self.time == new_time:
-            self.time_hung += 1
+            if self.stall_detection_on:
+                self.time_hung += 1
         else:
             self.time_hung = 0
         if self.time_hung > 50:
@@ -989,13 +818,7 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
 
-            # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
-            if dungeon_number == 0 and level_number == 1:
-                # EARTH PLANE DCOORD = ?
-                EARTH_PLANE_DNUM = -1
-                level_map.add_staircase(player_location, new_dcoord=(EARTH_PLANE_DNUM, 1), direction='up')
-
-        level_map.update(player_location)
+        level_map.update(player_location, observation['glyphs'])
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
@@ -1014,11 +837,9 @@ class CustomAgent(BatchedAgent):
             if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
                 run_state.glyph_under_player = None
             else:
-                previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
-
-                # Don't forget dungeon features just because we're now standing on them
-                if not (isinstance(run_state.glyph_under_player, gd.CMapGlyph) and isinstance(previous_glyph_on_player, gd.MonsterGlyph)):
-                    run_state.glyph_under_player = previous_glyph_on_player
+                raw_previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
+                if not isinstance(raw_previous_glyph_on_player, gd.MonsterGlyph):
+                    run_state.glyph_under_player = raw_previous_glyph_on_player
         previous_glyph_on_player = run_state.glyph_under_player
 
         run_state.update_observation(observation) # moved after previous glyph futzing
@@ -1028,6 +849,8 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+        if message.dungeon_feature_here:
+            level_map.add_feature(player_location, message.dungeon_feature_here)
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
@@ -1072,9 +895,10 @@ class CustomAgent(BatchedAgent):
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
-            previous_level_map.add_staircase(run_state.neighborhood.absolute_player_location, new_dcoord=dcoord, new_location=player_location, direction=direction[0]) # start, end, end
+            previous_level_map.add_traversed_staircase(
+                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0]) # start, end, end
             # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_staircase(player_location, new_dcoord=run_state.neighborhood.dcoord, new_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end 
+            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
@@ -1137,6 +961,17 @@ class CustomAgent(BatchedAgent):
             run_state.set_menu_plan(scumming_menu_plan)
             run_state.log_action(retval, menu_plan=scumming_menu_plan)
             return retval
+
+        if run_state.wizmode_prep:
+            if not run_state.wizmode_prep.prepped:
+                run_state.stall_detection_on = False
+                action, menu_plan = run_state.wizmode_prep.next_action()
+                retval = utilities.ACTION_LOOKUP[action]
+                run_state.set_menu_plan(menu_plan)
+                run_state.log_action(retval, menu_plan=menu_plan)
+                return retval
+            else:
+                run_state.stall_detection_on = True
 
         neighborhood = Neighborhood(
             time,

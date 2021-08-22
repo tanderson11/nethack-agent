@@ -1,11 +1,11 @@
 GLYPH,NAME,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGHT,APPEARANCE,JAPANESE_NAME,MAGIC,SHUFFLED,SHUFFLE_CLASS,SLOT,COST,PRICE,GEN_CURSED,AC,MATERIAL,SPECIAL
 2054,fumble boots,1,-10,,20,riding boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Fumble
-2055,levitation boots,1,-10,15,15,snow boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Lev
+2055,levitation boots,1,-10,17,15,snow boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Lev
 2046,low boots,1,1,,10,walking shoes,,FALSE,FALSE,,boots,8,25,FALSE,1,L,
 2047,iron shoes,1,2,,50,hard shoes,,FALSE,FALSE,,boots,16,7,FALSE,2,I,
 2053,kicking boots,1,2,,15,buckled boots,,TRUE,TRUE,boots,boots,8,12,FALSE,1,I,Kick
 2048,high boots,1,3,,20,jackboots,,FALSE,FALSE,,boots,12,15,FALSE,2,L,
-2050,water walking boots,1,3,10,20,jungle boots,,TRUE,TRUE,boots,boots,50,12,FALSE,1,L,WWalk
+2050,water walking boots,1,3,4,20,jungle boots,,TRUE,TRUE,boots,boots,50,12,FALSE,1,L,WWalk
 2051,jumping boots,1,3,,20,hiking boots,,TRUE,TRUE,boots,boots,50,12,FALSE,1,L,Jump
 2052,elven boots,1,3,,15,mud boots,,TRUE,TRUE,boots,boots,8,12,FALSE,1,L,Stealth
 2049,speed boots,1,8,,20,combat boots,,TRUE,TRUE,boots,boots,50,12,FALSE,1,L,Speed
@@ -14,7 +14,7 @@ GLYPH,NAME,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGHT,APPEARANCE,JAPANESE_
 2026,dwarvish cloak,1,0,,10,hooded cloak,,FALSE,FALSE,,cloak,50,8,FALSE,0,C,
 2030,leather cloak,1,1,,15,leather cloak,,FALSE,FALSE,,cloak,40,8,FALSE,1,L,
 2032,cloak of invisibility,1,1,,10,opera cloak,,TRUE,TRUE,cloak,cloak,60,10,FALSE,1,C,Invis
-2024,elven cloak,1,3,,10,faded pall,,TRUE,TRUE,cloak,cloak,60,8,FALSE,1,C,Stealth
+2024,elven cloak,1,3,,10,faded pall,,TRUE,FALSE,,cloak,60,8,FALSE,1,C,Stealth
 2028,robe,2,4,,15,robe,,FALSE,FALSE,,cloak,50,3,FALSE,2,C,Spell
 2029,alchemy smock,1,4,,10,apron,,FALSE,FALSE,,cloak,50,9,FALSE,1,C,Poi+Acid
 2034,cloak of displacement,1,4,,10,piece of cloth,,TRUE,TRUE,cloak,cloak,50,10,FALSE,1,C,Displ
@@ -27,7 +27,7 @@ GLYPH,NAME,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGHT,APPEARANCE,JAPANESE_
 2044,gauntlets of power,1,9,,30,riding gloves,,TRUE,TRUE,gloves,gloves,50,8,FALSE,1,I,Str
 1986,helm of opposite alignment,1,-10,15,50,crested helmet,,TRUE,TRUE,helmet,helmet,50,6,TRUE,1,I,Align
 1980,fedora,1,0,,3,fedora,,FALSE,FALSE,,helmet,1,0,FALSE,0,C,
-1982,dunce cap,1,0,,4,conical hat,,FALSE,FALSE,,helmet,1,3,FALSE,0,C,Stupid
+1982,dunce cap,1,-10,,4,conical hat,,FALSE,FALSE,,helmet,1,3,FALSE,0,C,Stupid
 1977,elven leather helm,1,1,,3,leather hat,,FALSE,FALSE,,helmet,8,6,FALSE,1,L,
 1981,cornuthaum,1,1,,4,conical hat,,TRUE,FALSE,,helmet,80,3,FALSE,0,C,Clair
 1978,orcish helm,1,2,,30,iron skull cap,,FALSE,FALSE,,helmet,10,6,FALSE,1,I,
