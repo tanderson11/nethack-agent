@@ -1,6 +1,8 @@
 import unittest
 from unittest.mock import MagicMock
 
+import enum
+from typing import NamedTuple
 import numpy as np
 
 import constants
@@ -10,16 +12,19 @@ import inventory as inv
 import glyphs as gd
 import agents.custom_agent
 
+class SpecialValues(enum.Enum):
+    same_name = "SAME NAME"
+
 class TestItemRegex(unittest.TestCase):
     test_values = {
         "a +0 dagger (alternate weapon; not wielded)": "dagger",
-        "a blessed +1 quarterstaff (weapon in hands)": "staff",
+        "a blessed +1 quarterstaff (weapon in hands)": "quarterstaff",
         "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
-        "a thoroughly rusty +0 battle-axe (weapon in hands)": "double-headed axe",
+        "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
         "a rusty corroded +1 long sword (weapon in hand)": "long sword",
         "a rusty thoroughly corroded +1 long sword (weapon in hand)": "long sword",
         "a heavy iron ball (chained to you)": "heavy iron ball",
@@ -28,12 +33,121 @@ class TestItemRegex(unittest.TestCase):
     }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
+            print(key)
+
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key
-            )
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
             if item.item is None:
                 import pdb; pdb.set_trace()
-            self.assertEqual(value, item.item.glyph.appearance)
+            self.assertEqual(value, item.item._seen_as)
+
+class TestObjectGlyphIdentities(unittest.TestCase):
+    global_identity_map = gd.GlobalIdentityMap()
+    def test_from_numeral(self):
+        test_values = {
+            # Amulets
+            2087: None, # shuffled
+            2094: "Amulet of Yendor",
+            # Armor
+            1981: "cornuthaum",
+            1985: None, # shuffled
+            # Food
+            2153: "glob of brown pudding",
+            2177: "tin",
+            # Gems
+            2341: "worthless piece of red glass",
+            2348: "luckstone",
+            # Potions
+            2184: None, # shuffled
+            2203: "water",
+            # Rings
+            2058: None, # shuffled
+            # Scrolls
+            2245: "blank paper",
+            2222: None, # shuffled
+            # Spellbooks,
+            2288: "Book of the Dead",
+            2287: "novel",
+            2286: "blank paper",
+            2271: None,
+            # Tools
+            2144: "Bell of Opening",
+            2143: "Candelabrum of Invocation",
+            2142: "unicorn horn",
+            2100: "bag of holding",
+            2101: "bag of tricks",
+            # Wands
+            2289: None, # shuffled
+            # Weapons
+            1909: "orcish arrow",
+            1965: "club",
+        }
+
+        for numeral, name in test_values.items():
+            identity = self.global_identity_map.identity_by_numeral[numeral]
+            self.assertEqual(name, identity.name())
+
+class TestItemParsing(unittest.TestCase):
+    '''
+        (2021, "an uncursed +0 Hawaiian shirt (being worn)"): ,
+
+    '''
+
+    class ItemTestInputs(NamedTuple):
+        numeral: int
+        item_str: str
+
+    class ItemTestValues(NamedTuple):
+        oclass: type
+        name_in_inventory: str
+        name_in_stack: str = SpecialValues.same_name
+
+    #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
+    test_values = {
+        ItemTestInputs(2104, "an uncursed credit card"): ItemTestValues(inv.Tool, "credit card"),
+        #ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
+        ItemTestInputs(1978, "an iron skull cap"): ItemTestValues(inv.Armor, "orcish helm"),
+        #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
+        ItemTestInputs(2103, "an osaku"): ItemTestValues(inv.Tool, "lock pick"),
+        ItemTestInputs(2042, "a +0 pair of yugake (being worn)"): ItemTestValues(inv.Armor, "leather gloves"),
+        ItemTestInputs(2042, "a +0 pair of old gloves (being worn)"): ItemTestValues(inv.Armor, None),
+        ItemTestInputs(2034, "a blessed +2 tattered cape"): ItemTestValues(inv.Armor, None),
+        ItemTestInputs(2181, "2 cursed yellow potions"): ItemTestValues(inv.Potion, None),
+        ItemTestInputs(2181, "3 uncursed potions of healing"): ItemTestValues(inv.Potion, "healing"),
+        ItemTestInputs(2349, "an uncursed gray stone"): ItemTestValues(inv.Gem, "loadstone", name_in_stack=None),
+        ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
+    }
+
+    def test_recognition_with_numeral(self):
+        #return
+        for inputs, values in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
+            self.assertEqual(item.identity.name(), values.name_in_inventory)
+
+    def test_recognition_with_category(self):
+        #return
+        for inputs, values in self.test_values.items():
+            print(inputs)
+            global_identity_map = gd.GlobalIdentityMap()
+            category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
+            item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
+            #print(item)
+            self.assertTrue(isinstance(item, values.oclass))
+            if values.name_in_stack == SpecialValues.same_name:
+                self.assertEqual(values.name_in_inventory, item.identity.name())
+            else:
+                self.assertEqual(item.identity.name(), values.name_in_stack)
+
+    def test_recognition_with_only_str(self):
+        for inputs, values in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str)
+            self.assertTrue(isinstance(item, values.oclass))
+            if values.name_in_stack == SpecialValues.same_name:
+                self.assertEqual(values.name_in_inventory, item.identity.name())
+            else:
+                self.assertEqual(item.identity.name(), values.name_in_stack)
 
 class TestMonsterKill(unittest.TestCase):
     test_values = {
@@ -116,58 +230,6 @@ class TestAttributeScreen(unittest.TestCase):
         self.assertEqual("Blind Io", run_state.gods_by_alignment['lawful'])
         self.assertEqual("Offler", run_state.gods_by_alignment['chaotic'])
 
-
-class TestObjectGlyphIdentities(unittest.TestCase):
-    global_identity_map = gd.GlobalIdentityMap()
-    def test_from_numeral(self):
-        test_values = {
-            # Amulets
-            2087: None, # shuffled
-            2094: "Amulet of Yendor",
-            # Armor
-            1981: "cornuthaum",
-            1985: None, # shuffled
-            # Food
-            2153: "glob of brown pudding",
-            2177: "tin",
-            # Gems
-            2341: "worthless piece of red glass",
-            2348: "luckstone",
-            # Potions
-            2184: None, # shuffled
-            2203: "water",
-            # Rings
-            2058: None, # shuffled
-            # Scrolls
-            2245: "blank paper",
-            2222: None, # shuffled
-            # Spellbooks,
-            2288: "Book of the Dead",
-            2287: "novel",
-            2286: "blank paper",
-            2271: None,
-            # Tools
-            2144: "Bell of Opening",
-            2143: "Candelabrum of Invocation",
-            2142: "unicorn horn",
-            2100: "bag of holding",
-            2101: "bag of tricks",
-            # Wands
-            2289: None, # shuffled
-            # Weapons
-            1909: "orcish arrow",
-            1965: "club",
-        }
-
-        for numeral, name in test_values.items():
-            identity = self.global_identity_map.identity_by_numeral[numeral]
-            self.assertEqual(name, identity.name())
-
-class TestItemParsing(unittest.TestCase):
-    global_identity_map = gd.GlobalIdentityMap()
-    def test_easy_case(self):
-        pass
-
 class TestSpecialRoleAttributes(unittest.TestCase):
     def test_body_armor_penalty(self):
         character = agents.custom_agent.Character(
@@ -207,6 +269,7 @@ class TestInnateIntrinsics(unittest.TestCase):
         self.assertTrue(character.has_intrinsic(constants.Intrinsics.speed))
         self.assertTrue(character.has_intrinsic(constants.Intrinsics.poison_resistance))
         self.assertFalse(character.has_intrinsic(constants.Intrinsics.warning))
+
 
 def make_glyphs(vals = {}):
     glyphs = np.full((21, 79), 2359)
