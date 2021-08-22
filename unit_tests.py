@@ -116,6 +116,7 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(2181, "3 uncursed potions of healing"): ItemTestValues(inv.Potion, "healing"),
         ItemTestInputs(2349, "an uncursed gray stone"): ItemTestValues(inv.Gem, "loadstone", name_in_stack=None),
         ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
+        ItemTestInputs(2311, "a long wand"): ItemTestValues(inv.Wand, None),
     }
 
     def test_recognition_with_numeral(self):
