@@ -775,7 +775,7 @@ class CustomAgent(BatchedAgent):
 
         if blstats.get('depth') == 1:
             run_state.l1_advised_step_count += 1
-            if level_map.need_downstairs:
+            if level_map.need_downstairs():
                 run_state.l1_need_downstairs_step_count += 1
 
         oracle = advs.Oracle(run_state, run_state.character, neighborhood, message, blstats)

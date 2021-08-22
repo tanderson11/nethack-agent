@@ -37,10 +37,12 @@ class DMap():
 class Staircase():
     def __init__(self, dcoord, location, to_dcoord, to_location, direction):
         self.start_dcoord = dcoord
+        self.start_branch = INDEX_TO_BRANCH[dcoord[0]]
         self.start_location = location
 
         self.end_dcoord = to_dcoord
         self.end_location = to_location
+        self.end_branch = INDEX_TO_BRANCH[to_dcoord[0]]
 
         self.direction = direction
 
@@ -61,8 +63,11 @@ class DLevelMap():
             import pdb; pdb.set_trace()
         self.level_number = level_number
         self.dcoord = (self.dungeon_number, self.level_number)
-        self.need_downstairs = True
-        self.need_upstairs = True
+        self.branch = INDEX_TO_BRANCH[dungeon_number]
+        self.downstairs_count = 0
+        self.upstairs_count = 0
+        self.downstairs_target = 1
+        self.upstairs_target = 1
 
         self.player_location = None
         self.player_location_mask = np.full_like(glyphs, False, dtype='bool')
@@ -74,17 +79,31 @@ class DLevelMap():
         self.staircases = {}
         self.warning_engravings = {}
 
+    def need_downstairs(self):
+        return (self.downstairs_count < self.downstairs_target)
+
+    def need_upstairs(self):
+        return (self.upstairs_count < self.upstairs_target)
+
+    def update_stair_counts(self):
+        if self.need_downstairs() or self.need_upstairs():
+            # If we're missing stairs let's count and try to find them
+            unique, counts = np.unique(self.dungeon_feature_map, return_counts=True)
+            counted_elements = dict(zip(unique, counts))
+            self.upstairs_count = counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'upstair').numeral, 0)
+            self.downstairs_count = counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'dnstair').numeral, 0)
+        if self.upstairs_count > self.upstairs_target:
+            print(f"Found a branch at {self.dcoord}")
+            self.upstairs_target = self.upstairs_count
+        if self.downstairs_count > self.downstairs_target:
+            print(f"Found a branch at {self.dcoord}")
+            self.downstairs_target = self.downstairs_count
+
     
     def update(self, player_location, glyphs):
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
         # This is expensive. If we don't get long-term utility from these, should delete it
-        if self.need_downstairs or self.need_upstairs:
-            unique, counts = np.unique(self.dungeon_feature_map, return_counts=True)
-            counted_elements = dict(zip(unique, counts))
-            if self.need_upstairs and counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'upstair').numeral, None):
-                self.need_upstairs = False
-            if self.need_downstairs and counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'dnstair').numeral, None):
-                self.need_downstairs = False
+        self.update_stair_counts()
         old_player_location = self.player_location
         self.player_location = player_location
         self.visits_count_map[self.player_location] += 1
@@ -102,10 +121,8 @@ class DLevelMap():
         if not isinstance(glyph, gd.CMapGlyph):
             raise Exception("Bad feature glyph")
         self.dungeon_feature_map[location] = glyph.numeral
-        if glyph.is_downstairs:
-            self.need_downstairs = False
-        elif glyph.is_upstairs:
-            self.need_upstairs = False
+        if glyph.is_downstairs or glyph.is_upstairs:
+            self.update_stair_counts()
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
@@ -121,6 +138,12 @@ class DLevelMap():
                 direction)
             self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
             self.staircases[location] = staircase
+            if staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.GnomishMines:
+                self.downstairs_target += 1
+                self.update_stair_counts()
+            elif staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.Sokoban:
+                self.upstairs_target += 1
+                self.update_stair_counts()
             return staircase
 
     def log_search(self, player_location):
