@@ -127,7 +127,11 @@ class DLevelMap():
             if existing.direction != direction:
                 if environment.env.debug:
                     import pdb; pdb.set_trace()
-                raise Exception("Conflicting staircases")
+                # Some sort of bug
+                # descend message lingers
+                # b'fDS8NA==', 7138506629994509347, 7118309277316884218
+                # raise Exception("Conflicting staircases")
+                pass
         except KeyError:
             if direction != 'up' and direction != 'down':
                 raise Exception("Strange direction " + direction)
