@@ -54,9 +54,6 @@ new_advisors = [
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
         EngraveTestWandsAdvisor(),
-        IdentifyPotentiallyMagicArmorAdvisor(),
-        ReadKnownBeneficialScrolls(),
-        ReadUnidentifiedScrolls(),
         ]),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
