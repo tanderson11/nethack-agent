@@ -70,12 +70,16 @@ new_advisors = [
         #DesirableObjectMoveAdvisor(square_threat_tolerance=0.),
         ]),
     # EXPLORE
+    SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
+        # Need to somehow deal with the fact that this takes us places we know we don't want to go
+        # like repeatedly back to warning-engraved doors. Or into shops.
+        # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDownstairsAdvisor(): 1,
-        }),
+    }),
     FallbackSearchAdvisor(),
 ]

@@ -6,9 +6,10 @@ from typing import NamedTuple
 import numpy as np
 
 import constants
+import inventory as inv
 import map
 import menuplan
-import inventory as inv
+import neighborhood
 import glyphs as gd
 import agents.custom_agent
 
@@ -273,7 +274,7 @@ class TestInnateIntrinsics(unittest.TestCase):
 
 
 def make_glyphs(vals = {}):
-    glyphs = np.full((21, 79), 2359)
+    glyphs = np.full(constants.GLYPHS_SHAPE, 2359)
     for k, v in vals.items():
         glyphs[k] = v
     return glyphs
@@ -307,6 +308,63 @@ class TestDLevelMap(unittest.TestCase):
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
         staircase = self.lmap.staircases[(0,0)]
         self.assertEqual((0,0), staircase.start_location)
+
+    def test_search_counter(self):
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 0)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 0)
+        self.lmap.update((0, 0), make_glyphs())
+        self.lmap.log_search((0, 0))
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 1)
+        self.lmap.update((1, 1), make_glyphs())
+        self.lmap.log_search((1, 1))
+        self.assertEqual(self.lmap.searches_count_map[(0,0)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,0)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(0,1)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,1)], 2)
+        self.assertEqual(self.lmap.searches_count_map[(1,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,1)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(0,2)], 1)
+        self.assertEqual(self.lmap.searches_count_map[(2,0)], 1)
+
+    def test_need_egress(self):
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((1,1), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), False)
+
+    def test_need_egress_at_mine_branch(self):
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((1,1), (map.Branches.GnomishMines.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), True)
+        self.lmap.add_traversed_staircase((2,2), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.assertEqual(self.lmap.need_egress(), False)
+
+class TestNeighborhood(unittest.TestCase):
+    def setUp(self):
+        glyphs = make_glyphs()
+        self.neighborhood = neighborhood.Neighborhood(
+            10,
+            (0, 0),
+            glyphs,
+            map.DLevelMap(0, 1, glyphs),
+            None,
+            None,
+            None,
+            None,
+            [],
+        )
+
+    def test_attributes(self):
+        self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
 
 if __name__ == '__main__':
     unittest.main()

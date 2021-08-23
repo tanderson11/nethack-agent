@@ -13,15 +13,11 @@ import itertools
 from nle import nethack
 from agents.base import BatchedAgent
 
-from typing import NamedTuple
-
-from astar import AStar
-import math
-
 import advisors as advs
 import advisor_sets
 
 import menuplan
+from neighborhood import Neighborhood
 import utilities
 import physics
 import inventory as inv
@@ -31,7 +27,7 @@ from utilities import ARS
 from character import Character
 import constants
 import glyphs as gd
-from map import DMap, ThreatMap
+from map import DMap
 import environment
 from wizmode_prep import WizmodePrep
 
@@ -42,8 +38,6 @@ if environment.env.debug:
 
 # Config variable that are screwing with me
 # pile_limit
-
-ACCEPTABLE_CORPSE_AGE = 40
 
 class BLStats():
     bl_meaning = [
@@ -145,6 +139,7 @@ class Message():
         "There is a doorway here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
         "There is a broken door here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
         "There is an open door here.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
+        "You can't move diagonally out of an intact doorway.": gd.get_by_name(gd.CMapGlyph, 'vodoor'),
         "There is a staircase up here.": gd.get_by_name(gd.CMapGlyph, 'upstair'),
         "There is a staircase down here.": gd.get_by_name(gd.CMapGlyph, 'dnstair'),
         "There is a fountain here.": gd.get_by_name(gd.CMapGlyph, 'fountain'),
@@ -169,6 +164,8 @@ class Message():
             #self.failed_move =  self.diagonal_into_doorway_message or self.collapse_message or self.boulder_in_vain_message
             self.nothing_to_eat = "You don't have anything to eat." in message.message
             self.nevermind = "Never mind." in message.message
+            self.trouble_lifting = "trouble lifting" in message.message
+            self.nothing_to_pickup = "There is nothing here to pick up." in message.message
 
 
     def get_dungeon_feature_here(self, raw_message):
@@ -203,239 +200,13 @@ class Message():
         self.dungeon_feature_here = self.get_dungeon_feature_here(self.message)
 
         if nle_missed_message and not (self.dungeon_feature_here or self.has_more or self.message.startswith("You read: ") or self.message in self.known_lost_messages):
-            print(f"NLE missed this message: {potential_message}")
+            # print(f"NLE missed this message: {potential_message}")
+            pass
 
         self.feedback = self.__class__.Feedback(self)
 
     def __bool__(self):
         return bool(self.message)
-
-class Neighborhood(): # goal: mediates all access to glyphs by advisors
-    extended_vision = 3
-    def __init__(self, time, absolute_player_location, observation, dcoord, level_map, character, last_movement_action, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square, feedback):
-        ###################
-        ### COPY FIELDS ###
-        ###################
-
-        blstats = BLStats(observation['blstats'])
-        self.last_movement_action = last_movement_action
-        self.previous_glyph_on_player = previous_glyph_on_player
-        self.absolute_player_location = absolute_player_location
-        self.dcoord = dcoord
-        self.level_map = level_map
-        self.dungeon_glyph_on_player = self.level_map.get_dungeon_glyph(absolute_player_location)
-
-
-        on_doorway = self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door or feedback.diagonal_out_of_doorway_message
-
-        #############################
-        ### FULL EXTENT OF VISION ###
-        #############################
-        row_vision, col_vision = utilities.centered_slices_bounded_on_array(
-            absolute_player_location, (self.extended_vision, self.extended_vision), observation['glyphs']
-        )
-        extended_visible_raw_glyphs = observation['glyphs'][row_vision, col_vision]
-        extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = level_map.visits_count_map[row_vision, col_vision]
-        extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
-        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
-
-        ###################################
-        ### RELATIVE POSITION IN VISION ###
-        ###################################
-
-        # index of player in the full vision
-        player_location_in_extended = (absolute_player_location[0]-row_vision.start, absolute_player_location[1]-col_vision.start)
-        self.player_location_in_extended = player_location_in_extended
-
-        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
-        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
-        self.extended_is_monster = extended_is_monster
-        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
-        extended_is_dangerous_monster[player_location_in_extended] = False
-        self.extended_is_dangerous_monster = extended_is_dangerous_monster
-
-        self.monster_present = extended_is_monster.any()
-
-        # radius 1 box around player in vision glyphs
-        neighborhood_rows, neighborhood_cols = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
-        neighborhood_view = (neighborhood_rows, neighborhood_cols)
-        self.neighborhood_view = neighborhood_view
-
-        ####################
-        # SHOPKEEPER STUFF #
-        ####################
-        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
-        shopkeeper_present = is_shopkeeper.any()
-
-        extended_shop = np.full_like(extended_visible_glyphs, False, dtype='bool')
-        if shopkeeper_present and on_doorway:
-            it = np.nditer(is_shopkeeper, flags=['multi_index'])
-            for b in it:
-                if b: # if this is a shopkeeper
-                    # draw the rectangle containing the player and shopkeeper
-                    shop_row_slice, shop_col_slice = utilities.rectangle_defined_by_corners(player_location_in_extended, it.multi_index)
-                    # check if that rectangle contains another doorway
-                    # if it doesn't, assume we're at the shop entrance
-                    if not extended_open_door[shop_row_slice, shop_col_slice].any():
-                        extended_shop[shop_row_slice, shop_col_slice] = True
-
-        ##############################
-        ### RESTRICTED ACTION GRID ###
-        ##############################
-
-        # a window into the action grid of the size size and shape as our window into the glyph grid (ie: don't include actions out of bounds on the map)
-        action_grid_rows, action_grid_cols = utilities.move_slice_center(player_location_in_extended, (1,1), neighborhood_view) # move center to (1,1) (action grid center)
-        action_grid_view = (action_grid_rows, action_grid_cols)
-
-        self.action_grid = physics.action_grid[action_grid_view]
-        self.diagonal_moves = physics.diagonal_moves[action_grid_view]
-
-        ########################################
-        ### RELATIVE POSITION IN ACTION GRID ###
-        ########################################
-
-        self.local_player_location = (1-action_grid_rows.start, 1-action_grid_cols.start) # not always guranteed to be (1,1) if we're at the edge of the map
-        self.player_location_mask = np.full_like(self.action_grid, False, dtype='bool')
-        self.player_location_mask[self.local_player_location] = True
-
-        #######################
-        ### THE LOCAL STUFF ###
-        #######################
-
-        self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
-        self.glyphs = extended_visible_glyphs[neighborhood_view]
-        self.visits = extended_visits[neighborhood_view]
-        is_open_door = extended_open_door[neighborhood_view]
-        shop = extended_shop[neighborhood_view]
-        self.is_monster = extended_is_monster[neighborhood_view]
-        self.is_dangerous_monster = extended_is_dangerous_monster[neighborhood_view]
-
-        walkable_tile = extended_walkable_tile[neighborhood_view]
-
-        # in the narrow sense
-        self.walkable = walkable_tile & ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
-        self.walkable[self.local_player_location] = False # in case we turn invisible
-
-        for f in failed_moves_on_square:
-            failed_target = physics.offset_location_by_action(self.local_player_location, f)
-            try:
-                self.walkable[failed_target] = False
-            except IndexError:
-                if environment.env.debug: import pdb; pdb.set_trace()
-
-
-        # we're not calculating the true walkable mesh in extended vision, but we can at least add our local calculation
-        # to help with pathfinding (which depends on an extended walkable mesh)
-        extended_walkable_tile[neighborhood_view] = self.walkable
-        self.extended_walkable = extended_walkable_tile
-
-        #########################################
-        ### MAPS DERVIED FROM EXTENDED VISION ###
-        #########################################
-        self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
-        self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
-        self.extended_n_threat = self.threat_map.melee_n_threat + self.threat_map.ranged_n_threat
-
-        #########################################
-        ### LOCAL PROPERTIES OF EXTENDED MAPS ###
-        #########################################
-        self.n_threat = self.extended_n_threat[neighborhood_view]
-        self.threat = self.extended_threat[neighborhood_view]
-
-        self.threat_on_player = self.threat[self.local_player_location]
-        ####################
-        ### CORPSE STUFF ###
-        ####################
-        
-        self.has_fresh_corpse = np.full_like(self.action_grid, False, dtype='bool')
-        self.fresh_corpse_on_square_glyph = None
-        if latest_monster_death and latest_monster_death.can_corpse and (time - latest_monster_death.time < ACCEPTABLE_CORPSE_AGE):
-            corpse_difference = (latest_monster_death.square[0] - absolute_player_location[0], latest_monster_death.square[1] - absolute_player_location[1])
-            corpse_relative_location = (self.local_player_location[0] + corpse_difference[0], self.local_player_location[1] + corpse_difference[1])
-            # is corpse nearby?
-            if corpse_relative_location[0] in range(0, action_grid_rows.stop-action_grid_rows.start) and corpse_relative_location[1] in range(0, action_grid_cols.stop-action_grid_cols.start):
-                self.has_fresh_corpse[corpse_relative_location] = True
-
-        if self.has_fresh_corpse[self.local_player_location]:
-            #import pdb; pdb.set_trace()
-            self.fresh_corpse_on_square_glyph = latest_monster_death.monster_glyph
-
-    class Path(NamedTuple):
-        path_action: int
-        delta: tuple
-        threat: float
-
-    def path_to_targets(self, target_mask):
-        if target_mask.any():
-            pathfinder = Pathfinder(self.extended_walkable | target_mask) # pretend the targets are walkable so we can actually reach them in pathfinding
-            it = np.nditer(target_mask, flags=['multi_index'])
-
-            shortest_path = None
-            shortest_length = None
-
-            for is_target in it:
-                if is_target:
-                    # start, goal
-                    path_iterator = pathfinder.astar(self.player_location_in_extended, it.multi_index)
-                    if path_iterator is None:
-                        path = None
-                        path_length = None
-                    else:
-                        path = list(path_iterator)
-                        path_length = len(path)
-                    if shortest_path is None or (shortest_length and path_length and shortest_length > path_length):
-                        shortest_path = path
-                        shortest_length = path_length
-
-            if shortest_path is None: # couldn't pathfind to any
-                return None
-            else:
-                first_square_in_path = shortest_path[1] # the 0th square is just your starting location
-                delta = (first_square_in_path[0]-self.player_location_in_extended[0], first_square_in_path[1]-self.player_location_in_extended[1])
-
-                threat = 0.
-                for square in shortest_path:
-                    threat += self.extended_threat[square]
-
-                path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
-                return self.Path(path_action, delta, threat)
-
-    def path_to_nearest_monster(self):
-        monsters = self.extended_is_monster.copy()
-        monsters[self.neighborhood_view] = False
-        return self.path_to_targets(monsters)
-
-    def path_to_nearest_weak_monster(self):
-        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
-        weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
-
-        return self.path_to_targets(weak_monsters)
-
-
-class Pathfinder(AStar):
-    def __init__(self, walkable_mesh):
-        self.walkable_mesh = walkable_mesh
-
-    def neighbors(self, node):
-        box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
-        upper_left = (box_slices[0].start, box_slices[1].start)
-        box = self.walkable_mesh[box_slices]
-
-        neighboring_walkable_squares = []
-        it = np.nditer(box, flags=['multi_index'])
-        for walkable in it:
-
-            if walkable:
-                neighboring_walkable_squares.append((it.multi_index[0]+upper_left[0] , it.multi_index[1]+upper_left[1]))
-
-        return neighboring_walkable_squares
-
-    def distance_between(self, n1, n2):
-        return 1 # diagonal moves are strong!
-
-    def heuristic_cost_estimate(self, current, goal):
-        return math.hypot(current[0]-goal[0], current[1]-goal[1])
 
 normal_background_menu_plan_options = [
     menuplan.PhraseMenuResponse('"Hello stranger, who are you?" - ', "Agent"),
@@ -464,7 +235,7 @@ BackgroundMenuPlan = menuplan.MenuPlan(
     "background",
     background_advisor,
     normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
-    )
+)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -482,7 +253,7 @@ class RunState():
     def print_action_log(self, num):
         return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended']
+    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -518,9 +289,16 @@ class RunState():
                 'last_pray_reason': str(self.character.last_pray_reason),
                 'scummed': self.scumming,
                 'ascended': ascended,
+                'step_count': self.step_count,
+                'l1_advised_step_count': self.l1_advised_step_count,
+                'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
+                'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
             })
 
-        #import pdb; pdb.set_trace()
+        with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
+            writer = csv.writer(search_log_file)
+            for line in self.search_log:
+                writer.writerow(list(line[0]) + [line[1]])
 
         self.update_counter_json("message_counter.json", self.message_log)
         self.update_counter_json("advisor_counter.json", [advice.advisor.__class__.__name__ for advice in self.advice_log if advice is not None])
@@ -537,7 +315,7 @@ class RunState():
         additional_counter = Counter(counter_list)
         counter.update(additional_counter)
 
-        with open(os.path.join(self.log_root, filename), 'w') as counter_file:
+        with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(counter, counter_file)
 
     def reset(self):
@@ -547,6 +325,8 @@ class RunState():
         self.gods_by_alignment = {}
 
         self.step_count = 0
+        self.l1_advised_step_count = 0
+        self.l1_need_downstairs_step_count = 0
         self.reward = 0
         self.time = None
 
@@ -554,6 +334,7 @@ class RunState():
         self.message_log = []
         self.action_log = []
         self.advice_log = []
+        self.search_log = []
         self.actions_without_consequence = []
 
         self.last_non_menu_action = None
@@ -727,7 +508,6 @@ class RunState():
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
-                assert self.last_movement_action in range(0,8), "Expected a movement action given failed_move flag but got {}".format(move)
                 self.failed_moves_on_square.append(self.last_movement_action)
             else:
                 if self.last_non_menu_action != utilities.ACTION_LOOKUP[nethack.actions.Command.TRAVEL]:
@@ -746,7 +526,15 @@ class RunState():
             self.last_non_menu_action = action
             self.last_non_menu_action_timestamp = self.time
 
-    def check_gamestate_advancement(self, neighborhood):
+    def check_gamestate_advancement(self, neighborhood, feedback):
+        if feedback.trouble_lifting or feedback.nothing_to_pickup:
+            if not self.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.PICKUP]:
+                if environment.env.debug: import pdb; pdb.set_trace()
+            self.actions_without_consequence.append(self.last_non_menu_action)
+            return False
+
+        # if self.last_non_menu_action in self.actions_without_consequence:
+        #    return False
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
@@ -787,6 +575,8 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+        if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
+            raise Exception("Bad glyphs shape")
 
         if done and run_state.step_count != 0:
             raise Exception("The runner framework should have reset the run state")
@@ -799,14 +589,9 @@ class CustomAgent(BatchedAgent):
 
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
-        # Our previous run finished, we are now at the start of a new run
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
         dcoord = (dungeon_number, level_number)
-
-        if dungeon_number != 0:
-            pass
-            #if environment.env.debug: import pdb; pdb.set_trace()
 
         if run_state.neighborhood is not None: # don't exceute on first turn
             level_changed = (dcoord != run_state.neighborhood.dcoord)
@@ -976,24 +761,34 @@ class CustomAgent(BatchedAgent):
         neighborhood = Neighborhood(
             time,
             player_location,
-            observation,
-            dcoord,
+            observation['glyphs'],
             level_map,
             run_state.character,
-            run_state.last_movement_action,
             previous_glyph_on_player,
             run_state.latest_monster_death,
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
-            message.feedback
         )
-        game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+        game_did_advance = run_state.check_gamestate_advancement(neighborhood, message.feedback)
+
+        if run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]:
+            search_succeeded = False
+            old_count = np.count_nonzero(run_state.neighborhood.extended_possible_secret_mask[run_state.neighborhood.neighborhood_view])
+            new_count = np.count_nonzero(neighborhood.extended_possible_secret_mask[neighborhood.neighborhood_view])
+            if new_count < old_count:
+                search_succeeded = True
+            run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
         ############################
         ### NEIGHBORHOOD UPDATED ###
         ############################
         run_state.update_neighborhood(neighborhood)
         ############################
+
+        if blstats.get('depth') == 1:
+            run_state.l1_advised_step_count += 1
+            if level_map.need_egress():
+                run_state.l1_need_downstairs_step_count += 1
 
         oracle = advs.Oracle(run_state, run_state.character, neighborhood, message, blstats)
 
@@ -1004,6 +799,8 @@ class CustomAgent(BatchedAgent):
                 if advice.action == nethack.actions.Command.PRAY:
                     run_state.character.last_pray_time = time
                     run_state.character.last_pray_reason = advice.advisor # advice.advisor because we want to be more specific inside composite advisors
+                elif advice.action == nethack.actions.Command.SEARCH:
+                    level_map.log_search(player_location)
 
                 menu_plan = advice.menu_plan
 

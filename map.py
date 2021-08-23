@@ -37,24 +37,24 @@ class DMap():
 class Staircase():
     def __init__(self, dcoord, location, to_dcoord, to_location, direction):
         self.start_dcoord = dcoord
+        self.start_branch = INDEX_TO_BRANCH[dcoord[0]]
         self.start_location = location
 
         self.end_dcoord = to_dcoord
         self.end_location = to_location
+        self.end_branch = INDEX_TO_BRANCH[to_dcoord[0]]
 
         self.direction = direction
 
 class DLevelMap():
     @staticmethod
-    def glyphs_to_dungeon_features(glyphs, default=None):
-        if default is None:
-            default = np.zeros_like(glyphs)
+    def glyphs_to_dungeon_features(glyphs, prior):
         # This treats the gd.CMapGlyph.OFFSET as unobserved. No way, AFAICT, to
         # distinguish between solid stone that we've seen with our own eyes vs. not
         return np.where(
             (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
             glyphs,
-            default
+            prior
         )
 
     def __init__(self, dungeon_number, level_number, glyphs):
@@ -62,17 +62,51 @@ class DLevelMap():
         if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
             import pdb; pdb.set_trace()
         self.level_number = level_number
+        self.dcoord = (self.dungeon_number, self.level_number)
+        self.branch = INDEX_TO_BRANCH[dungeon_number]
+        self.downstairs_count = 0
+        self.upstairs_count = 0
+        self.downstairs_target = 1
+        self.upstairs_target = 1
+
+        self.player_location = None
+        self.player_location_mask = np.full_like(glyphs, False, dtype='bool')
 
         # These are our map layers
-        self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs)
+        self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
+        self.searches_count_map = np.zeros_like(glyphs)
         self.staircases = {}
         self.warning_engravings = {}
+
+    def need_egress(self):
+        return (self.downstairs_count < self.downstairs_target) or (self.upstairs_count < self.upstairs_target)
+
+    def update_stair_counts(self):
+        if self.need_egress():
+            # If we're missing stairs let's count and try to find them
+            unique, counts = np.unique(self.dungeon_feature_map, return_counts=True)
+            counted_elements = dict(zip(unique, counts))
+            self.upstairs_count = counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'upstair').numeral, 0)
+            self.downstairs_count = counted_elements.get(gd.get_by_name(gd.CMapGlyph, 'dnstair').numeral, 0)
+        if self.upstairs_count > self.upstairs_target:
+            print(f"Found a branch at {self.dcoord}")
+            self.upstairs_target = self.upstairs_count
+        if self.downstairs_count > self.downstairs_target:
+            print(f"Found a branch at {self.dcoord}")
+            self.downstairs_target = self.downstairs_count
 
     
     def update(self, player_location, glyphs):
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
-        self.visits_count_map[player_location] += 1
+        # This is expensive. If we don't get long-term utility from these, should delete it
+        self.update_stair_counts()
+        old_player_location = self.player_location
+        self.player_location = player_location
+        self.visits_count_map[self.player_location] += 1
+        self.player_location_mask[old_player_location] = False
+        self.player_location_mask[player_location] = True
+
 
     def get_dungeon_glyph(self, location):
         loc = self.dungeon_feature_map[location]
@@ -84,22 +118,46 @@ class DLevelMap():
         if not isinstance(glyph, gd.CMapGlyph):
             raise Exception("Bad feature glyph")
         self.dungeon_feature_map[location] = glyph.numeral
+        if glyph.is_downstairs or glyph.is_upstairs:
+            self.update_stair_counts()
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
-            return self.staircases[location]
+            existing = self.staircases[location]
+            if existing.direction != direction:
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
+                # Some sort of bug
+                # descend message lingers
+                # b'fDS8NA==', 7138506629994509347, 7118309277316884218
+                # raise Exception("Conflicting staircases")
+                pass
         except KeyError:
             if direction != 'up' and direction != 'down':
                 raise Exception("Strange direction " + direction)
             staircase = Staircase(
-                (self.dungeon_number, self.level_number),
+                self.dcoord,
                 location,
                 to_dcoord,
                 to_location,
                 direction)
             self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
             self.staircases[location] = staircase
+            if staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.GnomishMines:
+                self.downstairs_target += 1
+                self.update_stair_counts()
+            elif staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.Sokoban:
+                self.upstairs_target += 1
+                self.update_stair_counts()
             return staircase
+
+    def log_search(self, player_location):
+        if player_location != self.player_location:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+            raise Exception("Player locations should match")
+        search_mask = FloodMap.flood_one_level_from_mask(self.player_location_mask)
+        self.searches_count_map[search_mask] += 1
 
 
 class FloodMap():
