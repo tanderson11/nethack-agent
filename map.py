@@ -7,6 +7,8 @@ import glyphs as gd
 import physics
 import utilities
 
+from utilities import ARS
+
 class Branches(enum.Enum):
     DungeonsOfDoom = 0
     GnomishMines = 2
@@ -19,6 +21,17 @@ INDEX_TO_BRANCH = {
     Branches.Quest.value: Branches.Quest,
     Branches.Sokoban.value: Branches.Sokoban,
 }
+
+class SpecialRoomTypes(enum.Enum):
+    # shouldn't have a 0 value so the numpy array is unambiguous
+    shop = 1
+    vault_closet = 2
+
+class BasicTerrainTypes(enum.Enum):
+    impassable = 0
+    floor = 1
+    door = 2
+    liquid = 3
 
 class DMap():
     def __init__(self):
@@ -57,6 +70,16 @@ class DLevelMap():
             prior
         )
 
+    @staticmethod
+    def glyphs_to_terrain_type(dungeon_feature_map):
+        glyph_objs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], dungeon_feature_map)
+
+        terrain_types = np.
+        import pdb; pdb.set_trace()
+
+        terrain_types = np.full_like(glyphs, BasicTerrainTypes.impassable.value)
+        terrain_types[glyph_objs.walkable] = BasicTerrainTypes.floor.value
+
     def __init__(self, dungeon_number, level_number, glyphs):
         self.dungeon_number = dungeon_number
         if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
@@ -76,6 +99,9 @@ class DLevelMap():
         self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
         self.searches_count_map = np.zeros_like(glyphs)
+        self.special_room_map = np.zeros_like(glyphs)
+        self.terrain_type = np.full_like(glyphs, BasicTerrainTypes.impassable.value)
+
         self.staircases = {}
         self.warning_engravings = {}
 
@@ -95,10 +121,10 @@ class DLevelMap():
         if self.downstairs_count > self.downstairs_target:
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
-
     
     def update(self, player_location, glyphs):
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
+        self.terrain_type = self.glyphs_to_terrain_type(glyphs, self.terrain_type)
         # This is expensive. If we don't get long-term utility from these, should delete it
         self.update_stair_counts()
         old_player_location = self.player_location
@@ -107,6 +133,23 @@ class DLevelMap():
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
+    def build_room_mask_from_square(self, square_in_room):
+        room_mask = np.full(self.dungeon_feature_map, False, dtype=bool)
+        room_mask[square_in_room] = True
+
+        while True:
+            new_mask = FloodMap.flood_one_level_from_mask(room_mask)
+            new_mask = new_mask & (self.terrain_type == BasicTerrainTypes.floor.value)
+
+            if (new_mask == room_mask).all():
+                break
+            else:
+                room_mask = new_mask
+
+        return room_mask
+
+    def add_room(self, room_mask, room_type):
+        self.special_room_map[room_mask] = room_type
 
     def get_dungeon_glyph(self, location):
         loc = self.dungeon_feature_map[location]
@@ -126,7 +169,8 @@ class DLevelMap():
             existing = self.staircases[location]
             if existing.direction != direction:
                 if environment.env.debug:
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
+                    pass
                 # Some sort of bug
                 # descend message lingers
                 # b'fDS8NA==', 7138506629994509347, 7118309277316884218
@@ -176,7 +220,6 @@ class FloodMap():
                 flooded_mask[row_slice, col_slice] = True
 
         return flooded_mask
-
 
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
