@@ -739,7 +739,7 @@ class OpenClosedDoorAdvisor(Advisor):
             a = rng.choice(door_directions)
             # another check: don't want to open doors if they are adjacent to an engraving
             for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
                 if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
                     return None
 
@@ -762,7 +762,7 @@ class KickLockedDoorAdvisor(Advisor):
         if len(door_directions) > 0:
             a = rng.choice(door_directions)
             for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, utilities.ACTION_LOOKUP[a])
+                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
                 # another check: don't want to kick doors if they are adjacent to an engraving
                 if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
                     return None
@@ -871,7 +871,7 @@ class EngraveTestWandsAdvisor(Advisor):
         wands = character.inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
-            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(utilities.ACTION_LOOKUP[engrave], False):
+            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False):
                 letter = w.inventory_letter
                 break
 

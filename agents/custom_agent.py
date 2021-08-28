@@ -247,8 +247,8 @@ class RunState():
                 writer = csv.DictWriter(log_file, fieldnames=self.LOG_HEADER)
                 writer.writeheader()
 
-    def print_action_log(self, num):
-        return "||".join([nethack.ACTIONS[num].name for num in self.action_log[(-1 * num):]])
+    def print_action_log(self, total):
+        return "||".join([str(num) for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
 
@@ -500,7 +500,7 @@ class RunState():
             if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
                 self.failed_moves_on_square.append(self.last_movement_action)
             else:
-                if self.last_non_menu_action != utilities.ACTION_LOOKUP[nethack.actions.Command.TRAVEL]:
+                if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
                     print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
@@ -510,24 +510,22 @@ class RunState():
         # TODO lots of compatiblility cruft here
 
         if isinstance(advice, MenuAdvice):
-            action = utilities.ACTION_LOOKUP[advice.keypress]
             self.menu_plan_log.append(advice.from_menu_plan)
+            self.action_log.append(advice.keypress)
         else:
-            action = utilities.ACTION_LOOKUP[advice.action]
             self.menu_plan_log.append(None)
-        self.action_log.append(action)
+            self.action_log.append(advice.action)
 
-        if action in range(0,8): #is a movement action; bad
-            self.last_movement_action = action
+            if advice.action in physics.direction_actions:
+                self.last_movement_action = advice.action
 
-        if isinstance(advice, ActionAdvice):
-            self.last_non_menu_action = utilities.ACTION_LOOKUP[advice.action]
+            self.last_non_menu_action = advice.action
             self.last_non_menu_action_timestamp = self.time
             self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood, feedback):
         if feedback.trouble_lifting or feedback.nothing_to_pickup:
-            if not self.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.PICKUP]:
+            if not self.last_non_menu_action == nethack.actions.Command.PICKUP:
                 if environment.env.debug: import pdb; pdb.set_trace()
             self.actions_without_consequence.append(self.last_non_menu_action)
             return False
@@ -635,7 +633,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if not run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.FIRE]:
+            if not run_state.last_non_menu_action == nethack.actions.Command.FIRE:
                 try:
                     delta = physics.action_to_delta[run_state.last_non_menu_action]
 
@@ -771,7 +769,7 @@ class CustomAgent(BatchedAgent):
         )
         game_did_advance = run_state.check_gamestate_advancement(neighborhood, message.feedback)
 
-        if run_state.last_non_menu_action == utilities.ACTION_LOOKUP[nethack.actions.Command.SEARCH]:
+        if run_state.last_non_menu_action == nethack.actions.Command.SEARCH:
             search_succeeded = False
             old_count = np.count_nonzero(run_state.neighborhood.extended_possible_secret_mask[run_state.neighborhood.neighborhood_view])
             new_count = np.count_nonzero(neighborhood.extended_possible_secret_mask[neighborhood.neighborhood_view])
@@ -802,7 +800,7 @@ class CustomAgent(BatchedAgent):
                 elif advice.action == nethack.actions.Command.SEARCH:
                     level_map.log_search(player_location)
 
-                if game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence:
+                if game_did_advance is True or advice.action not in run_state.actions_without_consequence:
                     break
 
         if isinstance(advice.from_advisor, advs.FallbackSearchAdvisor):
