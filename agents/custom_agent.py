@@ -1,19 +1,16 @@
-from pdb import run
 import base64
 import csv
-from dataclasses import dataclass
-import enum
 import os
 import re
 
 import numpy as np
 import pandas as pd
-import itertools
 
 from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
+from advisors import Advice, ActionAdvice, MenuAdvice
 import advisor_sets
 
 import menuplan
@@ -301,7 +298,7 @@ class RunState():
                 writer.writerow(list(line[0]) + [line[1]])
 
         self.update_counter_json("message_counter.json", self.message_log)
-        self.update_counter_json("advisor_counter.json", [advice.advisor.__class__.__name__ for advice in self.advice_log if advice is not None])
+        self.update_counter_json("advisor_counter.json", [advice.from_advisor.__class__.__name__ for advice in self.advice_log if isinstance(advice, ActionAdvice)])
 
     def update_counter_json(self, filename, counter_list):
         import json
@@ -496,14 +493,7 @@ class RunState():
             self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
 
         if message.feedback.nevermind or message.feedback.nothing_to_eat:
-            eat_corpse_flag = False
-            if self.advice_log[-1] is None:
-                if isinstance(self.menu_plan_log[-1].advisor, advs.EatCorpseAdvisor): # why is this an instance and not a class?
-                    eat_corpse_flag = True
-            elif self.advice_log[-1].advisor == advs.EatCorpseAdvisor: # have to do this weird thing because we usually handle classes and not instances
-                eat_corpse_flag = True
-
-            if eat_corpse_flag:
+            if isinstance(self.last_non_menu_advisor, advs.EatCorpseAdvisor):
                 self.latest_monster_death = None
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
@@ -514,17 +504,26 @@ class RunState():
                     if environment.env.debug: import pdb; pdb.set_trace()
                     print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
-    def log_action(self, action, menu_plan=None, advice=None):
-        self.menu_plan_log.append(menu_plan)
-        self.action_log.append(action)
+    def log_action(self, advice):
         self.advice_log.append(advice)
+
+        # TODO lots of compatiblility cruft here
+
+        if isinstance(advice, MenuAdvice):
+            action = utilities.ACTION_LOOKUP[advice.keypress]
+            self.menu_plan_log.append(advice.from_menu_plan)
+        else:
+            action = utilities.ACTION_LOOKUP[advice.action]
+            self.menu_plan_log.append(None)
+        self.action_log.append(action)
 
         if action in range(0,8): #is a movement action; bad
             self.last_movement_action = action
 
-        if menu_plan == None:
-            self.last_non_menu_action = action
+        if isinstance(advice, ActionAdvice):
+            self.last_non_menu_action = utilities.ACTION_LOOKUP[advice.action]
             self.last_non_menu_action_timestamp = self.time
+            self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood, feedback):
         if feedback.trouble_lifting or feedback.nothing_to_pickup:
@@ -573,16 +572,8 @@ class CustomAgent(BatchedAgent):
         else:
             self.run_states = [RunState() for i in range(0, num_envs)]
 
-    def step(self, run_state, observation, reward, done, info):
-        ARS.set_active(run_state)
-        if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
-            raise Exception("Bad glyphs shape")
-
-        if done and run_state.step_count != 0:
-            raise Exception("The runner framework should have reset the run state")
-
-        run_state.update_reward(reward)
-
+    @classmethod
+    def generate_action(cls, run_state, observation):
         blstats = BLStats(observation['blstats'])
 
         time = blstats.get('time')
@@ -630,7 +621,7 @@ class CustomAgent(BatchedAgent):
         run_state.update_observation(observation) # moved after previous glyph futzing
 
         if run_state.step_count % 1000 == 0:
-            print_stats(done, run_state, blstats)
+            print_stats(False, run_state, blstats)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
@@ -719,42 +710,51 @@ class CustomAgent(BatchedAgent):
             ### GET MENU_PLAN RETVAL ###
 
         if menu_plan_retval is None and message.has_more and not run_state.active_menu_plan.in_interactive_menu:
-            retval = utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
-            dummy_menu_plan = type('MenuPlan', (), {"name":"hit space if more", "advisor":background_advisor})()
-            run_state.log_action(retval, menu_plan=dummy_menu_plan)
-            return retval
+            advice = MenuAdvice(
+                keypress=nethack.actions.TextCharacters.SPACE,
+                from_menu_plan=run_state.active_menu_plan, # TODO Not necessarily right vs background
+            )
+            return advice
 
         if menu_plan_retval is not None: # wait to return menu_plan retval, in case our click through more is supposed to override behavior in non-interactive menu plan
-            run_state.log_action(menu_plan_retval, menu_plan=run_state.active_menu_plan)
-            return menu_plan_retval
+            advice = MenuAdvice(
+                keypress=menu_plan_retval,
+                from_menu_plan=run_state.active_menu_plan, # TODO Not necessarily right vs background
+            )
+            return advice
 
         if message.has_more:
             if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
 
         if not run_state.character:
-            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.ATTRIBUTES]
             run_state.reading_base_attributes = True
-            dummy_menu_plan = type('MenuPlan', (), {"name":"look up attributes at game start", "advisor":background_advisor})()
-            run_state.log_action(retval, menu_plan=dummy_menu_plan)
-            return retval
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=nethack.actions.Command.ATTRIBUTES,
+            )
+            return advice
 
         if run_state.scumming:
-            retval = utilities.ACTION_LOOKUP[nethack.actions.Command.QUIT]
-            scumming_menu_plan = menuplan.MenuPlan("scumming", self, [
+            scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
                 menuplan.YesMenuResponse("Really quit?")
             ])
-            run_state.set_menu_plan(scumming_menu_plan)
-            run_state.log_action(retval, menu_plan=scumming_menu_plan)
-            return retval
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=nethack.actions.Command.QUIT,
+                new_menu_plan=scumming_menu_plan,
+            )
+            return advice
 
         if run_state.wizmode_prep:
             if not run_state.wizmode_prep.prepped:
                 run_state.stall_detection_on = False
                 action, menu_plan = run_state.wizmode_prep.next_action()
-                retval = utilities.ACTION_LOOKUP[action]
-                run_state.set_menu_plan(menu_plan)
-                run_state.log_action(retval, menu_plan=menu_plan)
-                return retval
+                advice = ActionAdvice(
+                    from_advisor=None,
+                    action=action,
+                    new_menu_plan=menu_plan,
+                )
+                return advice
             else:
                 run_state.stall_detection_on = True
 
@@ -798,27 +798,43 @@ class CustomAgent(BatchedAgent):
                 #print(advice)
                 if advice.action == nethack.actions.Command.PRAY:
                     run_state.character.last_pray_time = time
-                    run_state.character.last_pray_reason = advice.advisor # advice.advisor because we want to be more specific inside composite advisors
+                    run_state.character.last_pray_reason = advice.from_advisor # advice.from_advisor because we want to be more specific inside composite advisors
                 elif advice.action == nethack.actions.Command.SEARCH:
                     level_map.log_search(player_location)
-
-                menu_plan = advice.menu_plan
 
                 if game_did_advance is True or utilities.ACTION_LOOKUP[advice.action] not in run_state.actions_without_consequence:
                     break
 
-        if isinstance(advice.advisor, advs.FallbackSearchAdvisor):
+        if isinstance(advice.from_advisor, advs.FallbackSearchAdvisor):
             #if environment.env.debug: import pdb; pdb.set_trace()
             print("WARNING: Fell through advisors to fallback search")
 
-        retval = utilities.ACTION_LOOKUP[advice.action]
+        return advice
 
-        run_state.log_action(retval, advice=advice) # don't log menu plan because this wasn't a menu plan action
+    def step(self, run_state, observation, reward, done, info):
+        ARS.set_active(run_state)
+        if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
+            raise Exception("Bad glyphs shape")
 
-        if menu_plan is not None:
-            run_state.set_menu_plan(menu_plan)
+        if done and run_state.step_count != 0:
+            raise Exception("The runner framework should have reset the run state")
 
-        return retval
+        run_state.update_reward(reward)
+
+        advice = self.generate_action(run_state, observation)
+
+        if not isinstance(advice, Advice):
+            raise Exception("Bad advice")
+
+        if advice.new_menu_plan:
+            run_state.set_menu_plan(advice.new_menu_plan)
+
+        run_state.log_action(advice)
+
+        if isinstance(advice, ActionAdvice):
+            return utilities.ACTION_LOOKUP[advice.action]
+        else:
+            return utilities.ACTION_LOOKUP[advice.keypress]
 
     def batched_step(self, observations, rewards, dones, infos):
         """

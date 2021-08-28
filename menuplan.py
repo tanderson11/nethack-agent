@@ -45,21 +45,21 @@ class MenuResponse:
 
 class EscapeMenuResponse(MenuResponse):
     def value(self, message_obj):
-        return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+        return nethack.actions.Command.ESC
 
 class YesMenuResponse(MenuResponse):
     def value(self, message_obj):
         if not message_obj.yn_question:
             # Decently common: Fast yn lingers on screen
             return None
-        return utilities.keypress_action(ord('y'))
+        return ord('y')
 
 class NoMenuResponse(MenuResponse):
     def value(self, message_obj):
         if not message_obj.yn_question:
             # Decently common: Fast yn lingers on screen
             return None
-        return utilities.keypress_action(ord('n'))
+        return ord('n')
 
 class CharacterMenuResponse(MenuResponse):
     def __init__(self, match_str, character, follow_with=None):
@@ -68,7 +68,7 @@ class CharacterMenuResponse(MenuResponse):
         self.follow_with = follow_with
 
     def value(self, message_obj):
-        return utilities.keypress_action(ord(self.character))
+        return ord(self.character)
 
 class FirstLetterChoiceMenuResponse(MenuResponse):
     pattern = re.compile('\[([a-zA-Z]).+\]')
@@ -76,8 +76,8 @@ class FirstLetterChoiceMenuResponse(MenuResponse):
         match = re.search(self.__class__.pattern, message_obj.message)
         if match:
             character = match[1]
-            return utilities.keypress_action(ord(character))
-        return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+            return ord(character)
+        return nethack.actions.Command.ESC
 
 class MoreMenuResponse(MenuResponse):
     def __init__(self, match_str, always_necessary=True):
@@ -91,7 +91,7 @@ class MoreMenuResponse(MenuResponse):
         if not message_obj.has_more:
             return None
         else:
-            return utilities.keypress_action(ord(' '))
+            return ord(' ')
 
 class DirectionMenuResponse(MenuResponse):
     def __init__(self, match_str, direction):
@@ -101,7 +101,7 @@ class DirectionMenuResponse(MenuResponse):
         self.direction = direction
 
     def value(self, message_obj):
-        return utilities.ACTION_LOOKUP[self.direction]
+        return self.direction
 
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
@@ -114,9 +114,9 @@ class PhraseMenuResponse(MenuResponse):
 
         try:
             next_chr = next(self.phrase)
-            return utilities.keypress_action(ord(next_chr))
+            return ord(next_chr)
         except StopIteration:
-            return utilities.keypress_action(ord('\r'))
+            return ord('\r')
 
 class ExtendedCommandResponse(PhraseMenuResponse):
         def __init__(self, phrase):
@@ -157,20 +157,20 @@ class MenuPlan():
             except EndOfMenu:
                 self.in_interactive_menu = False
                 self.current_interactive_menu = None
-                return utilities.keypress_action(ord('\r'))
+                return ord('\r')
             except EndOfPage:
                 self.current_interactive_menu.flip_page()
-                return utilities.keypress_action(ord('>'))
+                return ord('>')
             except MadeSelection:
                 self.in_interactive_menu = False
                 self.current_interactive_menu = None
-                return utilities.ACTION_LOOKUP[nethack.actions.TextCharacters.SPACE]
+                return nethack.actions.TextCharacters.SPACE
 
             if selected_item is not None:
                 if not self.current_interactive_menu.multi_select and not self.current_interactive_menu.confirm_choice:
                     self.in_interactive_menu = False
                     self.current_interactive_menu = None
-                return utilities.keypress_action(ord(selected_item.character))
+                return ord(selected_item.character)
 
         for response in self.menu_responses:
             action = response.action_message(message_obj)
@@ -214,7 +214,7 @@ class InteractiveMenu():
     selectors = {}
     # How should the menu plan know that we're now in the interactive menu.
     # Either because we just pressed * (which is default)
-    trigger_action = utilities.keypress_action(ord('*'))
+    trigger_action = ord('*')
     # or because we see a particular prompt on the screen, which is helpful for the pickup situation where it could go either way
     trigger_phrase = None
     # Is this an interactive menu where we can select many items?
