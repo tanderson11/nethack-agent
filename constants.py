@@ -3,6 +3,16 @@ from typing import NamedTuple
 
 GLYPHS_SHAPE = (21, 79)
 
+class TerrainProperties(enum.Flag):
+    NONE = 0
+    wall = enum.auto()
+    #room = enum.auto() # something that could be inside a room
+    #corridor = enum.auto()
+    door = enum.auto()
+    liquid = enum.auto()
+    trap = enum.auto()
+    secret_friendly = enum.auto()
+
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
     Barbarian = 'Barbarian'

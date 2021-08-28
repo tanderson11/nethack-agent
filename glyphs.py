@@ -443,18 +443,32 @@ class CMapGlyph(Glyph):
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = self.__class__.NAMES[numeral - self.__class__.OFFSET]
 
-        ## Thayer: could also do this with static methods, but either way I think we want these as static attributes to play nicely with getattr
+        self.properties = constants.TerrainProperties.NONE
+
         self.possible_secret_door = self.offset < 3
-        
-        self.is_floor = self.offset >= 19 and self.offset <= 31
+        if self.possible_secret_door:
+            self.properties &= constants.TerrainProperties.secret_friendly
 
         self.is_wall = self.offset < 12
-        # offset 12 is technically the square where a door used to be, we're going to ignore it
+        if self.is_wall:
+            self.properties &= constants.TerrainProperties.wall
+
+        self.is_floor = self.offset >= 19 and self.offset <= 31
+        self.is_upstairs = self.offset == 23 or self.offset == 25
+        self.is_downstairs = self.offset == 24 or self.offset == 26
+
+        self.is_trap = self.offset > 41 and self.offset < 65
+        if self.is_trap:
+            self.properties &= constants.TerrainProperties.trap
+
+        self.is_broken_door = self.offset == 12 # not 100% sure these are broken doors.TK
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
-        self.is_downstairs = self.offset == 24 or self.offset == 26
-        self.is_upstairs = self.offset == 23 or self.offset == 25
-        self.is_trap = self.offset > 41 and self.offset < 65
+        if self.is_broken_door or self.is_open_door or self.is_closed_door:
+            self.properties &= constants.TerrainProperties.door
+
+        if self.offset == 32 or self.offset == 34 or self.offset == 41:
+            self.properties &= constants.TerrainProperties.liquid
         
     def walkable(self, character):
         return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_downstairs or self.is_upstairs
