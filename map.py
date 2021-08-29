@@ -54,11 +54,17 @@ class DLevelMap():
     def glyphs_to_dungeon_features(glyphs, prior):
         # This treats the gd.CMapGlyph.OFFSET as unobserved. No way, AFAICT, to
         # distinguish between solid stone that we've seen with our own eyes vs. not
-        return np.where(
-            (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
+
+        dungeon_features = np.where(
+            gd.CMapGlyph.class_mask(glyphs),
             glyphs,
             prior
         )
+
+        # our prior for monsters and objects is room floor
+        #import pdb; pdb.set_trace()
+        dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
+        return dungeon_features
 
     def __init__(self, dungeon_number, level_number, glyphs):
         self.dungeon_number = dungeon_number

@@ -53,6 +53,10 @@ class Glyph():
     OFFSET = 0
     COUNT = 0
 
+    @classmethod
+    def class_mask(cls, glyphs):
+        return (glyphs > cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET

@@ -14,6 +14,7 @@ import glyphs as gd
 from map import ThreatMap
 import physics
 import utilities
+from utilities import ARS
 
 
 ACCEPTABLE_CORPSE_AGE = 40
