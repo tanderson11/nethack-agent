@@ -118,10 +118,10 @@ class DLevelMap():
             0 # solid stone / unseen
         )
 
-        #self.impassable = gd.CMapGlyph.is_impassable_check(offsets)
+        self.walls = gd.CMapGlyph.is_wall_check(offsets)
         self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
         #self.traps     = gd.CMapGlyph.is_trap_floor(offsets)
-        self.corridor   = gd.CMapGlyph.is_corridor_check(offsets)
+        self.corridors  = gd.CMapGlyph.is_corridor_check(offsets)
         self.doors      = gd.CMapGlyph.is_door_check(offsets)
 
         #import pdb; pdb.set_trace()
@@ -155,6 +155,7 @@ class DLevelMap():
     def add_room_from_square(self, square_in_room, room_type):
         room_mask = self.build_room_mask_from_square(square_in_room)
         self.add_room(room_mask, room_type)
+        #import pdb; pdb.set_trace()
 
     def get_dungeon_glyph(self, location):
         loc = self.dungeon_feature_map[location]
@@ -168,6 +169,21 @@ class DLevelMap():
         self.dungeon_feature_map[location] = glyph.numeral
         if glyph.is_downstairs or glyph.is_upstairs:
             self.update_stair_counts()
+
+    def add_warning_engraving(self, location):
+        self.warning_engravings[location] = True
+
+        # vault closet engravings appear on the floor
+        if self.room_floor[location] == True:
+            self.add_vault_closet(location)
+
+    def add_vault_closet(self, engraving_location):
+        for offset in physics.ortholinear_offsets:
+            # if 
+            if self.walls[engraving_location[0] + offset[0], engraving_location[1] + offset[1]]:
+                room_mask = np.full_like(self.walls, False, dtype=bool)
+                room_mask[engraving_location[0] + 2 * offset[0], engraving_location[1] + 2 * offset[1]] = True
+                self.add_room(room_mask, constants.SpecialRoomTypes.vault_closet)
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:

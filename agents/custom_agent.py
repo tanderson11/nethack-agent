@@ -688,7 +688,8 @@ class CustomAgent(BatchedAgent):
 
         if "Something is written here in the dust" in message.message:
             # TODO When we learn to write in the dust we need to be smarter about this
-            level_map.warning_engravings[player_location] = True
+            level_map.add_warning_engraving(player_location)
+            #level_map.warning_engravings[player_location] = True
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)

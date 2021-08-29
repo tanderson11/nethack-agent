@@ -35,3 +35,6 @@ def offset_location_by_action(location, action):
      delta = action_to_delta[action]
      new_loc = (location[0] + delta[0], location[1] + delta[1])
      return new_loc
+
+
+ortholinear_offsets = [(1,0), (0,1), (-1, 0), (0, -1)]

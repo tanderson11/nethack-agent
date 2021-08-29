@@ -458,6 +458,10 @@ class CMapGlyph(Glyph):
     def is_door_check(offsets):
         return (offsets >= 12) & (offsets <= 16)
 
+    @staticmethod
+    def is_wall_check(offsets):
+        return (offsets < 12)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
