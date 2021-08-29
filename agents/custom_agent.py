@@ -248,7 +248,7 @@ class RunState():
                 writer.writeheader()
 
     def print_action_log(self, total):
-        return "||".join([str(num) for num in self.action_log[(-1 * total):]])
+        return "||".join([num.name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
 
@@ -351,7 +351,6 @@ class RunState():
         self.latest_monster_death = None
         self.latest_monster_flight = None
 
-        self.menu_plan_log = []
         self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
         self.stall_detection_on = True
 
@@ -502,7 +501,6 @@ class RunState():
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
-                    print("Failed move no advisor with menu_plan_log {} and message:{}".format(self.menu_plan_log[-5:], message.message))
 
     def log_action(self, advice):
         self.advice_log.append(advice)
@@ -510,18 +508,16 @@ class RunState():
         # TODO lots of compatiblility cruft here
 
         if isinstance(advice, MenuAdvice):
-            self.menu_plan_log.append(advice.from_menu_plan)
-            self.action_log.append(advice.keypress)
-        else:
-            self.menu_plan_log.append(None)
-            self.action_log.append(advice.action)
+            return
 
-            if advice.action in physics.direction_actions:
-                self.last_movement_action = advice.action
+        self.action_log.append(advice.action)
 
-            self.last_non_menu_action = advice.action
-            self.last_non_menu_action_timestamp = self.time
-            self.last_non_menu_advisor = advice.from_advisor
+        if advice.action in physics.direction_actions:
+            self.last_movement_action = advice.action
+
+        self.last_non_menu_action = advice.action
+        self.last_non_menu_action_timestamp = self.time
+        self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood, feedback):
         if feedback.trouble_lifting or feedback.nothing_to_pickup:

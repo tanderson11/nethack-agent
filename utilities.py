@@ -16,6 +16,11 @@ ACTION_LOOKUP = {}
 for i, action in enumerate(nethack.ACTIONS):
     ACTION_LOOKUP[action] = i
 
+INT_TO_ACTION = {}
+
+for action in nethack.ACTIONS:
+    INT_TO_ACTION[action.value] = action
+
 ##################################
 ### For neighborhoods and maps ###
 ##################################

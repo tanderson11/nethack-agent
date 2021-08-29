@@ -170,6 +170,9 @@ class ActionAdvice(Advice):
 
     def __post_init__(self):
         utilities.ACTION_LOOKUP[self.action] # check that this exists
+        # This is kinda sketchy, should be a pre init, but fine for now
+        if np.isscalar(self.action):
+            self.action = utilities.INT_TO_ACTION[self.action]
 
 @dataclass
 class MenuAdvice(Advice):
