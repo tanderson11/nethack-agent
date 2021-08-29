@@ -332,10 +332,11 @@ class RunState():
         self.action_log = []
         self.advice_log = []
         self.search_log = []
-        self.actions_without_consequence = []
+        self.actions_without_consequence = set()
 
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
+        self.last_non_menu_action_failed_advancement = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -509,7 +510,8 @@ class RunState():
                 if environment.env.debug: import pdb; pdb.set_trace()
             else:
                 # Pickup, don't try that again
-                self.actions_without_consequence.append(self.last_non_menu_action)
+                self.last_non_menu_action_failed_advancement = True
+                self.actions_without_consequence.add(self.last_non_menu_action)
 
     def log_action(self, advice):
         self.advice_log.append(advice)
@@ -523,13 +525,13 @@ class RunState():
 
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
+        self.last_non_menu_action_failed_advancement = False
         self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood):
-        # This should only happen if a recent message updated actions_without_consequence
         if self.last_non_menu_action in self.actions_without_consequence:
-            return False
-
+            # Why are we confused about this.
+            if environment.env.debug: import pdb; pdb.set_trace()
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
@@ -539,9 +541,10 @@ class RunState():
                     game_did_advance = False
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
-            self.actions_without_consequence = []
+            self.actions_without_consequence = set()
         else:
-            self.actions_without_consequence.append(self.last_non_menu_action)
+            self.last_non_menu_action_failed_advancement = True
+            self.actions_without_consequence.add(self.last_non_menu_action)
 
         return game_did_advance
 
@@ -765,7 +768,10 @@ class CustomAgent(BatchedAgent):
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
         )
-        game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+        if run_state.last_non_menu_action_failed_advancement:
+            game_did_advance = False
+        else:
+            game_did_advance = run_state.check_gamestate_advancement(neighborhood)
 
         if run_state.last_non_menu_action == nethack.actions.Command.SEARCH:
             search_succeeded = False
