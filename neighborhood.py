@@ -15,6 +15,7 @@ from map import ThreatMap
 import physics
 import utilities
 
+
 ACCEPTABLE_CORPSE_AGE = 40
 
 class ViewField(enum.Enum):
@@ -33,6 +34,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return glyph_alike[self.vision]
         else:
             raise Exception("Bad view field")
+
+    @staticmethod
+    def extended_position_to_absolute(extended_position, player_location_in_extended, absolute_player_location):
+        offset = (extended_position[0] - player_location_in_extended[0], extended_position[1] - player_location_in_extended[1])
+        return (absolute_player_location[0] + offset[0], absolute_player_location[1] + offset[1])
+
 
     def __init__(self, time, absolute_player_location, glyphs, level_map, character, previous_glyph_on_player, latest_monster_death, latest_monster_flight, failed_moves_on_square):
         ###################
@@ -88,17 +95,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
         shopkeeper_present = is_shopkeeper.any()
 
-        extended_shop = np.full_like(extended_visible_glyphs, False, dtype='bool')
         if shopkeeper_present and on_doorway:
             it = np.nditer(is_shopkeeper, flags=['multi_index'])
             for b in it:
                 if b: # if this is a shopkeeper
-                    # draw the rectangle containing the player and shopkeeper
-                    shop_row_slice, shop_col_slice = utilities.rectangle_defined_by_corners(player_location_in_extended, it.multi_index)
-                    # check if that rectangle contains another doorway
-                    # if it doesn't, assume we're at the shop entrance
-                    if not extended_open_door[shop_row_slice, shop_col_slice].any():
-                        extended_shop[shop_row_slice, shop_col_slice] = True
+                    absolute_shopkeeper_position = self.extended_position_to_absolute(it.multi_index, self.player_location_in_extended, absolute_player_location)
+                    level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
+
+        extended_special_rooms = level_map.special_room_map[self.vision]
 
         ##############################
         ### RESTRICTED ACTION GRID ###
@@ -125,14 +129,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
-        shop = extended_shop[neighborhood_view]
+        special_rooms = extended_special_rooms[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
-        self.local_possible_secret_mask = self.extended_possible_secret_mask[self.neighborhood_view]
+        self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
         walkable_tile = extended_walkable_tile[neighborhood_view]
 
         # in the narrow sense
-        self.walkable = walkable_tile & ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) & ~shop # don't move diagonally into open doors
+        self.walkable = walkable_tile & ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) & ~(special_rooms == constants.SpecialRoomTypes.shop.value) # don't move diagonally into open doors
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
         for f in failed_moves_on_square:
