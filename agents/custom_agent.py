@@ -336,7 +336,6 @@ class RunState():
 
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
-        self.last_movement_action = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -496,8 +495,8 @@ class RunState():
                 self.latest_monster_death = None
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
-            if self.last_movement_action is not None and self.last_movement_action == self.last_non_menu_action:
-                self.failed_moves_on_square.append(self.last_movement_action)
+            if self.last_non_menu_action in physics.direction_actions:
+                self.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -511,9 +510,6 @@ class RunState():
             return
 
         self.action_log.append(advice.action)
-
-        if advice.action in physics.direction_actions:
-            self.last_movement_action = advice.action
 
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
