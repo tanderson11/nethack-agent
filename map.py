@@ -86,6 +86,7 @@ class DLevelMap():
         self.visits_count_map = np.zeros_like(glyphs)
         self.searches_count_map = np.zeros_like(glyphs)
         self.special_room_map = np.zeros_like(glyphs)
+        self.owned_doors = np.zeros_like(glyphs)
 
         self.staircases = {}
         self.warning_engravings = {}
@@ -176,10 +177,18 @@ class DLevelMap():
         # vault closet engravings appear on the floor
         if self.room_floor[location] == True:
             self.add_vault_closet(location)
+        elif self.corridors[location] == True:
+            self.add_owned_door(location)
+
+    def add_owned_door(self, engraving_location):
+        #import pdb; pdb.set_trace()
+        for offset in physics.ortholinear_offsets:
+            offset_loc = engraving_location[0] + offset[0], engraving_location[1] + offset[1]
+            if self.doors[offset_loc]:
+                self.owned_doors[offset_loc] = True
 
     def add_vault_closet(self, engraving_location):
         for offset in physics.ortholinear_offsets:
-            # if 
             if self.walls[engraving_location[0] + offset[0], engraving_location[1] + offset[1]]:
                 room_mask = np.full_like(self.walls, False, dtype=bool)
                 room_mask[engraving_location[0] + 2 * offset[0], engraving_location[1] + 2 * offset[1]] = True
