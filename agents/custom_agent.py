@@ -501,6 +501,16 @@ class RunState():
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
 
+        if message.feedback.trouble_lifting or message.feedback.nothing_to_pickup:
+            if self.last_non_menu_action in physics.direction_actions:
+                # Autopickup
+                pass
+            elif not self.last_non_menu_action == nethack.actions.Command.PICKUP:
+                if environment.env.debug: import pdb; pdb.set_trace()
+            else:
+                # Pickup, don't try that again
+                self.actions_without_consequence.append(self.last_non_menu_action)
+
     def log_action(self, advice):
         self.advice_log.append(advice)
 
@@ -515,15 +525,11 @@ class RunState():
         self.last_non_menu_action_timestamp = self.time
         self.last_non_menu_advisor = advice.from_advisor
 
-    def check_gamestate_advancement(self, neighborhood, feedback):
-        if feedback.trouble_lifting or feedback.nothing_to_pickup:
-            if not self.last_non_menu_action == nethack.actions.Command.PICKUP:
-                if environment.env.debug: import pdb; pdb.set_trace()
-            self.actions_without_consequence.append(self.last_non_menu_action)
+    def check_gamestate_advancement(self, neighborhood):
+        # This should only happen if a recent message updated actions_without_consequence
+        if self.last_non_menu_action in self.actions_without_consequence:
             return False
 
-        # if self.last_non_menu_action in self.actions_without_consequence:
-        #    return False
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
@@ -759,7 +765,7 @@ class CustomAgent(BatchedAgent):
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
         )
-        game_did_advance = run_state.check_gamestate_advancement(neighborhood, message.feedback)
+        game_did_advance = run_state.check_gamestate_advancement(neighborhood)
 
         if run_state.last_non_menu_action == nethack.actions.Command.SEARCH:
             search_succeeded = False
