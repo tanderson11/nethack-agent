@@ -3,6 +3,11 @@ from typing import NamedTuple
 
 GLYPHS_SHAPE = (21, 79)
 
+class SpecialRoomTypes(enum.Enum):
+    # shouldn't have a 0 value so the numpy array is unambiguous
+    shop = 1
+    vault_closet = 2
+
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
     Barbarian = 'Barbarian'

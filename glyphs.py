@@ -53,6 +53,10 @@ class Glyph():
     OFFSET = 0
     COUNT = 0
 
+    @classmethod
+    def class_mask(cls, glyphs):
+        return (glyphs > cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
@@ -438,23 +442,44 @@ class CMapGlyph(Glyph):
         'explode9', # 95
     ]
 
+    @staticmethod
+    def is_room_floor_check(offsets):
+        return ((offsets >= 19) & (offsets <= 35)) | ((offsets >= 39) & (offsets <= 64))
+
+    @staticmethod
+    def is_corridor_check(offsets):
+        return offsets == 21
+
+    @staticmethod
+    def is_trap_check(offsets):
+        return (offsets >= 42) and (offsets <= 64)
+
+    @staticmethod
+    def is_door_check(offsets):
+        return (offsets >= 12) & (offsets <= 16)
+
+    @staticmethod
+    def is_wall_check(offsets):
+        return (offsets < 12)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = self.__class__.NAMES[numeral - self.__class__.OFFSET]
 
-        ## Thayer: could also do this with static methods, but either way I think we want these as static attributes to play nicely with getattr
-        self.possible_secret_door = self.offset < 3
-        
-        self.is_floor = self.offset >= 19 and self.offset <= 31
-
         self.is_wall = self.offset < 12
-        # offset 12 is technically the square where a door used to be, we're going to ignore it
+
+        self.possible_secret_door = self.offset < 3
+
+        self.is_floor = self.offset >= 19 and self.offset <= 31
+        self.is_upstairs = self.offset == 23 or self.offset == 25
+        self.is_downstairs = self.offset == 24 or self.offset == 26
+
+        self.is_trap = self.offset > 41 and self.offset < 65
+
+        self.is_broken_door = self.offset == 12 # not 100% sure these are broken doors.TK
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
-        self.is_downstairs = self.offset == 24 or self.offset == 26
-        self.is_upstairs = self.offset == 23 or self.offset == 25
-        self.is_trap = self.offset > 41 and self.offset < 65
         
     def walkable(self, character):
         return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_downstairs or self.is_upstairs

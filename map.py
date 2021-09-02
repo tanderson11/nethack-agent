@@ -6,6 +6,9 @@ import environment
 import glyphs as gd
 import physics
 import utilities
+import constants
+
+from utilities import ARS
 
 class Branches(enum.Enum):
     DungeonsOfDoom = 0
@@ -51,11 +54,17 @@ class DLevelMap():
     def glyphs_to_dungeon_features(glyphs, prior):
         # This treats the gd.CMapGlyph.OFFSET as unobserved. No way, AFAICT, to
         # distinguish between solid stone that we've seen with our own eyes vs. not
-        return np.where(
-            (glyphs > gd.CMapGlyph.OFFSET) & (glyphs < gd.CMapGlyph.OFFSET + gd.CMapGlyph.COUNT),
+
+        dungeon_features = np.where(
+            gd.CMapGlyph.class_mask(glyphs),
             glyphs,
             prior
         )
+
+        # our prior for monsters and objects is room floor
+        #import pdb; pdb.set_trace()
+        dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
+        return dungeon_features
 
     def __init__(self, dungeon_number, level_number, glyphs):
         self.dungeon_number = dungeon_number
@@ -76,6 +85,9 @@ class DLevelMap():
         self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
         self.searches_count_map = np.zeros_like(glyphs)
+        self.special_room_map = np.zeros_like(glyphs)
+        self.owned_doors = np.zeros_like(glyphs)
+
         self.staircases = {}
         self.warning_engravings = {}
 
@@ -95,10 +107,26 @@ class DLevelMap():
         if self.downstairs_count > self.downstairs_target:
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
-
     
     def update(self, player_location, glyphs):
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
+
+        # Basic terrain types
+
+        offsets = np.where(
+            self.dungeon_feature_map != 0,
+            self.dungeon_feature_map - gd.CMapGlyph.OFFSET,
+            0 # solid stone / unseen
+        )
+
+        self.walls = gd.CMapGlyph.is_wall_check(offsets)
+        self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
+        #self.traps     = gd.CMapGlyph.is_trap_floor(offsets)
+        self.corridors  = gd.CMapGlyph.is_corridor_check(offsets)
+        self.doors      = gd.CMapGlyph.is_door_check(offsets)
+
+        #import pdb; pdb.set_trace()
+
         # This is expensive. If we don't get long-term utility from these, should delete it
         self.update_stair_counts()
         old_player_location = self.player_location
@@ -107,6 +135,28 @@ class DLevelMap():
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
+    def build_room_mask_from_square(self, square_in_room):
+        room_mask = np.full_like(self.dungeon_feature_map, False, dtype=bool)
+        room_mask[square_in_room] = True
+
+        while True:
+            new_mask = FloodMap.flood_one_level_from_mask(room_mask)
+            new_mask = new_mask & self.room_floor
+
+            if (new_mask == room_mask).all():
+                break
+            else:
+                room_mask = new_mask
+
+        return room_mask
+
+    def add_room(self, room_mask, room_type):
+        self.special_room_map[room_mask] = room_type.value
+
+    def add_room_from_square(self, square_in_room, room_type):
+        room_mask = self.build_room_mask_from_square(square_in_room)
+        self.add_room(room_mask, room_type)
+        #import pdb; pdb.set_trace()
 
     def get_dungeon_glyph(self, location):
         loc = self.dungeon_feature_map[location]
@@ -121,12 +171,36 @@ class DLevelMap():
         if glyph.is_downstairs or glyph.is_upstairs:
             self.update_stair_counts()
 
+    def add_warning_engraving(self, location):
+        self.warning_engravings[location] = True
+
+        # vault closet engravings appear on the floor
+        if self.room_floor[location] == True:
+            self.add_vault_closet(location)
+        elif self.corridors[location] == True:
+            self.add_owned_door(location)
+
+    def add_owned_door(self, engraving_location):
+        #import pdb; pdb.set_trace()
+        for offset in physics.ortholinear_offsets:
+            offset_loc = engraving_location[0] + offset[0], engraving_location[1] + offset[1]
+            if self.doors[offset_loc]:
+                self.owned_doors[offset_loc] = True
+
+    def add_vault_closet(self, engraving_location):
+        for offset in physics.ortholinear_offsets:
+            if self.walls[engraving_location[0] + offset[0], engraving_location[1] + offset[1]]:
+                room_mask = np.full_like(self.walls, False, dtype=bool)
+                room_mask[engraving_location[0] + 2 * offset[0], engraving_location[1] + 2 * offset[1]] = True
+                self.add_room(room_mask, constants.SpecialRoomTypes.vault_closet)
+
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
         try:
             existing = self.staircases[location]
             if existing.direction != direction:
                 if environment.env.debug:
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
+                    pass
                 # Some sort of bug
                 # descend message lingers
                 # b'fDS8NA==', 7138506629994509347, 7118309277316884218
@@ -176,7 +250,6 @@ class FloodMap():
                 flooded_mask[row_slice, col_slice] = True
 
         return flooded_mask
-
 
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
