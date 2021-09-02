@@ -366,5 +366,31 @@ class TestNeighborhood(unittest.TestCase):
     def test_attributes(self):
         self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
 
+def string_to_tty_chars(multiline_str):
+    return [[ord(c) for c in line] for line in multiline_str.split("\n")]
+
+class InveractiveMenu(unittest.TestCase):
+    def test_comestible_pickup(self):
+        text = string_to_tty_chars("""Pick up what?
+
+Comestibles
+a - an egg
+(end)
+""")
+        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), 'comestibles')
+        result = interactive_menu.search_through_rows(text)
+        import pdb; pdb.set_trace()
+
+    def test_comestible_pickup_in_shop(self):
+        text = string_to_tty_chars("""Pick up what?
+
+Comestibles
+a - an egg (for sale, 10 zorkmids)
+(end)
+""")
+        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), 'comestibles')
+        result = interactive_menu.search_through_rows(text)
+        import pdb; pdb.set_trace()
+
 if __name__ == '__main__':
     unittest.main()

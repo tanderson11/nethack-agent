@@ -329,8 +329,7 @@ class ParsingInventoryMenu(InteractiveMenu):
         'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
         'healing potions': lambda x: (isinstance(x, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
         'extra weapons': lambda x: (isinstance(x, inv.Weapon)) and (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
-
-        'comestibles': lambda x: isinstance(x, inv.Food) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
+        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.equipped_status is None or "for sale" not in x.item.equipped_status), # comestibles = food and corpses
         'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
     }
 
