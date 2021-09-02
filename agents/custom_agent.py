@@ -546,8 +546,6 @@ class RunState():
             self.last_non_menu_action_failed_advancement = True
             self.actions_without_consequence.add(self.last_non_menu_action)
 
-        return game_did_advance
-
 
 def print_stats(done, run_state, blstats):
     print(
@@ -768,10 +766,8 @@ class CustomAgent(BatchedAgent):
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
         )
-        if run_state.last_non_menu_action_failed_advancement:
-            game_did_advance = False
-        else:
-            game_did_advance = run_state.check_gamestate_advancement(neighborhood)
+        if not (run_state.last_non_menu_action_failed_advancement or run_state.last_non_menu_action == nethack.actions.Command.SEARCH):
+            run_state.check_gamestate_advancement(neighborhood)
 
         if run_state.last_non_menu_action == nethack.actions.Command.SEARCH:
             search_succeeded = False
@@ -804,7 +800,7 @@ class CustomAgent(BatchedAgent):
                 elif advice.action == nethack.actions.Command.SEARCH:
                     level_map.log_search(player_location)
 
-                if game_did_advance is True or advice.action not in run_state.actions_without_consequence:
+                if advice.action not in run_state.actions_without_consequence:
                     break
 
         if isinstance(advice.from_advisor, advs.FallbackSearchAdvisor):
