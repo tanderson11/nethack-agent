@@ -103,6 +103,26 @@ class DirectionMenuResponse(MenuResponse):
     def value(self, message_obj):
         return utilities.ACTION_LOOKUP[self.direction]
 
+class TravelNavigationMenuResponse(MenuResponse):
+    def __init__(self, match_str, initial_square, target_square):
+        super().__init__(match_str)
+
+        offsets = []
+        current_square = initial_square
+        while current_square != target_square: # check equality
+            offset = physics.Square(np.sign(np.array(target_square - initial_square)))
+            offsets.append(offset)
+            current_square += offset
+
+        self.actions = (physics.delta_to_action[x] for x in offsets)
+
+    def value(self, message_obj):
+        try:
+            next_chr = next(self.actions)
+            return utilities.keypress_action(ord(next_chr))
+        except StopIteration:
+            return utilities.keypress_action(ord('.'))
+
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
         super().__init__(match_str)

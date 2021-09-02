@@ -656,6 +656,22 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
             return Advice(self, travel, menu_plan)
         return None
 
+class TravelToBespokeUnexploredAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
+
+        desirable_unvisited = (lmap.visits == 0) & (lmap.room_floor | lmap.corridors) & (lmap.special_room_map == constants.SpecialRoomTypes.NONE)
+
+        # TK make bespoke menu plan
+        return None
+
+        menu_plan = menuplan.MenuPlan(
+            "travel down", self, [
+                menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
+            ],
+            fallback=utilities.keypress_action(ord('.')))
+
 class TravelToUnexploredSquareAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not run_state.neighborhood.level_map.need_egress():
