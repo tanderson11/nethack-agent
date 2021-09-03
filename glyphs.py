@@ -444,7 +444,8 @@ class CMapGlyph(Glyph):
 
     @staticmethod
     def is_room_floor_check(offsets):
-        return ((offsets >= 19) & (offsets <= 35)) | ((offsets >= 39) & (offsets <= 64))
+        #import pdb; pdb.set_trace()
+        return ((offsets >= 19) & (offsets <= 35) & (offsets != 21)) | ((offsets >= 39) & (offsets <= 64)) 
 
     @staticmethod
     def is_corridor_check(offsets):

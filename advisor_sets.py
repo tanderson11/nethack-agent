@@ -72,6 +72,7 @@ new_advisors = [
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
+    TravelToBespokeUnexploredAdvisor(),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,

@@ -15,6 +15,7 @@ import menuplan
 import utilities
 from utilities import ARS
 import inventory as inv
+import constants
 import re
 
 class Oracle():
@@ -661,16 +662,26 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
         travel = nethack.actions.Command.TRAVEL
         lmap = run_state.neighborhood.level_map
 
-        desirable_unvisited = (lmap.visits == 0) & (lmap.room_floor | lmap.corridors) & (lmap.special_room_map == constants.SpecialRoomTypes.NONE)
+        desirable_unvisited = np.transpose(np.where((lmap.visits_count_map == 0) & (lmap.room_floor | lmap.corridors) & (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)))
+        if ((lmap.room_floor | lmap.corridors) & (lmap.dungeon_feature_map == 0)).any():
+            import pdb; pdb.set_trace()
 
-        # TK make bespoke menu plan
-        return None
+        #import pdb; pdb.set_trace()
 
-        menu_plan = menuplan.MenuPlan(
-            "travel down", self, [
-                menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
-            ],
-            fallback=utilities.keypress_action(ord('.')))
+        #import pdb; pdb.set_trace()
+        if len(desirable_unvisited) > 0:
+            nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
+            if lmap.visits_count_map[target_square] != 0:
+                import pdb; pdb.set_trace()
+            menu_plan = menuplan.MenuPlan(
+                "travel to unexplored", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square), # offset because cursor row 0 = top line
+                ],
+                fallback=utilities.keypress_action(ord('.'))) # fallback seems broken if you ever ESC out? check TK
+
+            #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
+            return Advice(self, travel, menu_plan)
 
 class TravelToUnexploredSquareAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -680,7 +691,7 @@ class TravelToUnexploredSquareAdvisor(Advisor):
         travel = nethack.actions.Command.TRAVEL
 
         menu_plan = menuplan.MenuPlan(
-            "travel down", self, [
+            "travel to unexplored", self, [
                 menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
             ],
             fallback=utilities.keypress_action(ord('.')))

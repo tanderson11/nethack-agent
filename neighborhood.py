@@ -15,6 +15,7 @@ from map import ThreatMap
 import physics
 import utilities
 from utilities import ARS
+from physics import Square
 from typing import NamedTuple
 
 ACCEPTABLE_CORPSE_AGE = 40
@@ -22,16 +23,6 @@ ACCEPTABLE_CORPSE_AGE = 40
 class ViewField(enum.Enum):
     Local = enum.auto()
     Extended = enum.auto()
-
-class Square(NamedTuple):
-    row: int
-    col: int
-
-    def __add__(self, x):
-        return self.__class__(self[0]+x[0], self[1]+x[1])
-
-    def __sub__(self, x):
-        return self.__class__(self[0]-x[0], self[1]-x[1])
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 3

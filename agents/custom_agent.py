@@ -336,6 +336,7 @@ class RunState():
         self.advice_log = []
         self.search_log = []
         self.actions_without_consequence = []
+        self.tty_cursor_log = []
 
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
@@ -550,6 +551,9 @@ class RunState():
 
         return game_did_advance
 
+    def log_tty_cursor(self, tty_cursor):
+        self.tty_cursor = tty_cursor
+        self.tty_cursor_log.append(tuple(tty_cursor))
 
 def print_stats(done, run_state, blstats):
     print(
@@ -575,6 +579,8 @@ class CustomAgent(BatchedAgent):
 
     def step(self, run_state, observation, reward, done, info):
         ARS.set_active(run_state)
+        run_state.log_tty_cursor(observation['tty_cursor'])
+
         if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
             raise Exception("Bad glyphs shape")
 
