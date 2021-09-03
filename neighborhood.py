@@ -239,7 +239,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 for square in shortest_path:
                     threat += self.extended_threat[square]
 
-                path_action = nethack.ACTIONS[physics.delta_to_action[delta]] # TODO make this better with an action object
+                path_action = physics.delta_to_action[delta]
                 return self.Path(path_action, delta, threat)
 
     def path_to_nearest_monster(self):
