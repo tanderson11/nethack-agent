@@ -7,7 +7,7 @@ new_advisors = [
     # STONING ILL ETC
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
     # CRITICALLY INJURED
-    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[ # oracle_consultation=dumb, doesn't work
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[
         WaitAdvisor(threat_tolerance=0.),
         UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
@@ -43,6 +43,7 @@ new_advisors = [
         RandomMoveAdvisor(), # sometimes we can't find our way to the enemy and we can't get out of threat
         ]),
     ###### OUT OF DANGER ###### ()
+    WaitAdvisor(oracle_consultation=lambda o: o.low_hp and not o.am_threatened),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
         AnyWardrobeChangeAdvisor(),
@@ -72,7 +73,6 @@ new_advisors = [
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
-    TravelToBespokeUnexploredAdvisor(),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
@@ -81,6 +81,7 @@ new_advisors = [
         # like repeatedly back to warning-engraved doors. Or into shops.
         # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDownstairsAdvisor(): 1,
+        TravelToBespokeUnexploredAdvisor(): 1,
     }),
     FallbackSearchAdvisor(),
 ]

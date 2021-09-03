@@ -61,6 +61,12 @@ class Oracle():
         else: return self.can_pray_for_hp
 
     @functools.cached_property
+    def low_hp(self):
+        current_hp = self.character.current_hp
+        max_hp = self.character.max_hp
+        return current_hp < max_hp * 0.6
+
+    @functools.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0.
 
