@@ -327,12 +327,12 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class ParsingInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (isinstance(x.item, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleportation'),
+        'teleport scrolls': lambda x: (isinstance(x.item, inv.Scroll)) and (x.item.identity.name() == 'teleportation'),
         'teleport wands': lambda x: (isinstance(x.item, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleportation'),
-        'healing potions': lambda x: (isinstance(x.item, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
+        'healing potions': lambda x: (isinstance(x.item, inv.Potion)) and (x.item.identity is not None and x.item.identity.name() and "healing" in x.item.identity.name()),
         'extra weapons': lambda x: (isinstance(x.item, inv.Weapon)) and (x.item.identity is not None and (x.item.equipped_status is None or x.item.equipped_status.status != 'wielded')),
-        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.parenthetical_status is None or "for sale" not in x.item.parenthetical_status), # comestibles = food and corpses
-        'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or "for sale" not in x.item.parenthetical_status),
+        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)), # comestibles = food and corpses
+        'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)),
     }
 
     def __init__(self, run_state, selector_name=None):

@@ -19,13 +19,12 @@ class ItemLike():
         self.BUC = instance_attributes.BUC
         self.condition = instance_attributes.condition
 
+        self.parenthetical_status = instance_attributes.parenthetical_status_str
         if instance_attributes.parenthetical_status_str is not None:
             self.equipped_status = EquippedStatus(self, instance_attributes.parenthetical_status_str)
-            if self.equipped_status is None:
-                self.parenthetical_status = instance_attributes.parenthetical_status_str
         else:
-            self.parenthetical_status = None
             self.equipped_status = None
+
         # optional arguments
         self.inventory_letter = inventory_letter
 

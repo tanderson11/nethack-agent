@@ -391,19 +391,19 @@ def labeled_string_to_raw_and_expected(multiline_str):
 def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
-class InveractiveMenu(unittest.TestCase):
+class InteractiveMenu(unittest.TestCase):
     def test_pickup(self):
         # use | between selectors for items picked by many selectors
         # TK `e - a lichen corpse >> comestibles`
         labeled_text = """Pick up what?
 
 Armor
+d - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
 a - a pair of leather gloves (for sale, 30 zorkmids)
 b - a pair of buckled boots >> armor
 Weapons
 c - an uncursed dagger >> extra weapons
 Comestibles
-d - a tripe ration
 e - an egg >> comestibles
 Scrolls
 f - a scroll labeled VE FORBRYDERNE
