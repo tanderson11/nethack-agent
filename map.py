@@ -30,12 +30,14 @@ class DMap():
         self.dlevels = {}
 
     def make_level_map(self, dungeon_number, level_number, glyphs, initial_player_location):
-        lmap = DLevelMap(dungeon_number, level_number, glyphs)
+        lmap = DLevelMap(dungeon_number, level_number)
         self.dlevels[(dungeon_number, level_number)] = lmap
 
         # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
         if dungeon_number == 0 and level_number == 1:
             lmap.add_feature(initial_player_location, gd.get_by_name(gd.CMapGlyph, 'upstair'))
+
+        lmap.update(initial_player_location, glyphs)
 
         return lmap
 
@@ -74,7 +76,7 @@ class DLevelMap():
         dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
         return dungeon_features
 
-    def __init__(self, dungeon_number, level_number, glyphs):
+    def __init__(self, dungeon_number, level_number):
         self.dungeon_number = dungeon_number
         if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
             import pdb; pdb.set_trace()
@@ -87,16 +89,16 @@ class DLevelMap():
         self.upstairs_target = 1
 
         self.player_location = None
-        self.player_location_mask = np.full_like(glyphs, False, dtype='bool')
+        self.player_location_mask = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
         # These are our map layers
-        self.dungeon_feature_map = np.zeros_like(glyphs)
-        self.visits_count_map = np.zeros_like(glyphs)
-        self.searches_count_map = np.zeros_like(glyphs)
-        self.special_room_map = np.full_like(glyphs, constants.SpecialRoomTypes.NONE.value)
-        self.owned_doors = np.zeros_like(glyphs)
-        self.edible_corpse_map = np.zeros_like(glyphs)
-        self.lootable_squares_map = np.full_like(glyphs, True, dtype='bool')
+        self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE)
+        self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE)
+        self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE)
+        self.special_room_map = np.full(constants.GLYPHS_SHAPE, constants.SpecialRoomTypes.NONE.value)
+        self.owned_doors = np.zeros(constants.GLYPHS_SHAPE)
+        self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
 
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)

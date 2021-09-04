@@ -569,10 +569,9 @@ class CustomAgent(BatchedAgent):
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
+            level_map.update(player_location, observation['glyphs'])
         except KeyError:
             level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
-
-        level_map.update(player_location, observation['glyphs'])
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')

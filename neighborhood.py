@@ -75,17 +75,38 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visible_raw_glyphs = glyphs[self.vision]
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        extended_visits = level_map.visits_count_map[self.vision]
-        extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
-        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
+
+        # index of player in the full vision
+        player_location_in_extended = absolute_player_location - vision_start
+        self.player_location_in_extended = player_location_in_extended
+
+        ####################
+        # SHOPKEEPER STUFF #
+        ####################
+        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
+        shopkeeper_present = is_shopkeeper.any()
+
+        if shopkeeper_present and on_doorway:
+            it = np.nditer(is_shopkeeper, flags=['multi_index'])
+            for b in it:
+                if b: # if this is a shopkeeper
+                    absolute_shopkeeper_position = self.extended_position_to_absolute(Square(*it.multi_index), self.player_location_in_extended, absolute_player_location)
+                    level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
+
+        extended_special_rooms = level_map.special_room_map[self.vision]
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
         ###################################
 
-        # index of player in the full vision
-        player_location_in_extended = absolute_player_location - vision_start
-        self.player_location_in_extended = player_location_in_extended
+        extended_visits = level_map.visits_count_map[self.vision]
+        extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
+        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
+
+        extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
+        if extended_special_rooms[self.player_location_in_extended] != constants.SpecialRoomTypes.shop.value:
+            extended_special_rooms &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
+        extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
@@ -102,21 +123,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         self.neighborhood_view = neighborhood_view
-
-        ####################
-        # SHOPKEEPER STUFF #
-        ####################
-        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
-        shopkeeper_present = is_shopkeeper.any()
-
-        if shopkeeper_present and on_doorway:
-            it = np.nditer(is_shopkeeper, flags=['multi_index'])
-            for b in it:
-                if b: # if this is a shopkeeper
-                    absolute_shopkeeper_position = self.extended_position_to_absolute(Square(*it.multi_index), self.player_location_in_extended, absolute_player_location)
-                    level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
-
-        extended_special_rooms = level_map.special_room_map[self.vision]
 
         ##############################
         ### RESTRICTED ACTION GRID ###
@@ -144,7 +150,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
-        special_rooms = extended_special_rooms[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
@@ -153,10 +158,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # in the narrow sense
         self.walkable = walkable_tile
         self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
-        self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
-        if special_rooms[self.local_player_location] == constants.SpecialRoomTypes.shop.value:
-            self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
-        self.walkable[self.local_player_location] = False # in case we turn invisible
 
         for f in current_square.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f)
@@ -199,7 +200,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
     def path_to_targets(self, target_mask):
         if target_mask.any():
-            pathfinder = Pathfinder(self.extended_walkable | target_mask) # pretend the targets are walkable so we can actually reach them in pathfinding
+            pathfinder = Pathfinder(
+                walkable_mesh=(self.extended_walkable | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
+                doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
+            )
             it = np.nditer(target_mask, flags=['multi_index'])
 
             shortest_path = None
@@ -255,20 +259,24 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         return self.path_to_targets(self.extended_has_item_stack & (desirable_corpses | lootable_squares))
 
 class Pathfinder(AStar):
-    def __init__(self, walkable_mesh):
+    def __init__(self, walkable_mesh, doors):
         self.walkable_mesh = walkable_mesh
+        self.doors = doors
 
     def neighbors(self, node):
         box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
         upper_left = Square(box_slices[0].start, box_slices[1].start)
-        box = self.walkable_mesh[box_slices]
+        current_square = node - upper_left
+        walkable_box = self.walkable_mesh[box_slices]
+        door_box = self.doors[box_slices]
 
         neighboring_walkable_squares = []
-        it = np.nditer(box, flags=['multi_index'])
+        it = np.nditer(walkable_box, flags=['multi_index'])
         for walkable in it:
-
-            if walkable:
-                square = Square(*it.multi_index)
+            square = Square(*it.multi_index)
+            #import pdb; pdb.set_trace()
+            is_orthogonal = np.sum(np.abs(square-current_square)) == 1
+            if walkable and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
                 neighboring_walkable_squares.append(square + upper_left)
 
         return neighboring_walkable_squares

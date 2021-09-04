@@ -5,6 +5,8 @@ import enum
 from typing import NamedTuple
 import numpy as np
 
+from nle import nethack
+
 import constants
 import inventory as inv
 import map
@@ -350,23 +352,35 @@ class TestDLevelMap(unittest.TestCase):
 
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):
-        glyphs = make_glyphs()
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): room_numeral,
+            (0,2): ruby_numeral,
+        })
         current_square = neighborhood.CurrentSquare(
             arrival_time=10,
             location=(0,0),
             dcoord=(0,1)
         )
+        dmap = map.DMap()
         self.neighborhood = neighborhood.Neighborhood(
             10,
             current_square,
             glyphs,
-            map.DLevelMap(0, 1, glyphs),
+            dmap.make_level_map(0, 1, glyphs, (0,0)),
             None,
             None,
         )
 
     def test_attributes(self):
         self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
+
+    def test_pathfind(self):
+        path = self.neighborhood.path_to_desirable_objects()
+        self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
+
 
 def labeled_string_to_raw_and_expected(multiline_str):
     expected_by_selector = {}
