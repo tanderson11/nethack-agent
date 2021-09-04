@@ -283,7 +283,7 @@ def make_glyphs(vals = {}):
 
 class TestDLevelMap(unittest.TestCase):
     def setUp(self):
-        self.lmap = map.DLevelMap(0, 1, make_glyphs())
+        self.lmap = map.DMap().make_level_map(0, 2, make_glyphs(), (0,0))
 
     def test_update(self):
         upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
