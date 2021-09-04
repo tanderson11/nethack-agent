@@ -148,8 +148,6 @@ class Message():
     class Feedback():
         def __init__(self, message):
             self.diagonal_out_of_doorway_message = "You can't move diagonally out of an intact doorway." in message.message
-            if environment.env.debug and self.diagonal_out_of_doorway_message:
-                import pdb; pdb.set_trace()
             self.diagonal_into_doorway_message = "You can't move diagonally into an intact doorway." in message.message
             self.collapse_message = "You collapse under your load" in message.message
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
