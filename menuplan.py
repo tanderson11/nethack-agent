@@ -1,5 +1,6 @@
 import pdb
 import re
+import numpy as np
 
 from collections import OrderedDict
 
@@ -103,6 +104,38 @@ class DirectionMenuResponse(MenuResponse):
     def value(self, message_obj):
         return self.direction
 
+class EndOfSequence(Exception):
+    pass
+
+class TravelNavigationMenuResponse(MenuResponse):
+    @staticmethod
+    def action_generator(tty_cursor, target_square):
+        while True:
+            current_square = physics.Square(*tty_cursor) + physics.Square(-1, 0) # offset because cursor row 0 = top line
+
+            if current_square != target_square:
+                offset = physics.Square(*np.sign(np.array(target_square - current_square)))
+                yield physics.delta_to_action[offset]
+            else:
+                return
+
+    def __init__(self, match_str, tty_cursor, target_square):
+        super().__init__(match_str)
+
+        self.action_generator = self.action_generator(tty_cursor, target_square)
+
+    def value(self, message_obj):
+        try:
+            next_action = next(self.action_generator)
+            #import pdb; pdb.set_trace()
+            return next_action
+        except StopIteration:
+            if "(no travel path)" in message_obj.message or "a boulder" in message_obj.message:
+                #import pdb; pdb.set_trace()
+                return nethack.actions.Command.ESC
+            else:
+                raise EndOfSequence()
+
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
         super().__init__(match_str)
@@ -173,7 +206,11 @@ class MenuPlan():
                 return ord(selected_item.character)
 
         for response in self.menu_responses:
-            action = response.action_message(message_obj)
+            try:
+                action = response.action_message(message_obj)
+            except EndOfSequence as e:
+                return None
+
             if action is not None:
                 if response.follow_with is not None:
                     self.fallback = response.follow_with
@@ -293,6 +330,8 @@ class InteractiveMenu():
                             if environment.env.debug: import pdb; pdb.set_trace()
                             raise Exception("already made selection but not multi_select")
 
+                    #print(next_item.item)
+                    #import pdb; pdb.set_trace()
                     if not next_item.selected and self.item_selector(next_item):
                         return next_item
                 else:
@@ -325,13 +364,12 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class ParsingInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleport'),
-        'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
-        'healing potions': lambda x: (isinstance(x, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
-        'extra weapons': lambda x: (isinstance(x, inv.Weapon)) and (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
-
-        'comestibles': lambda x: isinstance(x, inv.Food) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status, # comestibles = food and corpses
-        'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
+        'teleport scrolls': lambda x: (isinstance(x.item, inv.Scroll)) and (x.item.identity.name() == 'teleportation'),
+        'teleport wands': lambda x: (isinstance(x.item, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleportation'),
+        'healing potions': lambda x: (isinstance(x.item, inv.Potion)) and (x.item.identity is not None and x.item.identity.name() and "healing" in x.item.identity.name()),
+        'extra weapons': lambda x: (isinstance(x.item, inv.Weapon)) and (x.item.identity is not None and (x.item.equipped_status is None or x.item.equipped_status.status != 'wielded')),
+        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)), # comestibles = food and corpses
+        'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)),
     }
 
     def __init__(self, run_state, selector_name=None):
@@ -354,6 +392,7 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
+    multi_select = True
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, run_state, inventory, selector_name=None, desired_letter=None):

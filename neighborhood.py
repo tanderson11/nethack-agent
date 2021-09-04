@@ -15,21 +15,12 @@ from map import ThreatMap
 import physics
 import utilities
 from utilities import ARS
+from physics import Square
 from typing import NamedTuple
 
 class ViewField(enum.Enum):
     Local = enum.auto()
     Extended = enum.auto()
-
-class Square(NamedTuple):
-    row: int
-    col: int
-
-    def __add__(self, x):
-        return self.__class__(self[0]+x[0], self[1]+x[1])
-
-    def __sub__(self, x):
-        return self.__class__(self[0]-x[0], self[1]-x[1])
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
     extended_vision = 3
@@ -152,7 +143,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # in the narrow sense
         self.walkable = walkable_tile
         self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
-        self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.shop.value) & ~(special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into special rooms
+        self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
+        if special_rooms[self.local_player_location] == constants.SpecialRoomTypes.shop.value:
+            self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
         for f in failed_moves_on_square:

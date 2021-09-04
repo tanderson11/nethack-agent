@@ -330,6 +330,7 @@ class RunState():
         self.action_log = []
         self.advice_log = []
         self.search_log = []
+        self.tty_cursor_log = []
         self.actions_without_consequence = set()
 
         self.last_non_menu_action = None
@@ -434,7 +435,7 @@ class RunState():
                 self.time_hung += 1
         else:
             self.time_hung = 0
-        if self.time_hung > 50:
+        if self.time_hung > 100:
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
@@ -540,6 +541,9 @@ class RunState():
             self.last_non_menu_action_failed_advancement = True
             self.actions_without_consequence.add(self.last_non_menu_action)
 
+    def log_tty_cursor(self, tty_cursor):
+        self.tty_cursor = tty_cursor
+        self.tty_cursor_log.append(tuple(tty_cursor))
 
 def print_stats(done, run_state, blstats):
     print(
@@ -562,7 +566,7 @@ class CustomAgent(BatchedAgent):
             self.run_states = [RunState(self.debug_envs[i]) for i in range(0, num_envs)]
         else:
             self.run_states = [RunState() for i in range(0, num_envs)]
-
+    
     @classmethod
     def generate_action(cls, run_state, observation):
         blstats = BLStats(observation['blstats'])
@@ -672,9 +676,8 @@ class CustomAgent(BatchedAgent):
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
-            # TODO When we learn to write in the dust we need to be smarter about this
-            level_map.add_warning_engraving(player_location)
-            #level_map.warning_engravings[player_location] = True
+            if level_map.visits_count_map[player_location] == 1:
+                level_map.add_warning_engraving(player_location)
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)
@@ -815,6 +818,7 @@ class CustomAgent(BatchedAgent):
             raise Exception("The runner framework should have reset the run state")
 
         run_state.update_reward(reward)
+        run_state.log_tty_cursor(observation['tty_cursor'])
 
         advice = self.generate_action(run_state, observation)
 
