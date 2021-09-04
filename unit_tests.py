@@ -366,22 +366,78 @@ class TestNeighborhood(unittest.TestCase):
     def test_attributes(self):
         self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
 
+def labeled_string_to_raw_and_expected(multiline_str):
+    expected_by_selector = {}
+    string = ""
+    for l in multiline_str.split("\n"):
+        try:
+            game_line, expected_selectors = l.split(">>")
+        except ValueError:
+            string += l + "\n"
+            continue
+
+        string += game_line.rstrip() + "\n"
+        corresponding_chr = game_line[0]
+        expected_selectors = expected_selectors.lstrip().split("|")
+        for s in expected_selectors:
+            if len(s) > 0:
+                try:
+                    expected_by_selector[s].add(corresponding_chr)
+                except KeyError:
+                    expected_by_selector[s] = set([corresponding_chr])
+
+    return string, expected_by_selector        
+
 def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
 class InveractiveMenu(unittest.TestCase):
-    def test_comestible_pickup(self):
-        text = string_to_tty_chars("""Pick up what?
+    def test_pickup(self):
+        # use | between selectors for items picked by many selectors
+        # TK `e - a lichen corpse >> comestibles`
+        labeled_text = """Pick up what?
 
+Armor
+a - a pair of leather gloves (for sale, 30 zorkmids)
+b - a pair of buckled boots >> armor
+Weapons
+c - an uncursed dagger >> extra weapons
 Comestibles
-a - an egg
+d - a tripe ration
+e - an egg >> comestibles
+Scrolls
+f - a scroll labeled VE FORBRYDERNE
+g - 2 uncursed scrolls of teleportation >> teleport scrolls
+Potions
+h - a smoky potion
+i - a blessed potion of full healing >> healing potions
+Wands
+j - an iron wand
+k - an uncursed wand of teleportation (0:6) >> teleport wands
+
 (end)
-""")
-        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), 'comestibles')
-        result = interactive_menu.search_through_rows(text)
-        import pdb; pdb.set_trace()
+"""
+        string, expected = labeled_string_to_raw_and_expected(labeled_text)
+        text = string_to_tty_chars(string)
+
+        for selector_name in menuplan.InteractivePickupMenu.selectors.keys():
+            # enforce that every selector has a test written for it
+            print(selector_name)
+            self.assertTrue(selector_name in expected.keys())
+
+            #import pdb; pdb.set_trace()
+            interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), selector_name)
+            result = interactive_menu.search_through_rows(text)
+            print(result)
+
+            # need to collate multiple results TK
+            acutally_selected_letters = set([result.character])
+
+            # check that selector correctly pulls the letters
+            self.assertEqual(acutally_selected_letters, expected[selector_name])
 
     def test_comestible_pickup_in_shop(self):
+        return 
         text = string_to_tty_chars("""Pick up what?
 
 Comestibles

@@ -293,6 +293,8 @@ class InteractiveMenu():
                             if environment.env.debug: import pdb; pdb.set_trace()
                             raise Exception("already made selection but not multi_select")
 
+                    #print(next_item.item)
+                    #import pdb; pdb.set_trace()
                     if not next_item.selected and self.item_selector(next_item):
                         return next_item
                 else:
@@ -325,12 +327,12 @@ class InteractiveEnhanceSkillsMenu(InteractiveMenu):
 
 class ParsingInventoryMenu(InteractiveMenu):
     selectors = {
-        'teleport scrolls': lambda x: (isinstance(x, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleport'),
-        'teleport wands': lambda x: (isinstance(x, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleporation'),
-        'healing potions': lambda x: (isinstance(x, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
-        'extra weapons': lambda x: (isinstance(x, inv.Weapon)) and (x.item.identity is not None and x.item.equipped_status is not None and x.item.equipped_status.status != 'wielded'),
-        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.equipped_status is None or "for sale" not in x.item.equipped_status), # comestibles = food and corpses
-        'armor': lambda x: x and isinstance(x, inv.Armor) and x.item.parenthetical_status is not None and "for sale" not in x.item.parenthetical_status,
+        'teleport scrolls': lambda x: (isinstance(x.item, inv.Scroll)) and (x.item.identity is not None and x.item.identity.name() == 'teleportation'),
+        'teleport wands': lambda x: (isinstance(x.item, inv.Wand)) and (x.item.identity is not None and x.item.identity.name() == 'teleportation'),
+        'healing potions': lambda x: (isinstance(x.item, inv.Potion)) and (x.item.identity is not None and "healing" in x.item.identity.name()),
+        'extra weapons': lambda x: (isinstance(x.item, inv.Weapon)) and (x.item.identity is not None and (x.item.equipped_status is None or x.item.equipped_status.status != 'wielded')),
+        'comestibles': lambda x: isinstance(x.item, inv.Food) and (x.item.parenthetical_status is None or "for sale" not in x.item.parenthetical_status), # comestibles = food and corpses
+        'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or "for sale" not in x.item.parenthetical_status),
     }
 
     def __init__(self, run_state, selector_name=None):
