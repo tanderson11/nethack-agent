@@ -124,11 +124,11 @@ class DLevelMap():
         return self.edible_corpse_dict[square][0].monster_glyph
 
     def record_eat_succeeded_or_failed(self, square):
-        # Needs to match the index returned by next_corpse above
+        self.edible_corpse_dict[square].pop(0)
         if not self.edible_corpse_dict[square]:
-            if environment.env.debug: import pdb; pdb.set_trace()
-        else:
-            self.edible_corpse_dict[square].pop(0)
+            # Ate it empty
+            del(self.edible_corpse_dict[square])
+            self.edible_corpse_map[square] = False
 
     def need_egress(self):
         return (self.downstairs_count < self.downstairs_target) or (self.upstairs_count < self.upstairs_target)

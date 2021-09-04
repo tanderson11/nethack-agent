@@ -623,7 +623,6 @@ class CustomAgent(BatchedAgent):
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
             if message.feedback.nevermind or message.feedback.nothing_to_eat or "You finish eating the" in message.message:
                 level_map.record_eat_succeeded_or_failed(player_location)
-        level_map.garbage_collect_corpses(time)
 
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
@@ -752,6 +751,8 @@ class CustomAgent(BatchedAgent):
                 return advice
             else:
                 run_state.stall_detection_on = True
+
+        level_map.garbage_collect_corpses(time)
 
         neighborhood = Neighborhood(
             time,
