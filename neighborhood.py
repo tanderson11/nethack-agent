@@ -87,6 +87,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
             extended_visible_glyphs
         )
+        self.extended_has_item_stack = utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) or isinstance(g, gd.CorpseGlyph), extended_visible_glyphs)
 
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
@@ -232,6 +233,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return self.path_to_targets(weak_monsters)
 
+    def path_to_desirable_objects(self):
+        desirable_corpses = self.zoom_glyph_alike(
+            self.level_map.edible_corpse_map,
+            self.ViewField.Extended
+        )
+        lootable_squares = self.zoom_glyph_alike(
+            self.level_map.lootable_squares_map,
+            self.ViewField.Extended
+        )
+        return self.path_to_targets(self.extended_has_item_stack & (desirable_corpses | lootable_squares))
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh):

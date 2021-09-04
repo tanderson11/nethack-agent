@@ -96,6 +96,7 @@ class DLevelMap():
         self.special_room_map = np.full_like(glyphs, constants.SpecialRoomTypes.NONE.value)
         self.owned_doors = np.zeros_like(glyphs)
         self.edible_corpse_map = np.zeros_like(glyphs)
+        self.lootable_squares_map = np.full_like(glyphs, True, dtype='bool')
 
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)

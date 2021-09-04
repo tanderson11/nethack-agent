@@ -624,7 +624,6 @@ class PathAdvisor(Advisor):
             if self.path_threat_tolerance is not None and path.threat > (self.path_threat_tolerance * character.current_hp):
                 return None
 
-            desired_square = (run_state.neighborhood.local_player_location[0] + path.delta[0], run_state.neighborhood.local_player_location[1] + path.delta[1])
             return ActionAdvice(from_advisor=self, action=path.path_action)
 
 class DownstairsAdvisor(Advisor):
@@ -847,6 +846,10 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         #import pdb; pdb.set_trace()
         return run_state.neighborhood.path_to_nearest_monster()
+
+class PathfindDesirableObjectsAdvisor(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        return run_state.neighborhood.path_to_desirable_objects()
 
 class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
