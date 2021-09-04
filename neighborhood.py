@@ -236,11 +236,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
             self.level_map.edible_corpse_map,
-            self.ViewField.Extended
+            ViewField.Extended
         )
         lootable_squares = self.zoom_glyph_alike(
             self.level_map.lootable_squares_map,
-            self.ViewField.Extended
+            ViewField.Extended
         )
         return self.path_to_targets(self.extended_has_item_stack & (desirable_corpses | lootable_squares))
 

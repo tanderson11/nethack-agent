@@ -114,7 +114,7 @@ class DLevelMap():
                 new_dict[k] = still_good
             else:
                 self.edible_corpse_map[k] = False
-        self.edible_corpse_map = new_dict
+        self.edible_corpse_dict = new_dict
 
     def next_corpse(self, square):
         if not self.edible_corpse_map[square]:
