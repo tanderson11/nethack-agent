@@ -66,10 +66,7 @@ new_advisors = [
         ]),
     GoDownstairsAdvisor(),
     # MOVE TO DESIRABLE
-    SequentialCompositeAdvisor(advisors=[
-        #FreshCorpseMoveAdvisor(square_threat_tolerance=0.),
-        #DesirableObjectMoveAdvisor(square_threat_tolerance=0.),
-        ]),
+    PathfindDesirableObjectsAdvisor(),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),

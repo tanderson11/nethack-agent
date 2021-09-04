@@ -372,9 +372,30 @@ class ParsingInventoryMenu(InteractiveMenu):
         'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)),
     }
 
-    def __init__(self, run_state, selector_name=None):
+    def __init__(self, run_state, selector_name=None, select_desirable=False):
         self.run_state = run_state
+        if selector_name and select_desirable:
+            raise Exception("Please only specify one of these")
         super().__init__(selector_name=selector_name)
+        def select_desirable_func(menu_item):
+            if menu_item.item is None:
+                if 'corpse' in menu_item.item_text:
+                    # This is expected. Will get better when we have CorpseIdentity implemented
+                    if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
+                        return True
+                elif environment.env.debug:
+                    if menu_item.item_text[0] in '123456789':
+                        # Known thing that we can't count yet
+                        pass
+                    else:
+                        import pdb; pdb.set_trace()
+                    return False
+                else:
+                    return False
+            else:
+                return menu_item.item.identity.desirable_identity(run_state.character)
+        if select_desirable:
+            self.item_selector = lambda x: select_desirable_func(x)
 
     class MenuItem:
         #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
@@ -385,6 +406,7 @@ class ParsingInventoryMenu(InteractiveMenu):
             self.category = category
             self.character = character
             self.selected = selected
+            self.item_text = item_text
             #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
 
