@@ -81,6 +81,10 @@ class Oracle():
         return self.neighborhood.threat_on_player > self.character.current_hp
 
     @functools.cached_property
+    def on_warning_engraving(self):
+        return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
+
+    @functools.cached_property
     def desirable_object_on_space(self):
         prev_glyph = self.neighborhood.previous_glyph_on_player
         desirable_object_on_space = (
