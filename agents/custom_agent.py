@@ -678,7 +678,7 @@ class CustomAgent(BatchedAgent):
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
-            if level_map.visits_count_map[run_state.neighborhood.absolute_player_location] == 1:
+            if level_map.visits_count_map[player_location] == 1:
                 level_map.add_warning_engraving(player_location)
 
         if "more skilled" in message.message or "most skilled" in message.message:
