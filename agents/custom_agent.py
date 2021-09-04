@@ -598,7 +598,11 @@ class CustomAgent(BatchedAgent):
                 if isinstance(raw_previous_glyph_on_player, gd.PetGlyph):
                     pass
                 elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player)):
-                    if environment.env.debug: import pdb; pdb.set_trace()
+                    if raw_previous_glyph_on_player == gd.get_by_name(gd.MonsterGlyph, 'leprechaun'):
+                        # Wild, I know, but a leprechaun can dodge us like this
+                        # "miss wildly and stumble forward"
+                        pass
+                    elif environment.env.debug: import pdb; pdb.set_trace()
                 else:
                     new_square.glyph_under_player = raw_previous_glyph_on_player
             run_state.current_square = new_square
