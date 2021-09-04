@@ -919,6 +919,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+            menuplan.PhraseMenuResponse("Create what kind of monster?", "lichen"),
         ], listening_item=w)
 
         #pdb.set_trace()
