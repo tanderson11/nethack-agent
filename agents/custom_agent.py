@@ -651,6 +651,7 @@ class CustomAgent(BatchedAgent):
                 except Exception as e:
                     print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
                 else:
+                    level_map.lootable_squares_map[recorded_death.square] = True
                     if recorded_death.monster_glyph.safe_to_eat(run_state.character):
                         level_map.record_edible_corpse(recorded_death.square, time, recorded_death.monster_glyph)
 
