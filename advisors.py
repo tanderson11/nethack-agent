@@ -81,10 +81,6 @@ class Oracle():
         return self.neighborhood.threat_on_player > self.character.current_hp
 
     @functools.cached_property
-    def on_warning_engraving(self):
-        return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
-
-    @functools.cached_property
     def desirable_object_on_space(self):
         prev_glyph = self.neighborhood.previous_glyph_on_player
         desirable_object_on_space = (
@@ -766,21 +762,11 @@ class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
 
 class OpenClosedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        # coarse check
-        if oracle.on_warning_engraving:
-            return None
-
         # don't open diagonally so we can be better about warning engravings
         door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions > 0):
             a = rng.choice(door_directions)
-            # another check: don't want to open doors if they are adjacent to an engraving
-            for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
-                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    return None
-
             return ActionAdvice(from_advisor=self, action=a)
         else:
             return None
@@ -799,11 +785,6 @@ class KickLockedDoorAdvisor(Advisor):
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions) > 0:
             a = rng.choice(door_directions)
-            for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
-                # another check: don't want to kick doors if they are adjacent to an engraving
-                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    return None
         else: # we got the locked door message but didn't find a door
             a = None
         if a is not None:
@@ -834,7 +815,6 @@ class PickupArmorAdvisor(Advisor):
                 [],
                 interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='armor'),
             )
-            #print("Armor pickup")
             return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
         return None
 
@@ -942,6 +922,5 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
         ], listening_item=w)
 
-        #pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
 
