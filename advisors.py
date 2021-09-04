@@ -938,6 +938,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+            menuplan.PhraseMenuResponse("Create what kind of monster?", "lichen"),
         ], listening_item=w)
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)

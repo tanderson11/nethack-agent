@@ -83,6 +83,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
+        self.extended_is_peaceful_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, extended_visible_glyphs)
         self.extended_possible_secret_mask = utilities.vectorized_map(
             lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
             extended_visible_glyphs
@@ -222,12 +223,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 return self.Path(path_action, delta, threat)
 
     def path_to_nearest_monster(self):
-        monsters = self.extended_is_monster.copy()
+        monsters = self.extended_is_monster & (~self.extended_is_peaceful_monster)
         monsters[self.neighborhood_view] = False
         return self.path_to_targets(monsters)
 
     def path_to_nearest_weak_monster(self):
-        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster
+        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster & (~self.extended_is_peaceful_monster)
         weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
 
         return self.path_to_targets(weak_monsters)
