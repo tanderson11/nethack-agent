@@ -1,4 +1,6 @@
+from collections import defaultdict
 import enum
+from typing import NamedTuple
 
 import numpy as np
 
@@ -49,6 +51,12 @@ class Staircase():
 
         self.direction = direction
 
+class TimedCorpse(NamedTuple):
+    ACCEPTABLE_CORPSE_AGE = 40
+
+    time: int
+    monster_glyph: gd.MonsterGlyph
+
 class DLevelMap():
     @staticmethod
     def glyphs_to_dungeon_features(glyphs, prior):
@@ -87,9 +95,34 @@ class DLevelMap():
         self.searches_count_map = np.zeros_like(glyphs)
         self.special_room_map = np.zeros_like(glyphs)
         self.owned_doors = np.zeros_like(glyphs)
+        self.edible_corpse_map = np.zeros_like(glyphs)
 
         self.staircases = {}
+        self.edible_corpse_dict = defaultdict(list)
         self.warning_engravings = {}
+
+    def record_edible_corpse(self, square, time, monster_glyph):
+        self.edible_corpse_dict[square].append(TimedCorpse(time=time, monster_glyph=monster_glyph))
+        self.edible_corpse_map[square] = True
+
+    def garbage_collect_corpses(self, time):
+        new_dict = defaultdict(list)
+        for k, v in self.edible_corpse_dict.items():
+            still_good = [corpse for corpse in v if corpse.time > (time - corpse.ACCEPTABLE_CORPSE_AGE)]
+            if still_good:
+                new_dict[k] = still_good
+            else:
+                self.edible_corpse_map[k] = False
+        self.edible_corpse_map = new_dict
+
+    def next_corpse(self, square):
+        if not self.edible_corpse_map[square]:
+            return None
+        return self.edible_corpse_dict[square][0].monster_glyph
+
+    def record_eat_succeeded_or_failed(self, square):
+        # Needs to match the index returned by next_corpse above
+        self.edible_corpse_dict[square].pop(0)
 
     def need_egress(self):
         return (self.downstairs_count < self.downstairs_target) or (self.upstairs_count < self.upstairs_target)

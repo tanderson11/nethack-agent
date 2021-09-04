@@ -359,7 +359,6 @@ class TestNeighborhood(unittest.TestCase):
             None,
             None,
             None,
-            None,
             [],
         )
 

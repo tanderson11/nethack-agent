@@ -337,6 +337,7 @@ class RunState():
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
         self.last_non_menu_action_failed_advancement = None
+        self.last_non_menu_advisor = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -348,7 +349,6 @@ class RunState():
         self.neighborhood = None
         self.global_identity_map = gd.GlobalIdentityMap()
 
-        self.latest_monster_death = None
         self.latest_monster_flight = None
 
         self.wizmode_prep = WizmodePrep() if environment.env.wizard else None
@@ -491,10 +491,6 @@ class RunState():
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
             self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
 
-        if message.feedback.nevermind or message.feedback.nothing_to_eat:
-            if isinstance(self.last_non_menu_advisor, advs.EatCorpseAdvisor):
-                self.latest_monster_death = None
-
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:
                 self.failed_moves_on_square.append(self.last_non_menu_action)
@@ -628,26 +624,29 @@ class CustomAgent(BatchedAgent):
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
 
+        if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
+            if message.feedback.nevermind or message.feedback.nothing_to_eat or "You finish eating the" in message.message:
+                level_map.record_eat_succeeded_or_failed(player_location)
+        level_map.garbage_collect_corpses(time)
+
         killed_monster_name = RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
             if not run_state.last_non_menu_action == nethack.actions.Command.FIRE:
-                try:
-                    delta = physics.action_to_delta[run_state.last_non_menu_action]
+                delta = physics.action_to_delta[run_state.last_non_menu_action]
 
-                    try:
-                        recorded_death = RecordedMonsterDeath(
-                            (player_location[0] + delta[0], player_location[1] + delta[1]),
-                            time,
-                            killed_monster_name
-                        )
-                        if recorded_death.can_corpse:
-                            run_state.latest_monster_death = recorded_death
-                    except Exception as e:
-                        print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
-                except:
-                    if environment.env.debug: import pdb; pdb.set_trace()
+                try:
+                    recorded_death = RecordedMonsterDeath(
+                        (player_location[0] + delta[0], player_location[1] + delta[1]),
+                        time,
+                        killed_monster_name
+                    )
+                except Exception as e:
+                    print("WARNING: {} for killed monster. Are we hallucinating?".format(str(e)))
+                else:
+                    if recorded_death.monster_glyph.safe_to_eat(run_state.character):
+                        level_map.record_edible_corpse(recorded_death.square, time, recorded_death.monster_glyph)
 
         fleeing_monster_name = RecordedMonsterFlight.involved_monster(message.message)
         if fleeing_monster_name:
@@ -763,7 +762,6 @@ class CustomAgent(BatchedAgent):
             level_map,
             run_state.character,
             previous_glyph_on_player,
-            run_state.latest_monster_death,
             run_state.latest_monster_flight,
             run_state.failed_moves_on_square,
         )
