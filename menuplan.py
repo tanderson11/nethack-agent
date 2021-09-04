@@ -396,3 +396,4 @@ class WizmodeIdentifyMenu(InteractiveMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Debug Identify -- unidentified or partially identified items"
+    multi_select = True
