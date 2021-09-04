@@ -355,6 +355,7 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
     trigger_action = None
     trigger_phrase = "Pick up what?"
+    multi_select = True
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, run_state, inventory, selector_name=None, desired_letter=None):
