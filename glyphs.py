@@ -797,7 +797,7 @@ class WandIdentity(ObjectIdentity):
         self.listened_actions[action] = True
 
         # engrave testing
-        if action == utilities.ACTION_LOOKUP[nethack.actions.Command.ENGRAVE]:
+        if action == nethack.actions.Command.ENGRAVE:
             # if there is an engrave message and it is in fact contained in the overheard message
             #pdb.set_trace()
             message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.apply(lambda v: pd.isnull(v) or v in message_obj.message)
