@@ -236,12 +236,26 @@ class SearchForSecretDoorAdvisor(Advisor):
 
 class SearchDeadEndAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if np.count_nonzero(run_state.neighborhood.walkable) != 1:
+        # Consider the 8-location square surrounding the player
+        # We define a dead end as a situation where a single edge holds all
+        # the walkable locations
+        walkable_count = np.count_nonzero(run_state.neighborhood.walkable)
+        if walkable_count > 3:
             return None
-        if run_state.neighborhood.zoom_glyph_alike(
+        elif walkable_count > 1:
+            edge_counts = [
+                np.count_nonzero(run_state.neighborhood.walkable[0,:]),
+                np.count_nonzero(run_state.neighborhood.walkable[-1,:]),
+                np.count_nonzero(run_state.neighborhood.walkable[:,0]),
+                np.count_nonzero(run_state.neighborhood.walkable[:,-1]),
+            ]
+            if not walkable_count in edge_counts: # i.e. if no edge holds all of them
+                return None
+        lowest_search_count = run_state.neighborhood.zoom_glyph_alike(
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
-        ).min() > 30:
+        ).min()
+        if lowest_search_count > 30:
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
