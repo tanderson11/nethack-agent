@@ -105,7 +105,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
         if extended_special_rooms[self.player_location_in_extended] != constants.SpecialRoomTypes.shop.value:
-            extended_special_rooms &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
+            extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
