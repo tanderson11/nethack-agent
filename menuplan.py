@@ -132,7 +132,7 @@ class TravelNavigationMenuResponse(MenuResponse):
         except StopIteration:
             if "(no travel path)" in message_obj.message or "a boulder" in message_obj.message:
                 #import pdb; pdb.set_trace()
-                return nethack.ACTIONS.index(nethack.actions.Command.ESC)
+                return nethack.actions.Command.ESC
             else:
                 raise EndOfSequence()
 

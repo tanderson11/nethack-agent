@@ -708,10 +708,10 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
                 "travel to unexplored", self, [
                     menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square), # offset because cursor row 0 = top line
                 ],
-                fallback=utilities.keypress_action(ord('.'))) # fallback seems broken if you ever ESC out? check TK
+                fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
 
             #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
-            return Advice(self, travel, menu_plan)
+            return ActionAdvice(self, travel, menu_plan)
 
 class TravelToUnexploredSquareAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
