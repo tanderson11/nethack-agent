@@ -1,5 +1,6 @@
 import pdb
 import re
+import numpy as np
 
 from collections import OrderedDict
 
@@ -103,6 +104,38 @@ class DirectionMenuResponse(MenuResponse):
     def value(self, message_obj):
         return self.direction
 
+class EndOfSequence(Exception):
+    pass
+
+class TravelNavigationMenuResponse(MenuResponse):
+    @staticmethod
+    def action_generator(tty_cursor, target_square):
+        while True:
+            current_square = physics.Square(*tty_cursor) + physics.Square(-1, 0) # offset because cursor row 0 = top line
+
+            if current_square != target_square:
+                offset = physics.Square(*np.sign(np.array(target_square - current_square)))
+                yield physics.delta_to_action[offset]
+            else:
+                return
+
+    def __init__(self, match_str, tty_cursor, target_square):
+        super().__init__(match_str)
+
+        self.action_generator = self.action_generator(tty_cursor, target_square)
+
+    def value(self, message_obj):
+        try:
+            next_action = next(self.action_generator)
+            #import pdb; pdb.set_trace()
+            return next_action
+        except StopIteration:
+            if "(no travel path)" in message_obj.message or "a boulder" in message_obj.message:
+                #import pdb; pdb.set_trace()
+                return nethack.actions.Command.ESC
+            else:
+                raise EndOfSequence()
+
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
         super().__init__(match_str)
@@ -173,7 +206,11 @@ class MenuPlan():
                 return ord(selected_item.character)
 
         for response in self.menu_responses:
-            action = response.action_message(message_obj)
+            try:
+                action = response.action_message(message_obj)
+            except EndOfSequence as e:
+                return None
+
             if action is not None:
                 if response.follow_with is not None:
                     self.fallback = response.follow_with

@@ -16,6 +16,9 @@ import menuplan
 import utilities
 from utilities import ARS
 import inventory as inv
+import constants
+import re
+
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -58,6 +61,12 @@ class Oracle():
 
         if current_hp == max_hp: return False
         else: return self.can_pray_for_hp
+
+    @functools.cached_property
+    def low_hp(self):
+        current_hp = self.character.current_hp
+        max_hp = self.character.max_hp
+        return current_hp < max_hp * 0.6
 
     @functools.cached_property
     def am_threatened(self):
@@ -692,6 +701,32 @@ class TravelToDownstairsAdvisor(DownstairsAdvisor):
             return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
         return None
 
+class TravelToBespokeUnexploredAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
+
+        desirable_unvisited = np.transpose(np.where((lmap.visits_count_map == 0) & (lmap.room_floor | lmap.corridors) & (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)))
+        if ((lmap.room_floor | lmap.corridors) & (lmap.dungeon_feature_map == 0)).any():
+            import pdb; pdb.set_trace()
+
+        #import pdb; pdb.set_trace()
+
+        #import pdb; pdb.set_trace()
+        if len(desirable_unvisited) > 0:
+            nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
+            if lmap.visits_count_map[target_square] != 0:
+                import pdb; pdb.set_trace()
+            menu_plan = menuplan.MenuPlan(
+                "travel to unexplored", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square), # offset because cursor row 0 = top line
+                ],
+                fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
+
+            #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
+            return ActionAdvice(self, travel, menu_plan)
+
 class TravelToUnexploredSquareAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not run_state.neighborhood.level_map.need_egress():
@@ -700,7 +735,7 @@ class TravelToUnexploredSquareAdvisor(Advisor):
         travel = nethack.actions.Command.TRAVEL
 
         menu_plan = menuplan.MenuPlan(
-            "travel down", self, [
+            "travel to unexplored", self, [
                 menuplan.CharacterMenuResponse("Where do you want to travel to?", "x"),
             ],
             fallback=ord('.')
@@ -745,21 +780,11 @@ class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
 
 class OpenClosedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        # coarse check
-        if oracle.on_warning_engraving:
-            return None
-
         # don't open diagonally so we can be better about warning engravings
         door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions > 0):
             a = rng.choice(door_directions)
-            # another check: don't want to open doors if they are adjacent to an engraving
-            for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
-                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    return None
-
             return ActionAdvice(from_advisor=self, action=a)
         else:
             return None
@@ -778,11 +803,6 @@ class KickLockedDoorAdvisor(Advisor):
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions) > 0:
             a = rng.choice(door_directions)
-            for location in run_state.neighborhood.level_map.warning_engravings.keys():
-                door_loc = physics.offset_location_by_action(run_state.neighborhood.absolute_player_location, a)
-                # another check: don't want to kick doors if they are adjacent to an engraving
-                if np.abs(door_loc[0] - location[0]) < 2 and np.abs(door_loc[1] - location[1]) < 2:
-                    return None
         else: # we got the locked door message but didn't find a door
             a = None
         if a is not None:
@@ -813,7 +833,6 @@ class PickupArmorAdvisor(Advisor):
                 [],
                 interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='armor'),
             )
-            #print("Armor pickup")
             return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
         return None
 
@@ -921,6 +940,5 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
         ], listening_item=w)
 
-        #pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
 

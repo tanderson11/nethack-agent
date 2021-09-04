@@ -93,7 +93,7 @@ class DLevelMap():
         self.dungeon_feature_map = np.zeros_like(glyphs)
         self.visits_count_map = np.zeros_like(glyphs)
         self.searches_count_map = np.zeros_like(glyphs)
-        self.special_room_map = np.zeros_like(glyphs)
+        self.special_room_map = np.full_like(glyphs, constants.SpecialRoomTypes.NONE.value)
         self.owned_doors = np.zeros_like(glyphs)
         self.edible_corpse_map = np.zeros_like(glyphs)
 
