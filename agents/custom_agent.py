@@ -585,7 +585,9 @@ class CustomAgent(BatchedAgent):
             if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
                 run_state.character.set_inventory(inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu()))
 
+        changed_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
+            change_square = True
             new_square = CurrentSquare(
                 arrival_time=time,
                 dcoord=dcoord,
@@ -598,7 +600,7 @@ class CustomAgent(BatchedAgent):
                 if isinstance(raw_previous_glyph_on_player, gd.PetGlyph):
                     pass
                 elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player)):
-                    if raw_previous_glyph_on_player == gd.get_by_name(gd.MonsterGlyph, 'leprechaun'):
+                    if raw_previous_glyph_on_player.name == 'leprechaun':
                         # Wild, I know, but a leprechaun can dodge us like this
                         # "miss wildly and stumble forward"
                         pass
@@ -621,8 +623,14 @@ class CustomAgent(BatchedAgent):
             run_state.character.update_from_observation(blstats)
 
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
+            if changed_square and environment.env.debug:
+                import pdb; pdb.set_trace()
             if message.feedback.nevermind or message.feedback.nothing_to_eat or "You finish eating the" in message.message:
                 level_map.record_eat_succeeded_or_failed(player_location)
+        elif isinstance(run_state.last_non_menu_advisor, advs.PickupDesirableItems):
+            if changed_square and environment.env.debug:
+                import pdb; pdb.set_trace()
+            level_map.lootable_squares_map[player_location] = False
 
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
@@ -772,6 +780,9 @@ class CustomAgent(BatchedAgent):
             if new_count < old_count:
                 search_succeeded = True
             run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
+
+        if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.global_identity_map, run_state.character):
+            level_map.lootable_squares_map[player_location] = False
 
         ############################
         ### NEIGHBORHOOD UPDATED ###

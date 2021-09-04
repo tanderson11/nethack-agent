@@ -86,13 +86,7 @@ class Oracle():
 
     @functools.cached_property
     def desirable_object_on_space(self):
-        prev_glyph = self.neighborhood.previous_glyph_on_player
-        desirable_object_on_space = (
-            (isinstance(prev_glyph, gd.ObjectGlyph) or isinstance(prev_glyph, gd.CorpseGlyph)) and
-            prev_glyph.desirable_object(self.run_state.global_identity_map, self.character)
-        )
-
-        return desirable_object_on_space
+        return self.neighborhood.desirable_object_on_space(self.run_state.global_identity_map, self.character)
 
     @functools.cached_property
     def have_moves(self):
@@ -378,7 +372,7 @@ class InventoryEatAdvisor(Advisor):
         return menu_plan
 
     def check_comestible(self, comestible, rng, run_state, character, oracle):
-        return True
+        return comestible.identity.safe_non_perishable(character)
 
     def advice(self, rng, run_state, character, oracle):
         eat = nethack.actions.Command.EAT
@@ -810,33 +804,17 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
-class PickupFoodAdvisor(Advisor):
+class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if oracle.desirable_object_on_space:
-            menu_plan = menuplan.MenuPlan(
-                "pick up comestibles and safe corpses",
-                self,
-                [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='comestibles'),
-            )
-            #print("Food pickup")
-            return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
-        return None
-
-class PickupArmorAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        if oracle.desirable_object_on_space: #You have much trouble lifting a splint mail.  Continue? [ynq] (q)     
-            menu_plan = menuplan.MenuPlan(
-                "pick up armor",
-                self,
-                [],
-                interactive_menu=menuplan.InteractivePickupMenu(run_state, selector_name='armor'),
-            )
-            return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
-        return None
-
-class PickupDesirableItems(PrebakedSequentialCompositeAdvisor):
-    sequential_advisors = [PickupFoodAdvisor, PickupArmorAdvisor]
+        if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
+            return
+        menu_plan = menuplan.MenuPlan(
+            "pick up all desirable objects",
+            self,
+            [],
+            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
 class HuntNearestWeakEnemyAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):

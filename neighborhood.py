@@ -62,6 +62,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.dcoord = level_map.dcoord
         self.level_map = level_map
         self.dungeon_glyph_on_player = self.level_map.get_dungeon_glyph(absolute_player_location)
+        self.stack_on_square = current_square.stack_on_square
 
         on_doorway = bool(self.dungeon_glyph_on_player and self.dungeon_glyph_on_player.is_open_door)
 
@@ -118,7 +119,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             lambda g: isinstance(g, gd.CMapGlyph) and g.possible_secret_door,
             extended_visible_glyphs
         )
-        self.extended_has_item_stack = utilities.vectorized_map(lambda g: isinstance(g, gd.ObjectGlyph) or isinstance(g, gd.CorpseGlyph), extended_visible_glyphs)
+        self.extended_has_item_stack = utilities.vectorized_map(
+            lambda g: gd.stackable_glyph(g),
+            extended_visible_glyphs
+        )
+        self.extended_boulders = utilities.vectorized_map(
+            lambda g: g == gd.RockGlyph.OFFSET, # The Boulder
+            extended_visible_raw_glyphs
+        )
 
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
@@ -247,6 +255,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return self.path_to_targets(weak_monsters)
 
+    def desirable_object_on_space(self, global_identity_map, character):
+        desirable_object_on_space = (
+            (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
+            self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
+        )
+
+        return desirable_object_on_space
+
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
             self.level_map.edible_corpse_map,
@@ -256,7 +272,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.level_map.lootable_squares_map,
             ViewField.Extended
         )
-        return self.path_to_targets(self.extended_has_item_stack & (desirable_corpses | lootable_squares))
+        return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors):
