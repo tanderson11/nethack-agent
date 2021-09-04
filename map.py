@@ -117,7 +117,7 @@ class DLevelMap():
 
     def next_corpse(self, square):
         if not self.edible_corpse_map[square]:
-            return False
+            return None
         return self.edible_corpse_dict[square][0].monster_glyph
 
     def record_eat_succeeded_or_failed(self, square):

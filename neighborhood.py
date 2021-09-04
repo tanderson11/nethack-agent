@@ -181,9 +181,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ####################
         ### CORPSE STUFF ###
         ####################
-        self.fresh_corpse_on_square_glyph = None
-        if level_map.edible_corpse_map[self.absolute_player_location]:
-            self.fresh_corpse_on_square_glyph = level_map.edible_corpse_dict[self.absolute_player_location][0].monster_glyph
+        self.fresh_corpse_on_square_glyph = level_map.next_corpse(self.absolute_player_location)
 
     def count_adjacent_searches(self, search_threshold):
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold
