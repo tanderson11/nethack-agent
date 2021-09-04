@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import NamedTuple
 
 import enum
@@ -16,7 +17,16 @@ import physics
 import utilities
 from utilities import ARS
 from physics import Square
-from typing import NamedTuple
+from typing import NamedTuple, Tuple, List
+
+@dataclass
+class CurrentSquare:
+    dcoord: Tuple[int, int]
+    location: Tuple[int, int]
+    arrival_time: int
+    glyph_under_player: gd.Glyph = None
+    stack_on_square: bool = False
+    failed_moves_on_square: List[int] = field(default_factory=list)
 
 class ViewField(enum.Enum):
     Local = enum.auto()
@@ -40,14 +50,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         offset = extended_position - player_location_in_extended
         return absolute_player_location + offset
 
-    def __init__(self, time, absolute_player_location, glyphs, level_map, character, previous_glyph_on_player, latest_monster_flight, failed_moves_on_square):
+    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight):
         ###################
         ### COPY FIELDS ###
         ###################
 
-        absolute_player_location = Square(*absolute_player_location)
+        absolute_player_location = Square(*current_square.location)
 
-        self.previous_glyph_on_player = previous_glyph_on_player
+        self.previous_glyph_on_player = current_square.glyph_under_player
         self.absolute_player_location = absolute_player_location
         self.dcoord = level_map.dcoord
         self.level_map = level_map
@@ -148,7 +158,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.walkable &= ~(special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         self.walkable[self.local_player_location] = False # in case we turn invisible
 
-        for f in failed_moves_on_square:
+        for f in current_square.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f)
             try:
                 self.walkable[failed_target] = False

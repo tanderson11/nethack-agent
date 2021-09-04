@@ -14,7 +14,7 @@ from advisors import Advice, ActionAdvice, MenuAdvice
 import advisor_sets
 
 import menuplan
-from neighborhood import Neighborhood
+from neighborhood import Neighborhood, CurrentSquare
 import utilities
 import physics
 import inventory as inv
@@ -342,12 +342,11 @@ class RunState():
         
         self.time_hung = 0
         self.time_stuck = 0
-        self.failed_moves_on_square = []
         self.rng = self.make_seeded_rng()
-        self.glyph_under_player = None
         self.time_did_advance = True
 
         self.neighborhood = None
+        self.current_square = None
         self.global_identity_map = gd.GlobalIdentityMap()
 
         self.latest_monster_flight = None
@@ -469,22 +468,9 @@ class RunState():
         return retval
 
     def update_neighborhood(self, neighborhood):
-        if self.neighborhood is not None:
-            old_loc = self.neighborhood.absolute_player_location
-        else:
-            old_loc = None
-        
         self.neighborhood = neighborhood
-
-        if self.neighborhood is not None and old_loc == self.neighborhood.absolute_player_location:
-            self.time_stuck += 1
-        else:
-            self.time_stuck = 0
-            self.failed_moves_on_square = []
-
-        if self.time_stuck > 200:
-            pass
-            #if environment.env.debug: import pdb; pdb.set_trace()
+        if self.current_square.location != neighborhood.absolute_player_location:
+            raise Exception("Somehow got out of sync")
 
     def handle_message(self, message):
         self.message_log.append(message.message)
@@ -494,7 +480,7 @@ class RunState():
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:
-                self.failed_moves_on_square.append(self.last_non_menu_action)
+                self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -581,11 +567,6 @@ class CustomAgent(BatchedAgent):
         level_number = blstats.get("level_number")
         dcoord = (dungeon_number, level_number)
 
-        if run_state.neighborhood is not None: # don't exceute on first turn
-            level_changed = (dcoord != run_state.neighborhood.dcoord)
-        else:
-            level_changed = True
-
         try:
             level_map = run_state.dmap.dlevels[dcoord]
         except KeyError:
@@ -605,15 +586,23 @@ class CustomAgent(BatchedAgent):
             if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
                 run_state.character.set_inventory(inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu()))
 
-        # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
-        if run_state.glyphs is not None:
-            if level_changed: # if we jumped dungeon levels, we don't know the glyph; if our run state ended same thing
-                run_state.glyph_under_player = None
-            else:
+        if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
+            new_square = CurrentSquare(
+                arrival_time=time,
+                dcoord=dcoord,
+                location=player_location,
+            )
+            # If still on the same level, know what's under us
+            if run_state.last_non_menu_action != nethack.actions.Command.TRAVEL and run_state.neighborhood and run_state.neighborhood.dcoord == dcoord:
+                # we're intentionally using the pre-update run_state here to get a little memory of previous glyphs
                 raw_previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
-                if not isinstance(raw_previous_glyph_on_player, gd.MonsterGlyph):
-                    run_state.glyph_under_player = raw_previous_glyph_on_player
-        previous_glyph_on_player = run_state.glyph_under_player
+                if isinstance(raw_previous_glyph_on_player, gd.PetGlyph):
+                    pass
+                elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player)):
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                else:
+                    new_square.glyph_under_player = raw_previous_glyph_on_player
+            run_state.current_square = new_square
 
         run_state.update_observation(observation) # moved after previous glyph futzing
 
@@ -632,6 +621,9 @@ class CustomAgent(BatchedAgent):
             if message.feedback.nevermind or message.feedback.nothing_to_eat or "You finish eating the" in message.message:
                 level_map.record_eat_succeeded_or_failed(player_location)
         level_map.garbage_collect_corpses(time)
+
+        if "Things that are here:" in message.message or "There are several objects here." in message.message:
+            run_state.current_square.stack_on_square = True
 
         killed_monster_name = RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
@@ -760,13 +752,11 @@ class CustomAgent(BatchedAgent):
 
         neighborhood = Neighborhood(
             time,
-            player_location,
+            run_state.current_square,
             observation['glyphs'],
             level_map,
             run_state.character,
-            previous_glyph_on_player,
             run_state.latest_monster_flight,
-            run_state.failed_moves_on_square,
         )
         if not (run_state.last_non_menu_action_failed_advancement or run_state.last_non_menu_action == nethack.actions.Command.SEARCH):
             run_state.check_gamestate_advancement(neighborhood)

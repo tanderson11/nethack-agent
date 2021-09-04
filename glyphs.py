@@ -969,3 +969,9 @@ def get_by_name(klass, name):
             pdb.set_trace()
         raise Exception("bad glyph name")
     return glyph
+
+def stackable_glyph(glyph):
+    if isinstance(glyph, ObjectGlyph): return True
+    if isinstance(glyph, CorpseGlyph): return True
+    if isinstance(glyph, StatueGlyph): return True
+    return False

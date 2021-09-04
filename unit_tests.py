@@ -351,15 +351,18 @@ class TestDLevelMap(unittest.TestCase):
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):
         glyphs = make_glyphs()
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
         self.neighborhood = neighborhood.Neighborhood(
             10,
-            (0, 0),
+            current_square,
             glyphs,
             map.DLevelMap(0, 1, glyphs),
             None,
             None,
-            None,
-            [],
         )
 
     def test_attributes(self):
