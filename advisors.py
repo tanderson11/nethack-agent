@@ -372,11 +372,14 @@ class InventoryEatAdvisor(Advisor):
         return menu_plan
 
     def check_comestible(self, comestible, rng, run_state, character, oracle):
+        if comestible.identity is None:
+            return True
+
         return comestible.identity.safe_non_perishable(character)
 
     def advice(self, rng, run_state, character, oracle):
         eat = nethack.actions.Command.EAT
-        food = character.inventory.get_oclass(inv.Food) # not eating corpses atm TK TK
+        food = character.inventory.get_oclass(inv.Food)
 
         for comestible in food:
             if comestible and self.check_comestible(comestible, rng, run_state, character, oracle):
