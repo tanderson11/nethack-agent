@@ -435,10 +435,14 @@ class CMapGlyph(Glyph):
         'explode9', # 95
     ]
 
-    @staticmethod
-    def is_room_floor_check(offsets):
+    @classmethod
+    def is_room_floor_check(cls, offsets):
         #import pdb; pdb.set_trace()
-        return ((offsets >= 19) & (offsets <= 35) & (offsets != 21)) | ((offsets >= 39) & (offsets <= 64)) 
+        return ((offsets >= 19) & (offsets <= 35)) | ((offsets >= 39) & (offsets <= 64)) & (~cls.is_trap_check(offsets)) & (~cls.is_liquid_check(offsets))
+
+    @staticmethod
+    def is_liquid_check(offsets):
+        return (offsets == 41) | (offsets == 32) | (offsets == 34)
 
     @staticmethod
     def is_corridor_check(offsets):
@@ -446,7 +450,7 @@ class CMapGlyph(Glyph):
 
     @staticmethod
     def is_trap_check(offsets):
-        return (offsets >= 42) and (offsets <= 64)
+        return (offsets >= 42) & (offsets <= 64) & (offsets != 58) # magic portal not a trap
 
     @staticmethod
     def is_door_check(offsets):
