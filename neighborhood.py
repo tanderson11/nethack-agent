@@ -232,10 +232,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                         shortest_path = path
                         shortest_length = path_length
 
-            if shortest_path is None: # couldn't pathfind to any
+            if shortest_path is None or len(shortest_path) == 1: # couldn't pathfind to any / already on target
                 return None
             else:
                 first_square_in_path = shortest_path[1] # the 0th square is just your starting location
+
                 delta = first_square_in_path - self.player_location_in_extended
 
                 threat = 0.
