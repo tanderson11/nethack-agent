@@ -5,6 +5,8 @@ import enum
 from typing import NamedTuple
 import numpy as np
 
+from nle import nethack
+
 import constants
 import inventory as inv
 import map
@@ -281,7 +283,7 @@ def make_glyphs(vals = {}):
 
 class TestDLevelMap(unittest.TestCase):
     def setUp(self):
-        self.lmap = map.DLevelMap(0, 1, make_glyphs())
+        self.lmap = map.DMap().make_level_map(0, 2, make_glyphs(), (0,0))
 
     def test_update(self):
         upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
@@ -350,20 +352,35 @@ class TestDLevelMap(unittest.TestCase):
 
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):
-        glyphs = make_glyphs()
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): room_numeral,
+            (0,2): ruby_numeral,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        dmap = map.DMap()
         self.neighborhood = neighborhood.Neighborhood(
             10,
-            (0, 0),
+            current_square,
             glyphs,
-            map.DLevelMap(0, 1, glyphs),
+            dmap.make_level_map(0, 1, glyphs, (0,0)),
             None,
             None,
-            None,
-            [],
         )
 
     def test_attributes(self):
         self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
+
+    def test_pathfind(self):
+        path = self.neighborhood.path_to_desirable_objects()
+        self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
+
 
 def labeled_string_to_raw_and_expected(multiline_str):
     expected_by_selector = {}
@@ -391,19 +408,16 @@ def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
 class InteractiveMenu(unittest.TestCase):
-    def test_pickup(self):
-        # use | between selectors for items picked by many selectors
-        # TK `e - a lichen corpse >> comestibles`
-        labeled_text = """Pick up what?
+    labeled_text = """Pick up what?
 
 Armor
-d - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
-a - a pair of leather gloves (for sale, 30 zorkmids)
-b - a pair of buckled boots >> armor
+a - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
+b - a pair of leather gloves (for sale, 30 zorkmids)
+c - a pair of buckled boots >> armor
 Weapons
-c - an uncursed dagger >> extra weapons
+d - an uncursed dagger >> extra weapons
 Comestibles
-e - an egg >> comestibles
+e - a food ration >> comestibles
 Scrolls
 f - a scroll labeled VE FORBRYDERNE
 g - 2 uncursed scrolls of teleportation >> teleport scrolls
@@ -416,7 +430,12 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands
 
 (end)
 """
-        string, expected = labeled_string_to_raw_and_expected(labeled_text)
+
+    def test_pickup(self):
+        # use | between selectors for items picked by many selectors
+        # TK `e - a lichen corpse >> comestibles`
+
+        string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
 
         for selector_name in menuplan.InteractivePickupMenu.selectors.keys():
@@ -435,17 +454,22 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands
             # check that selector correctly pulls the letters
             self.assertEqual(acutally_selected_letters, expected[selector_name])
 
-    def test_comestible_pickup_in_shop(self):
-        return 
-        text = string_to_tty_chars("""Pick up what?
+    def test_pickup_desirable(self):
+        string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
+        text = string_to_tty_chars(string)
+        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), select_desirable=True)
+        results = []
+        for i in range(0, 20):
+            try:
+                result = interactive_menu.search_through_rows(text)
+            except menuplan.EndOfMenu:
+                break
+            string = string.replace(f"{result.character} - ", f"{result.character} + ")
+            text = string_to_tty_chars(string)
+            results.append(result)
+        # The armor and food ration
+        self.assertEqual(4, len(results))
 
-Comestibles
-a - an egg (for sale, 10 zorkmids)
-(end)
-""")
-        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), 'comestibles')
-        result = interactive_menu.search_through_rows(text)
-        import pdb; pdb.set_trace()
 
 if __name__ == '__main__':
     unittest.main()

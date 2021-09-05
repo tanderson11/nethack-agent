@@ -194,8 +194,11 @@ class ObjectGlyph(Glyph):
     def walkable(self, character):
         return True
 
-    def desirable_object(self, global_identity_map, character):
-        return False
+    def desirable_glyph(self, global_identity_map, character):
+        identity = global_identity_map.identity_by_numeral[self.numeral]
+        if not identity:
+            import pdb; pdb.set_trace()
+        return identity.desirable_identity(character)
 
     @classmethod
     def names(cls):
@@ -249,9 +252,6 @@ class ArmorGlyph(ObjectGlyph):
     COUNT = 79
     class_number = 3
 
-    def desirable_object(self, global_identity_map, character):
-        return True
-
 class RingGlyph(ObjectGlyph):
     OFFSET = ArmorGlyph.OFFSET + ArmorGlyph.COUNT
     COUNT = 28
@@ -271,22 +271,6 @@ class FoodGlyph(ObjectGlyph):
     OFFSET = ToolGlyph.OFFSET + ToolGlyph.COUNT
     COUNT = 33
     class_number = 7
-
-    def safe_non_perishable(self, global_identity_map, character):
-        identity = global_identity_map.identity_by_numeral[self.numeral]
-        if identity is None:
-            return False
-
-        if identity and character.sick_from_tripe() and identity.name() == "tripe ration":
-            return False
-
-        if identity and ("glob" in identity.name() or identity.name() == "egg"):
-            return False
-
-        return True
-
-    def desirable_object(self, global_identity_map, character):
-        return self.safe_non_perishable(global_identity_map, character)
 
 class PotionGlyph(ObjectGlyph):
     OFFSET = FoodGlyph.OFFSET + FoodGlyph.COUNT
@@ -313,6 +297,9 @@ class CoinGlyph(ObjectGlyph):
     COUNT = 1
     class_number = 12
 
+    def desirable_glyph(self, global_identity_map, character):
+        return True
+
 class GemGlyph(ObjectGlyph):
     OFFSET = CoinGlyph.OFFSET + CoinGlyph.COUNT
     COUNT = 36
@@ -334,10 +321,16 @@ class ChainGlyph(ObjectGlyph):
     COUNT = 1
     class_number = 16
 
+    def desirable_glyph(self, global_identity_map, character):
+        return False
+
 class VenomGlyph(ObjectGlyph):
     OFFSET = ChainGlyph.OFFSET + ChainGlyph.COUNT
     COUNT = 2
     class_number = 17
+
+    def desirable_glyph(self, global_identity_map, character):
+        return False
 
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
@@ -517,15 +510,18 @@ class CorpseGlyph(Glyph):
     OFFSET = nethack.GLYPH_BODY_OFF
     COUNT = nethack.NUMMONS
 
+    always_safe_non_perishable_offsets = [155, 322] # lichens and lizards!
+
     def __init__(self, numeral):
         super().__init__(numeral)
 
-        self.always_safe_non_perishable = (self.offset in [155, 322]) # lichens and lizards!
+        self.always_safe_non_perishable = (self.offset in self.always_safe_non_perishable_offsets)
 
     def walkable(self, character):
         return True
 
-    def desirable_object(self, global_identity_map, character):
+    # TODO hard-coding this for now until we have a CorpseIdentity that we can use
+    def desirable_glyph(self, global_identity_map, character):
         return self.always_safe_non_perishable
 
 class RiddenGlyph(MonsterAlikeGlyph):
@@ -761,6 +757,9 @@ class ObjectIdentity():
         else:
             return None
 
+    def desirable_identity(self, character):
+        return False
+
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
@@ -778,6 +777,21 @@ class PotionIdentity(ObjectIdentity):
 
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
+
+    def safe_non_perishable(self, character):
+        if character.sick_from_tripe() and self.name() == "tripe ration":
+            return False
+
+        if "glob" in self.name() or self.name() == "egg":
+            return False
+
+        return True
+
+    def desirable_identity(self, character):
+        if "glob" in self.name() or self.name() == "egg":
+            return False
+
+        return True
 
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
@@ -831,6 +845,9 @@ class ArmorIdentity(ObjectIdentity):
 
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')
+
+    def desirable_identity(self, character):
+        return True
 
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
@@ -969,3 +986,9 @@ def get_by_name(klass, name):
             pdb.set_trace()
         raise Exception("bad glyph name")
     return glyph
+
+def stackable_glyph(glyph):
+    if isinstance(glyph, ObjectGlyph): return True
+    if isinstance(glyph, CorpseGlyph): return True
+    if isinstance(glyph, StatueGlyph): return True
+    return False
