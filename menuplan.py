@@ -389,6 +389,12 @@ class ParsingInventoryMenu(InteractiveMenu):
                         pass
                     elif 'spellbook' in menu_item.item_text:
                         pass
+                    elif 'small glob' in menu_item.item_text:
+                        pass
+                    elif 'statue' in menu_item.item_text:
+                        pass
+                    elif 'figurine' in menu_item.item_text:
+                        pass
                     else:
                         import pdb; pdb.set_trace()
                     return False

@@ -713,7 +713,12 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
         travel = nethack.actions.Command.TRAVEL
         lmap = run_state.neighborhood.level_map
 
-        desirable_unvisited = np.transpose(np.where((lmap.visits_count_map == 0) & (lmap.room_floor | lmap.corridors) & (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)))
+        desirable_unvisited = np.transpose(np.where(
+            (lmap.visits_count_map == 0) &
+            (lmap.room_floor | lmap.corridors) &
+            (~lmap.boulder_map) &
+            (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)
+        ))
         if ((lmap.room_floor | lmap.corridors) & (lmap.dungeon_feature_map == 0)).any():
             import pdb; pdb.set_trace()
 
