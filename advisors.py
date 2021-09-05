@@ -69,6 +69,14 @@ class Oracle():
         return current_hp < max_hp * 0.6
 
     @functools.cached_property
+    def nuisance_condition(self):
+        return (
+            self.blstats.check_condition(nethack.BL_MASK_HALLU) or
+            self.blstats.check_condition(nethack.BL_MASK_STUN) or
+            self.blstats.check_condition(nethack.BL_MASK_CONF)
+        )
+
+    @functools.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0.
 
@@ -99,11 +107,17 @@ class Oracle():
 
     @functools.cached_property
     def urgent_major_trouble(self):
-        return self.blstats.check_condition(nethack.BL_MASK_STONE)
+        return (
+            self.blstats.check_condition(nethack.BL_MASK_STONE) or
+            self.blstats.check_condition(nethack.BL_MASK_SLIME) or
+            self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
+            # TODO Requires NLE upgrade:
+            # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
+        )
 
     @functools.cached_property
     def major_trouble(self):
-        return "You feel feverish." in self.message.message
+        return self.character.afflicted_with_lycanthropy
 
     @functools.cached_property
     def can_enhance(self):

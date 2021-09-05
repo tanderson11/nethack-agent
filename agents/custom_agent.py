@@ -37,6 +37,23 @@ if environment.env.debug:
 # pile_limit
 
 class BLStats():
+    """// From botl.h.
+    mn.attr("BL_MASK_STONE") = py::int_(static_cast<int>(BL_MASK_STONE));
+    mn.attr("BL_MASK_SLIME") = py::int_(static_cast<int>(BL_MASK_SLIME));
+    mn.attr("BL_MASK_STRNGL") = py::int_(static_cast<int>(BL_MASK_STRNGL));
+    mn.attr("BL_MASK_FOODPOIS") =
+        py::int_(static_cast<int>(BL_MASK_FOODPOIS));
+    mn.attr("BL_MASK_TERMILL") = py::int_(static_cast<int>(BL_MASK_TERMILL));
+    mn.attr("BL_MASK_BLIND") = py::int_(static_cast<int>(BL_MASK_BLIND));
+    mn.attr("BL_MASK_DEAF") = py::int_(static_cast<int>(BL_MASK_DEAF));
+    mn.attr("BL_MASK_STUN") = py::int_(static_cast<int>(BL_MASK_STUN));
+    mn.attr("BL_MASK_CONF") = py::int_(static_cast<int>(BL_MASK_CONF));
+    mn.attr("BL_MASK_HALLU") = py::int_(static_cast<int>(BL_MASK_HALLU));
+    mn.attr("BL_MASK_LEV") = py::int_(static_cast<int>(BL_MASK_LEV));
+    mn.attr("BL_MASK_FLY") = py::int_(static_cast<int>(BL_MASK_FLY));
+    mn.attr("BL_MASK_RIDE") = py::int_(static_cast<int>(BL_MASK_RIDE));
+    mn.attr("BL_MASK_BITS") = py::int_(static_cast<int>(BL_MASK_BITS));"""
+
     bl_meaning = [
         'hero_col', 'hero_row', 'strength_25', 'strength_125', 'dexterity', 'constitution',
         'intelligence', 'wisdom', 'charisma', 'score', 'hitpoints', 'max_hitpoints', 'depth', 
@@ -681,6 +698,12 @@ class CustomAgent(BatchedAgent):
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
                 level_map.add_warning_engraving(player_location)
+
+        if "You feel feverish." in message.message:
+            run_state.character.afflicted_with_lycanthropy = True
+
+        if "You feel purified." in message.message:
+            run_state.character.afflicted_with_lycanthropy = False
 
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)

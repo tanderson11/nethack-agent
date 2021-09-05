@@ -387,6 +387,8 @@ class ParsingInventoryMenu(InteractiveMenu):
                     if menu_item.item_text[0] in '123456789':
                         # Known thing that we can't count yet
                         pass
+                    elif 'spellbook' in menu_item.item_text:
+                        pass
                     else:
                         import pdb; pdb.set_trace()
                     return False
