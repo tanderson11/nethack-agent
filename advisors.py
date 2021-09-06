@@ -81,8 +81,12 @@ class Oracle():
         return self.neighborhood.threat_on_player > 0.
 
     @functools.cached_property
+    def recently_damaged(self):
+        return self.run_state.last_damage_timestamp is None or (self.run_state.time - self.run_state.last_damage_timestamp > 10)
+
+    @functools.cached_property
     def am_safe(self):
-        return not self.weak_with_hunger and not self.am_threatened and self.character.current_hp > self.character.max_hp * 2/3
+        return not self.weak_with_hunger and not self.am_threatened and self.character.current_hp > self.character.max_hp * 2/3 and not self.recently_damaged
 
     @functools.cached_property
     def life_threatened(self):

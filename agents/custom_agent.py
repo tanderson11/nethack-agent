@@ -347,6 +347,7 @@ class RunState():
         self.action_log = []
         self.advice_log = []
         self.search_log = []
+        self.hp_log = []
         self.tty_cursor_log = []
         self.actions_without_consequence = set()
 
@@ -354,6 +355,8 @@ class RunState():
         self.last_non_menu_action_timestamp = None
         self.last_non_menu_action_failed_advancement = None
         self.last_non_menu_advisor = None
+
+        self.last_damage_timestamp = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -443,9 +446,13 @@ class RunState():
         # neighborhood equality assessed by glyphs and player location
 
         blstats = BLStats(observation['blstats'].copy())
+        new_time = blstats.get('time')
+
+        self.hp_log.append(blstats.get('hitpoints'))
+        if len(self.hp_log) > 1 and self.hp_log[-1] < self.hp_log[-2]:
+            self.last_damage_timestamp = new_time
 
         # Potentially useful for checking stalls
-        new_time = blstats.get('time')
         if self.time == new_time:
             if self.stall_detection_on:
                 self.time_hung += 1
@@ -534,7 +541,6 @@ class RunState():
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
                 neighborhood_diverged = self.neighborhood.absolute_player_location != neighborhood.absolute_player_location or (self.neighborhood.glyphs != neighborhood.glyphs).any()
-                #pdb.set_trace()
                 if not neighborhood_diverged:
                     game_did_advance = False
 
