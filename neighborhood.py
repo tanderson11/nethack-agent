@@ -124,9 +124,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             lambda g: gd.stackable_glyph(g),
             extended_visible_glyphs
         )
-        self.extended_boulders = utilities.vectorized_map(
-            lambda g: g == gd.RockGlyph.OFFSET, # The Boulder
-            extended_visible_raw_glyphs
+        self.extended_boulders = self.zoom_glyph_alike(
+            level_map.boulder_map,
+            ViewField.Extended
         )
 
         # radius 1 box around player in vision glyphs

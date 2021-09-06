@@ -22,6 +22,7 @@ class Character():
     experience_level: int = 1
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
+    afflicted_with_lycanthropy: bool = False
 
     def set_innate_intrinsics(self):
         new_intrinsics = constants.Intrinsics.NONE
