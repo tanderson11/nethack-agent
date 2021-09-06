@@ -711,8 +711,13 @@ class CustomAgent(BatchedAgent):
         if "You feel purified." in message.message:
             run_state.character.afflicted_with_lycanthropy = False
 
+        if "You feel more confident" in message.message or "could be more dangerous" in message.message:
+            run_state.character.can_enhance = True
+
         if "more skilled" in message.message or "most skilled" in message.message:
             print(message.message)
+            if "more dangerous" not in message.message:
+                run_state.character.can_enhance = False
 
         if "corpse tastes" in message.message:
             print(message.message)

@@ -124,11 +124,6 @@ class Oracle():
         return self.character.afflicted_with_lycanthropy
 
     @functools.cached_property
-    def can_enhance(self):
-        can_enhance = "You feel more confident" in self.message.message or "could be more dangerous" in self.message.message
-        return can_enhance
-
-    @functools.cached_property
     def in_gnomish_mines(self):
         in_gnomish_mines = self.blstats.get('dungeon_number') == 2
         return in_gnomish_mines
@@ -335,7 +330,7 @@ class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if not oracle.can_enhance:
+        if not run_state.character.can_enhance:
             return None
 
         enhance = nethack.actions.Command.ENHANCE
