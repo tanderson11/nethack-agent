@@ -430,57 +430,52 @@ class SlotCluster():
         
         return blockers
 
-class ArmamentSlots(SlotCluster):
-    slot_type_mapping = OrderedDict({
-        "shirt": ShirtSlot,
-        "suit": SuitSlot,
-        "cloak": Slot,
-        "off-hand": Slot,
-        "hand": Slot,
-        "gloves": Slot,
-        "helmet": Slot,
-        "boots": Slot,
-    })
-    involved_classes = [Armor] # until I add weapons TK TK
-    #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
+class SlotFactory():
+    @staticmethod
+    def make_from_inventory(slot_class, inventory):
+        worn_by_slot = {}
 
-'''
-class ItemCollection():
-    def __init__(self, items):
-        self.items = items
+        for oclass in slot_class.involved_classes:
+            class_contents = inventory.get_oclass(oclass)
 
-class Inventory():
-    @classmethod
-    def make_inventory(cls, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
-        items = []
+            for item in class_contents:
+                if item is not None and item.equipped_status is not None:
+                    slot = item.equipped_status.slot
 
-        for numeral, letter, raw_string in zip(self.inv_glyphs[oclass_idx], self.inv_letters[oclass_idx], self.inv_strs[oclass_idx]):
-                item_str = ItemParser.decode_inventory_item(raw_string)
-                if inv_glyphs is None:
-                    item = ItemParser.make_item_with_string(self.global_identity_map, item_str, inventory_letter=letter)
-                else:
-                    item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
+                    if slot is not None: # alternatively wielded and other weird things can have none slot
+                        worn_by_slot[slot] = item
 
-                items.append(item)
+        return slot_class(**worn_by_slot)
 
-    def __init__(self, items):
-        self.items = items
+class ArmamentSlots(NamedTuple):
+    shirt:    Armor = None
+    suit:     Armor = None
+    cloak:    Armor = None
+    off_hand: Item  = None
+    hand:     Item  = None
+    gloves:   Armor = None
+    helmet:   Armor = None
+    boots:    Armor = None
+    quiver:   Item  = None
 
-        self.items_by_class = {type(item):item for item in self.items}
+    blockers_by_name = {
+        "shirt": ['suit', 'cloak'],
+        "suit" : ['cloak'],
+    }
 
-    @functools.cached_property
-    def armaments(self):
-        return self.get_slots('armaments')
+    involved_classes = [Armor, Weapon, Tool]
 
-class GroundInventory(Inventory):
-    pass
-'''
+    def get_blockers(self, slot_name):
+        blockers = [getattr(self, b) for b in self.blockers_by_name.get(slot_name, [])]
+        blockers.append(getattr(self, slot_name)) # a slot blocks itself
+        blockers = [b for b in blockers if b is not None]
+
+        return blockers
 
 class PlayerInventory():
     slot_cluster_mapping = {
         'armaments': ArmamentSlots,
     }
-
 
     def __init__(self, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
         self.items_by_class = {}
@@ -494,15 +489,13 @@ class PlayerInventory():
         self.inv_oclasses = inv_oclasses
         self.inv_glyphs = inv_glyphs
 
-    def wants_glyph(self, character, glyph):
-        pass
-
     @functools.cached_property
     def armaments(self):
         return self.get_slots('armaments')
 
-    def wants_item(self, character, item):
-        pass
+    class AttireProposal(NamedTuple):
+        proposed_items: list = []
+        proposal_blockers: list = []
 
     def proposed_attire_changes(self, character):
         armor = self.get_oclass(Armor)
@@ -517,12 +510,12 @@ class PlayerInventory():
                     unequipped_by_slot[slot] = [item]
 
         if len(unequipped_by_slot.keys()) == 0:
-            return [], []
+            return self.AttireProposal()
 
         proposed_items = []
         proposal_blockers = []
-        for slot in self.armaments.slot_type_mapping.keys(): # ordered dict by difficulty to access
-            unequipped_in_slot = unequipped_by_slot.get(slot, [])
+        for slot_name, current_occupant in zip(self.armaments._fields, self.armaments):
+            unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
 
             if len(unequipped_in_slot) > 0:
                 most_desirable = None
@@ -533,33 +526,40 @@ class PlayerInventory():
                         max_desirability = desirability
                         most_desirable = item
 
-                current_occupant = self.armaments.slots[slot].occupant
                 if current_occupant is not None:
                     current_desirability = current_occupant.instance_desirability_to_wear(character)
                 else:
-                    current_occupant = None
                     current_desirability = 0
 
                 if max_desirability > current_desirability:
-                    slot = self.armaments.slots[slot]
-                    blockers = self.armaments.blocked_by_letters(slot, self)
+                    blockers = self.armaments.get_blockers(slot_name)
 
                     proposed_items.append(most_desirable)
                     proposal_blockers.append(blockers)
 
-        return proposed_items, proposal_blockers
+        return self.AttireProposal(proposed_items, proposal_blockers)
 
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
-    def get_item(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+    def get_items(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         oclass = self.get_oclass(oclass)
+        matches = []
 
         for item in oclass:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
-                    return item
+                matches.append(item)
+
+        return matches
+
+    def get_item(self, *args, **kwargs):
+        items = self.get_items(*args, **kwargs)
+        if len(items) > 0:
+            return items[0]
+        else:
+            return None
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
@@ -593,19 +593,19 @@ class PlayerInventory():
             self.items_by_class[object_class] = class_contents
             return class_contents
 
-    def get_slots(self, slot_cluster_name):
+    def get_slots(self, group_name):
         try:
-            return self.slot_groups_by_name[slot_cluster_name] # if we've already baked the slots
+            return self.slot_groups_by_name[group_name] # if we've already baked the slots
         except KeyError:
-            slots = self.__class__.slot_cluster_mapping[slot_cluster_name](self)
-            self.slot_groups_by_name[slot_cluster_name] = slots
+            slots = SlotFactory.make_from_inventory(self.slot_cluster_mapping[group_name], self)
+            self.slot_groups_by_name[group_name] = slots
             return slots
 
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
-        hand_occupant = armaments.slots['hand'].occupant
+        hand_occupant = armaments.hand
 
-        if not hand_occupant:
+        if hand_occupant is None:
             return None
 
         if hand_occupant.equipped_status.status == 'wielded':

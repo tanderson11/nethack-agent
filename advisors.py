@@ -400,7 +400,7 @@ class EnchantArmorAdvisor(Advisor):
                         return None
             
             menu_plan = menuplan.MenuPlan("read enchant armor", self, [
-                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_armor_scroll.letter))
+                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_armor_scroll.inventory_letter))
             ])
             return ActionAdvice(self, read, menu_plan)
 
@@ -413,8 +413,6 @@ class EnchantWeaponAdvisor(Advisor):
         if enchant_weapon_scroll is not None:
             armaments = character.inventory.get_slots('armaments')
 
-            import pdb; pdb.set_trace()
-
             for item in armaments:
                 if isinstance(item, inv.Weapon):
                     # don't enchant if it could implode an item
@@ -423,7 +421,7 @@ class EnchantWeaponAdvisor(Advisor):
                         return None
             
             menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
-                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_weapon_scroll.letter))
+                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_weapon_scroll.inventory_letter))
             ])
             return ActionAdvice(self, read, menu_plan)
 
