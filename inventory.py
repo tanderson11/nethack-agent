@@ -394,7 +394,7 @@ class Slot():
         prefix = "{}:".format(self.name)
         if self.occupant is None:
             return prefix + 'nothing'
-        return prefix + chr(self.occupant)
+        return prefix + str(self.occupant)
 
 class SuitSlot(Slot):
     blockers = ['cloak']
@@ -415,12 +415,11 @@ class SlotCluster():
                 else:
                     if item.equipped_status is not None:
                         occ_slot = item.equipped_status.slot
-                        #print(occ_slot)
-                        #print(occ_slot is not None)
+
                         if occ_slot is not None:
                             slots[occ_slot].add_occupant(item)
 
-        #pdb.set_trace()
+        #import pdb; pdb.set_trace()
         self.slots = slots
 
     def blocked_by_letters(self, slot, inventory):
@@ -485,6 +484,7 @@ class PlayerInventory():
 
     def __init__(self, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
         self.items_by_class = {}
+        self.items_by_letter = {}
         self.slot_groups_by_name = {}
 
         self.global_identity_map = global_identity_map
@@ -570,6 +570,7 @@ class PlayerInventory():
         except KeyError:
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
+            import pdb; pdb.set_trace()
             for i in range(len(self.inv_strs[oclass_idx])):
                 letter, raw_string = self.inv_letters[oclass_idx][i], self.inv_strs[oclass_idx][i]
                 if self.inv_glyphs is not None:
@@ -586,6 +587,7 @@ class PlayerInventory():
                     else:
                         item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
                     class_contents.append(item)
+                    self.items_by_letter[letter] = item
                 else:
                     import pdb; pdb.set_trace() # why did we ever check this? why are we here?
 

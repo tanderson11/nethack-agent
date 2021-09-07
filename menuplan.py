@@ -406,16 +406,12 @@ class ParsingInventoryMenu(InteractiveMenu):
             self.item_selector = lambda x: select_desirable_func(x)
 
     class MenuItem:
-        #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
-        # 'a rusty corroded +1 long sword (weapon in hand)'
-        # 'an uncursed very rusty +0 ring mail (being worn)'
         def __init__(self, ambient_menu, category, character, selected, item_text):
             run_state = ambient_menu.run_state
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
-            #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
 
 class InteractivePickupMenu(ParsingInventoryMenu):

@@ -407,6 +407,11 @@ def labeled_string_to_raw_and_expected(multiline_str):
 def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
+
+class TestArmorProposals(unittest.TestCase):
+    def test(self):
+        pass
+
 class InteractiveMenu(unittest.TestCase):
     labeled_text = """Pick up what?
 
