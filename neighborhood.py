@@ -276,6 +276,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
 
+    def lootable_current_square(self):
+        return self.level_map.lootable_squares_map[self.absolute_player_location]
+
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors):
         self.walkable_mesh = walkable_mesh
