@@ -439,11 +439,16 @@ class SlotFactory():
             class_contents = inventory.get_oclass(oclass)
 
             for item in class_contents:
+
                 if item is not None and item.equipped_status is not None:
                     slot = item.equipped_status.slot
 
                     if slot is not None: # alternatively wielded and other weird things can have none slot
-                        worn_by_slot[slot] = item
+                        if isinstance(slot, list):
+                            for s in slot:
+                                worn_by_slot[s] = item
+                        else:
+                            worn_by_slot[slot] = item
 
         return slot_class(**worn_by_slot)
 
@@ -521,12 +526,15 @@ class PlayerInventory():
                 most_desirable = None
                 max_desirability = None
                 for item in unequipped_in_slot:
-                    desirability = item.instance_desirability_to_wear(character)
+                    if isinstance(item, Armor):
+                        desirability = item.instance_desirability_to_wear(character)
+                    else:
+                        desirability = 0
                     if max_desirability is None or desirability > max_desirability:
                         max_desirability = desirability
                         most_desirable = item
 
-                if current_occupant is not None:
+                if current_occupant is not None and isinstance(current_occupant, Armor):
                     current_desirability = current_occupant.instance_desirability_to_wear(character)
                 else:
                     current_desirability = 0
@@ -615,7 +623,7 @@ class PlayerInventory():
 
     def to_hit_modifiers(self, character, monster):
         weapon = self.wielded_weapon()
-        if weapon:
+        if weapon is not None:
             to_hit = 0 or weapon.enhancement
         else:
             to_hit = 0
