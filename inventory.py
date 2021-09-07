@@ -570,7 +570,6 @@ class PlayerInventory():
         except KeyError:
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
-            import pdb; pdb.set_trace()
             for i in range(len(self.inv_strs[oclass_idx])):
                 letter, raw_string = self.inv_letters[oclass_idx][i], self.inv_strs[oclass_idx][i]
                 if self.inv_glyphs is not None:

@@ -608,7 +608,7 @@ class CustomAgent(BatchedAgent):
                 inv_letters = observation['inv_letters']
                 inv_oclasses = observation['inv_oclasses']
 
-                if blstats.am_hallu:
+                if blstats.am_hallu():
                     run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs))
                 else:
                     inv_glyphs = observation['inv_glyphs'].copy()
