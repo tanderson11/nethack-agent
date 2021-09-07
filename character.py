@@ -109,7 +109,7 @@ class Character():
 
         if self.base_class == constants.BaseRole.Monk:
             armaments = self.inventory.get_slots('armaments')
-            if not armaments.slots['suit'].occupied and not armaments.slots['off-hand'].occupied: # TK check if our off-hand is genuinely a shield
+            if armaments.suit is None and armaments.off_hand is None: # TK check if our off-hand is genuinely a shield
                 to_hit += self.experience_level / 3 + 2
 
         return to_hit
