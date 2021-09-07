@@ -620,7 +620,8 @@ class CustomAgent(BatchedAgent):
                 raw_previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
                 if isinstance(raw_previous_glyph_on_player, gd.PetGlyph):
                     pass
-                elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player)):
+                elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player) or isinstance(raw_previous_glyph_on_player, gd.WarningGlyph)):
+                    # Re: warning glyphs, current situations where we walk onto them include piercers
                     if raw_previous_glyph_on_player.name == 'leprechaun':
                         # Wild, I know, but a leprechaun can dodge us like this
                         # "miss wildly and stumble forward"
