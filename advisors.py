@@ -347,9 +347,9 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
         print("Trying to identify")
         
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
-            menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(item.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
 
         return ActionAdvice(self, read, menu_plan)
 
@@ -393,7 +393,6 @@ class EnchantArmorAdvisor(Advisor):
         if enchant_armor_scroll is not None:
             armaments = character.inventory.get_slots('armaments')
 
-            import pdb; pdb.set_trace()
             for item in armaments:
                 if isinstance(item, inv.Armor):
                     if item.enhancement > 3: # don't enchant if it could implode an item

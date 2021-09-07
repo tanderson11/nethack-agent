@@ -623,8 +623,8 @@ class PlayerInventory():
 
     def to_hit_modifiers(self, character, monster):
         weapon = self.wielded_weapon()
-        if weapon is not None:
-            to_hit = 0 or weapon.enhancement
+        if weapon is not None and weapon.enhancement is not None:
+            to_hit = weapon.enhancement
         else:
             to_hit = 0
         # TK rings of increased accuracy
