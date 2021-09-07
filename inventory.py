@@ -445,26 +445,54 @@ class ArmamentSlots(SlotCluster):
     involved_classes = [Armor] # until I add weapons TK TK
     #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
 
+'''
+class ItemCollection():
+    def __init__(self, items):
+        self.items = items
+
+class Inventory():
+    @classmethod
+    def make_inventory(cls, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
+        items = []
+
+        for numeral, letter, raw_string in zip(self.inv_glyphs[oclass_idx], self.inv_letters[oclass_idx], self.inv_strs[oclass_idx]):
+                item_str = ItemParser.decode_inventory_item(raw_string)
+                if inv_glyphs is None:
+                    item = ItemParser.make_item_with_string(self.global_identity_map, item_str, inventory_letter=letter)
+                else:
+                    item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
+
+                items.append(item)
+
+    def __init__(self, items):
+        self.items = items
+
+        self.items_by_class = {type(item):item for item in self.items}
+
+    @functools.cached_property
+    def armaments(self):
+        return self.get_slots('armaments')
+
+class GroundInventory(Inventory):
+    pass
+'''
+
 class PlayerInventory():
     slot_cluster_mapping = {
         'armaments': ArmamentSlots,
     }
 
-    def __init__(self, run_state, observation, am_hallu):
-        self.am_hallu = am_hallu
 
-        self.items_by_letter = {}
+    def __init__(self, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
         self.items_by_class = {}
-
         self.slot_groups_by_name = {}
 
-        self.inv_strs = observation['inv_strs'].copy()
-        self.inv_letters = observation['inv_letters']
-        self.inv_oclasses = observation['inv_oclasses']
-        self.inv_glyphs = observation['inv_glyphs'].copy()
+        self.global_identity_map = global_identity_map
 
-        self.observation = observation
-        self.global_identity_map = run_state.global_identity_map
+        self.inv_strs = inv_strs
+        self.inv_letters = inv_letters
+        self.inv_oclasses = inv_oclasses
+        self.inv_glyphs = inv_glyphs
 
     def wants_glyph(self, character, glyph):
         pass
@@ -490,7 +518,6 @@ class PlayerInventory():
 
         if len(unequipped_by_slot.keys()) == 0:
             return [], []
-
 
         proposed_items = []
         proposal_blockers = []
@@ -527,6 +554,13 @@ class PlayerInventory():
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
+    def get_item(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+        oclass = self.get_oclass(oclass)
+
+        for item in oclass:
+            if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
+                    return item
+
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
 
@@ -536,17 +570,24 @@ class PlayerInventory():
         except KeyError:
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
-            for numeral, letter, raw_string in zip(self.inv_glyphs[oclass_idx], self.inv_letters[oclass_idx], self.inv_strs[oclass_idx]):
+            for i in range(len(self.inv_strs[oclass_idx])):
+                letter, raw_string = self.inv_letters[oclass_idx][i], self.inv_strs[oclass_idx][i]
+                if self.inv_glyphs is not None:
+                    numeral = self.inv_glyphs[oclass_idx][i]
+                else:
+                    numeral = None
+
                 item_str = ItemParser.decode_inventory_item(raw_string)
 
                 if item_str:
                     # if we're hallucinating, the glyph_numerals are garbage
-                    if self.am_hallu:
+                    if numeral is None:
                         item = ItemParser.make_item_with_string(self.global_identity_map, item_str, inventory_letter=letter)
                     else:
                         item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
-                    self.items_by_letter[letter] = item
                     class_contents.append(item)
+                else:
+                    import pdb; pdb.set_trace() # why did we ever check this? why are we here?
 
             self.items_by_class[object_class] = class_contents
             return class_contents

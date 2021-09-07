@@ -604,7 +604,15 @@ class CustomAgent(BatchedAgent):
         # Two cases when we reset inventory: new run or something changed
         if run_state.character:
             if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
-                run_state.character.set_inventory(inv.PlayerInventory(run_state, observation, am_hallu=blstats.am_hallu()))
+                inv_strs = observation['inv_strs'].copy()
+                inv_letters = observation['inv_letters']
+                inv_oclasses = observation['inv_oclasses']
+
+                if blstats.am_hallu:
+                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs))
+                else:
+                    inv_glyphs = observation['inv_glyphs'].copy()
+                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs))
 
         changed_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
@@ -660,7 +668,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if not run_state.last_non_menu_action == nethack.actions.Command.FIRE:
+            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.READ]:
                 delta = physics.action_to_delta[run_state.last_non_menu_action]
 
                 try:
