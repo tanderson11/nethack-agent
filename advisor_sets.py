@@ -49,7 +49,7 @@ new_advisors = [
         AnyWardrobeChangeAdvisor(),
         IdentifyPotentiallyMagicArmorAdvisor(),
         ReadKnownBeneficialScrolls(),
-        ReadUnidentifiedScrollsAdvisor()
+        #ReadUnidentifiedScrollsAdvisor()
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
