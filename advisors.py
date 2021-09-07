@@ -829,6 +829,8 @@ class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
             return
+        if not run_state.neighborhood.lootable_current_square():
+            return
         menu_plan = menuplan.MenuPlan(
             "pick up all desirable objects",
             self,
