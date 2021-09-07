@@ -6,6 +6,8 @@ import pdb
 import glyphs as gd
 import environment
 import numpy as np
+import constants
+import pandas as pd
 
 from utilities import ARS
 
@@ -84,15 +86,87 @@ class Potion(Item):
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
 
-    def melee_damage(self, monster):
+    def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
-        weapon_damage += 0 or self.enhancement
+        enhancement = self.enhancement if self.enhancement is not None else 0
+        #import pdb; pdb.set_trace()
+        weapon_damage += 0 or enhancement
 
         # TK know about silver damage etc
         return weapon_damage
 
+    def instance_desirability_to_wield(self, character):
+        # What's the basic gist? What's with the magic 17?
+        # If you aren't really a weapon (you're darts or something), you have negative des
+        # If we're restricted in your skill, you have -1 des
+        # If we're basic in your skill, you have average damage + enhancement des
+        # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
+        # and your des is 17 + average damage + enhancement
+
+        if self.identity.is_ammunition or self.identity.is_ranged:
+            return -10
+
+        if character.base_class == constants.BaseRole.Monk:
+            return -1
+
+        associated_skill = self.identity.skill
+        if pd.isnull(associated_skill):
+            return -1
+
+        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[associated_skill]]
+        if max_rank > constants.SkillRank.basic.value:
+            max_rank = constants.SkillRank.skilled.value
+
+        enhancement = self.enhancement
+        if enhancement is None:
+            enhancement = 0
+        
+        return max_rank * 17 + (enhancement + self.identity.avg_melee_damage(None))
+
+class BareHands(Weapon):
+    def __init__(self):
+        self.enhancement = 0
+        self.inventory_letter = '-'
+
+    def which_skill(self, character):
+        bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
+        martial_arts_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['martial arts']]
+
+        if bare_hands_rank > martial_arts_rank:
+            bare_hands_skill = 'bare hands'
+        elif martial_arts_rank > bare_hands_rank:
+            bare_hands_skill = 'martial arts'
+
+        return bare_hands_skill
+
+    def instance_desirability_to_wield(self, character):
+        bare_hands_skill = self.which_skill(character)
+
+        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[bare_hands_skill]]
+        if max_rank > constants.SkillRank.basic.value:
+            max_rank = constants.SkillRank.skilled.value
+
+        return max_rank * 17 + self.melee_damage(character, None)
+
+    def melee_damage(self, character, monster):
+        bare_hands_skill = self.which_skill(character)
+        # TK use the actual skill -> damage table
+        if bare_hands_skill == 'bare hands':
+            damage = 1.5
+        else:
+            damage = 2.5
+        return damage
+
+
 class Tool(Item):
     glyph_class = gd.ToolGlyph
+
+    def melee_damage(self, character, monster_spoiler):
+        # TK know about pick-axe and unicorn horn
+        return 1
+
+    def instance_desirability_to_wield(self, character):
+        return 0
 
 class Gem(Item):
     glyph_class = gd.GemGlyph
@@ -198,8 +272,6 @@ class ItemParser():
     category_by_glyph_class = {v:k for k,v in glyph_class_by_category.items() if isinstance(v, type)}
     category_by_glyph_class[gd.FoodGlyph] = 'Comestibles'
     category_by_glyph_class[gd.CorpseGlyph] = 'Comestibles'
-
-    #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
@@ -502,6 +574,31 @@ class PlayerInventory():
         proposed_items: list = []
         proposal_blockers: list = []
 
+    def proposed_weapon_changes(self, character):
+        current_weapon = self.wielded_weapon
+
+        current_desirability = current_weapon.instance_desirability_to_wield(character)
+
+        most_desirable = current_weapon
+        max_desirability = current_desirability
+
+        extra_weapons = self.get_items(Weapon, instance_selector=lambda i: i.equipped_status is None or i.equipped_status.status != 'wielded')
+        if len(extra_weapons) == 0:
+            return None
+
+
+        for weapon in extra_weapons:
+            desirability = weapon.instance_desirability_to_wield(character)
+            if desirability > max_desirability:
+                most_desirable = weapon
+                max_desirability = desirability
+
+        if most_desirable != current_weapon:
+            #import pdb; pdb.set_trace()
+            return most_desirable
+        else:
+            return None
+
     def proposed_attire_changes(self, character):
         armor = self.get_oclass(Armor)
 
@@ -609,12 +706,13 @@ class PlayerInventory():
             self.slot_groups_by_name[group_name] = slots
             return slots
 
+    @functools.cached_property
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
         hand_occupant = armaments.hand
 
         if hand_occupant is None:
-            return None
+            return BareHands()
 
         if hand_occupant.equipped_status.status == 'wielded':
             return hand_occupant
@@ -622,8 +720,8 @@ class PlayerInventory():
             if environment.env.debug: pdb.set_trace()
 
     def to_hit_modifiers(self, character, monster):
-        weapon = self.wielded_weapon()
-        if weapon is not None and weapon.enhancement is not None:
+        weapon = self.wielded_weapon
+        if weapon.enhancement is not None:
             to_hit = weapon.enhancement
         else:
             to_hit = 0

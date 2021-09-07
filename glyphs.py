@@ -859,6 +859,9 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx):
         super().__init__(idx)
 
+        self.is_ammunition = self.find_values('AMMUNITION')
+        self.is_ranged = self.find_values('RANGED')
+        self.skill = self.find_values('SKILL')
         self.slot = self.find_values('SLOT')
 
         second_slot = self.find_values('SECOND_SLOT')
@@ -872,10 +875,9 @@ class WeaponIdentity(ObjectIdentity):
         if has_second_slot:
             self.slot = [self.slot, second_slot]
 
-
     def avg_melee_damage(self, monster):
         # TK know about monster size
-        return self.find_values('SAVG')
+        return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {

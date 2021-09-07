@@ -1,6 +1,7 @@
 from typing import Optional
 from typing import NamedTuple
 
+import pandas as pd
 from dataclasses import dataclass
 
 import constants
@@ -20,10 +21,14 @@ class Character():
     last_pray_time: Optional[int] = None
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
+    class_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
+
+    def set_class_skills(self):
+        self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
 
     def set_innate_intrinsics(self):
         new_intrinsics = constants.Intrinsics.NONE
@@ -123,15 +128,8 @@ class Character():
         melee_hit_probability = min(self.melee_to_hit(monster_spoiler)/20, 1)
         melee_hit_probability = max(0, melee_hit_probability)
 
-        weapon = self.inventory.wielded_weapon()
-        if weapon is None:
-            # Bare hands / martial arts logic NOT INCLUDING SKILLS, which should be covered later
-            if self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai:
-                damage = 2.5
-            else:
-                damage = 1.5
-        else:
-            damage = weapon.melee_damage(monster_spoiler)
+        weapon = self.inventory.wielded_weapon
+        damage = weapon.melee_damage(self, monster_spoiler)
 
         # TK damage from skills
         damage += self.attributes.melee_damage_modifiers()

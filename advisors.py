@@ -955,6 +955,19 @@ class FallbackSearchAdvisor(Advisor):
         search = nethack.actions.Command.SEARCH
         return ActionAdvice(from_advisor=self, action=search)
 
+class WieldBetterWeaponAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        wield = nethack.actions.Command.WIELD
+        best_weapon = character.inventory.proposed_weapon_changes(character)
+        if best_weapon is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("wield weaon", self, [
+            menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
+            ], listening_item=best_weapon)
+
+        return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
+
 class WearUnblockedArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         proposed_items, proposal_blockers = character.inventory.proposed_attire_changes(character)

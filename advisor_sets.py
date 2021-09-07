@@ -16,6 +16,8 @@ new_advisors = [
         #EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
+    # WEAPON IMPROVEMENT
+    WieldBetterWeaponAdvisor(),
     # WEAK
     CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, threat_tolerance=0.05),
     # HIGHLY THREATENED
