@@ -210,7 +210,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def path_to_targets(self, target_mask):
         if target_mask.any():
             pathfinder = Pathfinder(
-                walkable_mesh=(self.extended_walkable | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
+                walkable_mesh=((self.extended_walkable & ~self.extended_boulders) | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
                 doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
             )
             it = np.nditer(target_mask, flags=['multi_index'])
