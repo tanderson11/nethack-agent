@@ -717,7 +717,8 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
         desirable_unvisited = np.transpose(np.where(
             (lmap.visits_count_map == 0) &
-            (lmap.room_floor | lmap.corridors) &
+            (lmap.room_floor | lmap.corridors | lmap.doors) &
+            (~lmap.owned_doors) &
             (~lmap.boulder_map) &
             (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)
         ))
