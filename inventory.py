@@ -103,7 +103,7 @@ class Weapon(Item):
         # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
         # and your des is 17 + average damage + enhancement
 
-        if identity.BUC == 'cursed':
+        if self.BUC == 'cursed':
             return -10
 
         if self.identity.is_ammunition or self.identity.is_ranged:

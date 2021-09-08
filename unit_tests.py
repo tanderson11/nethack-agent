@@ -460,9 +460,18 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands
             self.assertEqual(acutally_selected_letters, expected[selector_name])
 
     def test_pickup_desirable(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+        run_state = agents.custom_agent.RunState()
+        run_state.character = character
+
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
-        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), select_desirable=True)
+        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
         results = []
         for i in range(0, 20):
             try:
