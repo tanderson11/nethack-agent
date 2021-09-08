@@ -82,7 +82,7 @@ class Oracle():
 
     @functools.cached_property
     def recently_damaged(self):
-        return self.run_state.last_damage_timestamp is None or (self.run_state.time - self.run_state.last_damage_timestamp > 10)
+        return self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 10)
 
     @functools.cached_property
     def am_safe(self):
