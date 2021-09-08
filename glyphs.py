@@ -710,6 +710,9 @@ class ObjectIdentity():
     def __init__(self, idx):
         self.idx = idx
         self.listened_actions = {}
+        # whenever we find values, if it's unique, we store it in this dictionary
+        # and don't have to touch the database repeatedly
+        self.unique_values = {}
 
     @classmethod
     def identity_from_name(cls, name):
@@ -735,8 +738,13 @@ class ObjectIdentity():
         self.idx = idx
 
     def find_values(self, column):
+        value = self.unique_values.get(column, None)
+        if value is not None:
+            return value
+
         unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
         if len(unique) == 1:
+            self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
         return unique
 
