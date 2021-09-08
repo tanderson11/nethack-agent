@@ -406,7 +406,7 @@ class ParsingInventoryMenu(InteractiveMenu):
                     #import pdb; pdb.set_trace()
                     if character.inventory is not None:
                         is_better = menu_item.item.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
-                        if is_better: print(f"Found better weapon: {menu_item.item.identity.name()}")
+                        if is_better: print(f"Found better weapon: {menu_item.item_text}")
                         return is_better
                 else:
                     return menu_item.item.identity.desirable_identity(run_state.character)
