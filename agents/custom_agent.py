@@ -429,6 +429,7 @@ class RunState():
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()
+        self.character.set_class_skills()
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
