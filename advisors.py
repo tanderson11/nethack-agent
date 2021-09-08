@@ -692,6 +692,47 @@ class DownstairsAdvisor(Advisor):
         #willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         return willing_to_descend
 
+class ExcaliburAdvisor(Advisor):
+    @staticmethod
+    def hankering_for_excalibur(character):
+        if character.base_alignment == 'Lawful' and character.experience_level >= 5:
+            current_weapon = character.inventory.wielded_weapon()
+            if current_weapon.identity.name() == 'long sword' and current_weapon.instance_name is None:
+                return True
+        return False
+
+
+class DipForExcaliburAdvisor(ExcaliburAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+            if self.hankering_for_excalibur(character) and neighborhood.dungeon_glyph_on_player and neighborhood.dungeon_glyph_on_player.is_fountain:
+                dip = nethack.actions.Command.DIP
+                long_sword = character.inventory.wielded_weapon()
+                menu_plan = menuplan.MenuPlan(
+                    "dip long sword", self, [
+                        menuplan.CharacterMenuResponse("What do you want to dip?", ord(long_sword.inventory_letter)),
+                        menuplan.YesMenuResponse("into fountain?"),
+                    ],
+                )
+
+                return ActionAdvice(from_advisor=self, action=dip, new_menu_plan=menu_plan)
+
+class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not self.hankering_for_excalibur(character):
+            return None
+
+        travel = nethack.actions.Command.TRAVEL
+
+        menu_plan = menuplan.MenuPlan(
+            "travel to fountain", self, [
+                menuplan.CharacterMenuResponse("Where do you want to travel to?", "}"),
+                menuplan.EscapeMenuResponse("Can't find dungeon feature"),
+            ],
+            fallback=ord('.')
+        )
+     
+        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+
 class TravelToDownstairsAdvisor(DownstairsAdvisor):
     def advice(self, rng, run_state, character, oracle):
         willing_to_descend = self.check_willingness_to_descend(run_state.blstats, character.inventory, run_state.neighborhood)

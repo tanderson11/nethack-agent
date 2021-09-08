@@ -478,6 +478,8 @@ class CMapGlyph(Glyph):
         self.is_broken_door = self.offset == 12 # not 100% sure these are broken doors.TK
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
+
+        self.is_fountain = self.offset == 31
         
     def walkable(self, character):
         return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_downstairs or self.is_upstairs
