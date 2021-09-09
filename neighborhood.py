@@ -12,7 +12,7 @@ import scipy.signal
 import constants
 import environment
 import glyphs as gd
-from map import ThreatMap
+import map
 import physics
 import utilities
 from utilities import ARS
@@ -109,6 +109,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
+        self.extended_boulders = self.zoom_glyph_alike(
+            level_map.boulder_map,
+            ViewField.Extended
+        )
+
+        if level_map.branch == map.Branches.Sokoban:
+            # Corrections to what is moveable in Sokoban
+            extended_walkable_tile &= ~(self.extended_boulders)
+
         extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         self.extended_is_monster = extended_is_monster
@@ -123,10 +132,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_has_item_stack = utilities.vectorized_map(
             lambda g: gd.stackable_glyph(g),
             extended_visible_glyphs
-        )
-        self.extended_boulders = self.zoom_glyph_alike(
-            level_map.boulder_map,
-            ViewField.Extended
         )
 
         # radius 1 box around player in vision glyphs
@@ -168,6 +173,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.walkable = walkable_tile
         self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
 
+        if level_map.branch == map.Branches.Sokoban:
+            # Corrections to what is moveable in Sokoban
+            self.walkable &= ~(self.diagonal_moves)
+
         for f in current_square.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f)
             try:
@@ -184,7 +193,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
-        self.threat_map = ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
 
         #########################################
@@ -210,7 +219,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def path_to_targets(self, target_mask):
         if target_mask.any():
             pathfinder = Pathfinder(
-                walkable_mesh=(self.extended_walkable | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
+                walkable_mesh=((self.extended_walkable & ~self.extended_boulders) | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
                 doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
             )
             it = np.nditer(target_mask, flags=['multi_index'])
@@ -275,6 +284,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             ViewField.Extended
         )
         return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
+
+    def lootable_current_square(self):
+        return self.level_map.lootable_squares_map[self.absolute_player_location]
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors):

@@ -149,6 +149,7 @@ class Message():
 
     # TODO. It's grunt work, but should learn all the trap messages in
     # # https://github.com/facebookresearch/nle/blob/ceee6396797c5fe00eac66aa909af48e5ee8b04d/src/trap.c
+    # Will check for k in message
     match_to_feature = {
         "There is a doorway here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
         "There is a broken door here.": gd.get_by_name(gd.CMapGlyph, 'ndoor'),
@@ -160,6 +161,15 @@ class Message():
         "There is a grave here.": gd.get_by_name(gd.CMapGlyph, 'grave'),
         "There is a sink here.": gd.get_by_name(gd.CMapGlyph, 'sink'),
         "There is an altar to ": gd.get_by_name(gd.CMapGlyph, 'altar'),
+        "An arrow shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'arrow_trap'),
+        "A little dart shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'dart_trap'),
+        "A tower of flame erupts from the floor!": gd.get_by_name(gd.CMapGlyph, 'fire_trap'),
+        "A trapdoor in the ceiling opens and a rock falls on your head!": gd.get_by_name(gd.CMapGlyph, 'falling_rock_trap'),
+        "Click! You trigger a rolling boulder trap!": gd.get_by_name(gd.CMapGlyph, 'rolling_boulder_trap'),
+        "A gush of water hits you": gd.get_by_name(gd.CMapGlyph, 'rust_trap'),
+        "A pit opens up under you": gd.get_by_name(gd.CMapGlyph, 'pit'),
+        "A pit full of spikes opens up under you": gd.get_by_name(gd.CMapGlyph, 'spiked_pit'),
+        "You step onto a polymorph trap!": gd.get_by_name(gd.CMapGlyph, 'polymorph_trap'),
     }
 
     class Feedback():
@@ -628,7 +638,8 @@ class CustomAgent(BatchedAgent):
                 raw_previous_glyph_on_player = gd.GLYPH_NUMERAL_LOOKUP[run_state.glyphs[player_location]]
                 if isinstance(raw_previous_glyph_on_player, gd.PetGlyph):
                     pass
-                elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player)):
+                elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player) or isinstance(raw_previous_glyph_on_player, gd.WarningGlyph)):
+                    # Re: warning glyphs, current situations where we walk onto them include piercers
                     if raw_previous_glyph_on_player.name == 'leprechaun':
                         # Wild, I know, but a leprechaun can dodge us like this
                         # "miss wildly and stumble forward"
