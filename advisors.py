@@ -405,7 +405,7 @@ class EnchantArmorAdvisor(Advisor):
 
             for item in armaments:
                 if isinstance(item, inv.Armor):
-                    if item.enhancement > 3: # don't enchant if it could implode an item
+                    if item.enhancement is not None and item.enhancement > 3: # don't enchant if it could implode an item
                         return None
             
             menu_plan = menuplan.MenuPlan("read enchant armor", self, [
@@ -426,7 +426,7 @@ class EnchantWeaponAdvisor(Advisor):
                 if isinstance(item, inv.Weapon):
                     # don't enchant if it could implode an item
                     # weapon enhancements don't auto id, so possibly we should fail if item.enhancement is None 
-                    if item.enhancement > 5: 
+                    if item.enhancement is not None and item.enhancement > 5: 
                         return None
             
             menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
