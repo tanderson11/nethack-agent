@@ -6,11 +6,13 @@ import pdb
 import glyphs as gd
 import environment
 import numpy as np
+import constants
+import pandas as pd
 
 from utilities import ARS
 
 
-class ItemLike():
+class Item():
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
         self.identity = identity
@@ -34,11 +36,11 @@ class ItemLike():
     def process_message(self, *args):
         self.identity.process_message(*args)
 
-    def desirability(self, character):
-        return None
+    def shop_owned(self):
+        return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
 
-class Item(ItemLike):
-    pass
+    def desirable(self, character):
+        return not self.shop_owned() and self.identity.desirable_identity(character)
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -67,8 +69,24 @@ class Armor(Item):
             raw_value = self.identity.converted_wear_value().min()
 
         desirability = raw_value + best_case_enhancement + body_armor_penalty
-        #pdb.set_trace()
         return desirability
+
+    def desirable(self, character):
+        if self.shop_owned():
+            return False
+
+        if self.identity.potentially_magic():
+            return True
+
+        instance_desirability = self.instance_desirability_to_wear(character)
+        slot = self.identity.slot
+        armaments = character.inventory.armaments
+        current = armaments[armaments._fields.index(slot)]
+        current_desirability = 0
+        if current is not None and isinstance(current, Armor):
+            current_desirability = current.instance_desirability_to_wear(character)
+
+        return instance_desirability > 0 and (instance_desirability > current_desirability)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -85,15 +103,102 @@ class Potion(Item):
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
 
-    def melee_damage(self, monster):
+    def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
-        weapon_damage += 0 or self.enhancement
+        enhancement = self.enhancement if self.enhancement is not None else 0
+        #import pdb; pdb.set_trace()
+        weapon_damage += 0 or enhancement
 
         # TK know about silver damage etc
         return weapon_damage
 
+    def instance_desirability_to_wield(self, character):
+        # What's the basic gist? What's with the magic 17?
+        # If you aren't really a weapon (you're darts or something), you have negative des
+        # If we're restricted in your skill, you have -1 des
+        # If we're basic in your skill, you have average damage + enhancement des
+        # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
+        # and your des is 17 + average damage + enhancement
+
+        if self.BUC == 'cursed' or (self.enhancement is not None and self.enhancement < 0):
+            return -10
+
+        if self.identity.is_ammunition or self.identity.is_ranged:
+            return -10
+
+        if character.base_class == constants.BaseRole.Monk:
+            return -1
+
+        associated_skill = self.identity.skill
+        if pd.isnull(associated_skill):
+            return -1
+
+        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[associated_skill]]
+        if max_rank > constants.SkillRank.basic.value:
+            max_rank = constants.SkillRank.skilled.value
+
+        enhancement = self.enhancement
+        if enhancement is None:
+            enhancement = 0
+
+        melee_damage = self.identity.avg_melee_damage(None)
+        if isinstance(melee_damage, np.ndarray):
+            melee_damage = melee_damage.max()
+        
+        return max_rank * 17 + (enhancement + melee_damage)
+
+    def desirable(self, character):
+        if self.shop_owned():
+            return False
+
+        is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
+        if is_better: print(f"Found better weapon: {self.identity.name()}")
+        return is_better
+
+class BareHands(Weapon):
+    def __init__(self):
+        self.enhancement = 0
+        self.inventory_letter = '-'
+
+    def which_skill(self, character):
+        bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
+        martial_arts_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['martial arts']]
+
+        if bare_hands_rank > martial_arts_rank:
+            bare_hands_skill = 'bare hands'
+        elif martial_arts_rank > bare_hands_rank:
+            bare_hands_skill = 'martial arts'
+
+        return bare_hands_skill
+
+    def instance_desirability_to_wield(self, character):
+        bare_hands_skill = self.which_skill(character)
+
+        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[bare_hands_skill]]
+        if max_rank > constants.SkillRank.basic.value:
+            max_rank = constants.SkillRank.skilled.value
+
+        return max_rank * 17 + self.melee_damage(character, None)
+
+    def melee_damage(self, character, monster):
+        bare_hands_skill = self.which_skill(character)
+        # TK use the actual skill -> damage table
+        if bare_hands_skill == 'bare hands':
+            damage = 1.5
+        else:
+            damage = 2.5
+        return damage
+
+
 class Tool(Item):
     glyph_class = gd.ToolGlyph
+
+    def melee_damage(self, character, monster_spoiler):
+        # TK know about pick-axe and unicorn horn
+        return 1
+
+    def instance_desirability_to_wield(self, character):
+        return 0
 
 class Gem(Item):
     glyph_class = gd.GemGlyph
@@ -199,8 +304,6 @@ class ItemParser():
     category_by_glyph_class = {v:k for k,v in glyph_class_by_category.items() if isinstance(v, type)}
     category_by_glyph_class[gd.FoodGlyph] = 'Comestibles'
     category_by_glyph_class[gd.CorpseGlyph] = 'Comestibles'
-
-    #glyph_class_by_item_class = {v:k for k,v in item_class_by_glyph_class.items()}
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
@@ -398,7 +501,7 @@ class Slot():
         prefix = "{}:".format(self.name)
         if self.occupant is None:
             return prefix + 'nothing'
-        return prefix + chr(self.occupant)
+        return prefix + str(self.occupant)
 
 class SuitSlot(Slot):
     blockers = ['cloak']
@@ -419,12 +522,11 @@ class SlotCluster():
                 else:
                     if item.equipped_status is not None:
                         occ_slot = item.equipped_status.slot
-                        #print(occ_slot)
-                        #print(occ_slot is not None)
+
                         if occ_slot is not None:
                             slots[occ_slot].add_occupant(item)
 
-        #pdb.set_trace()
+        #import pdb; pdb.set_trace()
         self.slots = slots
 
     def blocked_by_letters(self, slot, inventory):
@@ -435,60 +537,61 @@ class SlotCluster():
         
         return blockers
 
-class ArmamentSlots(SlotCluster):
-    slot_type_mapping = OrderedDict({
-        "shirt": ShirtSlot,
-        "suit": SuitSlot,
-        "cloak": Slot,
-        "off-hand": Slot,
-        "hand": Slot,
-        "gloves": Slot,
-        "helmet": Slot,
-        "boots": Slot,
-    })
-    involved_classes = [Armor] # until I add weapons TK TK
-    #involved_classes = ['ARMOR_CLASS', 'WEAPON_CLASS'] # while anything can be in your hands, only these objects will weld and hence only they are meaningful
+class SlotFactory():
+    @staticmethod
+    def make_from_inventory(slot_class, inventory):
+        worn_by_slot = {}
 
-'''
-class ItemCollection():
-    def __init__(self, items):
-        self.items = items
+        for oclass in slot_class.involved_classes:
+            class_contents = inventory.get_oclass(oclass)
 
-class Inventory():
-    @classmethod
-    def make_inventory(cls, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
-        items = []
+            for item in class_contents:
 
-        for numeral, letter, raw_string in zip(self.inv_glyphs[oclass_idx], self.inv_letters[oclass_idx], self.inv_strs[oclass_idx]):
-                item_str = ItemParser.decode_inventory_item(raw_string)
-                if inv_glyphs is None:
-                    item = ItemParser.make_item_with_string(self.global_identity_map, item_str, inventory_letter=letter)
-                else:
-                    item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
+                if item is not None and item.equipped_status is not None:
+                    slot = item.equipped_status.slot
 
-                items.append(item)
+                    if slot is not None: # alternatively wielded and other weird things can have none slot
+                        if isinstance(slot, list):
+                            for s in slot:
+                                worn_by_slot[s] = item
+                        else:
+                            worn_by_slot[slot] = item
 
-    def __init__(self, items):
-        self.items = items
+        return slot_class(**worn_by_slot)
 
-        self.items_by_class = {type(item):item for item in self.items}
+class ArmamentSlots(NamedTuple):
+    shirt:    Armor = None
+    suit:     Armor = None
+    cloak:    Armor = None
+    off_hand: Item  = None
+    hand:     Item  = None
+    gloves:   Armor = None
+    helmet:   Armor = None
+    boots:    Armor = None
+    quiver:   Item  = None
 
-    @functools.cached_property
-    def armaments(self):
-        return self.get_slots('armaments')
+    blockers_by_name = {
+        "shirt": ['suit', 'cloak'],
+        "suit" : ['cloak'],
+    }
 
-class GroundInventory(Inventory):
-    pass
-'''
+    involved_classes = [Armor, Weapon, Tool]
+
+    def get_blockers(self, slot_name):
+        blockers = [getattr(self, b) for b in self.blockers_by_name.get(slot_name, [])]
+        blockers.append(getattr(self, slot_name)) # a slot blocks itself
+        blockers = [b for b in blockers if b is not None]
+
+        return blockers
 
 class PlayerInventory():
     slot_cluster_mapping = {
         'armaments': ArmamentSlots,
     }
 
-
     def __init__(self, global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=None):
         self.items_by_class = {}
+        self.items_by_letter = {}
         self.slot_groups_by_name = {}
 
         self.global_identity_map = global_identity_map
@@ -498,15 +601,38 @@ class PlayerInventory():
         self.inv_oclasses = inv_oclasses
         self.inv_glyphs = inv_glyphs
 
-    def wants_glyph(self, character, glyph):
-        pass
-
     @functools.cached_property
     def armaments(self):
         return self.get_slots('armaments')
 
-    def wants_item(self, character, item):
-        pass
+    class AttireProposal(NamedTuple):
+        proposed_items: list = []
+        proposal_blockers: list = []
+
+    def proposed_weapon_changes(self, character):
+        current_weapon = self.wielded_weapon
+
+        current_desirability = current_weapon.instance_desirability_to_wield(character)
+
+        most_desirable = current_weapon
+        max_desirability = current_desirability
+
+        extra_weapons = self.get_items(Weapon, instance_selector=lambda i: i.equipped_status is None or i.equipped_status.status != 'wielded')
+        if len(extra_weapons) == 0:
+            return None
+
+
+        for weapon in extra_weapons:
+            desirability = weapon.instance_desirability_to_wield(character)
+            if desirability > max_desirability:
+                most_desirable = weapon
+                max_desirability = desirability
+
+        if most_desirable != current_weapon:
+            #import pdb; pdb.set_trace()
+            return most_desirable
+        else:
+            return None
 
     def proposed_attire_changes(self, character):
         armor = self.get_oclass(Armor)
@@ -521,49 +647,67 @@ class PlayerInventory():
                     unequipped_by_slot[slot] = [item]
 
         if len(unequipped_by_slot.keys()) == 0:
-            return [], []
+            return self.AttireProposal()
 
         proposed_items = []
         proposal_blockers = []
-        for slot in self.armaments.slot_type_mapping.keys(): # ordered dict by difficulty to access
-            unequipped_in_slot = unequipped_by_slot.get(slot, [])
+        for slot_name, current_occupant in zip(self.armaments._fields, self.armaments):
+            unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
 
             if len(unequipped_in_slot) > 0:
                 most_desirable = None
                 max_desirability = None
                 for item in unequipped_in_slot:
-                    desirability = item.instance_desirability_to_wear(character)
+                    if isinstance(item, Armor):
+                        desirability = item.instance_desirability_to_wear(character)
+                    else:
+                        desirability = 0
                     if max_desirability is None or desirability > max_desirability:
                         max_desirability = desirability
                         most_desirable = item
 
-                current_occupant = self.armaments.slots[slot].occupant
-                if current_occupant is not None:
+                if current_occupant is not None and isinstance(current_occupant, Armor):
                     current_desirability = current_occupant.instance_desirability_to_wear(character)
                 else:
-                    current_occupant = None
                     current_desirability = 0
 
                 if max_desirability > current_desirability:
-                    slot = self.armaments.slots[slot]
-                    blockers = self.armaments.blocked_by_letters(slot, self)
+                    blockers = self.armaments.get_blockers(slot_name)
 
-                    proposed_items.append(most_desirable)
-                    proposal_blockers.append(blockers)
+                    if len(blockers) == 0:
+                        proposed_items.append(most_desirable)
+                        proposal_blockers.append(blockers)
+                    else:
+                        for b in blockers:
+                            if isinstance(b, Weapon) or b.BUC == 'cursed':
+                                pass
+                            else:
+                                proposed_items.append(most_desirable)
+                                proposal_blockers.append(blockers)
 
-        return proposed_items, proposal_blockers
+        return self.AttireProposal(proposed_items, proposal_blockers)
 
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
-    def get_item(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+    def get_items(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         oclass = self.get_oclass(oclass)
+        matches = []
 
         for item in oclass:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
-                    return item
+                matches.append(item)
+
+        return matches
+
+    def get_item(self, *args, **kwargs):
+        items = self.get_items(*args, **kwargs)
+        if len(items) > 0:
+            return items[0]
+        else:
+            return None
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
@@ -590,26 +734,28 @@ class PlayerInventory():
                     else:
                         item = ItemParser.make_item_with_glyph(self.global_identity_map, numeral, item_str, inventory_letter=letter)
                     class_contents.append(item)
+                    self.items_by_letter[letter] = item
                 else:
                     import pdb; pdb.set_trace() # why did we ever check this? why are we here?
 
             self.items_by_class[object_class] = class_contents
             return class_contents
 
-    def get_slots(self, slot_cluster_name):
+    def get_slots(self, group_name):
         try:
-            return self.slot_groups_by_name[slot_cluster_name] # if we've already baked the slots
+            return self.slot_groups_by_name[group_name] # if we've already baked the slots
         except KeyError:
-            slots = self.__class__.slot_cluster_mapping[slot_cluster_name](self)
-            self.slot_groups_by_name[slot_cluster_name] = slots
+            slots = SlotFactory.make_from_inventory(self.slot_cluster_mapping[group_name], self)
+            self.slot_groups_by_name[group_name] = slots
             return slots
 
+    @functools.cached_property
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
-        hand_occupant = armaments.slots['hand'].occupant
+        hand_occupant = armaments.hand
 
-        if not hand_occupant:
-            return None
+        if hand_occupant is None:
+            return BareHands()
 
         if hand_occupant.equipped_status.status == 'wielded':
             return hand_occupant
@@ -617,9 +763,9 @@ class PlayerInventory():
             if environment.env.debug: pdb.set_trace()
 
     def to_hit_modifiers(self, character, monster):
-        weapon = self.wielded_weapon()
-        if weapon:
-            to_hit = 0 or weapon.enhancement
+        weapon = self.wielded_weapon
+        if weapon.enhancement is not None:
+            to_hit = weapon.enhancement
         else:
             to_hit = 0
         # TK rings of increased accuracy

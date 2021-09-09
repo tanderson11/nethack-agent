@@ -30,7 +30,7 @@ class Oracle():
 
     @functools.cached_property
     def can_move(self):
-        # TK Held, overburndened, etc.
+        # TK Held, overburdened, etc.
         return True
 
     @functools.cached_property
@@ -337,6 +337,106 @@ class ReadTeleportAdvisor(Advisor):
 
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
+
+class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify")
+
+        if identify_scroll is None:
+            return None
+
+        unidentified_magic_armor = character.inventory.get_item(
+            inv.Armor,
+            identity_selector=lambda i: i.name() is None and i.potentially_magic()
+        )
+
+        if unidentified_magic_armor is None:
+            return None
+
+        print("Trying to identify")
+        
+        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
+
+        return ActionAdvice(self, read, menu_plan)
+
+class ReadUnidentifiedScrollsAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        scrolls = character.inventory.get_oclass(inv.Scroll)
+
+        for scroll in scrolls:
+            if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != 'cursed':
+                letter = scroll.inventory_letter
+
+                interactive_menus = [
+                    menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+                ]
+
+                menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
+                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+                    menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
+                    menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
+                    menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
+                    # most remote square for placements
+                    menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=ord('.')),
+                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=ord('\r')),
+                    menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
+                    menuplan.MoreMenuResponse("This is a scroll of"),
+                    menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
+                    menuplan.MoreMenuResponse("You have found a scroll of"),
+                    menuplan.EscapeMenuResponse("What do you want to charge?"),
+                    menuplan.NoMenuResponse("Do you wish to teleport?"),
+                ], interactive_menu=interactive_menus)
+
+                return ActionAdvice(self, read, menu_plan)
+
+class EnchantArmorAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+
+        enchant_armor_scroll = character.inventory.get_item(inv.Scroll, name='enchant armor', instance_selector=lambda i: i.BUC != 'cursed')
+
+        if enchant_armor_scroll is not None:
+            armaments = character.inventory.get_slots('armaments')
+
+            for item in armaments:
+                if isinstance(item, inv.Armor):
+                    if item.enhancement > 3: # don't enchant if it could implode an item
+                        return None
+            
+            menu_plan = menuplan.MenuPlan("read enchant armor", self, [
+                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_armor_scroll.inventory_letter))
+            ])
+            return ActionAdvice(self, read, menu_plan)
+
+class EnchantWeaponAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+
+        enchant_weapon_scroll = character.inventory.get_item(inv.Scroll, name='enchant weapon', instance_selector=lambda i: i.BUC != 'cursed')
+
+        if enchant_weapon_scroll is not None:
+            armaments = character.inventory.get_slots('armaments')
+
+            for item in armaments:
+                if isinstance(item, inv.Weapon):
+                    # don't enchant if it could implode an item
+                    # weapon enhancements don't auto id, so possibly we should fail if item.enhancement is None 
+                    if item.enhancement > 5: 
+                        return None
+            
+            menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
+                menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_weapon_scroll.inventory_letter))
+            ])
+            return ActionAdvice(self, read, menu_plan)
+
+class ReadKnownBeneficialScrolls(PrebakedSequentialCompositeAdvisor):
+    sequential_advisors = [EnchantArmorAdvisor, EnchantWeaponAdvisor]
+
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -908,6 +1008,19 @@ class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         search = nethack.actions.Command.SEARCH
         return ActionAdvice(from_advisor=self, action=search)
+
+class WieldBetterWeaponAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        wield = nethack.actions.Command.WIELD
+        best_weapon = character.inventory.proposed_weapon_changes(character)
+        if best_weapon is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("wield weaon", self, [
+            menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
+            ], listening_item=best_weapon)
+
+        return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 
 class WearUnblockedArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

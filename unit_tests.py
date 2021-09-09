@@ -407,26 +407,72 @@ def labeled_string_to_raw_and_expected(multiline_str):
 def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
+
+class TestArmorProposals(unittest.TestCase):
+    def test(self):
+        pass
+
+class TestWeaponPickup(unittest.TestCase):
+    test_header = "Pick up what?\n\nWeapons\n"
+
+    test_values = {
+        "d - an uncursed dagger": "d",
+        "a - a cursed dagger": None,
+        "a - a blessed +5 club": None,
+        "a - a scimitar": "a",
+        "a - a blessed -2 scimitar": None,
+        "a - a blessed +5 scimitar": "a",
+        "a - a runed broadsword": None
+    }
+
+    def test(self):
+        run_state = agents.custom_agent.RunState()
+
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+        character.set_class_skills()
+
+        inventory = inv.PlayerInventory([], [], [], [])
+        inventory.wielded_weapon = inv.BareHands()
+        run_state.character = character
+        run_state.character.inventory = inventory
+
+        for k,v in self.test_values.items():
+
+            menu_text = string_to_tty_chars(self.test_header + k)
+            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            result = interactive_menu.search_through_rows(menu_text)
+            print(result)
+
+            if v is None:
+                self.assertEqual(result, None)
+            else:
+                self.assertEqual(result.character, v)
+
 class InteractiveMenu(unittest.TestCase):
     labeled_text = """Pick up what?
 
 Armor
 a - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
 b - a pair of leather gloves (for sale, 30 zorkmids)
-c - a pair of buckled boots >> armor
+c - a pair of buckled boots >> armor|desirable
 Weapons
-d - an uncursed dagger >> extra weapons
+d - an uncursed dagger >> extra weapons|desirable
 Comestibles
-e - a food ration >> comestibles
+e - a food ration >> comestibles|desirable
 Scrolls
-f - a scroll labeled VE FORBRYDERNE
-g - 2 uncursed scrolls of teleportation >> teleport scrolls
+f - a scroll labeled VE FORBRYDERNE >> desirable
+g - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
 Potions
 h - a smoky potion
 i - a blessed potion of full healing >> healing potions
 Wands
-j - an iron wand
-k - an uncursed wand of teleportation (0:6) >> teleport wands
+j - an iron wand >> desirable
+k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
 
 (end)
 """
@@ -455,9 +501,23 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands
             self.assertEqual(acutally_selected_letters, expected[selector_name])
 
     def test_pickup_desirable(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+        character.set_class_skills()
+        run_state = agents.custom_agent.RunState()
+        run_state.character = character
+
+        character.inventory = inv.PlayerInventory([], [], [], [])
+        character.inventory.armaments = inv.ArmamentSlots()
+        character.inventory.wielded_weapon = inv.BareHands()
+
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
-        interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), select_desirable=True)
+        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
         results = []
         for i in range(0, 20):
             try:
@@ -468,7 +528,7 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands
             text = string_to_tty_chars(string)
             results.append(result)
         # The armor and food ration
-        self.assertEqual(4, len(results))
+        self.assertEqual(len(expected['desirable']), len(results))
 
 
 if __name__ == '__main__':

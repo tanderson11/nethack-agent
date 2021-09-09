@@ -52,7 +52,7 @@ class BatchedEnv:
         """
         Resets all the environments in self.envs
         """
-        #[env.unwrapped.seed(core=6080183802797075429, disp=5919092727942140734, reseed=False) for env in self.envs]
+        #[env.unwrapped.seed(core=7225585048089617083, disp=7391845646563007834, reseed=False) for env in self.envs]
         observation = [env.reset() for env in self.envs]
         [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation

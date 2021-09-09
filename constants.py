@@ -1,5 +1,7 @@
 import enum
 from typing import NamedTuple
+import pandas as pd
+import os
 
 GLYPHS_SHAPE = (21, 79)
 
@@ -29,6 +31,26 @@ class BaseRace(enum.Enum):
     gnome = 'gnome'
     human = 'human'
     orc = 'orc'
+
+class SkillRank(enum.IntEnum):
+    restricted = -1
+    basic = 0
+    skilled = 1
+    expert = 2
+    master = 3
+    grand_master = 4
+
+skill_abbrev_to_rank = {
+    '-': SkillRank.restricted,
+    'b': SkillRank.basic,
+    'S': SkillRank.skilled,
+    'E': SkillRank.expert,
+    'M': SkillRank.master,
+    'GM': SkillRank.grand_master,
+}
+
+CLASS_SKILLS = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "skill_spoiler.csv"))
+CLASS_SKILLS = CLASS_SKILLS.set_index("SKILL")
 
 class Attributes(NamedTuple):
     strength: int

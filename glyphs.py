@@ -777,14 +777,23 @@ class ObjectIdentity():
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
+    def desirable_identity(self, character):
+        return True
+
 class SpellbookIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
 
 class RingIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
 
+    def desirable_identity(self, character):
+        return True
+
 class AmuletIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
+
+    def desirable_identity(self, character):
+        return True
 
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
@@ -833,6 +842,9 @@ class WandIdentity(ObjectIdentity):
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
+    def desirable_identity(self, character):
+        return True
+
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
@@ -857,6 +869,14 @@ class ArmorIdentity(ObjectIdentity):
     def magic(self):
         return self.find_values('MAGIC')
 
+    def potentially_magic(self):
+        magic = self.magic()
+
+        if isinstance(magic, np.ndarray):
+            return self.magic().any()
+        else:
+            return magic
+
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')
 
@@ -869,6 +889,9 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx):
         super().__init__(idx)
 
+        self.is_ammunition = self.find_values('AMMUNITION')
+        self.is_ranged = self.find_values('RANGED')
+        self.skill = self.find_values('SKILL')
         self.slot = self.find_values('SLOT')
 
         second_slot = self.find_values('SECOND_SLOT')
@@ -882,10 +905,9 @@ class WeaponIdentity(ObjectIdentity):
         if has_second_slot:
             self.slot = [self.slot, second_slot]
 
-
     def avg_melee_damage(self, monster):
         # TK know about monster size
-        return self.find_values('SAVG')
+        return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
