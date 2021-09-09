@@ -301,7 +301,6 @@ class ZapDiggingDownAdvisor(Advisor):
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 
         if wand_of_digging is not None:
-            import pdb; pdb.set_trace()
             menu_plan = menuplan.MenuPlan("zap digging wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
