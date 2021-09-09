@@ -646,12 +646,16 @@ class PlayerInventory():
                 if max_desirability > current_desirability:
                     blockers = self.armaments.get_blockers(slot_name)
 
-                    for b in blockers:
-                        if isinstance(b, Weapon) or b.BUC == 'cursed':
-                            pass
-                        else:
-                            proposed_items.append(most_desirable)
-                            proposal_blockers.append(blockers)
+                    if len(blockers) == 0:
+                        proposed_items.append(most_desirable)
+                        proposal_blockers.append(blockers)
+                    else:
+                        for b in blockers:
+                            if isinstance(b, Weapon) or b.BUC == 'cursed':
+                                pass
+                            else:
+                                proposed_items.append(most_desirable)
+                                proposal_blockers.append(blockers)
 
         return self.AttireProposal(proposed_items, proposal_blockers)
 
