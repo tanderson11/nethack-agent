@@ -717,7 +717,8 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
         desirable_unvisited = np.transpose(np.where(
             (lmap.visits_count_map == 0) &
-            (lmap.room_floor | lmap.corridors) &
+            (lmap.room_floor | lmap.corridors | lmap.doors) &
+            (~lmap.owned_doors) &
             (~lmap.boulder_map) &
             (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)
         ))
@@ -828,6 +829,8 @@ class KickLockedDoorAdvisor(Advisor):
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
+            return
+        if not run_state.neighborhood.lootable_current_square():
             return
         menu_plan = menuplan.MenuPlan(
             "pick up all desirable objects",

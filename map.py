@@ -96,7 +96,7 @@ class DLevelMap():
         self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE)
         self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE)
         self.special_room_map = np.full(constants.GLYPHS_SHAPE, constants.SpecialRoomTypes.NONE.value)
-        self.owned_doors = np.zeros(constants.GLYPHS_SHAPE)
+        self.owned_doors = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
