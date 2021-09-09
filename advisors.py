@@ -295,20 +295,31 @@ class DrinkHealingPotionAdvisor(Advisor):
 class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [DrinkHealingPotionAdvisor]
 
+class ZapDiggingDownAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        zap = nethack.actions.Command.ZAP
+        wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
+
+        if wand_of_digging is not None:
+            import pdb; pdb.set_trace()
+            menu_plan = menuplan.MenuPlan("zap digging wand", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
+                menuplan.CharacterMenuResponse("In what direction?", '>'),
+            ])
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
+
 class ZapTeleportOnSelfAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         zap = nethack.actions.Command.ZAP
-        wands = character.inventory.get_oclass(inv.Wand)
+        wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation')
 
-        for wand in wands:
-            if wand and wand.identity and wand.identity.name() == 'teleportation':
-                letter = wand.inventory_letter
-                menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
-                    menuplan.CharacterMenuResponse("What do you want to zap?", chr(letter)),
-                    menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
-                ])
-                return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
-        return None
+        if wand_of_teleport is not None:
+            menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
+                menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
+            ])
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
 class ReadTeleportAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -326,7 +337,7 @@ class ReadTeleportAdvisor(Advisor):
         return None
 
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
-    sequential_advisors = [ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
+    sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
 class EnhanceSkillsAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
