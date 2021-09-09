@@ -395,6 +395,12 @@ class ParsingInventoryMenu(InteractiveMenu):
                         pass
                     elif 'figurine' in menu_item.item_text:
                         pass
+                    elif 'partly used candle' in menu_item.item_text:
+                        pass
+                    elif 'pair of lenses' in menu_item.item_text:
+                        pass
+                    elif ' named ' in menu_item.item_text:
+                        pass
                     else:
                         import pdb; pdb.set_trace()
                     return False

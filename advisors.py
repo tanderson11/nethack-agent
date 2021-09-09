@@ -717,17 +717,12 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
         desirable_unvisited = np.transpose(np.where(
             (lmap.visits_count_map == 0) &
-            (lmap.room_floor | lmap.corridors | lmap.doors) &
+            (lmap.safely_walkable) &
             (~lmap.owned_doors) &
             (~lmap.boulder_map) &
             (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)
         ))
-        if ((lmap.room_floor | lmap.corridors) & (lmap.dungeon_feature_map == 0)).any():
-            import pdb; pdb.set_trace()
 
-        #import pdb; pdb.set_trace()
-
-        #import pdb; pdb.set_trace()
         if len(desirable_unvisited) > 0:
             nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
             target_square = physics.Square(*desirable_unvisited[nearest_square_idx])

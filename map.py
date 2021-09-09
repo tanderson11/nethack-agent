@@ -163,11 +163,12 @@ class DLevelMap():
 
         self.walls = gd.CMapGlyph.is_wall_check(offsets)
         self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
-        #self.traps     = gd.CMapGlyph.is_trap_floor(offsets)
-        self.corridors  = gd.CMapGlyph.is_corridor_check(offsets)
-        self.doors      = gd.CMapGlyph.is_door_check(offsets)
+        self.safely_walkable = gd.CMapGlyph.is_safely_walkable_check(offsets)
+        self.doors = gd.CMapGlyph.is_door_check(offsets)
 
-        #import pdb; pdb.set_trace()
+        if np.count_nonzero(gd.CMapGlyph.is_poorly_understood_check(offsets)):
+            if environment.env.debug: import pdb; pdb.set_trace()
+            pass
 
         # This is expensive. If we don't get long-term utility from these, should delete it
         self.update_stair_counts()
@@ -214,6 +215,7 @@ class DLevelMap():
             self.update_stair_counts()
 
     def add_warning_engraving(self, location):
+        import pdb; pdb.set_trace()
         self.warning_engravings[location] = True
 
         # vault closet engravings appear on the floor
@@ -221,9 +223,13 @@ class DLevelMap():
             self.add_vault_closet(location)
         elif self.corridors[location] == True:
             self.add_owned_door(location)
+        else:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+            pass
 
     def add_owned_door(self, engraving_location):
-        #import pdb; pdb.set_trace()
+        import pdb; pdb.set_trace()
         for offset in physics.ortholinear_offsets:
             offset_loc = engraving_location[0] + offset[0], engraving_location[1] + offset[1]
             if self.doors[offset_loc]:

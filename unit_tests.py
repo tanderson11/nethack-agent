@@ -350,6 +350,194 @@ class TestDLevelMap(unittest.TestCase):
         self.lmap.add_traversed_staircase((2,2), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
         self.assertEqual(self.lmap.need_egress(), False)
 
+class TestCMapGlyphs(unittest.TestCase):
+    def test_safely_walkable(self):
+        true_labels = {
+            'stone': False, # 0
+            'vwall': False, # 1
+            'hwall': False, # 2
+            'tlcorn': False, # 3
+            'trcorn': False, # 4
+            'blcorn': False, # 5
+            'brcorn': False, # 6
+            'crwall': False, # 7
+            'tuwall': False, # 8
+            'tdwall': False, # 9
+            'tlwall': False, # 10
+            'trwall': False, # 11
+            'ndoor': True, # 12
+            'vodoor': True, # 13
+            'hodoor': True, # 14
+            'vcdoor': False, # 15
+            'hcdoor': False, # 16
+            'bars': False, # 17
+            'tree': False, # 18
+            'room': True, # 19
+            'darkroom': True, # 20
+            'corr': True, # 21
+            'litcorr': True, # 22
+            'upstair': True, # 23
+            'dnstair': True, # 24
+            'upladder': True, # 25
+            'dnladder': True, # 26
+            'altar': True, # 27
+            'grave': True, # 28
+            'throne': True, # 29
+            'sink': True, # 30
+            'fountain': True, # 31
+            'pool': False, # 32
+            'ice': True, # 33
+            'lava': False, # 34
+            'vodbridge': False, # 35
+            'hodbridge': False, # 36
+            'vcdbridge': False, # 37
+            'hcdbridge': False, # 38
+            'air': False, # 39
+            'cloud': False, # 40
+            'water': False, # 41
+            'arrow_trap': False, # 42
+            'dart_trap': False, # 43
+            'falling_rock_trap': False, # 44
+            'squeaky_board': False, # 45
+            'bear_trap': False, # 46
+            'land_mine': False, # 47
+            'rolling_boulder_trap': False, # 48
+            'sleeping_gas_trap': False, # 49
+            'rust_trap': False, # 50
+            'fire_trap': False, # 51
+            'pit': False, # 52
+            'spiked_pit': False, # 53
+            'hole': False, # 54
+            'trap_door': False, # 55
+            'teleportation_trap': False, # 56
+            'level_teleporter': False, # 57
+            'magic_portal': True, # 58
+            'web': False, # 59
+            'statue_trap': False, # 60
+            'magic_trap': False, # 61
+            'anti_magic_trap': False, # 62
+            'polymorph_trap': False, # 63
+            'vibrating_square': True, # 64
+            'vbeam': False, # 65
+            'hbeam': False, # 66
+            'lslant': False, # 67
+            'rslant': False, # 68
+            'digbeam': False, # 69
+            'flashbeam': False, # 70
+            'boomleft': False, # 71
+            'boomright': False, # 72
+            'ss1': False, # 73
+            'ss2': False, # 74
+            'ss3': False, # 75
+            'ss4': False, # 76
+            'poisoncloud': False, # 77
+            'goodpos': False, # 78
+            'sw_tl': False, # 79
+            'sw_tc': False, # 80
+            'sw_tr': False, # 81
+            'sw_ml': False, # 82
+            'sw_mr': False, # 83
+            'sw_bl': False, # 84
+            'sw_bc': False, # 85
+            'sw_br': False, # 86
+        }
+        for k, v in true_labels.items():
+            self.assertEqual(1 if v else 0, gd.CMapGlyph.is_safely_walkable_check(gd.get_by_name(gd.CMapGlyph, k).offset), k)
+
+    def test_room_floor(self):
+        true_labels = {
+            'stone': False, # 0
+            'vwall': False, # 1
+            'hwall': False, # 2
+            'tlcorn': False, # 3
+            'trcorn': False, # 4
+            'blcorn': False, # 5
+            'brcorn': False, # 6
+            'crwall': False, # 7
+            'tuwall': False, # 8
+            'tdwall': False, # 9
+            'tlwall': False, # 10
+            'trwall': False, # 11
+            'ndoor': False, # 12
+            'vodoor': False, # 13
+            'hodoor': False, # 14
+            'vcdoor': False, # 15
+            'hcdoor': False, # 16
+            'bars': False, # 17
+            'tree': False, # 18
+            'room': True, # 19
+            'darkroom': True, # 20
+            'corr': False, # 21
+            'litcorr': False, # 22
+            'upstair': True, # 23
+            'dnstair': True, # 24
+            'upladder': True, # 25
+            'dnladder': True, # 26
+            'altar': True, # 27
+            'grave': True, # 28
+            'throne': True, # 29
+            'sink': True, # 30
+            'fountain': True, # 31
+            'pool': True, # 32
+            'ice': True, # 33
+            'lava': True, # 34
+            'vodbridge': False, # 35
+            'hodbridge': False, # 36
+            'vcdbridge': False, # 37
+            'hcdbridge': False, # 38
+            'air': False, # 39
+            'cloud': False, # 40
+            'water': False, # 41
+            'arrow_trap': True, # 42
+            'dart_trap': True, # 43
+            'falling_rock_trap': True, # 44
+            'squeaky_board': True, # 45
+            'bear_trap': True, # 46
+            'land_mine': True, # 47
+            'rolling_boulder_trap': True, # 48
+            'sleeping_gas_trap': True, # 49
+            'rust_trap': True, # 50
+            'fire_trap': True, # 51
+            'pit': True, # 52
+            'spiked_pit': True, # 53
+            'hole': True, # 54
+            'trap_door': True, # 55
+            'teleportation_trap': True, # 56
+            'level_teleporter': True, # 57
+            'magic_portal': True, # 58
+            'web': True, # 59
+            'statue_trap': True, # 60
+            'magic_trap': True, # 61
+            'anti_magic_trap': True, # 62
+            'polymorph_trap': True, # 63
+            'vibrating_square': True, # 64
+            'vbeam': False, # 65
+            'hbeam': False, # 66
+            'lslant': False, # 67
+            'rslant': False, # 68
+            'digbeam': False, # 69
+            'flashbeam': False, # 70
+            'boomleft': False, # 71
+            'boomright': False, # 72
+            'ss1': False, # 73
+            'ss2': False, # 74
+            'ss3': False, # 75
+            'ss4': False, # 76
+            'poisoncloud': False, # 77
+            'goodpos': False, # 78
+            'sw_tl': False, # 79
+            'sw_tc': False, # 80
+            'sw_tr': False, # 81
+            'sw_ml': False, # 82
+            'sw_mr': False, # 83
+            'sw_bl': False, # 84
+            'sw_bc': False, # 85
+            'sw_br': False, # 86
+        }
+
+        for k, v in true_labels.items():
+            self.assertEqual(1 if v else 0, gd.CMapGlyph.is_room_floor_check(gd.get_by_name(gd.CMapGlyph, k).offset), k)
+
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):
         room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
