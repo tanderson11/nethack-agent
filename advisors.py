@@ -338,7 +338,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
 
         unidentified_magic_armor = character.inventory.get_item(
             inv.Armor,
-            identity_selector=lambda i: i.name() is None and i.magic().any()
+            identity_selector=lambda i: i.name() is None and i.potentially_magic()
         )
 
         if unidentified_magic_armor is None:

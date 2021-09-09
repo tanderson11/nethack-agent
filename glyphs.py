@@ -775,14 +775,23 @@ class ObjectIdentity():
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
+    def desirable_identity(self, character):
+        return True
+
 class SpellbookIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
 
 class RingIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
 
+    def desirable_identity(self, character):
+        return True
+
 class AmuletIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
+
+    def desirable_identity(self, character):
+        return True
 
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
@@ -831,6 +840,9 @@ class WandIdentity(ObjectIdentity):
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
+    def desirable_identity(self, character):
+        return True
+
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
@@ -854,6 +866,14 @@ class ArmorIdentity(ObjectIdentity):
 
     def magic(self):
         return self.find_values('MAGIC')
+
+    def potentially_magic(self):
+        magic = self.magic()
+
+        if isinstance(magic, np.ndarray):
+            return self.magic().any()
+        else:
+            return magic
 
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')

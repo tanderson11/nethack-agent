@@ -12,7 +12,7 @@ import pandas as pd
 from utilities import ARS
 
 
-class ItemLike():
+class Item():
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
         self.identity = identity
@@ -35,11 +35,11 @@ class ItemLike():
     def process_message(self, *args):
         self.identity.process_message(*args)
 
-    def desirability(self, character):
-        return None
+    def shop_owned(self):
+        return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
 
-class Item(ItemLike):
-    pass
+    def desirable(self, character):
+        return not self.shop_owned() and self.identity.desirable_identity(character)
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -68,8 +68,24 @@ class Armor(Item):
             raw_value = self.identity.converted_wear_value().min()
 
         desirability = raw_value + best_case_enhancement + body_armor_penalty
-        #pdb.set_trace()
         return desirability
+
+    def desirable(self, character):
+        if self.shop_owned():
+            return False
+
+        if self.identity.potentially_magic():
+            return True
+
+        instance_desirability = self.instance_desirability_to_wear(character)
+        slot = self.identity.slot
+        armaments = character.inventory.armaments
+        current = armaments[armaments._fields.index(slot)]
+        current_desirability = 0
+        if current is not None and isinstance(current, Armor):
+            current_desirability = current.instance_desirability_to_wear(character)
+
+        return instance_desirability > 0 and (instance_desirability > current_desirability)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -129,6 +145,14 @@ class Weapon(Item):
             melee_damage = melee_damage.max()
         
         return max_rank * 17 + (enhancement + melee_damage)
+
+    def desirable(self, character):
+        if self.shop_owned():
+            return False
+
+        is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
+        if is_better: print(f"Found better weapon: {self.identity.name()}")
+        return is_better
 
 class BareHands(Weapon):
     def __init__(self):

@@ -376,40 +376,34 @@ class ParsingInventoryMenu(InteractiveMenu):
         if selector_name and select_desirable:
             raise Exception("Please only specify one of these")
         super().__init__(selector_name=selector_name)
-        def select_desirable_func(menu_item):
-            if menu_item.item is None:
-                if 'corpse' in menu_item.item_text:
-                    # This is expected. Will get better when we have CorpseIdentity implemented
-                    if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
-                        return True
-                elif environment.env.debug:
-                    if menu_item.item_text[0] in '123456789':
-                        # Known thing that we can't count yet
-                        pass
-                    elif 'spellbook' in menu_item.item_text:
-                        pass
-                    elif 'small glob' in menu_item.item_text:
-                        pass
-                    elif 'statue' in menu_item.item_text:
-                        pass
-                    elif 'figurine' in menu_item.item_text:
-                        pass
-                    else:
-                        import pdb; pdb.set_trace()
-                    return False
-                else:
-                    return False
-            else:
-                character = run_state.character
-                if isinstance(menu_item.item, inv.Weapon):
 
-                    if character.inventory is not None:
-                        is_better = menu_item.item.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
-                        if is_better: print(f"Found better weapon: {menu_item.item_text}")
-                        return is_better
-                else:
-                    return menu_item.item.identity.desirable_identity(run_state.character)
         if select_desirable:
+            def select_desirable_func(menu_item):
+                if menu_item.item is None:
+                    if 'corpse' in menu_item.item_text:
+                        # This is expected. Will get better when we have CorpseIdentity implemented
+                        if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
+                            return True
+                    elif environment.env.debug:
+                        if menu_item.item_text[0] in '123456789':
+                            # Known thing that we can't count yet
+                            pass
+                        elif 'spellbook' in menu_item.item_text:
+                            pass
+                        elif 'small glob' in menu_item.item_text:
+                            pass
+                        elif 'statue' in menu_item.item_text:
+                            pass
+                        elif 'figurine' in menu_item.item_text:
+                            pass
+                        else:
+                            import pdb; pdb.set_trace()
+                        return False
+                    else:
+                        return False
+                else:
+                    if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
+                    return menu_item.item.desirable(run_state.character)
             self.item_selector = lambda x: select_desirable_func(x)
 
     class MenuItem:
