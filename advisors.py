@@ -642,34 +642,16 @@ class DownstairsAdvisor(Advisor):
         2: 1,
         3: 2,
         4: 2,
-        5: 3,
-        6: 5,
-        7: 6,
-        8: 8,
-        9: 10,
-        10: 12,
-        11: 16,
-        12: 20,
-        13: 20,
-        14: 60,
-    }
-
-    # getting slightly less aggressive now that we eat corpses
-    exp_lvl_to_max_mazes_lvl_no_food = {
-        1:1,
-        2:2,
-        3:3,
-        4:4,
-        5:5,
-        6:6,
-        7:6,
-        8:8,
-        9:10,
-        10:12,
-        11:16,
-        12:20,
-        13:20,
-        14:60,
+        5: 2,
+        6: 2,
+        7: 2,
+        8: 2,
+        9: 2,
+        10: 2,
+        11: 2,
+        12: 2,
+        13: 2,
+        14: 2,
     }
 
     @classmethod
@@ -684,12 +666,9 @@ class DownstairsAdvisor(Advisor):
             pass
 
         willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        if inventory.have_item_oclass(inv.Food):
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        else:
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
         
-        #willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
+        
         return willing_to_descend
 
 class TravelToDownstairsAdvisor(DownstairsAdvisor):
