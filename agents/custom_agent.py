@@ -725,19 +725,8 @@ class CustomAgent(BatchedAgent):
             if level_map.visits_count_map[player_location] == 1:
                 level_map.add_warning_engraving(player_location)
 
-        if "You feel feverish." in message.message:
-            run_state.character.afflicted_with_lycanthropy = True
-
-        if "You feel purified." in message.message:
-            run_state.character.afflicted_with_lycanthropy = False
-
-        if "You feel more confident" in message.message or "could be more dangerous" in message.message:
-            run_state.character.can_enhance = True
-
-        if "more skilled" in message.message or "most skilled" in message.message:
-            print(message.message)
-            if "more dangerous" not in message.message:
-                run_state.character.can_enhance = False
+        if run_state.character:
+            run_state.character.update_from_message(message.message)
 
         if "corpse tastes" in message.message:
             print(message.message)

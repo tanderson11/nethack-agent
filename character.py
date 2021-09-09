@@ -1,11 +1,18 @@
 from typing import Optional
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 import pandas as pd
 from dataclasses import dataclass
 
 import constants
+import glyphs as gd
 import inventory as inv
+
+@dataclass
+class HeldBy():
+    time_held: int
+    monster_glyph: gd.MonsterGlyph
+    monster_square: Tuple[int, int]
 
 @dataclass
 class Character():
@@ -26,6 +33,7 @@ class Character():
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
+    held_by: HeldBy = None
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -66,6 +74,30 @@ class Character():
         old_AC = self.AC
         if old_AC != blstats.get('armor_class'):
             self.AC = blstats.get('armor_class')
+
+    def update_from_message(self, message_text):
+        if "You feel feverish." in message_text:
+            self.afflicted_with_lycanthropy = True
+
+        if "You feel purified." in message_text:
+            self.afflicted_with_lycanthropy = False
+
+        "grabs you!"
+        if "You cannot escape" in message_text:
+            # import pdb; pdb.set_trace()
+            pass
+
+        "was a large mimic"
+        "was a giant mimic"
+
+
+        if "You feel more confident" in message_text or "could be more dangerous" in message_text:
+            self.can_enhance = True
+
+        if "more skilled" in message_text or "most skilled" in message_text:
+            print(message_text)
+            if "more dangerous" not in message_text:
+                self.can_enhance = False
 
     def set_attributes(self, attributes):
         self.attributes = attributes
