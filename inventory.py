@@ -103,7 +103,7 @@ class Weapon(Item):
         # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
         # and your des is 17 + average damage + enhancement
 
-        if self.BUC == 'cursed':
+        if self.BUC == 'cursed' or (self.enhancement is not None and self.enhancement < 0):
             return -10
 
         if self.identity.is_ammunition or self.identity.is_ranged:
@@ -123,8 +123,12 @@ class Weapon(Item):
         enhancement = self.enhancement
         if enhancement is None:
             enhancement = 0
+
+        melee_damage = self.identity.avg_melee_damage(None)
+        if isinstance(melee_damage, np.ndarray):
+            melee_damage = melee_damage.max()
         
-        return max_rank * 17 + (enhancement + self.identity.avg_melee_damage(None))
+        return max_rank * 17 + (enhancement + melee_damage)
 
 class BareHands(Weapon):
     def __init__(self):

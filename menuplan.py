@@ -331,7 +331,6 @@ class InteractiveMenu():
                             raise Exception("already made selection but not multi_select")
 
                     #print(next_item.item)
-                    #import pdb; pdb.set_trace()
                     if not next_item.selected and self.item_selector(next_item):
                         return next_item
                 else:
@@ -403,7 +402,7 @@ class ParsingInventoryMenu(InteractiveMenu):
             else:
                 character = run_state.character
                 if isinstance(menu_item.item, inv.Weapon):
-                    #import pdb; pdb.set_trace()
+
                     if character.inventory is not None:
                         is_better = menu_item.item.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
                         if is_better: print(f"Found better weapon: {menu_item.item_text}")

@@ -412,6 +412,47 @@ class TestArmorProposals(unittest.TestCase):
     def test(self):
         pass
 
+class TestWeaponPickup(unittest.TestCase):
+    test_header = "Pick up what?\n\nWeapons\n"
+
+    test_values = {
+        "d - an uncursed dagger": "d",
+        "a - a cursed dagger": None,
+        "a - a blessed +5 club": None,
+        "a - a scimitar": "a",
+        "a - a blessed -2 scimitar": None,
+        "a - a blessed +5 scimitar": "a",
+        "a - a runed broadsword": None
+    }
+
+    def test(self):
+        run_state = agents.custom_agent.RunState()
+
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+        character.set_class_skills()
+
+        inventory = inv.PlayerInventory([], [], [], [])
+        inventory.wielded_weapon = inv.BareHands()
+        run_state.character = character
+        run_state.character.inventory = inventory
+
+        for k,v in self.test_values.items():
+
+            menu_text = string_to_tty_chars(self.test_header + k)
+            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            result = interactive_menu.search_through_rows(menu_text)
+            print(result)
+
+            if v is None:
+                self.assertEqual(result, None)
+            else:
+                self.assertEqual(result.character, v)
+
 class InteractiveMenu(unittest.TestCase):
     labeled_text = """Pick up what?
 
