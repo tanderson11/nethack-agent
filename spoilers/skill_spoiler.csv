@@ -1,0 +1,40 @@
+SKILL,Archeologist,Barbarian,Caveperson,Healer,Knight,Monk,Priest,Rogue,Ranger,Samurai,Tourist,Valkyrie,Wizard
+dagger,b,b,b,S,b,-,-,E,E,b,E,E,E
+knife,b,-,S,E,b,-,-,E,S,S,S,-,S
+axe,-,E,S,-,S,-,-,-,S,-,b,E,S
+pick-axe,E,S,b,-,b,-,-,-,b,-,b,S,-
+short sword,b,E,-,S,S,-,-,E,b,E,E,S,b
+broadsword,-,S,-,-,S,-,-,S,-,S,b,S,-
+long sword,-,S,-,-,E,-,-,S,-,E,b,E,-
+two-handed sword,-,E,-,-,S,-,-,b,-,E,b,E,-
+scimitar,S,S,-,b,b,-,-,S,-,b,S,b,-
+saber,E,b,-,b,S,-,-,S,-,b,S,b,-
+club,S,S,E,S,b,-,E,S,-,-,-,-,S
+mace,-,S,E,b,S,-,E,S,-,-,b,-,b
+morning star,-,S,b,-,S,-,E,b,b,-,b,-,-
+flail,-,b,S,-,b,-,E,b,S,S,b,-,-
+hammer,-,E,S,-,b,-,E,b,b,-,b,E,-
+quarterstaff,S,b,E,E,-,b,E,-,b,b,b,b,E
+polearm,-,-,S,b,S,-,S,b,S,S,b,S,S
+spear,-,S,E,b,S,b,S,b,E,S,b,S,b
+trident,-,S,S,b,b,-,S,-,b,-,b,b,b
+lance,-,-,-,-,E,-,b,-,-,S,b,S,-
+bow,-,b,S,-,b,-,b,-,E,E,b,-,-
+sling,S,-,E,S,-,-,b,-,E,-,b,b,S
+crossbow,-,-,-,-,S,b,b,E,E,-,b,-,-
+dart,b,-,-,E,-,-,b,E,E,-,E,-,E
+shuriken,-,-,-,S,-,b,b,S,S,E,b,-,b
+boomerang,E,-,E,-,-,-,b,-,E,-,b,-,-
+whip,E,-,-,-,-,-,-,-,b,-,b,-,-
+unicorn horn,S,-,b,E,-,-,S,-,-,-,S,-,-
+bare hands,E,M,M,b,E,-,b,E,b,-,S,E,b
+two weapon combat,b,b,-,-,S,-,-,E,-,E,S,S,-
+riding,b,b,-,-,E,-,-,b,b,S,b,S,b
+martial arts,-,-,-,-,-,GM,-,-,-,M,-,-,-
+attack,b,b,b,-,S,b,-,-,-,b,-,b,E
+healing,b,-,-,E,S,E,E,-,b,-,-,-,S
+divination,E,-,-,-,-,b,E,S,E,b,b,-,E
+enchantment,-,-,-,-,-,b,-,-,-,-,b,-,S
+clerical,-,-,-,-,S,S,E,-,-,S,-,-,S
+escape,-,b,-,-,-,S,-,S,b,-,S,b,E
+matter,b,-,S,-,-,b,-,S,-,-,-,-,E

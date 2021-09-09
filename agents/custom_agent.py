@@ -389,7 +389,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'2jHKfA=='
+        #seed = b'Vb4M8w=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -439,6 +439,7 @@ class RunState():
             base_alignment = attribute_match_2[1],
         )
         self.character.set_innate_intrinsics()
+        self.character.set_class_skills()
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
@@ -618,7 +619,7 @@ class CustomAgent(BatchedAgent):
                 inv_letters = observation['inv_letters']
                 inv_oclasses = observation['inv_oclasses']
 
-                if blstats.am_hallu:
+                if blstats.am_hallu():
                     run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs))
                 else:
                     inv_glyphs = observation['inv_glyphs'].copy()
