@@ -82,7 +82,7 @@ new_advisors = [
         # like repeatedly back to warning-engraved doors. Or into shops.
         # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDownstairsAdvisor(): 1,
-        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
+        #TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),
 ]
