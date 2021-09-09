@@ -155,6 +155,11 @@ class Weapon(Item):
         if is_better: print(f"Found better weapon: {self.identity.name()}")
         return is_better
 
+class ArtifactWeapon(Weapon):
+    def __init__(self, identity, artifact_identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter, seen_as)
+        self.artifact_identity = artifact_identity
+
 class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
@@ -243,7 +248,7 @@ class EquippedStatus():
                 self.slot = 'quiver'
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9])( named [a-zA-Z]+)? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z ]+))? ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #
@@ -477,9 +482,9 @@ class ItemParser():
 
             description = match[8]
 
-            instance_name = match[9]
+            instance_name = match[10]
             
-            equipped_status = match[10]
+            equipped_status = match[11]
 
             return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name)
 
