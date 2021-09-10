@@ -225,7 +225,7 @@ class DLevelMap():
 
 
     def add_owned_door(self, engraving_location):
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         for offset in physics.ortholinear_offsets:
             offset_loc = engraving_location[0] + offset[0], engraving_location[1] + offset[1]
             if self.doors[offset_loc]:
