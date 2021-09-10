@@ -136,6 +136,10 @@ class Oracle():
     def on_upstairs(self):
         return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
 
+    @functools.cached_property
+    def on_stairs(self):
+        return self.on_downstairs or self.on_upstairs
+
 class Advisor(abc.ABC):
     def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
         self.consult = oracle_consultation
@@ -747,78 +751,45 @@ class PathAdvisor(Advisor):
             return ActionAdvice(from_advisor=self, action=path.path_action)
 
 class DownstairsAdvisor(Advisor):
-    exp_lvl_to_max_mazes_lvl = {
-        1: 1,
-        2: 1,
-        3: 2,
-        4: 2,
-        5: 3,
-        6: 5,
-        7: 6,
-        8: 8,
-        9: 10,
-        10: 12,
-        11: 16,
-        12: 20,
-        13: 20,
-        14: 60,
-    }
+    pass
 
-    # getting slightly less aggressive now that we eat corpses
-    exp_lvl_to_max_mazes_lvl_no_food = {
-        1:1,
-        2:2,
-        3:3,
-        4:4,
-        5:5,
-        6:6,
-        7:6,
-        8:8,
-        9:10,
-        10:12,
-        11:16,
-        12:20,
-        13:20,
-        14:60,
-    }
-
-    @classmethod
-    def check_willingness_to_descend(cls, blstats, inventory, neighborhood):
-        try:
-            # see if we know about this staircase
-            staircase = neighborhood.level_map.staircases[neighborhood.absolute_player_location]
-            # don't descend if it leads to the mines
-            if staircase.end_dcoord[0] == map.Branches.GnomishMines.value:
-                return False
-        except KeyError:
-            pass
-
-        willing_to_descend = blstats.get('hitpoints') == blstats.get('max_hitpoints')
-        if inventory.have_item_oclass(inv.Food):
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        else:
-            willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl_no_food.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        
-        #willing_to_descend = willing_to_descend and cls.exp_lvl_to_max_mazes_lvl.get(blstats.get('experience_level'), 60) > blstats.get('depth')
-        return willing_to_descend
-
-class TravelToDownstairsAdvisor(DownstairsAdvisor):
+class TravelToDesiredEgress(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        willing_to_descend = self.check_willingness_to_descend(run_state.blstats, character.inventory, run_state.neighborhood)
-        
-        if willing_to_descend:
-            travel = nethack.actions.Command.TRAVEL
+        travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
 
-            menu_plan = menuplan.MenuPlan(
-                "travel down", self, [
-                    menuplan.CharacterMenuResponse("Where do you want to travel to?", ">"),
-                    menuplan.EscapeMenuResponse("Can't find dungeon feature"),
-                ],
-                fallback=ord('.')
-            )
-     
-            return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
-        return None
+        heading = run_state.dmap.dungeon_direction_to_best_target(lmap.dcoord)
+        if heading is None:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+                pass
+            return None
+
+        if heading.direction == map.DirectionThroughDungeon.down and not character.am_willing_to_descend(run_state.blstats.get('depth')+1):
+            return None
+
+        for location, staircase in lmap.staircases.items():
+            if staircase.matches_heading(heading):
+                menu_plan = menuplan.MenuPlan(
+                    "travel to unexplored", self, [
+                        menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, neighborhood.Square(*location)),
+                    ],
+                    fallback=ord('.'))
+
+                return ActionAdvice(self, travel, menu_plan)
+
+        if environment.env.debug and heading.direction == map.DirectionThroughDungeon.flat:
+            import pdb; pdb.set_trace()
+
+        target_symbol = "<" if heading.direction == map.DirectionThroughDungeon.up else ">"
+        menu_plan = menuplan.MenuPlan(
+            "travel down", self, [
+                menuplan.CharacterMenuResponse("Where do you want to travel to?", target_symbol),
+                menuplan.EscapeMenuResponse("Can't find dungeon feature"),
+            ],
+            fallback=ord('.')
+        )
+        return ActionAdvice(self, travel, menu_plan)
 
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -862,42 +833,36 @@ class TravelToUnexploredSquareAdvisor(Advisor):
             fallback=ord('.')
         )
 
-        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)  
 
-class GoDownstairsAdvisor(DownstairsAdvisor):
+class TakeStaircaseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if oracle.can_move and oracle.on_downstairs:
-            willing_to_descend = self.check_willingness_to_descend(run_state.blstats, character.inventory, run_state.neighborhood)
-            if willing_to_descend:
-                return ActionAdvice(from_advisor=self, action=nethack.actions.MiscDirection.DOWN)
-
-class UpstairsAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        if oracle.can_move and oracle.on_upstairs:
-            willing_to_ascend = self.willing_to_ascend(rng, run_state, character, oracle)
-            if willing_to_ascend:
-                menu_plan = menuplan.MenuPlan("go upstairs", self, [
-                      menuplan.NoMenuResponse("Beware, there will be no return!  Still climb? [yn] (n)"),
-                  ])
-                return ActionAdvice(from_advisor=self, action=nethack.actions.MiscDirection.UP)
+        if not (oracle.can_move and oracle.on_stairs):
             return None
-        return None
+        
+        current_level = run_state.neighborhood.level_map.dcoord
+        traversed_staircase = run_state.neighborhood.level_map.staircases.get(run_state.neighborhood.absolute_player_location, None)
+        heading = run_state.dmap.dungeon_direction_to_best_target(current_level)
+        if traversed_staircase is not None:
+            if traversed_staircase.matches_heading(heading):
+                action = nethack.actions.MiscDirection.DOWN if heading.direction == map.DirectionThroughDungeon.down else nethack.actions.MiscDirection.UP
+            else:
+                return None
+        if traversed_staircase is None:
+            if oracle.on_upstairs:
+                if current_level == map.DCoord(map.Branches.DungeonsOfDoom.value, 1):
+                    return None
+                action = nethack.actions.MiscDirection.UP
+            elif oracle.on_downstairs:
+                action = nethack.actions.MiscDirection.DOWN
+            else:
+                import pdb; pdb.set_trace()
+                assert False, "on stairs but not on up or downstairs"
 
-    def willing_to_ascend(self, rng, run_state, character, oracle):
-        if oracle.blstats.get('depth') == 1:
-            return False
-        return True 
+        if heading.direction == map.DirectionThroughDungeon.down and not character.am_willing_to_descend(run_state.blstats.get('depth')+1):
+            return None
 
-class TraverseUnknownUpstairsAdvisor(UpstairsAdvisor):
-    def willing_to_ascend(self, rng, run_state, character, oracle):
-        if oracle.blstats.get('depth') == 1:
-            return False
-        try:
-            # if we know about this staircase, we're not interested
-            run_state.neighborhood.level_map.staircases[run_state.neighborhood.absolute_player_location]
-            return False
-        except:
-            return True
+        return ActionAdvice(from_advisor=self, action=action)
 
 class OpenClosedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

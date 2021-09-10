@@ -114,6 +114,9 @@ class Staircase():
 
         self.direction = direction
 
+    def matches_heading(self, heading):
+        return self.end_dcoord.branch == heading.target_branch or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
+
 class TimedCorpse(NamedTuple):
     ACCEPTABLE_CORPSE_AGE = 40
 

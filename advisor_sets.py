@@ -9,7 +9,7 @@ new_advisors = [
     # CRITICALLY INJURED
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[
         WaitAdvisor(threat_tolerance=0.),
-        UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
+        #UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
@@ -23,7 +23,7 @@ new_advisors = [
     # HIGHLY THREATENED
     #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
     # IN GNOMISH MINES
-    UpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
+    TakeStaircaseAdvisor(),
     # COMBAT
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         SafeMeleeAttackAdvisor(),
@@ -66,9 +66,7 @@ new_advisors = [
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(),
         OpenClosedDoorAdvisor(),
-        TraverseUnknownUpstairsAdvisor(),
         ]),
-    GoDownstairsAdvisor(),
     # MOVE TO DESIRABLE
     PathfindDesirableObjectsAdvisor(),
     # EXPLORE
@@ -81,7 +79,7 @@ new_advisors = [
         # Need to somehow deal with the fact that this takes us places we know we don't want to go
         # like repeatedly back to warning-engraved doors. Or into shops.
         # TravelToUnexploredSquareAdvisor(): 2,
-        TravelToDownstairsAdvisor(): 1,
+        TravelToDesiredEgress(): 1,
         #TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),
