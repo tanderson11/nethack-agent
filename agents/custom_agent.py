@@ -802,7 +802,8 @@ class CustomAgent(BatchedAgent):
 
         if run_state.scumming:
             scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
-                menuplan.YesMenuResponse("Really quit?")
+                menuplan.YesMenuResponse("Really quit?"),
+                menuplan.NoMenuResponse("Dump core?")
             ])
             advice = ActionAdvice(
                 from_advisor=None,

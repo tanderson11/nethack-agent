@@ -177,10 +177,10 @@ class MenuPlan():
 
         if isinstance(self.interactive_menu, list):
             for interactive_menu in self.interactive_menu:
-                if interactive_menu.trigger_phrase == message_obj.message:
+                if interactive_menu.trigger_phrase in message_obj.message:
                     self.in_interactive_menu = True
                     self.current_interactive_menu = interactive_menu
-        elif self.interactive_menu and self.interactive_menu.trigger_phrase == message_obj.message:
+        elif self.interactive_menu and self.interactive_menu.trigger_phrase in message_obj.message:
             self.in_interactive_menu = True
             self.current_interactive_menu = self.interactive_menu
 

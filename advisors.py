@@ -451,7 +451,9 @@ class EnhanceSkillsAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan(
             "enhance skills",
             self,
-            [],
+            [
+                menuplan.NoMenuResponse("Advance skills without practice?"),
+            ],
             interactive_menu=menuplan.InteractiveEnhanceSkillsMenu(),
         )
 
