@@ -34,7 +34,7 @@ class DirectionThroughDungeon(enum.IntEnum):
 class DMap():
     def __init__(self):
         self.dlevels = {}
-        self.target_dcoord = (0, 60)
+        self.target_dcoords = [DCoord(0, 60)]
 
     def make_level_map(self, dcoord, glyphs, initial_player_location):
         lmap = DLevelMap(dcoord)
@@ -48,9 +48,18 @@ class DMap():
 
         return lmap
 
-    def dungeon_direction_to_target(self, current_dcoord):
-        if current_dcoord.branch == self.target_dcoord.branch:
-            return DirectionThroughDungeon(np.sign(self.target_dcoord.level - current_dcoord.level))
+    def add_top_target(self, target_dcoord):
+        self.target_dcoords.append(target_dcoord)
+
+    def dungeon_direction_to_best_target(self, current_dcoord):
+        for dcoord in reversed(self.target_dcoords):
+            heading = self.dungeon_direction_to_target(current_dcoord, dcoord)
+            if heading is not None:
+                return heading
+
+    def dungeon_direction_to_target(self, current_dcoord, target_dcoord):
+        if current_dcoord.branch == target_dcoord.branch:
+            return DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level))
 
         to_dod_stair=None
         from_dod_stair=None
@@ -65,7 +74,7 @@ class DMap():
             for staircase in staircases.values():
                 assert staircase.start_dcoord.branch == Branches.DungeonsOfDoom
 
-                if staircase.end_dcoord.branch == self.target_dcoord.branch:
+                if staircase.end_dcoord.branch == target_dcoord.branch:
                     from_dod_stair = staircase
 
                 if current_dcoord.branch != Branches.DungeonsOfDoom and staircase.end_dcoord.branch == current_dcoord.branch:
@@ -83,7 +92,7 @@ class DMap():
             if to_dod_stair is None:
                 return None
 
-            if self.target_dcoord.branch == Branches.DungeonsOfDoom:
+            if target_dcoord.branch == Branches.DungeonsOfDoom:
                 return DirectionThroughDungeon(np.sign(to_dod_stair.end_dcoord.level - current_dcoord.level))
             else:
                 if from_dod_stair is None:

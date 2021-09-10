@@ -24,6 +24,7 @@ from utilities import ARS
 from character import Character
 import constants
 import glyphs as gd
+import map
 from map import DMap, DCoord
 import environment
 from wizmode_prep import WizmodePrep
@@ -664,6 +665,11 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
+
+            if run_state.character.ready_for_mines():
+                run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+
+            #run_state.dmap.current_
 
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
             if changed_square and environment.env.debug:

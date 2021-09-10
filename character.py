@@ -85,6 +85,9 @@ class Character():
             return False
         return True
 
+    def ready_for_mines(self):
+        return self.experience_level > 8
+
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:
             return True
