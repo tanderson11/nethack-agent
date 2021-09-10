@@ -297,6 +297,9 @@ class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
 
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if character.held_by is not None:
+            return None
+
         zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 

@@ -536,7 +536,7 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
 
 class TestCharacterUpdateFromMessage(unittest.TestCase):
     grab_messages = {
-        "You cannot escape the lichen!": "lichen",
+        "You cannot escape from the lichen!": "lichen",
         "The giant eel bites!  The giant eel swings itself around you!": "giant eel",
         "The owlbear hits!  The owlbear hits!  The owlbear grabs you!": "owlbear",
         "The large mimic hits!": "large mimic",
