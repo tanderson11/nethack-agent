@@ -496,6 +496,8 @@ class PetGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
+
+        self.name = "pet" + self.name
     
     def walkable(self, character):
         return True
@@ -507,9 +509,15 @@ class InvisibleGlyph(Glyph):
     def __init__(self, numeral):
         super().__init__(numeral)
 
+        self.name = "invisible monster"
+
 class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.name = "detected" + self.name
 
 class CorpseGlyph(Glyph):
     OFFSET = nethack.GLYPH_BODY_OFF
@@ -532,6 +540,10 @@ class CorpseGlyph(Glyph):
 class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.name = "ridden" + self.name
 
 class ExplodeGlyph(Glyph):
     OFFSET = nethack.GLYPH_EXPLODE_OFF

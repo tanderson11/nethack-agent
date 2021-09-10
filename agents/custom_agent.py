@@ -19,6 +19,7 @@ import utilities
 import physics
 import inventory as inv
 import constants
+import monster_messages
 
 from utilities import ARS
 from character import Character
@@ -101,39 +102,6 @@ class BLStats():
 
     def am_hallu(self):
         return (nethack.BL_MASK_HALLU & self.get('condition')) == nethack.BL_MASK_HALLU
-
-class RecordedMonsterEvent():
-    def __init__(self, time, monster_name):
-        self.time = time
-        self.monster_name = monster_name
-
-        self.monster_glyph = gd.get_by_name(gd.MonsterAlikeGlyph, self.monster_name)
-
-    @classmethod
-    def involved_monster(cls, message):
-        match = re.search(cls.pattern, message)
-        if match is None:
-            return None
-        monster_name = match[cls.name_field]
-        # Blind and don't know what's going on
-        if monster_name == 'it':
-            return None
-        return monster_name
-
-MONSTER_REGEX = '((T|t)he )?(poor )?(invisible )?(saddled )?([a-zA-Z -]+?)( of .+?)?'
-
-class RecordedMonsterFlight(RecordedMonsterEvent):
-    pattern = re.compile(f"(^|. +|! +){MONSTER_REGEX} turns to flee.")
-    name_field = 7
-
-class RecordedMonsterDeath(RecordedMonsterEvent):
-    pattern = re.compile(f"You kill {MONSTER_REGEX}!")
-    name_field = 6
-
-    def __init__(self, square, time, monster_name):
-        self.square = square # doesn't know about dungeon levels
-        super().__init__(time, monster_name)
-        self.can_corpse = bool(self.monster_glyph.corpse_spoiler)
 
 class Message():
     known_lost_messages = set([
@@ -630,6 +598,10 @@ class CustomAgent(BatchedAgent):
         changed_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
             change_square = True
+
+            if run_state.character and run_state.character.held_by is not None:
+                run_state.character.held_by = None
+
             new_square = CurrentSquare(
                 arrival_time=time,
                 dcoord=dcoord,
@@ -678,15 +650,18 @@ class CustomAgent(BatchedAgent):
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
 
-        killed_monster_name = RecordedMonsterDeath.involved_monster(message.message)
+        killed_monster_name = monster_messages.RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
             if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.READ]:
+                if run_state.character.held_by is not None:
+                    run_state.character.held_by = None
+
                 delta = physics.action_to_delta[run_state.last_non_menu_action]
 
                 try:
-                    recorded_death = RecordedMonsterDeath(
+                    recorded_death = monster_messages.RecordedMonsterDeath(
                         (player_location[0] + delta[0], player_location[1] + delta[1]),
                         time,
                         killed_monster_name
@@ -698,10 +673,10 @@ class CustomAgent(BatchedAgent):
                     if recorded_death.monster_glyph.safe_to_eat(run_state.character):
                         level_map.record_edible_corpse(recorded_death.square, time, recorded_death.monster_glyph)
 
-        fleeing_monster_name = RecordedMonsterFlight.involved_monster(message.message)
+        fleeing_monster_name = monster_messages.RecordedMonsterFlight.involved_monster(message.message)
         if fleeing_monster_name:
             try:
-                recorded_flight = RecordedMonsterFlight(time, fleeing_monster_name)
+                recorded_flight = monster_messages.RecordedMonsterFlight(time, fleeing_monster_name)
                 run_state.latest_monster_flight = recorded_flight
             except Exception as e:
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
@@ -727,19 +702,8 @@ class CustomAgent(BatchedAgent):
             if level_map.visits_count_map[player_location] == 1:
                 level_map.add_warning_engraving(player_location)
 
-        if "You feel feverish." in message.message:
-            run_state.character.afflicted_with_lycanthropy = True
-
-        if "You feel purified." in message.message:
-            run_state.character.afflicted_with_lycanthropy = False
-
-        if "You feel more confident" in message.message or "could be more dangerous" in message.message:
-            run_state.character.can_enhance = True
-
-        if "more skilled" in message.message or "most skilled" in message.message:
-            print(message.message)
-            if "more dangerous" not in message.message:
-                run_state.character.can_enhance = False
+        if run_state.character:
+            run_state.character.update_from_message(message.message, time)
 
         if "corpse tastes" in message.message:
             print(message.message)
