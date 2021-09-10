@@ -444,6 +444,10 @@ class TestCMapGlyphs(unittest.TestCase):
         for k, v in true_labels.items():
             self.assertEqual(v, gd.CMapGlyph.is_safely_walkable_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
+        for k, v in true_labels.items():
+            glyph = gd.GLYPH_NAME_LOOKUP[k]
+            self.assertEqual(glyph.walkable(None), v, k)
+
     def test_room_floor(self):
         true_labels = {
             'stone': False, # 0

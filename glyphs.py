@@ -481,7 +481,7 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
         
     def walkable(self, character):
-        return self.is_safely_walkable_check(np.array(self.offset).all())
+        return self.is_safely_walkable_check(np.array([self.offset])).all()
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
