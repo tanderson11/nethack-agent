@@ -26,6 +26,7 @@ new_advisors = [
     UpstairsAdvisor(oracle_consultation=lambda o: o.in_gnomish_mines),
     # COMBAT
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
+        MeleeHoldingMonsterAdvisor(),
         SafeMeleeAttackAdvisor(),
         RandomMoveAdvisor(square_threat_tolerance=0.),
         PassiveMonsterRangedAttackAdvisor(),

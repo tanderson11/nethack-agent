@@ -10,6 +10,7 @@ from nle import nethack
 import constants
 import inventory as inv
 import map
+import monster_messages
 import menuplan
 import neighborhood
 import glyphs as gd
@@ -169,8 +170,8 @@ class TestMonsterKill(unittest.TestCase):
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            monster_name = agents.custom_agent.RecordedMonsterDeath.involved_monster(key)
-            self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath(None, None, monster_name).monster_name)
+            monster_name = monster_messages.RecordedMonsterDeath.involved_monster(key)
+            self.assertEqual(value, monster_messages.RecordedMonsterDeath(None, None, monster_name).monster_name)
 
 class TestMonsterFlight(unittest.TestCase):
     test_values = {
@@ -185,8 +186,8 @@ class TestMonsterFlight(unittest.TestCase):
     def test_all_test_values(self):
         for key, value in self.test_values.items():
             print(value)
-            monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
-            self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
+            monster_name = monster_messages.RecordedMonsterFlight.involved_monster(key)
+            self.assertEqual(value, monster_messages.RecordedMonsterFlight(None, monster_name).monster_name)
 
 class TestAttributeScreen(unittest.TestCase):
     def test_easy_case(self):
@@ -532,6 +533,46 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
             results.append(result)
         # The armor and food ration
         self.assertEqual(len(expected['desirable']), len(results))
+
+class TestCharacterUpdateFromMessage(unittest.TestCase):
+    grab_messages = {
+        "You cannot escape from the lichen!": "lichen",
+        "The giant eel bites!  The giant eel swings itself around you!": "giant eel",
+        "The owlbear hits!  The owlbear hits!  The owlbear grabs you!": "owlbear",
+        "The large mimic hits!": "large mimic",
+        "It grabs you!  It bites!  It bites!  It bites!  It bites!  It bites!": "invisible monster",
+    }
+
+    release_messages = [
+        "You pull free from the violet fungus.",
+        "The owlbear releases you.  The grid bug bites!",
+    ]
+    def test_monster_grabs(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+
+        for m, v in self.grab_messages.items():
+            character.update_from_message(m, 0)
+            self.assertEqual(v, character.held_by.monster_glyph.name)
+            character.held_by = None
+    
+    def test_free_from_monster(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+
+        for m in self.release_messages:
+            character.held_by = True
+            character.update_from_message(m, 0)
+            self.assertEqual(None, character.held_by)
+
 
 
 if __name__ == '__main__':
