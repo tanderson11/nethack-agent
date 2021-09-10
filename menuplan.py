@@ -331,7 +331,6 @@ class InteractiveMenu():
                             raise Exception("already made selection but not multi_select")
 
                     #print(next_item.item)
-                    #import pdb; pdb.set_trace()
                     if not next_item.selected and self.item_selector(next_item):
                         return next_item
                 else:
@@ -377,51 +376,47 @@ class ParsingInventoryMenu(InteractiveMenu):
         if selector_name and select_desirable:
             raise Exception("Please only specify one of these")
         super().__init__(selector_name=selector_name)
-        def select_desirable_func(menu_item):
-            if menu_item.item is None:
-                if 'corpse' in menu_item.item_text:
-                    # This is expected. Will get better when we have CorpseIdentity implemented
-                    if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
-                        return True
-                elif environment.env.debug:
-                    if menu_item.item_text[0] in '123456789':
-                        # Known thing that we can't count yet
-                        pass
-                    elif 'spellbook' in menu_item.item_text:
-                        pass
-                    elif 'small glob' in menu_item.item_text:
-                        pass
-                    elif 'statue' in menu_item.item_text:
-                        pass
-                    elif 'figurine' in menu_item.item_text:
-                        pass
-                    elif 'partly used candle' in menu_item.item_text:
-                        pass
-                    elif 'pair of lenses' in menu_item.item_text:
-                        pass
-                    elif ' named ' in menu_item.item_text:
-                        pass
-                    else:
-                        import pdb; pdb.set_trace()
-                    return False
-                else:
-                    return False
-            else:
-                return menu_item.item.identity.desirable_identity(run_state.character)
+
         if select_desirable:
+            def select_desirable_func(menu_item):
+                if menu_item.item is None:
+                    if 'corpse' in menu_item.item_text:
+                        # This is expected. Will get better when we have CorpseIdentity implemented
+                        if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
+                            return True
+                    elif environment.env.debug:
+                        if menu_item.item_text[0] in '123456789':
+                            # Known thing that we can't count yet
+                            pass
+                        elif 'spellbook' in menu_item.item_text:
+                            pass
+                        elif 'small glob' in menu_item.item_text:
+                            pass
+                        elif 'statue' in menu_item.item_text:
+                            pass
+                        elif 'figurine' in menu_item.item_text:
+                            pass
+                        elif 'partly used candle' in menu_item.item_text:
+                          pass
+                        elif 'pair of lenses' in menu_item.item_text:
+                          pass
+                        else:
+                            import pdb; pdb.set_trace()
+                        return False
+                    else:
+                        return False
+                else:
+                    if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
+                    return menu_item.item.desirable(run_state.character)
             self.item_selector = lambda x: select_desirable_func(x)
 
     class MenuItem:
-        #quantity BUC erosion_status enhancement class appearance (wielded/quivered_status / for sale price)
-        # 'a rusty corroded +1 long sword (weapon in hand)'
-        # 'an uncursed very rusty +0 ring mail (being worn)'
         def __init__(self, ambient_menu, category, character, selected, item_text):
             run_state = ambient_menu.run_state
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
-            #cls, string, glyph_numeral=None, passed_object_class=None, inventory_letter=None
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
 
 class InteractivePickupMenu(ParsingInventoryMenu):

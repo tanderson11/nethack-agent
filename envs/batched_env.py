@@ -6,7 +6,7 @@ from collections.abc import Iterable
 import environment
 
 def log_new_run(batch_number, env):
-    if not environment.env.print_seed or environment.env.debug: return
+    if not (environment.env.print_seed or environment.env.debug): return
     env = env.unwrapped
     core_seed, disp_seed, reseed = env.get_seeds()
     print(f"[{batch_number} {env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
@@ -18,7 +18,7 @@ class BatchedEnv:
         """
         self.num_envs = num_envs
         self.envs = [env_make_fn() for _ in range(self.num_envs)]
-        if environment.env.debug:
+        if environment.env.print_seed or environment.env.debug:
             [env.unwrapped.seed(None, None, False) for env in self.envs]
         self.num_actions = self.envs[0].action_space.n
 
@@ -52,7 +52,7 @@ class BatchedEnv:
         """
         Resets all the environments in self.envs
         """
-        #[env.unwrapped.seed(core=9182470441859512757, disp=33419431266180681, reseed=False) for env in self.envs]
+        #[env.unwrapped.seed(core=7225585048089617083, disp=7391845646563007834, reseed=False) for env in self.envs]
         observation = [env.reset() for env in self.envs]
         [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation

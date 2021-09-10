@@ -36,13 +36,13 @@ GLYPH,NAME,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGHT,APPEARANCE,JAPANESE_
 1985,helm of brilliance,1,3,,50,etched helmet,,TRUE,TRUE,helmet,helmet,50,6,FALSE,1,I,Int+Wis
 1979,dwarvish iron helm,1,3,,40,hard hat,,FALSE,FALSE,,helmet,20,6,FALSE,2,I,
 1987,helm of telepathy,1,4,,50,visored helmet,,TRUE,TRUE,helmet,helmet,50,2,FALSE,1,I,ESP
-2035,small shield,1,1,,30,small shield,,FALSE,FALSE,,off-hand,3,6,FALSE,1,W,
-2037,Uruk-hai shield,1,1,,50,white-handed shield,,FALSE,FALSE,,off-hand,7,2,FALSE,1,I,
-2038,orcish shield,1,1,,50,red-eyed shield,,FALSE,FALSE,,off-hand,7,2,FALSE,1,I,
-2036,elven shield,1,2,,40,blue and green shield,,FALSE,FALSE,,off-hand,7,2,FALSE,2,W,
-2039,large shield,1,2,,100,large shield,,FALSE,FALSE,,off-hand,10,7,FALSE,2,I,
-2040,dwarvish roundshield,1,2,,100,large round shield,,FALSE,FALSE,,off-hand,10,4,FALSE,2,I,
-2041,shield of reflection,1,7,,50,polished silver shield,,FALSE,FALSE,,off-hand,50,3,FALSE,2,S,Reflect
+2035,small shield,1,1,,30,small shield,,FALSE,FALSE,,off_hand,3,6,FALSE,1,W,
+2037,Uruk-hai shield,1,1,,50,white-handed shield,,FALSE,FALSE,,off_hand,7,2,FALSE,1,I,
+2038,orcish shield,1,1,,50,red-eyed shield,,FALSE,FALSE,,off_hand,7,2,FALSE,1,I,
+2036,elven shield,1,2,,40,blue and green shield,,FALSE,FALSE,,off_hand,7,2,FALSE,2,W,
+2039,large shield,1,2,,100,large shield,,FALSE,FALSE,,off_hand,10,7,FALSE,2,I,
+2040,dwarvish roundshield,1,2,,100,large round shield,,FALSE,FALSE,,off_hand,10,4,FALSE,2,I,
+2041,shield of reflection,1,7,,50,polished silver shield,,FALSE,FALSE,,off_hand,50,3,FALSE,2,S,Reflect
 2021,Hawaiian shirt,0,0,,5,Hawaiian shirt,,FALSE,FALSE,,shirt,3,8,FALSE,0,C,Shops
 2022,T-shirt,0,0,,5,T-shirt,,FALSE,FALSE,,shirt,2,2,FALSE,0,C,Shops
 2018,orcish ring mail,1,1,,250,crude ring mail,,FALSE,FALSE,,suit,80,20,FALSE,2,I,

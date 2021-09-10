@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import tqdm
 import bz2
@@ -165,3 +166,8 @@ def parse_dir(dr, outpath=None):
             df.to_csv(f)
 
     return df
+
+if __name__ == "__main__":
+    #parse_dir(os.path.join(os.path(__file__), argv[1]), outpath=outpath)
+    outpath="foo.txt"
+    parse_dir(sys.argv[1], outpath=outpath)

@@ -145,3 +145,7 @@ dmypy.json
 nle_data/
 test_batched_env.py
 notebooks/*.ipynb
+parsed/
+
+# top level csvs
+/*.csv
