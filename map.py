@@ -29,7 +29,12 @@ class DCoord(NamedTuple):
 
 class DirectionThroughDungeon(enum.IntEnum):
         up =  -1
+        flat = 0
         down = 1
+
+class DungeonHeading(NamedTuple):
+    direction: DirectionThroughDungeon
+    target_branch: Branches
 
 class DMap():
     def __init__(self):
@@ -59,7 +64,7 @@ class DMap():
 
     def dungeon_direction_to_target(self, current_dcoord, target_dcoord):
         if current_dcoord.branch == target_dcoord.branch:
-            return DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level))
+            return DungeonHeading(DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level)), target_dcoord.branch)
 
         to_dod_stair=None
         from_dod_stair=None
@@ -86,18 +91,18 @@ class DMap():
             if from_dod_stair is None:
                 return None
 
-            return DirectionThroughDungeon(np.sign(from_dod_stair.start_dcoord.level - current_dcoord.level))
+            return DungeonHeading(DirectionThroughDungeon(np.sign(from_dod_stair.start_dcoord.level - current_dcoord.level)), target_dcoord.branch)
 
         if current_dcoord.branch != Branches.DungeonsOfDoom:
             if to_dod_stair is None:
                 return None
 
             if target_dcoord.branch == Branches.DungeonsOfDoom:
-                return DirectionThroughDungeon(np.sign(to_dod_stair.end_dcoord.level - current_dcoord.level))
+                return DungeonHeading(DirectionThroughDungeon(np.sign(to_dod_stair.end_dcoord.level - current_dcoord.level)), target_dcoord.branch)
             else:
                 if from_dod_stair is None:
                     return None
-                return DirectionThroughDungeon(np.sign(to_dod_stair.end_dcoord.level - current_dcoord.level))
+                return DungeonHeading(DirectionThroughDungeon(np.sign(to_dod_stair.end_dcoord.level - current_dcoord.level)), Branches.DungeonsOfDoom)
 
 class Staircase():
     def __init__(self, dcoord, location, to_dcoord, to_location, direction):

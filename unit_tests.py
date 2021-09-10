@@ -745,7 +745,7 @@ class TestDungeonDirection(unittest.TestCase):
         stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
         dmap = stairs_to_dmap(stairs)
         dmap.target_dcoords = [target_dcoord]
-        direction = dmap.dungeon_direction_to_best_target(current_dcoord)
+        direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_fail(self):
         # in the dungeons of doom trying to get out but can't
@@ -754,8 +754,17 @@ class TestDungeonDirection(unittest.TestCase):
         stairs = []
         dmap = stairs_to_dmap(stairs)
         dmap.target_dcoords = [target_dcoord]
-        direction = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(direction, None)
+        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
+        self.assertEqual(heading, None)
+    def test_same_level(self):
+        # trying to get out of dungones
+        current_dcoord = map.DCoord(0, 4)
+        target_dcoord = map.DCoord(2,2)
+        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoords = [target_dcoord]
+        direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
+        self.assertEqual(direction, map.DirectionThroughDungeon.flat)
     def test_in_succeed(self):
         # out of the dungeons of doom, trying to get in
         current_dcoord = map.DCoord(2, 2)
@@ -763,7 +772,7 @@ class TestDungeonDirection(unittest.TestCase):
         stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
         dmap = stairs_to_dmap(stairs)
         dmap.target_dcoords = [target_dcoord]
-        direction = dmap.dungeon_direction_to_best_target(current_dcoord)
+        direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
     def test_through_succeed(self):
         # out of the dungeons of doom, trying to go through
@@ -775,7 +784,7 @@ class TestDungeonDirection(unittest.TestCase):
         ]
         dmap = stairs_to_dmap(stairs)
         dmap.target_dcoords = [target_dcoord]
-        direction = dmap.dungeon_direction_to_best_target(current_dcoord)
+        direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
 
     def test_through_fail(self):
@@ -787,8 +796,8 @@ class TestDungeonDirection(unittest.TestCase):
         ]
         dmap = stairs_to_dmap(stairs)
         dmap.target_dcoords = [target_dcoord]
-        direction = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(direction, None)
+        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
+        self.assertEqual(heading, None)
 
 if __name__ == '__main__':
     unittest.main()
