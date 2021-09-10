@@ -591,7 +591,7 @@ class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
         if not super().satisfactory_monster(monster, rng, run_state, character, oracle):
             return False
 
-        return monster == character.held_by.monster_glyph    
+        return monster == character.held_by.monster_glyph
 
 class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):
