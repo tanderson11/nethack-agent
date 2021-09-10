@@ -789,7 +789,7 @@ class TravelToDesiredEgress(Advisor):
             ],
             fallback=ord('.')
         )
-        return ActionAdvice(self, travel, menu_plan)
+        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
 
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

@@ -309,7 +309,7 @@ class TestDLevelMap(unittest.TestCase):
     def test_add_traversed_staircase(self):
         downstair = gd.get_by_name(gd.CMapGlyph, 'dnstair')
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
-        self.lmap.add_traversed_staircase((0,0), map.DCoord(0, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(0, 1), (0,0), map.DirectionThroughDungeon.down)
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
         staircase = self.lmap.staircases[(0,0)]
         self.assertEqual((0,0), staircase.start_location)
@@ -339,18 +339,18 @@ class TestDLevelMap(unittest.TestCase):
 
     def test_need_egress(self):
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), map.DirectionThroughDungeon.up)
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), map.DirectionThroughDungeon.down)
         self.assertEqual(self.lmap.need_egress(), False)
 
     def test_need_egress_at_mine_branch(self):
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), map.DirectionThroughDungeon.up)
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.GnomishMines.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.GnomishMines.value, 1), (0,0), map.DirectionThroughDungeon.down)
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((2,2), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((2,2), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), map.DirectionThroughDungeon.down)
         self.assertEqual(self.lmap.need_egress(), False)
 
 class TestCMapGlyphs(unittest.TestCase):

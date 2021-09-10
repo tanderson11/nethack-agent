@@ -717,9 +717,9 @@ class CustomAgent(BatchedAgent):
             print(run_state.message_log[-2])
             # create the staircases (idempotent)
             if "You descend the" in run_state.message_log[-2]:
-                direction = ('down', 'up')
+                direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
             elif "You climb" in run_state.message_log[-2]:
-                direction = ('up', 'down')
+                direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]

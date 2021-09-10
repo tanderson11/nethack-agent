@@ -115,7 +115,7 @@ class Staircase():
         self.direction = direction
 
     def matches_heading(self, heading):
-        return self.end_dcoord.branch == heading.target_branch or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
+        return (self.end_dcoord.branch == heading.target_branch and not self.start_dcoord.branch == self.end_dcoord.branch) or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
 
 class TimedCorpse(NamedTuple):
     ACCEPTABLE_CORPSE_AGE = 40
@@ -142,8 +142,7 @@ class DLevelMap():
 
     def __init__(self, dcoord):
         self.dcoord = dcoord
-        if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
-            import pdb; pdb.set_trace()
+
         self.downstairs_count = 0
         self.upstairs_count = 0
         self.downstairs_target = 1
@@ -312,15 +311,13 @@ class DLevelMap():
                 # raise Exception("Conflicting staircases")
                 pass
         except KeyError:
-            if direction != 'up' and direction != 'down':
-                raise Exception("Strange direction " + direction)
             staircase = Staircase(
                 self.dcoord,
                 location,
                 to_dcoord,
                 to_location,
                 direction)
-            self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
+            self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == DirectionThroughDungeon.up else 'dnstair'))
             self.staircases[location] = staircase
             if staircase.start_dcoord.branch == Branches.DungeonsOfDoom and staircase.end_dcoord.branch == Branches.GnomishMines:
                 self.downstairs_target += 1
