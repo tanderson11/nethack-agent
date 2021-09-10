@@ -334,7 +334,7 @@ class VenomGlyph(ObjectGlyph):
 
 class CMapGlyph(Glyph):
     OFFSET = nethack.GLYPH_CMAP_OFF
-    COUNT = nethack.MAXPCHARS
+    COUNT = nethack.MAXPCHARS - 9 # Fascinatingly, the explosions trample the end of this
 
     NAMES = [
         'stone', # 0
@@ -424,33 +424,38 @@ class CMapGlyph(Glyph):
         'sw_bl', # 84
         'sw_bc', # 85
         'sw_br', # 86
-        'explode1', # 87
-        'explode2', # 88
-        'explode3', # 89
-        'explode4', # 90
-        'explode5', # 91
-        'explode6', # 92
-        'explode7', # 93
-        'explode8', # 94
-        'explode9', # 95
     ]
 
     @classmethod
+    def is_poorly_understood_check(cls, offsets):
+        # Christian: Glyphs that I don't really know what they are
+        return (
+            ((offsets >= 39) & (offsets <= 41)) | # air, cloud, water. Planes only?
+            (offsets == 60) | # statue trap uses this glyph or not?
+            (offsets >= 65) # cruft?
+        )
+
+    @classmethod
     def is_room_floor_check(cls, offsets):
-        #import pdb; pdb.set_trace()
-        return ((offsets >= 19) & (offsets <= 35)) | ((offsets >= 39) & (offsets <= 64)) & (~cls.is_trap_check(offsets)) & (~cls.is_liquid_check(offsets))
+        # This is specifically defined as the stuff you find
+        # in the guts of a DoD room. Used to define special rooms
+        return (
+            ((offsets >= 19) & (offsets <= 34) & ~(offsets == 21) & ~(offsets == 22)) |
+            ((offsets >= 42) & (offsets <= 64))
+        )
+
+    @classmethod
+    def is_safely_walkable_check(cls, offsets):
+         return (
+            ((offsets >= 12) & (offsets <= 14)) | # Doors
+            ((offsets >= 19) & (offsets <= 34) & (~cls.is_liquid_check(offsets))) | # Room-like
+            (offsets == 58) | # Magic portal
+            (offsets == 64) # Vibrating square
+         )
 
     @staticmethod
     def is_liquid_check(offsets):
         return (offsets == 41) | (offsets == 32) | (offsets == 34)
-
-    @staticmethod
-    def is_corridor_check(offsets):
-        return offsets == 21
-
-    @staticmethod
-    def is_trap_check(offsets):
-        return (offsets >= 42) & (offsets <= 64) & (offsets != 58) # magic portal not a trap
 
     @staticmethod
     def is_door_check(offsets):
@@ -462,25 +467,21 @@ class CMapGlyph(Glyph):
 
     def __init__(self, numeral):
         self.numeral = numeral
-        self.offset = self.numeral - self.__class__.OFFSET
-        self.name = self.__class__.NAMES[numeral - self.__class__.OFFSET]
+        self.offset = self.numeral - self.OFFSET
+        self.name = self.NAMES[self.offset]
 
         self.is_wall = self.offset < 12
 
         self.possible_secret_door = self.offset < 3
 
-        self.is_floor = self.offset >= 19 and self.offset <= 31
         self.is_upstairs = self.offset == 23 or self.offset == 25
         self.is_downstairs = self.offset == 24 or self.offset == 26
 
-        self.is_trap = self.offset > 41 and self.offset < 65
-
-        self.is_broken_door = self.offset == 12 # not 100% sure these are broken doors.TK
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
         
     def walkable(self, character):
-        return (self.offset > 18 and self.offset < 32) or self.offset == 12 or self.is_open_door or self.is_downstairs or self.is_upstairs
+        return self.is_safely_walkable_check(np.array([self.offset])).all()
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -1028,9 +1029,7 @@ def dump_oclass(cls):
 def get_by_name(klass, name):
     glyph = GLYPH_NAME_LOOKUP.get(name, None)
     if not isinstance(glyph, klass):
-        if environment.env.debug:
-            pdb.set_trace()
-        raise Exception(f"bad glyph name {name}")
+        raise Exception(f"bad glyph name: {name}")
     return glyph
 
 def stackable_glyph(glyph):
