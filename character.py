@@ -113,8 +113,11 @@ class Character():
                 monster_name = "invisible monster"
             self.held_by = HeldBy(time, gd.GLYPH_NAME_LOOKUP[monster_name])
 
-        relase = monster_messages.RecordedRelease.involved_monster(message_text)
-        if relase is not None:
+        possible_releases = [monster_messages.RecordedPullFree.involved_monster(message_text),
+        monster_messages.RecordedRelease.involved_monster(message_text)]
+
+        relase_name = next((name for name in possible_releases if name is not None), None)
+        if relase_name is not None:
             self.held_by = None
 
         if "You feel more confident" in message_text or "could be more dangerous" in message_text:
