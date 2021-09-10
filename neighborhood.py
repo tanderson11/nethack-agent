@@ -114,7 +114,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             ViewField.Extended
         )
 
-        if level_map.branch == map.Branches.Sokoban:
+        if level_map.dcoord.branch == map.Branches.Sokoban:
             # Corrections to what is moveable in Sokoban
             extended_walkable_tile &= ~(self.extended_boulders)
 
@@ -173,7 +173,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.walkable = walkable_tile
         self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
 
-        if level_map.branch == map.Branches.Sokoban:
+        if level_map.dcoord.branch == map.Branches.Sokoban:
             # Corrections to what is moveable in Sokoban
             self.walkable &= ~(self.diagonal_moves)
 

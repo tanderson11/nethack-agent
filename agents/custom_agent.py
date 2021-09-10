@@ -24,7 +24,7 @@ from utilities import ARS
 from character import Character
 import constants
 import glyphs as gd
-from map import DMap
+from map import DMap, DCoord
 import environment
 from wizmode_prep import WizmodePrep
 
@@ -599,13 +599,13 @@ class CustomAgent(BatchedAgent):
 
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
-        dcoord = (dungeon_number, level_number)
+        dcoord = DCoord(dungeon_number, level_number)
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
             level_map.update(player_location, observation['glyphs'])
         except KeyError:
-            level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
+            level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')

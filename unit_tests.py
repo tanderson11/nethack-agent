@@ -286,7 +286,7 @@ def make_glyphs(vals = {}):
 
 class TestDLevelMap(unittest.TestCase):
     def setUp(self):
-        self.lmap = map.DMap().make_level_map(0, 2, make_glyphs(), (0,0))
+        self.lmap = map.DMap().make_level_map(map.DCoord(0,2), make_glyphs(), (0,0))
 
     def test_update(self):
         upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
@@ -309,7 +309,7 @@ class TestDLevelMap(unittest.TestCase):
     def test_add_traversed_staircase(self):
         downstair = gd.get_by_name(gd.CMapGlyph, 'dnstair')
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
-        self.lmap.add_traversed_staircase((0,0), (0, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(0, 1), (0,0), 'down')
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), downstair)
         staircase = self.lmap.staircases[(0,0)]
         self.assertEqual((0,0), staircase.start_location)
@@ -339,18 +339,18 @@ class TestDLevelMap(unittest.TestCase):
 
     def test_need_egress(self):
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((1,1), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
         self.assertEqual(self.lmap.need_egress(), False)
 
     def test_need_egress_at_mine_branch(self):
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((0,0), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
+        self.lmap.add_traversed_staircase((0,0), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'up')
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((1,1), (map.Branches.GnomishMines.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((1,1), map.DCoord(map.Branches.GnomishMines.value, 1), (0,0), 'down')
         self.assertEqual(self.lmap.need_egress(), True)
-        self.lmap.add_traversed_staircase((2,2), (map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
+        self.lmap.add_traversed_staircase((2,2), map.DCoord(map.Branches.DungeonsOfDoom.value, 1), (0,0), 'down')
         self.assertEqual(self.lmap.need_egress(), False)
 
 class TestCMapGlyphs(unittest.TestCase):
@@ -564,7 +564,7 @@ class TestNeighborhood(unittest.TestCase):
             10,
             current_square,
             glyphs,
-            dmap.make_level_map(0, 1, glyphs, (0,0)),
+            dmap.make_level_map(map.DCoord(0,1), glyphs, (0,0)),
             None,
             None,
         )
@@ -725,6 +725,70 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
         # The armor and food ration
         self.assertEqual(len(expected['desirable']), len(results))
 
+def stairs_to_dmap(stairs):
+    dmap = map.DMap()
+    for stair in stairs:
+        start_level = map.DLevelMap(stair.start_dcoord)
+        start_level.staircases[(0,0)] = stair
+        end_level = map.DLevelMap(stair.end_dcoord)
+
+        dmap.dlevels[start_level.dcoord] = start_level
+        dmap.dlevels[end_level.dcoord] = end_level
+
+    return dmap
+
+class TestDungeonDirection(unittest.TestCase):
+    def test_out_succeed(self):
+        # in the dungeons of doom, trying to get out
+        current_dcoord = map.DCoord(0, 5)
+        target_dcoord = map.DCoord(2,100)
+        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoord = target_dcoord
+        direction = dmap.dungeon_direction_to_target(current_dcoord)
+        self.assertEqual(direction, map.DirectionThroughDungeon.up)
+    def test_out_fail(self):
+        # in the dungeons of doom trying to get out but can't
+        current_dcoord = map.DCoord(0, 5)
+        target_dcoord = map.DCoord(2,100)
+        stairs = []
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoord = target_dcoord
+        direction = dmap.dungeon_direction_to_target(current_dcoord)
+        self.assertEqual(direction, None)
+    def test_in_succeed(self):
+        # out of the dungeons of doom, trying to get in
+        current_dcoord = map.DCoord(2, 2)
+        target_dcoord = map.DCoord(0,1)
+        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoord = target_dcoord
+        direction = dmap.dungeon_direction_to_target(current_dcoord)
+        self.assertEqual(direction, map.DirectionThroughDungeon.down)
+    def test_through_succeed(self):
+        # out of the dungeons of doom, trying to go through
+        current_dcoord = map.DCoord(3, 2)
+        target_dcoord = map.DCoord(2,3)
+        stairs = [
+            map.Staircase(map.DCoord(0, 7), None, map.DCoord(2, 3), None, None),
+            map.Staircase(map.DCoord(0, 4), None, map.DCoord(3, 3), None, None)
+        ]
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoord = target_dcoord
+        direction = dmap.dungeon_direction_to_target(current_dcoord)
+        self.assertEqual(direction, map.DirectionThroughDungeon.down)
+
+    def test_through_fail(self):
+        # out of dungeons of doom, trying to go through but can't find
+        current_dcoord = map.DCoord(3, 2)
+        target_dcoord = map.DCoord(2,3)
+        stairs = [
+            map.Staircase(map.DCoord(0, 7), None, map.DCoord(2, 3), None, None),
+        ]
+        dmap = stairs_to_dmap(stairs)
+        dmap.target_dcoord = target_dcoord
+        direction = dmap.dungeon_direction_to_target(current_dcoord)
+        self.assertEqual(direction, None)
 
 if __name__ == '__main__':
     unittest.main()
