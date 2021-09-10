@@ -215,9 +215,9 @@ class DLevelMap():
             self.update_stair_counts()
 
     def add_warning_engraving(self, location):
-        import pdb; pdb.set_trace()
         self.warning_engravings[location] = True
 
+        import pdb; pdb.set_trace()
         # vault closet engravings appear on the floor
         if self.room_floor[location] == True:
             self.add_vault_closet(location)
