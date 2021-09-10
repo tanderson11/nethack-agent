@@ -7,12 +7,14 @@ from dataclasses import dataclass
 import constants
 import glyphs as gd
 import inventory as inv
+from utilities import ARS
+import monster_messages
 
 @dataclass
 class HeldBy():
     time_held: int
     monster_glyph: gd.MonsterGlyph
-    monster_square: Tuple[int, int]
+    #monster_square: Tuple[int, int]
 
 @dataclass
 class Character():
@@ -75,7 +77,7 @@ class Character():
         if old_AC != blstats.get('armor_class'):
             self.AC = blstats.get('armor_class')
 
-    def update_from_message(self, message_text):
+    def update_from_message(self, message_text, time):
         if "You feel feverish." in message_text:
             self.afflicted_with_lycanthropy = True
 
@@ -83,13 +85,31 @@ class Character():
             self.afflicted_with_lycanthropy = False
 
         "grabs you!"
-        if "You cannot escape" in message_text:
-            # import pdb; pdb.set_trace()
+        if "You cannot escape" in message_text or "grabs you!" in message_text or "swings itself around you" in message_text:
+            #import pdb; pdb.set_trace()
             pass
 
-        "was a large mimic"
-        "was a giant mimic"
+        monster_name = None
 
+        possible_grabs = [monster_messages.RecordedSeaMonsterGrab.involved_monster(message_text),
+        monster_messages.RecordedMonsterGrab.involved_monster(message_text),
+        monster_messages.RecordedCannotEscape.involved_monster(message_text)]
+
+        monster_name = next((name for name in possible_grabs if name is not None), None)
+
+        sticky_monster_messages = [("was a large mimic", "large mimic"),
+        ("was a giant mimic", "giant mimic"),
+        ("The large mimic hits!", "large mimic"),
+        ("The giant mimic hits!", "giant mimic"),
+        ("The lichen touches you!", "lichen"),
+        ("The violet fungus touches you!", "violet fungus"),]
+
+        for sticky_message, name in sticky_monster_messages:
+            if sticky_message in message_text:
+                monster_name = name
+
+        if monster_name is not None:
+            self.held_by = HeldBy(time, gd.GLYPH_NAME_LOOKUP[monster_name])
 
         if "You feel more confident" in message_text or "could be more dangerous" in message_text:
             self.can_enhance = True

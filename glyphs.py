@@ -495,6 +495,8 @@ class PetGlyph(MonsterAlikeGlyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
+
+        self.name = "pet" + self.name
     
     def walkable(self, character):
         return True
@@ -509,6 +511,10 @@ class InvisibleGlyph(Glyph):
 class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.name = "detected" + self.name
 
 class CorpseGlyph(Glyph):
     OFFSET = nethack.GLYPH_BODY_OFF
@@ -531,6 +537,10 @@ class CorpseGlyph(Glyph):
 class RiddenGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_RIDDEN_OFF
     COUNT = nethack.NUMMONS
+
+    def __init__(self, numeral):
+        super().__init__(numeral)
+        self.name = "ridden" + self.name
 
 class ExplodeGlyph(Glyph):
     OFFSET = nethack.GLYPH_EXPLODE_OFF
@@ -1018,7 +1028,7 @@ def get_by_name(klass, name):
     if not isinstance(glyph, klass):
         if environment.env.debug:
             pdb.set_trace()
-        raise Exception("bad glyph name")
+        raise Exception(f"bad glyph name {name}")
     return glyph
 
 def stackable_glyph(glyph):
