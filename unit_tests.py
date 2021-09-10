@@ -14,6 +14,9 @@ import menuplan
 import neighborhood
 import glyphs as gd
 import agents.custom_agent
+import environment
+
+environment.env = environment.make_environment(log_runs=False)
 
 class SpecialValues(enum.Enum):
     same_name = "SAME NAME"
