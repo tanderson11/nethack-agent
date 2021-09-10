@@ -391,7 +391,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'UNC1Ug=='
+        #seed = b'UNC1Ug=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -747,9 +747,6 @@ class CustomAgent(BatchedAgent):
         if "enough tries" in message.message and environment.env.debug:
             #import pdb; pdb.set_trace()
             pass
-
-        if "pay for that" in message.message:
-            import pdb; pdb.set_trace()
 
         if run_state.debugger_on:
             import pdb; pdb.set_trace()

@@ -442,7 +442,7 @@ class TestCMapGlyphs(unittest.TestCase):
             'sw_br': False, # 86
         }
         for k, v in true_labels.items():
-            self.assertEqual(1 if v else 0, gd.CMapGlyph.is_safely_walkable_check(gd.get_by_name(gd.CMapGlyph, k).offset), k)
+            self.assertEqual(v, gd.CMapGlyph.is_safely_walkable_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
     def test_room_floor(self):
         true_labels = {
@@ -536,7 +536,7 @@ class TestCMapGlyphs(unittest.TestCase):
         }
 
         for k, v in true_labels.items():
-            self.assertEqual(1 if v else 0, gd.CMapGlyph.is_room_floor_check(gd.get_by_name(gd.CMapGlyph, k).offset), k)
+            self.assertEqual(v, gd.CMapGlyph.is_room_floor_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
 class TestNeighborhood(unittest.TestCase):
     def setUp(self):

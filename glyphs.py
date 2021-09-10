@@ -458,10 +458,6 @@ class CMapGlyph(Glyph):
         return (offsets == 41) | (offsets == 32) | (offsets == 34)
 
     @staticmethod
-    def is_corridor_check(offsets):
-        return ((offsets == 21) | (offsets == 22))
-
-    @staticmethod
     def is_door_check(offsets):
         return (offsets >= 12) & (offsets <= 16)
 
@@ -485,7 +481,7 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
         
     def walkable(self, character):
-        return self.is_safely_walkable_check(self.offset)
+        return self.is_safely_walkable_check(np.array(self.offset).all())
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
