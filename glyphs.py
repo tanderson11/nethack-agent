@@ -508,6 +508,8 @@ class InvisibleGlyph(Glyph):
     def __init__(self, numeral):
         super().__init__(numeral)
 
+        self.name = "invisible monster"
+
 class DetectGlyph(MonsterAlikeGlyph):
     OFFSET = nethack.GLYPH_DETECT_OFF
     COUNT = nethack.NUMMONS

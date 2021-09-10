@@ -539,7 +539,9 @@ class TestCharacterUpdateFromMessage(unittest.TestCase):
         "You cannot escape the lichen!": "lichen",
         "The giant eel bites!  The giant eel swings itself around you!": "giant eel",
         "The owlbear hits!  The owlbear hits!  The owlbear grabs you!": "owlbear",
-        "The large mimic hits!": "large mimic"
+        "The large mimic hits!": "large mimic",
+        "The owlbear grabs you! The owlbear releases you.  The grid bug bites!": None,
+        "It grabs you!  It bites!  It bites!  It bites!  It bites!  It bites!": "invisible monster",
     }
     def test_monster_grabs(self):
         character = agents.custom_agent.Character(
@@ -551,7 +553,10 @@ class TestCharacterUpdateFromMessage(unittest.TestCase):
 
         for m, v in self.messages.items():
             character.update_from_message(m, 0)
-            self.assertEqual(v, character.held_by.monster_glyph.name)
+            if v is None:
+                self.assertEqual(character.held_by, None)
+            else:
+                self.assertEqual(v, character.held_by.monster_glyph.name)
             character.held_by = None
 
 

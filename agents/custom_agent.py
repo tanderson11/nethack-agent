@@ -649,6 +649,9 @@ class CustomAgent(BatchedAgent):
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
             if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.READ]:
+                if run_state.character.held_by is not None:
+                    run_state.character.held_by = None
+
                 delta = physics.action_to_delta[run_state.last_non_menu_action]
 
                 try:
