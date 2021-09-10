@@ -6,7 +6,7 @@ from collections.abc import Iterable
 import environment
 
 def log_new_run(batch_number, env):
-    if not environment.env.debug: return
+    if not environment.env.print_seed or environment.env.debug: return
     env = env.unwrapped
     core_seed, disp_seed, reseed = env.get_seeds()
     print(f"[{batch_number} {env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")

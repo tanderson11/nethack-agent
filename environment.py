@@ -6,6 +6,7 @@ class EnvironmentVariable(NamedTuple):
     num_environments: int
     num_episodes: int
     debug: bool
+    print_seed: bool
     log_runs: bool
     target_roles: set[str]
     wizard: bool
@@ -21,11 +22,17 @@ def parse_target_roles(raw_str):
 
     return set([constants.BaseRole[s] for s in raw_str.split(',')])
 
-env = EnvironmentVariable(
-    num_environments=try_cast(int, os.getenv("NLE_DEV_NUM_ENVIRONMENTS")),
-    num_episodes=try_cast(int, os.getenv("NLE_DEV_NUM_EPISODES")),
-    debug=(os.getenv("NLE_DEV_DEBUG") == "true"),
-    log_runs=((os.getenv("NLE_DEV_LOG_RUNS") == "true")),
-    target_roles=parse_target_roles(os.getenv("NLE_DEV_TARGET_ROLES")),
-    wizard=(os.getenv("NLE_DEV_WIZARD") == "true"),
-)
+def make_environment(**kwargs):
+    environment = {'num_environments':try_cast(int, os.getenv("NLE_DEV_NUM_ENVIRONMENTS")),
+    'num_episodes':try_cast(int, os.getenv("NLE_DEV_NUM_EPISODES")),
+    'debug':(os.getenv("NLE_DEV_DEBUG") == "true"),
+    'print_seed':(os.getenv("NLE_DEV_PRINT_SEED") == "true"),
+    'log_runs':((os.getenv("NLE_DEV_LOG_RUNS") == "true")),
+    'target_roles':parse_target_roles(os.getenv("NLE_DEV_TARGET_ROLES")),
+    'wizard':(os.getenv("NLE_DEV_WIZARD") == "true"),}
+
+    environment.update(kwargs)
+
+    return EnvironmentVariable(**environment)
+
+env = make_environment()
