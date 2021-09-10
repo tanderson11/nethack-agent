@@ -18,7 +18,7 @@ class BatchedEnv:
         """
         self.num_envs = num_envs
         self.envs = [env_make_fn() for _ in range(self.num_envs)]
-        if environment.env.debug:
+        if environment.env.print_seed or environment.env.debug:
             [env.unwrapped.seed(None, None, False) for env in self.envs]
         self.num_actions = self.envs[0].action_space.n
 
