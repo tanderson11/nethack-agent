@@ -721,12 +721,15 @@ class CustomAgent(BatchedAgent):
             elif "You climb" in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
+            if dcoord.branch != run_state.neighborhood.dcoord.branch:
+                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=run_state.neighborhood.dcoord)
+
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
             previous_level_map.add_traversed_staircase(
-                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0]) # start, end, end
+                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
             # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end
+            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1])
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:

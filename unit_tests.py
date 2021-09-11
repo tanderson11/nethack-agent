@@ -742,17 +742,19 @@ class TestDungeonDirection(unittest.TestCase):
         # in the dungeons of doom, trying to get out
         current_dcoord = map.DCoord(0, 5)
         target_dcoord = map.DCoord(2,100)
-        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
-        dmap = stairs_to_dmap(stairs)
+
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
+
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_fail(self):
         # in the dungeons of doom trying to get out but can't
+
         current_dcoord = map.DCoord(0, 5)
         target_dcoord = map.DCoord(2,100)
-        stairs = []
-        dmap = stairs_to_dmap(stairs)
+        dmap = map.DMap()
         dmap.target_dcoords = [target_dcoord]
         heading = dmap.dungeon_direction_to_best_target(current_dcoord)
         self.assertEqual(heading, None)
@@ -760,8 +762,8 @@ class TestDungeonDirection(unittest.TestCase):
         # trying to get out of dungones
         current_dcoord = map.DCoord(0, 4)
         target_dcoord = map.DCoord(2,2)
-        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
-        dmap = stairs_to_dmap(stairs)
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.flat)
@@ -769,8 +771,8 @@ class TestDungeonDirection(unittest.TestCase):
         # out of the dungeons of doom, trying to get in
         current_dcoord = map.DCoord(2, 2)
         target_dcoord = map.DCoord(0,1)
-        stairs = [map.Staircase(map.DCoord(0, 4), None, map.DCoord(2, 3), None, None)]
-        dmap = stairs_to_dmap(stairs)
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
@@ -778,11 +780,11 @@ class TestDungeonDirection(unittest.TestCase):
         # out of the dungeons of doom, trying to go through
         current_dcoord = map.DCoord(3, 2)
         target_dcoord = map.DCoord(2,3)
-        stairs = [
-            map.Staircase(map.DCoord(0, 7), None, map.DCoord(2, 3), None, None),
-            map.Staircase(map.DCoord(0, 4), None, map.DCoord(3, 3), None, None)
-        ]
-        dmap = stairs_to_dmap(stairs)
+
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
+        dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
+
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
@@ -791,10 +793,10 @@ class TestDungeonDirection(unittest.TestCase):
         # out of dungeons of doom, trying to go through but can't find
         current_dcoord = map.DCoord(3, 2)
         target_dcoord = map.DCoord(2,3)
-        stairs = [
-            map.Staircase(map.DCoord(0, 7), None, map.DCoord(2, 3), None, None),
-        ]
-        dmap = stairs_to_dmap(stairs)
+
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
+
         dmap.target_dcoords = [target_dcoord]
         heading = dmap.dungeon_direction_to_best_target(current_dcoord)
         self.assertEqual(heading, None)
