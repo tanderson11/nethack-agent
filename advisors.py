@@ -852,7 +852,7 @@ class TakeStaircaseAdvisor(Advisor):
                 return None
         if traversed_staircase is None:
             if oracle.on_upstairs:
-                if current_level == map.DCoord(map.Branches.DungeonsOfDoom.value, 1):
+                if current_level.branch == map.Branches.DungeonsOfDoom and current_level.level == 1:
                     return None
                 action = nethack.actions.MiscDirection.UP
             elif oracle.on_downstairs:

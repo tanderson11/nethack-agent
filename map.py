@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import enum
 from typing import NamedTuple
 
@@ -19,13 +20,19 @@ class Branches(enum.Enum):
     Quest = 3
     Sokoban = 4
 
-class DCoord(NamedTuple):
+@dataclass
+class DCoord():
     branch_numeral: int
     level: int
 
-    @property
-    def branch(self):
-        return Branches(self.branch_numeral)
+    def __post_init__(self):
+        self.branch = Branches(self.branch_numeral)
+    
+    def __eq__(self, y):
+        return (self.branch_numeral == y.branch_numeral) and (self.level == y.level)
+
+    def __hash__(self):
+        return hash((self.branch_numeral, self.level))
 
 class DirectionThroughDungeon(enum.IntEnum):
         up =  -1
