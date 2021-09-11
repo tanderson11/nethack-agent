@@ -86,7 +86,7 @@ class Character():
         return True
 
     def ready_for_mines(self):
-        return self.experience_level > 8
+        return self.experience_level > 7
 
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
@@ -96,7 +96,7 @@ class Character():
         5: 3,
         6: 5,
         7: 6,
-        8: 8,
+        #8: 8,
     }
 
     # getting slightly less aggressive now that we eat corpses
@@ -108,7 +108,7 @@ class Character():
         5:5,
         6:6,
         7:6,
-        8:8,
+        #8:8,
     }
 
     def am_willing_to_descend(self, depth):
