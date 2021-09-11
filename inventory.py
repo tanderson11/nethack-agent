@@ -99,6 +99,30 @@ class Scroll(Item):
 class Potion(Item):
     glyph_class = gd.PotionGlyph
 
+    healing_dice_by_BUC = {
+        'uncursed': 6,
+        'cursed': 4,
+        'blessed': 8,
+    }
+    def expected_healing(self, character):
+        name = self.identity.name()
+        if name is None or 'healing' not in name:
+            return 0
+
+        if name == 'full healing':
+            return character.max_hp
+
+        BUC = self.BUC if self.BUC is not None else 'uncursed'
+        n_dice = self.healing_dice_by_BUC[BUC]
+        if name == 'healing':
+            return n_dice * 4
+            #return min(n_dice * 4, character.max_hp)
+
+        if name == 'extra healing':
+            return n_dice * 8
+            #return min(n_dice * 8, character.max_hp)
+
+
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
 

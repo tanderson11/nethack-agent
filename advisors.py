@@ -279,20 +279,39 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
-class DrinkHealingPotionAdvisor(Advisor):
+class PotionAdvisor(Advisor):
+    def make_menu_plan(self, letter):
+        menu_plan = menuplan.MenuPlan(
+            "drink potion", self, [
+                menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
+                menuplan.NoMenuResponse("Drink from the fountain?"),
+                menuplan.NoMenuResponse("Drink from the sink?"),
+            ])
+        
+        return menu_plan
+
+class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
-        potions = character.inventory.get_oclass(inv.Potion)
+        healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != 'cursed', identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
 
-        for potion in potions:
-            if potion and potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+        for potion in healing_potions:
+            expected_healing = potion.expected_healing(character)
+            if expected_healing < (character.max_hp / 2):
+                menu_plan = self.make_menu_plan(potion.inventory_letter)
+                import pdb; pdb.set_trace()
+                return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+        return None
+
+class DrinkHealingPotionAdvisor(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        quaff = nethack.actions.Command.QUAFF
+        healing_potions = character.inventory.get_items(inv.Potion, identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
+
+        for potion in healing_potions:
                 letter = potion.inventory_letter
-                menu_plan = menuplan.MenuPlan(
-                    "drink healing potion", self, [
-                        menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
-                        menuplan.NoMenuResponse("Drink from the fountain?"),
-                        menuplan.NoMenuResponse("Drink from the sink?"),
-                    ])
+                menu_plan = self.make_menu_plan(letter)
                 return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
         return None
 

@@ -809,6 +809,18 @@ class AmuletIdentity(ObjectIdentity):
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
 
+    def desirable_identity(self, character):
+        if self.name() is not None and 'healing' in self.name():
+            return True
+
+        if self.name() == 'gain level':
+            return True
+
+        if self.name() == 'fruit juice':
+            return True
+
+        return False
+
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
@@ -830,8 +842,29 @@ class FoodIdentity(ObjectIdentity):
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
 
+    def desirable_identity(self, character):
+        if self.name() == 'unicorn horn':
+            return True
+
+        if self.name() in ['lock pick', 'key', 'credit card']:
+            return True
+
+        if self.name() in ['sack', 'bag of holding', 'oilskin sack']:
+            return True
+
+        if self.name() == 'magic marker':
+            return True
+
+        return False
+
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+
+    def desirable_identity(self, character):
+        if self.name() == 'luckstone':
+            return True
+
+        return False
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
