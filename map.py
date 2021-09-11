@@ -50,8 +50,12 @@ class DMap():
         self.branch_connections = {}
 
     def add_branch_traversal(self, start_dcoord, end_dcoord):
-        self.branch_connections[start_dcoord] = end_dcoord
-        self.branch_connections[end_dcoord] = start_dcoord
+        exists = self.branch_connections.get((start_dcoord, end_dcoord), False)
+        if exists:
+            return
+        
+        self.branch_connections[(start_dcoord, end_dcoord)] = True
+        self.branch_connections[(end_dcoord, start_dcoord)] = True
 
     def make_level_map(self, dcoord, glyphs, initial_player_location):
         lmap = DLevelMap(dcoord)
@@ -82,7 +86,7 @@ class DMap():
         final_start=None
         one_and_only_start=None
         #import pdb; pdb.set_trace()
-        for start_dcoord, end_dcoord in self.branch_connections.items():
+        for start_dcoord, end_dcoord in self.branch_connections.keys():
             # if not relevant in any way, continue
             if start_dcoord.branch != current_dcoord.branch and end_dcoord.branch != target_dcoord.branch:
                 continue

@@ -749,9 +749,20 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
+    def test_out_succeed_overlapping_branches(self):
+        # in the dungeons of doom, trying to get out
+        current_dcoord = map.DCoord(0, 5)
+        target_dcoord = map.DCoord(2,100)
+
+        dmap = map.DMap()
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
+        dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
+
+        dmap.target_dcoords = [target_dcoord]
+        direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
+        self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_fail(self):
         # in the dungeons of doom trying to get out but can't
-
         current_dcoord = map.DCoord(0, 5)
         target_dcoord = map.DCoord(2,100)
         dmap = map.DMap()
@@ -788,7 +799,6 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.target_dcoords = [target_dcoord]
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
-
     def test_through_fail(self):
         # out of dungeons of doom, trying to go through but can't find
         current_dcoord = map.DCoord(3, 2)

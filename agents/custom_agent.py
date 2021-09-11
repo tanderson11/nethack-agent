@@ -644,6 +644,7 @@ class CustomAgent(BatchedAgent):
                     pass
                 elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player) or isinstance(raw_previous_glyph_on_player, gd.WarningGlyph)):
                     # Re: warning glyphs, current situations where we walk onto them include piercers
+                    # While hallu, we might step onto a statue we hallucinated as a monster
                     if raw_previous_glyph_on_player.name == 'leprechaun':
                         # Wild, I know, but a leprechaun can dodge us like this
                         # "miss wildly and stumble forward"
