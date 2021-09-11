@@ -10,6 +10,7 @@ from nle import nethack
 import constants
 import inventory as inv
 import map
+import monster_messages
 import menuplan
 import neighborhood
 import glyphs as gd
@@ -169,8 +170,8 @@ class TestMonsterKill(unittest.TestCase):
 
     def test_all_test_values(self):
         for key, value in self.test_values.items():
-            monster_name = agents.custom_agent.RecordedMonsterDeath.involved_monster(key)
-            self.assertEqual(value, agents.custom_agent.RecordedMonsterDeath(None, None, monster_name).monster_name)
+            monster_name = monster_messages.RecordedMonsterDeath.involved_monster(key)
+            self.assertEqual(value, monster_messages.RecordedMonsterDeath(None, None, monster_name).monster_name)
 
 class TestMonsterFlight(unittest.TestCase):
     test_values = {
@@ -185,8 +186,8 @@ class TestMonsterFlight(unittest.TestCase):
     def test_all_test_values(self):
         for key, value in self.test_values.items():
             print(value)
-            monster_name = agents.custom_agent.RecordedMonsterFlight.involved_monster(key)
-            self.assertEqual(value, agents.custom_agent.RecordedMonsterFlight(None, monster_name).monster_name)
+            monster_name = monster_messages.RecordedMonsterFlight.involved_monster(key)
+            self.assertEqual(value, monster_messages.RecordedMonsterFlight(None, monster_name).monster_name)
 
 class TestAttributeScreen(unittest.TestCase):
     def test_easy_case(self):
@@ -725,18 +726,6 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
         # The armor and food ration
         self.assertEqual(len(expected['desirable']), len(results))
 
-def stairs_to_dmap(stairs):
-    dmap = map.DMap()
-    for stair in stairs:
-        start_level = map.DLevelMap(stair.start_dcoord)
-        start_level.staircases[(0,0)] = stair
-        end_level = map.DLevelMap(stair.end_dcoord)
-
-        dmap.dlevels[start_level.dcoord] = start_level
-        dmap.dlevels[end_level.dcoord] = end_level
-
-    return dmap
-
 class TestDungeonDirection(unittest.TestCase):
     def test_out_succeed(self):
         # in the dungeons of doom, trying to get out
@@ -810,6 +799,47 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.target_dcoords = [target_dcoord]
         heading = dmap.dungeon_direction_to_best_target(current_dcoord)
         self.assertEqual(heading, None)
+
+        
+class TestCharacterUpdateFromMessage(unittest.TestCase):
+    grab_messages = {
+        "You cannot escape from the lichen!": "lichen",
+        "The giant eel bites!  The giant eel swings itself around you!": "giant eel",
+        "The owlbear hits!  The owlbear hits!  The owlbear grabs you!": "owlbear",
+        "The large mimic hits!": "large mimic",
+        "It grabs you!  It bites!  It bites!  It bites!  It bites!  It bites!": "invisible monster",
+    }
+
+    release_messages = [
+        "You pull free from the violet fungus.",
+        "The owlbear releases you.  The grid bug bites!",
+    ]
+    def test_monster_grabs(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+
+        for m, v in self.grab_messages.items():
+            character.update_from_message(m, 0)
+            self.assertEqual(v, character.held_by.monster_glyph.name)
+            character.held_by = None
+    
+    def test_free_from_monster(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+
+        for m in self.release_messages:
+            character.held_by = True
+            character.update_from_message(m, 0)
+            self.assertEqual(None, character.held_by)
+
 
 if __name__ == '__main__':
     unittest.main()

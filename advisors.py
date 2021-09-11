@@ -301,6 +301,9 @@ class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
 
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if character.held_by is not None:
+            return None
+
         zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 
@@ -584,6 +587,20 @@ class DumbMeleeAttackAdvisor(Advisor):
             attack_direction = run_state.neighborhood.action_grid[target_square]
             return ActionAdvice(from_advisor=self, action=attack_direction)
         return None
+
+class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.held_by is None:
+            return None
+
+        #import pdb; pdb.set_trace()
+        return super().advice(rng, run_state, character, oracle)
+
+    def satisfactory_monster(self, monster, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, rng, run_state, character, oracle):
+            return False
+
+        return monster == character.held_by.monster_glyph
 
 class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):

@@ -1,11 +1,20 @@
 from typing import Optional
-from typing import NamedTuple
+from typing import NamedTuple, Tuple
 
 import pandas as pd
 from dataclasses import dataclass
 
 import constants
+import glyphs as gd
 import inventory as inv
+from utilities import ARS
+import monster_messages
+
+@dataclass
+class HeldBy():
+    time_held: int
+    monster_glyph: gd.MonsterGlyph
+    #monster_square: Tuple[int, int]
 
 @dataclass
 class Character():
@@ -26,6 +35,7 @@ class Character():
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
+    held_by: HeldBy = None
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -66,6 +76,57 @@ class Character():
         old_AC = self.AC
         if old_AC != blstats.get('armor_class'):
             self.AC = blstats.get('armor_class')
+
+    def update_from_message(self, message_text, time):
+        if "You feel feverish." in message_text:
+            self.afflicted_with_lycanthropy = True
+
+        if "You feel purified." in message_text:
+            self.afflicted_with_lycanthropy = False
+
+        "grabs you!"
+        if "You cannot escape" in message_text or "grabs you!" in message_text or "swings itself around you" in message_text:
+            #import pdb; pdb.set_trace()
+            pass
+
+        monster_name = None
+
+        possible_grabs = [monster_messages.RecordedSeaMonsterGrab.involved_monster(message_text),
+        monster_messages.RecordedMonsterGrab.involved_monster(message_text),
+        monster_messages.RecordedCannotEscape.involved_monster(message_text)]
+
+        monster_name = next((name for name in possible_grabs if name is not None), None)
+
+        sticky_monster_messages = [("was a large mimic", "large mimic"),
+        ("was a giant mimic", "giant mimic"),
+        ("The large mimic hits!", "large mimic"),
+        ("The giant mimic hits!", "giant mimic"),
+        ("The lichen touches you!", "lichen"),
+        ("The violet fungus touches you!", "violet fungus"),]
+
+        for sticky_message, name in sticky_monster_messages:
+            if sticky_message in message_text:
+                monster_name = name
+
+        if monster_name is not None:
+            if monster_name.lower() == "it":
+                monster_name = "invisible monster"
+            self.held_by = HeldBy(time, gd.GLYPH_NAME_LOOKUP[monster_name])
+
+        possible_releases = [monster_messages.RecordedPullFree.involved_monster(message_text),
+        monster_messages.RecordedRelease.involved_monster(message_text)]
+
+        relase_name = next((name for name in possible_releases if name is not None), None)
+        if relase_name is not None:
+            self.held_by = None
+
+        if "You feel more confident" in message_text or "could be more dangerous" in message_text:
+            self.can_enhance = True
+
+        if "more skilled" in message_text or "most skilled" in message_text:
+            print(message_text)
+            if "more dangerous" not in message_text:
+                self.can_enhance = False
 
     def set_attributes(self, attributes):
         self.attributes = attributes
