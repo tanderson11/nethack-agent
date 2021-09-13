@@ -763,7 +763,7 @@ class PlayerInventory():
     def all_undesirable_items(self, character):
         all_items = self.all_items()
         #import pdb; pdb.set_trace()
-        return [item for item in all_items if not item.desirable(character)]
+        return [item for item in all_items if item is not None and not item.desirable(character)]
 
     def all_items(self):
         all = []
@@ -772,8 +772,8 @@ class PlayerInventory():
             oclass_contents = self.get_oclass(oclass)
             all.extend(oclass_contents)
 
-        if None in all:
-            import pdb; pdb.set_trace()
+        #if None in all:
+        #    import pdb; pdb.set_trace()
         return all
 
     def get_oclass(self, object_class):
