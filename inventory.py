@@ -65,7 +65,10 @@ class Armor(Item):
         if self.enhancement is None:
             if self.BUC == 'cursed':
                 return -10
-            best_case_enhancement = 5
+            elif self.BUC is None:
+                best_case_enhancement = 0
+            else:
+                best_case_enhancement = 5
         else:
             best_case_enhancement = self.enhancement
 
