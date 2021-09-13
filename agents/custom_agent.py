@@ -25,7 +25,8 @@ from utilities import ARS
 from character import Character
 import constants
 import glyphs as gd
-from map import DMap
+import map
+from map import DMap, DCoord
 import environment
 from wizmode_prep import WizmodePrep
 
@@ -567,13 +568,13 @@ class CustomAgent(BatchedAgent):
 
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
-        dcoord = (dungeon_number, level_number)
+        dcoord = DCoord(dungeon_number, level_number)
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
             level_map.update(player_location, observation['glyphs'])
         except KeyError:
-            level_map = run_state.dmap.make_level_map(dungeon_number, level_number, observation['glyphs'], player_location)
+            level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
         if run_state.reading_base_attributes:
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
@@ -615,6 +616,7 @@ class CustomAgent(BatchedAgent):
                     pass
                 elif not (isinstance(raw_previous_glyph_on_player, gd.CMapGlyph) or gd.stackable_glyph(raw_previous_glyph_on_player) or isinstance(raw_previous_glyph_on_player, gd.WarningGlyph)):
                     # Re: warning glyphs, current situations where we walk onto them include piercers
+                    # While hallu, we might step onto a statue we hallucinated as a monster
                     if raw_previous_glyph_on_player.name == 'leprechaun':
                         # Wild, I know, but a leprechaun can dodge us like this
                         # "miss wildly and stumble forward"
@@ -636,6 +638,11 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
+
+            if run_state.character.ready_for_mines():
+                run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+
+            #run_state.dmap.current_
 
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
             if changed_square and environment.env.debug:
@@ -686,16 +693,19 @@ class CustomAgent(BatchedAgent):
             print(run_state.message_log[-2])
             # create the staircases (idempotent)
             if "You descend the" in run_state.message_log[-2]:
-                direction = ('down', 'up')
+                direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
             elif "You climb" in run_state.message_log[-2]:
-                direction = ('up', 'down')
+                direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+
+            if dcoord.branch != run_state.neighborhood.dcoord.branch:
+                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=run_state.neighborhood.dcoord)
 
             # staircase we just took
             previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
             previous_level_map.add_traversed_staircase(
-                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0]) # start, end, end
+                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
             # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1]) # start, end, end
+            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1])
             print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
@@ -760,7 +770,8 @@ class CustomAgent(BatchedAgent):
 
         if run_state.scumming:
             scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
-                menuplan.YesMenuResponse("Really quit?")
+                menuplan.YesMenuResponse("Really quit?"),
+                menuplan.NoMenuResponse("Dump core?")
             ])
             advice = ActionAdvice(
                 from_advisor=None,

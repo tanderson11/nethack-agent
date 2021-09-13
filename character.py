@@ -146,6 +146,41 @@ class Character():
             return False
         return True
 
+    def ready_for_mines(self):
+        return self.experience_level > 7
+
+    exp_lvl_to_max_mazes_lvl = {
+        1: 1,
+        2: 1,
+        3: 2,
+        4: 2,
+        5: 3,
+        6: 5,
+        7: 6,
+        #8: 8,
+    }
+
+    # getting slightly less aggressive now that we eat corpses
+    exp_lvl_to_max_mazes_lvl_no_food = {
+        1:1,
+        2:2,
+        3:3,
+        4:4,
+        5:5,
+        6:6,
+        7:6,
+        #8:8,
+    }
+
+    def am_willing_to_descend(self, depth):
+        willing_to_descend = self.current_hp == self.max_hp
+        if self.inventory.have_item_oclass(inv.Food):
+            willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60) > depth
+        else:
+            willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl_no_food.get(self.experience_level, 60) > depth
+
+        return willing_to_descend
+
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:
             return True

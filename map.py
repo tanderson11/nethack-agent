@@ -1,4 +1,5 @@
 from collections import defaultdict
+from dataclasses import dataclass
 import enum
 from typing import NamedTuple
 
@@ -10,6 +11,7 @@ import physics
 import utilities
 import constants
 
+import functools
 from utilities import ARS
 
 class Branches(enum.Enum):
@@ -18,40 +20,107 @@ class Branches(enum.Enum):
     Quest = 3
     Sokoban = 4
 
-INDEX_TO_BRANCH = {
-    Branches.DungeonsOfDoom.value: Branches.DungeonsOfDoom,
-    Branches.GnomishMines.value: Branches.GnomishMines,
-    Branches.Quest.value: Branches.Quest,
-    Branches.Sokoban.value: Branches.Sokoban,
-}
+@dataclass
+class DCoord():
+    branch_numeral: int
+    level: int
+
+    def __post_init__(self):
+        self.branch = Branches(self.branch_numeral)
+    
+    def __eq__(self, y):
+        return (self.branch_numeral == y.branch_numeral) and (self.level == y.level)
+
+    def __hash__(self):
+        return hash((self.branch_numeral, self.level))
+
+class DirectionThroughDungeon(enum.IntEnum):
+        up =  -1
+        flat = 0
+        down = 1
+
+class DungeonHeading(NamedTuple):
+    direction: DirectionThroughDungeon
+    target_branch: Branches
 
 class DMap():
     def __init__(self):
         self.dlevels = {}
+        self.target_dcoords = [DCoord(0, 60)]
+        self.branch_connections = {}
 
-    def make_level_map(self, dungeon_number, level_number, glyphs, initial_player_location):
-        lmap = DLevelMap(dungeon_number, level_number)
-        self.dlevels[(dungeon_number, level_number)] = lmap
+    def add_branch_traversal(self, start_dcoord, end_dcoord):
+        exists = self.branch_connections.get((start_dcoord, end_dcoord), False)
+        if exists:
+            return
+        
+        self.branch_connections[(start_dcoord, end_dcoord)] = True
+        self.branch_connections[(end_dcoord, start_dcoord)] = True
+
+    def make_level_map(self, dcoord, glyphs, initial_player_location):
+        lmap = DLevelMap(dcoord)
+        self.dlevels[dcoord] = lmap
 
         # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
-        if dungeon_number == 0 and level_number == 1:
+        if dcoord.branch == Branches.DungeonsOfDoom and dcoord.level == 1:
             lmap.add_feature(initial_player_location, gd.get_by_name(gd.CMapGlyph, 'upstair'))
 
         lmap.update(initial_player_location, glyphs)
 
         return lmap
 
+    def add_top_target(self, target_dcoord):
+        self.target_dcoords.append(target_dcoord)
+
+    def dungeon_direction_to_best_target(self, current_dcoord):
+        for dcoord in reversed(self.target_dcoords):
+            heading = self.dungeon_direction_to_target(current_dcoord, dcoord)
+            if heading is not None:
+                return heading
+
+    def dungeon_direction_to_target(self, current_dcoord, target_dcoord):
+        if current_dcoord.branch == target_dcoord.branch:
+            return DungeonHeading(DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level)), target_dcoord.branch)
+
+        initial_start=None
+        final_start=None
+        one_and_only_start=None
+        #import pdb; pdb.set_trace()
+        for start_dcoord, end_dcoord in self.branch_connections.keys():
+            # if not relevant in any way, continue
+            if start_dcoord.branch != current_dcoord.branch and end_dcoord.branch != target_dcoord.branch:
+                continue
+
+            if end_dcoord.branch == target_dcoord.branch:
+                if start_dcoord.branch == current_dcoord.branch:
+                    one_and_only_start = start_dcoord
+                else:
+                    final_start = start_dcoord
+                continue # don't want to grab this as our initial leg and double count it
+
+            if current_dcoord.branch != Branches.DungeonsOfDoom and (start_dcoord.branch == current_dcoord.branch and end_dcoord.branch == Branches.DungeonsOfDoom):
+                initial_start = start_dcoord
+
+        if one_and_only_start is not None:
+            return DungeonHeading(DirectionThroughDungeon(np.sign(one_and_only_start.level - current_dcoord.level)), target_dcoord.branch)
+
+        if initial_start is None or final_start is None:
+            return None
+
+        return DungeonHeading(DirectionThroughDungeon(np.sign(initial_start.level - current_dcoord.level)), target_dcoord.branch)
+
 class Staircase():
     def __init__(self, dcoord, location, to_dcoord, to_location, direction):
         self.start_dcoord = dcoord
-        self.start_branch = INDEX_TO_BRANCH[dcoord[0]]
         self.start_location = location
 
         self.end_dcoord = to_dcoord
         self.end_location = to_location
-        self.end_branch = INDEX_TO_BRANCH[to_dcoord[0]]
 
         self.direction = direction
+
+    def matches_heading(self, heading):
+        return (self.end_dcoord.branch == heading.target_branch and not self.start_dcoord.branch == self.end_dcoord.branch) or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
 
 class TimedCorpse(NamedTuple):
     ACCEPTABLE_CORPSE_AGE = 40
@@ -76,13 +145,9 @@ class DLevelMap():
         dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
         return dungeon_features
 
-    def __init__(self, dungeon_number, level_number):
-        self.dungeon_number = dungeon_number
-        if environment.env.debug and not self.dungeon_number in INDEX_TO_BRANCH:
-            import pdb; pdb.set_trace()
-        self.level_number = level_number
-        self.dcoord = (self.dungeon_number, self.level_number)
-        self.branch = INDEX_TO_BRANCH[dungeon_number]
+    def __init__(self, dcoord):
+        self.dcoord = dcoord
+
         self.downstairs_count = 0
         self.upstairs_count = 0
         self.downstairs_target = 1
@@ -223,7 +288,6 @@ class DLevelMap():
         else:
             self.add_owned_door(location)
 
-
     def add_owned_door(self, engraving_location):
         #import pdb; pdb.set_trace()
         for offset in physics.ortholinear_offsets:
@@ -251,22 +315,21 @@ class DLevelMap():
                 # raise Exception("Conflicting staircases")
                 pass
         except KeyError:
-            if direction != 'up' and direction != 'down':
-                raise Exception("Strange direction " + direction)
             staircase = Staircase(
                 self.dcoord,
                 location,
                 to_dcoord,
                 to_location,
                 direction)
-            self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == 'up' else 'dnstair'))
+            self.add_feature(location, gd.get_by_name(gd.CMapGlyph, 'upstair' if direction == DirectionThroughDungeon.up else 'dnstair'))
             self.staircases[location] = staircase
-            if staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.GnomishMines:
+            if staircase.start_dcoord.branch == Branches.DungeonsOfDoom and staircase.end_dcoord.branch == Branches.GnomishMines:
                 self.downstairs_target += 1
                 self.update_stair_counts()
-            elif staircase.start_branch == Branches.DungeonsOfDoom and staircase.end_branch == Branches.Sokoban:
+            elif staircase.start_dcoord.branch == Branches.DungeonsOfDoom and staircase.end_dcoord.branch == Branches.Sokoban:
                 self.upstairs_target += 1
                 self.update_stair_counts()
+
             return staircase
 
     def log_search(self, player_location):
