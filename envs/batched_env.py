@@ -37,7 +37,7 @@ class BatchedEnv:
         for i, env, a in zip(range(len(self.envs)), self.envs, actions):
             observation, reward, done, info = env.step(a)
             if done:
-                if environment.env.debug:
+                if environment.env.debug or environment.env.print_seed:
                     env.unwrapped.seed(None, None, False)
                 observation = env.reset()
                 log_new_run(i, env)
