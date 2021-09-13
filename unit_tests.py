@@ -642,7 +642,7 @@ class TestWeaponPickup(unittest.TestCase):
         for k,v in self.test_values.items():
 
             menu_text = string_to_tty_chars(self.test_header + k)
-            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
             result = interactive_menu.search_through_rows(menu_text)
             print(result)
 
@@ -715,7 +715,7 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
-        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
         results = []
         for i in range(0, 20):
             try:
