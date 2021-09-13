@@ -1091,3 +1091,17 @@ class EngraveTestWandsAdvisor(Advisor):
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
 
+class NameItemAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        name_action = run_state.queued_name_action
+        run_state.queued_name_action = None
+        if name_action is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("name item", self, [
+                    menuplan.menuplan.YesMenuResponse("What do you want to name?"),
+                    menuplan.CharacterMenuResponse("What do you want to name?", name_action.letter),
+                    menuplan.PhraseMenuResponse("What do you want to name this", name_action.name)
+            ])
+
+        return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)

@@ -11,8 +11,11 @@ import pandas as pd
 
 from utilities import ARS
 
-
 class Item():
+    class NameAction(NamedTuple):
+        letter: str
+        name: str
+
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
         self.identity = identity
@@ -33,7 +36,9 @@ class Item():
         self._seen_as = seen_as
 
     def process_message(self, *args):
-        self.identity.process_message(*args)
+        name = self.identity.process_message(self, *args)
+        if name is not None:
+            return self.NameAction(self.inventory_letter, name)
 
     def shop_owned(self):
         return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)

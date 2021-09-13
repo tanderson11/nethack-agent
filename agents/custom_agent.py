@@ -336,6 +336,8 @@ class RunState():
         self.last_non_menu_advisor = None
 
         self.last_damage_timestamp = None
+
+        self.queued_name_action = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -480,7 +482,9 @@ class RunState():
         self.message_log.append(message.message)
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
-            self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+            name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+            if name_action is not None:
+                self.queued_name_action = name_action
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:

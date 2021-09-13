@@ -875,6 +875,11 @@ class WandIdentity(ObjectIdentity):
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
 
+        if action == nethack.actions.Command.ZAP:
+            if "Nothing happens." in message_obj.message and self.name() is not None:
+                return "NO_CHARGE"
+
+
         # engrave testing
         if action == nethack.actions.Command.ENGRAVE:
             # if there is an engrave message and it is in fact contained in the overheard message

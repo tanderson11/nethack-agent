@@ -3,6 +3,7 @@ from  advisors import *
 
 new_advisors = [
     # FREE IMPROVEMENT
+    NameItemAdvisor(),
     EnhanceSkillsAdvisor(),
     # STONING ILL ETC
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
