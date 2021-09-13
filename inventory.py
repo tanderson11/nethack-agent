@@ -123,8 +123,8 @@ class Wand(Item):
             charge_match = re.match(self.charge_pattern, p_status)
 
             if charge_match:
-                self.recharges = charge_match[0]
-                self.charges = charge_match[1]
+                self.recharges = int(charge_match[0])
+                self.charges = int(charge_match[1])
 
     def desirable(self, character):
         desirable_identity = super().desirable(character)
