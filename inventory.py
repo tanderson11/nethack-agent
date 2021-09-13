@@ -57,6 +57,8 @@ class Armor(Item):
             return -20 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
+            if self.BUC == 'cursed':
+                return -10
             best_case_enhancement = 5
         else:
             best_case_enhancement = self.enhancement
