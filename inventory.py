@@ -37,7 +37,7 @@ class Item():
         self._seen_as = seen_as
 
     def process_message(self, *args):
-        name = self.identity.process_message(self, *args)
+        name = self.identity.process_message(*args)
         if name is not None:
             return self.NameAction(self.inventory_letter, name)
 
