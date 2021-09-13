@@ -318,7 +318,7 @@ class EquippedStatus():
                 self.slot = 'quiver'
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z ]+))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z _]+))? ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #

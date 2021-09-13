@@ -1143,8 +1143,8 @@ class NameItemAdvisor(Advisor):
         import pdb; pdb.set_trace()
 
         menu_plan = menuplan.MenuPlan("name item", self, [
-                    menuplan.YesMenuResponse("What do you want to name?"),
-                    menuplan.CharacterMenuResponse("What do you want to name?", name_action.letter),
+                    menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),
+                    menuplan.CharacterMenuResponse("What do you want to name? [", chr(name_action.letter)),
                     menuplan.PhraseMenuResponse("What do you want to name this", name_action.name)
             ])
 
