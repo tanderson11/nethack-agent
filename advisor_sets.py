@@ -48,6 +48,7 @@ new_advisors = [
         ]),
     ###### OUT OF DANGER ###### ()
     DrinkHealingForMaxHPAdvisor(),
+    DipForExcaliburAdvisor(),
     WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[

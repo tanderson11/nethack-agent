@@ -606,9 +606,32 @@ def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
 
-class TestArmorProposals(unittest.TestCase):
-    def test(self):
-        pass
+class TestArtifacts(unittest.TestCase):
+    test_header = "Pick up what?\n\nWeapons\n"
+
+    class ArtifactValue(NamedTuple):
+        artifact_name: str
+        base_item_name: str
+
+    test_values = {
+        "n - a runed broadsword named Stormbringer": ArtifactValue("Stormbringer", "runesword"),
+        "n - the blessed +5 Stormbringer": ArtifactValue("Stormbringer", "runesword"),
+        "m - a gray stone named The Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
+        "m - the uncursed Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
+        "o - a long sword named Excalibur": ArtifactValue("Excalibur", "long sword"),
+        "o - the +0 Excalibur": ArtifactValue("Excalibur", "long sword"),
+    }
+
+    def test_from_string(self):
+        for k,v in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            menu_text = string_to_tty_chars(k)
+            interactive_menu = menuplan.ParsingInventoryMenu(run_state)
+            result = interactive_menu.search_through_rows(menu_text)
+            print(result.item)
 
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
@@ -640,7 +663,6 @@ class TestWeaponPickup(unittest.TestCase):
         run_state.character.inventory = inventory
 
         for k,v in self.test_values.items():
-
             menu_text = string_to_tty_chars(self.test_header + k)
             interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
             result = interactive_menu.search_through_rows(menu_text)

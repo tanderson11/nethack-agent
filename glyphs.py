@@ -479,6 +479,8 @@ class CMapGlyph(Glyph):
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
 
+        self.is_fountain = self.offset == 31
+        
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
         OFFSET = offset
