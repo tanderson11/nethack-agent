@@ -371,21 +371,20 @@ class ThreatMap(FloodMap):
         #self.calculate_implied_threat()
 
     @classmethod
-    def calculate_can_occupy(cls, monster, start, glyph_grid):
-        #print(monster)
+    def calculate_can_occupy(cls, monster, start, raw_glyph_grid):
+        walkable = gd.walkable(raw_glyph_grid)
         if isinstance(monster, gd.MonsterGlyph):
             free_moves = np.ceil(monster.monster_spoiler.speed / monster.monster_spoiler.__class__.NORMAL_SPEED) - 1 # -1 because we are interested in move+hit turns not just move turns
             #print("speed, free_moves:", monster.monster_spoiler.speed, free_moves)
         elif isinstance(monster, gd.InvisibleGlyph):
             free_moves = 0
         
-        mons_square_mask = np.full_like(glyph_grid, False, dtype='bool')
+        mons_square_mask = np.full_like(raw_glyph_grid, False, dtype='bool')
         mons_square_mask[start] = True
         can_occupy_mask = mons_square_mask
 
         if free_moves > 0: # if we can move+attack, we need to know where we can move
-            walkable = utilities.vectorized_map(lambda g: g.walkable(monster), glyph_grid)
-            already_checked_mask = np.full_like(glyph_grid, False, dtype='bool')
+            already_checked_mask = np.full_like(raw_glyph_grid, False, dtype='bool')
 
         while free_moves > 0:
             # flood from newly identified squares that we can occupy
@@ -430,7 +429,7 @@ class ThreatMap(FloodMap):
                 if isinstance(glyph, gd.MonsterGlyph) or is_invis:
                     if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
                         ### SHARED ###
-                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
+                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.raw_glyph_grid)
                         ###
 
                         ### MELEE ###

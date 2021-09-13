@@ -62,9 +62,6 @@ class Glyph():
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = None
 
-    def walkable(self, character):
-        return False
-
     @classmethod
     def numeral_mapping(cls):
         mapping = {}
@@ -81,6 +78,10 @@ class Glyph():
     def numerals(cls):
         numerals = range(cls.OFFSET, cls.OFFSET + cls.COUNT)
         return numerals
+    
+    @classmethod
+    def where_is(cls, glyphs):
+        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
 class MonsterAlikeGlyph(Glyph):
     NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
@@ -190,9 +191,6 @@ class ObjectGlyph(Glyph):
 
         self.appearance = appearance
         self.name = name # not accurate for shuffled glyphs
-
-    def walkable(self, character):
-        return True
 
     def desirable_glyph(self, global_identity_map, character):
         identity = global_identity_map.identity_by_numeral[self.numeral]
@@ -447,10 +445,11 @@ class CMapGlyph(Glyph):
     @classmethod
     def is_safely_walkable_check(cls, offsets):
          return (
-            ((offsets >= 12) & (offsets <= 14)) | # Doors
+             ~((offsets < 0) | (offsets > cls.OFFSET + cls.COUNT)) &
+            (((offsets >= 12) & (offsets <= 14)) | # Doors
             ((offsets >= 19) & (offsets <= 34) & (~cls.is_liquid_check(offsets))) | # Room-like
             (offsets == 58) | # Magic portal
-            (offsets == 64) # Vibrating square
+            (offsets == 64)) # Vibrating square
          )
 
     @staticmethod
@@ -479,9 +478,6 @@ class CMapGlyph(Glyph):
 
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
-        
-    def walkable(self, character):
-        return self.is_safely_walkable_check(np.array([self.offset])).all()
 
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -498,9 +494,6 @@ class PetGlyph(MonsterAlikeGlyph):
         super().__init__(numeral)
 
         self.name = "pet" + self.name
-    
-    def walkable(self, character):
-        return True
 
 class InvisibleGlyph(Glyph):
     OFFSET = nethack.GLYPH_INVIS_OFF
@@ -529,9 +522,6 @@ class CorpseGlyph(Glyph):
         super().__init__(numeral)
 
         self.always_safe_non_perishable = (self.offset in self.always_safe_non_perishable_offsets)
-
-    def walkable(self, character):
-        return True
 
     # TODO hard-coding this for now until we have a CorpseIdentity that we can use
     def desirable_glyph(self, global_identity_map, character):
@@ -572,9 +562,17 @@ class StatueGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-    
-    def walkable(self, character):
-        return True
+
+def walkable(glyphs):
+    # Object, Statue, Pet, Corpse, CMap
+    walkable_glyphs = np.full_like(glyphs, False, dtype=bool)
+    walkable_glyphs = np.where(CMapGlyph.where_is(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
+    walkable_glyphs = np.where(CorpseGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(PetGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(StatueGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(ObjectGlyph.where_is(glyphs), True, walkable_glyphs)
+
+    return walkable_glyphs
 
 klasses = [
     MonsterGlyph,

@@ -102,7 +102,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visits = level_map.visits_count_map[self.vision]
         extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
-        extended_walkable_tile = utilities.vectorized_map(lambda g: g.walkable(character), extended_visible_glyphs)
+        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
 
         extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
         if extended_special_rooms[self.player_location_in_extended] != constants.SpecialRoomTypes.shop.value:
@@ -118,7 +118,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             # Corrections to what is moveable in Sokoban
             extended_walkable_tile &= ~(self.extended_boulders)
 
-        extended_is_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) or isinstance(g, gd.SwallowGlyph) or isinstance(g, gd.InvisibleGlyph) or isinstance(g, gd.WarningGlyph), extended_visible_glyphs)
+        extended_is_monster = gd.MonsterGlyph.where_is(extended_visible_raw_glyphs) | gd.SwallowGlyph.where_is(extended_visible_raw_glyphs) | gd.InvisibleGlyph.where_is(extended_visible_raw_glyphs) | gd.WarningGlyph.where_is(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         self.extended_is_monster = extended_is_monster
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
