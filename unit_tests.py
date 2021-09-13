@@ -863,6 +863,9 @@ class TestDrop(unittest.TestCase):
         ItemTestInputs(2349, inv.Gem, "an uncursed gray stone"): True, # lodestone
         #ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
         ItemTestInputs(2311, inv.Wand, "a long wand"): False,
+        ItemTestInputs(1974, inv.Weapon, "a +0 yumi"): False,
+        ItemTestInputs(1911, inv.Weapon, "38 +0 ya"): False,
+        ItemTestInputs(2174, inv.Food, "6 food rations"): False,
     }
 
     def test_single_items(self):
