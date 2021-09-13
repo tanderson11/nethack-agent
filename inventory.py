@@ -213,6 +213,7 @@ class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
         self.inventory_letter = '-'
+        self.BUC = 'uncursed'
 
     def which_skill(self, character):
         bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]

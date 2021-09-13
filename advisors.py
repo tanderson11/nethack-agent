@@ -330,7 +330,7 @@ class ZapDiggingDownAdvisor(Advisor):
             menu_plan = menuplan.MenuPlan("zap digging wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
-            ])
+            ], listening_item=wand_of_digging)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
 
@@ -343,7 +343,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
             menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
                 menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
-            ])
+            ], listening_item=wand_of_teleport)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
 class ReadTeleportAdvisor(Advisor):
@@ -1029,6 +1029,10 @@ class FallbackSearchAdvisor(Advisor):
 class WieldBetterWeaponAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         wield = nethack.actions.Command.WIELD
+
+        if character.inventory.wielded_weapon.BUC == 'cursed':
+            return None
+
         best_weapon = character.inventory.proposed_weapon_changes(character)
         if best_weapon is None:
             return None
@@ -1135,9 +1139,11 @@ class NameItemAdvisor(Advisor):
         run_state.queued_name_action = None
         if name_action is None:
             return None
+        
+        import pdb; pdb.set_trace()
 
         menu_plan = menuplan.MenuPlan("name item", self, [
-                    menuplan.menuplan.YesMenuResponse("What do you want to name?"),
+                    menuplan.YesMenuResponse("What do you want to name?"),
                     menuplan.CharacterMenuResponse("What do you want to name?", name_action.letter),
                     menuplan.PhraseMenuResponse("What do you want to name this", name_action.name)
             ])
