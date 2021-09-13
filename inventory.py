@@ -110,6 +110,37 @@ class Armor(Item):
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
+    charge_pattern = re.compile("\(([0-9]+):([0-9]+)\)")
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        self.charges = None
+
+        if self.instance_name == "NO_CHARGE":
+            self.charges = 0
+
+        p_status = instance_attributes.parenthetical_status_str
+        if p_status is not None:
+            charge_match = re.match(self.charge_pattern, p_status)
+
+            if charge_match:
+                self.recharges = charge_match[0]
+                self.charges = charge_match[1]
+
+    def desirable(self, character):
+        desirable_identity = super().desirable(character)
+
+        # keep even a 0 charge wand of wishing
+        if self.identity.name() == 'wishing':
+            return True
+
+        # keep even a 0 charge wand of death
+        if self.identity.name() == 'death':
+            return True
+
+        if self.charges == 0:
+            return False
+
+        return desirable_identity
 
 class Food(Item):
     glyph_class = gd.FoodGlyph

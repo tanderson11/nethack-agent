@@ -326,7 +326,7 @@ class ZapDiggingDownAdvisor(Advisor):
         zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 
-        if wand_of_digging is not None:
+        if wand_of_digging is not None and (wand_of_digging.charges is None or wand_of_digging.charges > 0):
             menu_plan = menuplan.MenuPlan("zap digging wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
@@ -339,7 +339,7 @@ class ZapTeleportOnSelfAdvisor(Advisor):
         zap = nethack.actions.Command.ZAP
         wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation')
 
-        if wand_of_teleport is not None:
+        if wand_of_teleport is not None and (wand_of_teleport.charges is None or wand_of_teleport.charges > 0):
             menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
                 menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
@@ -1139,8 +1139,6 @@ class NameItemAdvisor(Advisor):
         run_state.queued_name_action = None
         if name_action is None:
             return None
-        
-        import pdb; pdb.set_trace()
 
         menu_plan = menuplan.MenuPlan("name item", self, [
                     menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),

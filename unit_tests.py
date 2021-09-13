@@ -864,11 +864,12 @@ class TestCharacterUpdateFromMessage(unittest.TestCase):
             character.update_from_message(m, 0)
             self.assertEqual(None, character.held_by)
 
+class ItemTestInputs(NamedTuple):
+    numeral: int
+    item_class: type
+    item_str: str
+
 class TestDrop(unittest.TestCase):
-    class ItemTestInputs(NamedTuple):
-        numeral: int
-        item_class: type
-        item_str: str
 
     #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
     test_values = {
@@ -915,6 +916,17 @@ class TestDrop(unittest.TestCase):
                     self.assertEqual(len(undesirable), 0, item_str)
             except:
                 import pdb; pdb.set_trace()
+
+class TestSpecialItemNames(unittest.TestCase):
+    def test_no_charges(self):
+        numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
+
+        global_identity_map = gd.GlobalIdentityMap()
+        string = np.array(string_to_tty_chars(item_str), dtype='uint8')
+        oclass = item_class.glyph_class.class_number
+        inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
+        item = inventory.all_items()[0]
+        self.assertEqual(item.charges, 0)
 
 if __name__ == '__main__':
     unittest.main()
