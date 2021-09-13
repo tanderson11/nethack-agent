@@ -39,7 +39,13 @@ class Item():
         return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
 
     def desirable(self, character):
+        if self.identity is None: # stupid: for lichens and so on
+            return True
+
         return not self.shop_owned() and self.identity.desirable_identity(character)
+
+class Amulet(Item):
+    glyph_class = gd.AmuletGlyph
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -81,11 +87,15 @@ class Armor(Item):
         slot = self.identity.slot
         armaments = character.inventory.armaments
         current = armaments[armaments._fields.index(slot)]
+
+        if self == current and instance_desirability >= 0:
+            return True
+
         current_desirability = 0
         if current is not None and isinstance(current, Armor):
             current_desirability = current.instance_desirability_to_wear(character)
 
-        return instance_desirability > 0 and (instance_desirability > current_desirability)
+        return instance_desirability >= 0 and (instance_desirability > current_desirability)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -121,7 +131,6 @@ class Potion(Item):
         if name == 'extra healing':
             return n_dice * 8
             #return min(n_dice * 8, character.max_hp)
-
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
@@ -174,6 +183,9 @@ class Weapon(Item):
         if self.shop_owned():
             return False
 
+        if self == character.inventory.wielded_weapon:
+            return True
+
         is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
         if is_better: print(f"Found better weapon: {self.identity.name()}")
         return is_better
@@ -212,6 +224,8 @@ class BareHands(Weapon):
             damage = 2.5
         return damage
 
+class Spellbook(Item):
+    glyph_class = gd.SpellbookGlyph
 
 class Tool(Item):
     glyph_class = gd.ToolGlyph
@@ -229,8 +243,26 @@ class Gem(Item):
 class Rock(Item):
     glyph_class = gd.RockGlyph
 
+class Ring(Item):
+    glyph_class = gd.RingGlyph
+
 class UnimplementedItemClassException(Exception):
     pass
+
+ALL_ITEM_CLASSES = [
+    Amulet,
+    Armor,
+    Food,
+    Gem,
+    Potion,
+    Ring,
+    Rock,
+    Scroll,
+    Spellbook,
+    Tool,
+    Wand,
+    Weapon,
+]
 
 class EquippedStatus():
     def __init__(self, item, parenthetical_status):
@@ -707,7 +739,6 @@ class PlayerInventory():
 
         return self.AttireProposal(proposed_items, proposal_blockers)
 
-
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
@@ -728,6 +759,22 @@ class PlayerInventory():
             return items[0]
         else:
             return None
+
+    def all_undesirable_items(self, character):
+        all_items = self.all_items()
+        #import pdb; pdb.set_trace()
+        return [item for item in all_items if not item.desirable(character)]
+
+    def all_items(self):
+        all = []
+
+        for oclass in ALL_ITEM_CLASSES:
+            oclass_contents = self.get_oclass(oclass)
+            all.extend(oclass_contents)
+
+        if None in all:
+            import pdb; pdb.set_trace()
+        return all
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number

@@ -840,6 +840,54 @@ class TestCharacterUpdateFromMessage(unittest.TestCase):
             character.update_from_message(m, 0)
             self.assertEqual(None, character.held_by)
 
+class TestDrop(unittest.TestCase):
+    class ItemTestInputs(NamedTuple):
+        numeral: int
+        item_class: type
+        item_str: str
+
+    #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
+    test_values = {
+        ItemTestInputs(2104, inv.Tool, "an uncursed credit card"): False,
+        #ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
+        ItemTestInputs(1978, inv.Armor, "an iron skull cap"): False,
+        #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
+        ItemTestInputs(2103, inv.Tool, "an osaku"): False,
+        ItemTestInputs(2042, inv.Armor, "a +0 pair of yugake (being worn)"): False,
+        ItemTestInputs(2042, inv.Armor, "a +0 pair of old gloves (being worn)"): False,
+        ItemTestInputs(2034, inv.Armor, "a blessed +2 tattered cape"): False,
+        ItemTestInputs(2181, inv.Potion, "2 cursed yellow potions"): True,
+        ItemTestInputs(2181, inv.Potion, "3 uncursed potions of healing"): False,
+        ItemTestInputs(2349, inv.Gem, "an uncursed gray stone"): True, # lodestone
+        #ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
+        ItemTestInputs(2311, inv.Wand, "a long wand"): False,
+    }
+
+    def test_single_items(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Caveperson,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        for inputs, do_drop in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            numeral, item_class, item_str = inputs
+            string = np.array(string_to_tty_chars(item_str), dtype='uint8')
+            oclass = item_class.glyph_class.class_number
+            inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
+            character.inventory = inventory
+            undesirable = inventory.all_undesirable_items(character)
+
+            try:
+                if do_drop:
+                    self.assertEqual(len(undesirable), 1, item_str)
+                else:
+                    self.assertEqual(len(undesirable), 0, item_str)
+            except:
+                import pdb; pdb.set_trace()
 
 if __name__ == '__main__':
     unittest.main()

@@ -299,7 +299,7 @@ class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
             expected_healing = potion.expected_healing(character)
             if expected_healing < (character.max_hp / 2):
                 menu_plan = self.make_menu_plan(potion.inventory_letter)
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
 
         return None
@@ -937,6 +937,25 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
+class DropUndesirableAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        undesirable_items = character.inventory.all_undesirable_items(character)
+        if len(undesirable_items) == 0:
+            return None
+
+        undesirable_letters = [item.inventory_letter for item in undesirable_items]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
@@ -947,7 +966,7 @@ class PickupDesirableItems(Advisor):
             "pick up all desirable objects",
             self,
             [],
-            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
