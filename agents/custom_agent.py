@@ -494,7 +494,8 @@ class RunState():
                     if environment.env.debug: import pdb; pdb.set_trace()
 
         if message.feedback.trouble_lifting or message.feedback.nothing_to_pickup:
-            self.character.near_burdened = True
+            if message.feedback.trouble_lifting:
+                self.character.near_burdened = True
             if self.last_non_menu_action in physics.direction_actions:
                 # Autopickup
                 pass

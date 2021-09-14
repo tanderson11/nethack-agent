@@ -309,8 +309,8 @@ class InteractiveMenu():
                 item_match = re.match(self.menu_item_pattern, potential_menu)
                 if item_match:
                     if not self.active_category:
-                        if environment.env.debug: pdb.set_trace()
-
+                        #if environment.env.debug: import pdb; pdb.set_trace()
+                        pass
                     #import pdb; pdb.set_trace()
                     next_item = self.MenuItem(
                         self,
