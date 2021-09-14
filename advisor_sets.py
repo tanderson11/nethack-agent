@@ -6,6 +6,7 @@ new_advisors = [
     NameItemAdvisor(),
     EnhanceSkillsAdvisor(),
     # STONING ILL ETC
+    ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.deadly_condition),
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
     # CRITICALLY INJURED
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[
@@ -26,6 +27,7 @@ new_advisors = [
     # IN GNOMISH MINES
     TakeStaircaseAdvisor(),
     # COMBAT
+    ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.nuisance_condition),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
         SafeMeleeAttackAdvisor(),

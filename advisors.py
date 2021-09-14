@@ -68,6 +68,35 @@ class Oracle():
         max_hp = self.character.max_hp
         return current_hp < max_hp * 0.6
 
+    """// From botl.h.
+    mn.attr("BL_MASK_STONE") = py::int_(static_cast<int>(BL_MASK_STONE));
+    mn.attr("BL_MASK_SLIME") = py::int_(static_cast<int>(BL_MASK_SLIME));
+    mn.attr("BL_MASK_STRNGL") = py::int_(static_cast<int>(BL_MASK_STRNGL));
+    mn.attr("BL_MASK_FOODPOIS") =
+        py::int_(static_cast<int>(BL_MASK_FOODPOIS));
+    mn.attr("BL_MASK_TERMILL") = py::int_(static_cast<int>(BL_MASK_TERMILL));
+    mn.attr("BL_MASK_BLIND") = py::int_(static_cast<int>(BL_MASK_BLIND));
+    mn.attr("BL_MASK_DEAF") = py::int_(static_cast<int>(BL_MASK_DEAF));
+    mn.attr("BL_MASK_STUN") = py::int_(static_cast<int>(BL_MASK_STUN));
+    mn.attr("BL_MASK_CONF") = py::int_(static_cast<int>(BL_MASK_CONF));
+    mn.attr("BL_MASK_HALLU") = py::int_(static_cast<int>(BL_MASK_HALLU));
+    mn.attr("BL_MASK_LEV") = py::int_(static_cast<int>(BL_MASK_LEV));
+    mn.attr("BL_MASK_FLY") = py::int_(static_cast<int>(BL_MASK_FLY));
+    mn.attr("BL_MASK_RIDE") = py::int_(static_cast<int>(BL_MASK_RIDE));
+    mn.attr("BL_MASK_BITS") = py::int_(static_cast<int>(BL_MASK_BITS));"""
+
+
+    @functools.cached_property
+    def deadly_condition(self):
+        return (
+            self.blstats.check_condition(nethack.BL_MASK_STONE) or
+            self.blstats.check_condition(nethack.BL_MASK_SLIME) or
+            #self.blstats.check_condition(nethack.BL_MASK_TERMILL) or
+            self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
+            # TODO Requires NLE upgrade:
+            # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
+        )
+
     @functools.cached_property
     def nuisance_condition(self):
         return (
@@ -111,13 +140,7 @@ class Oracle():
 
     @functools.cached_property
     def urgent_major_trouble(self):
-        return (
-            self.blstats.check_condition(nethack.BL_MASK_STONE) or
-            self.blstats.check_condition(nethack.BL_MASK_SLIME) or
-            self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
-            # TODO Requires NLE upgrade:
-            # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
-        )
+        return self.deadly_condition
 
     @functools.cached_property
     def major_trouble(self):
@@ -318,6 +341,16 @@ class DrinkHealingPotionAdvisor(PotionAdvisor):
 class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [DrinkHealingPotionAdvisor]
 
+class ApplyUnicornHornAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != 'cursed')
+        if unicorn_horn is not None:
+            apply = nethack.actions.Command.APPLY
+            menu_plan = menuplan.MenuPlan("apply unicorn horn", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(unicorn_horn.inventory_letter)),
+            ], listening_item=unicorn_horn)
+            return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
+
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is not None:
@@ -332,7 +365,6 @@ class ZapDiggingDownAdvisor(Advisor):
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
             ], listening_item=wand_of_digging)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
-
 
 class ZapTeleportOnSelfAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
