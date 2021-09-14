@@ -36,6 +36,7 @@ class Character():
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
     held_by: HeldBy = None
+    near_burdened: bool = False
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]

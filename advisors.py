@@ -1009,6 +1009,10 @@ class KickLockedDoorAdvisor(Advisor):
 
 class DropUndesirableAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if not character.near_burdened:
+            return None
+
+        character.near_burdened = False
         undesirable_items = character.inventory.all_undesirable_items(character)
         if len(undesirable_items) == 0:
             return None
