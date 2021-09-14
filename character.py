@@ -90,6 +90,12 @@ class Character():
             #import pdb; pdb.set_trace()
             pass
 
+        try:
+            self.update_held_by_from_message(message_text, time)
+        except Exception as e:
+            print(f"Exception while finding holding monster. Are we hallu? {e}")
+
+    def update_held_by_from_message(self, message_text, time):
         monster_name = None
 
         possible_grabs = [monster_messages.RecordedSeaMonsterGrab.involved_monster(message_text),
