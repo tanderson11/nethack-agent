@@ -613,7 +613,7 @@ class TestArtifacts(unittest.TestCase):
         artifact_name: str
         base_item_name: str
 
-    test_values = {
+    from_str_test_values = {
         "n - a runed broadsword named Stormbringer": ArtifactValue("Stormbringer", "runesword"),
         "n - the blessed +5 Stormbringer": ArtifactValue("Stormbringer", "runesword"),
         "m - a gray stone named The Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
@@ -622,8 +622,50 @@ class TestArtifacts(unittest.TestCase):
         "o - the +0 Excalibur": ArtifactValue("Excalibur", "long sword"),
     }
 
+    from_glyph_test_values = {
+        (1947, "a runed broadsword named Stormbringer"): ArtifactValue("Stormbringer", "runesword"),
+        (1947, "the blessed +5 Stormbringer"): ArtifactValue("Stormbringer", "runesword"),
+        (2348, "a gray stone named The Heart of Ahriman"): ArtifactValue("Heart of Ahriman", "luckstone"),
+        (2348, "the uncursed Heart of Ahriman"): ArtifactValue("Heart of Ahriman", "luckstone"),
+        (1943, "a long sword named Excalibur"): ArtifactValue("Excalibur", "long sword"),
+        (1943, "the +0 Excalibur"): ArtifactValue("Excalibur", "long sword"),
+        # different amulet glyphs still can be the Eye because shuffled
+        (2090, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+        (2091, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+        (2092, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+    }
+
+    def test_base_gets_identified(self):
+        numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
+        global_identity_map = gd.GlobalIdentityMap()
+        run_state = agents.custom_agent.RunState()
+        run_state.global_identity_map = global_identity_map
+
+        artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+        numeral, item_str = (2090, "a hexagonal amulet")
+        base = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+        self.assertEqual(base.identity.name(), "amulet of ESP")
+
+
+    def test_from_glyph(self):
+        for k,v in self.from_glyph_test_values.items():
+            numeral, item_str = k
+            print(k,v)
+
+            global_identity_map = gd.GlobalIdentityMap()
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+            #print(result.item.artifact_identity)
+            artifact_name, name = v
+            self.assertEqual(artifact_name, artifact.identity.artifact_name)
+            self.assertEqual(name, artifact.identity.name())
+
     def test_from_string(self):
-        for k,v in self.test_values.items():
+        for k,v in self.from_str_test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
@@ -631,7 +673,13 @@ class TestArtifacts(unittest.TestCase):
             menu_text = string_to_tty_chars(k)
             interactive_menu = menuplan.ParsingInventoryMenu(run_state)
             result = interactive_menu.search_through_rows(menu_text)
-            print(result.item)
+            print(result.item.identity.name())
+
+            artifact_name, name = v
+
+            self.assertEqual(artifact_name, result.item.identity.artifact_name)
+            self.assertEqual(name, result.item.identity.name())
+
 
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"

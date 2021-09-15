@@ -235,11 +235,6 @@ class Weapon(Item):
         if is_better: print(f"Found better weapon: {self.identity.name()}")
         return is_better
 
-class ArtifactWeapon(Weapon):
-    def __init__(self, identity, artifact_identity, instance_attributes, inventory_letter=None, seen_as=None):
-        super().__init__(identity, instance_attributes, inventory_letter, seen_as)
-        self.artifact_identity = artifact_identity
-
 class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
@@ -380,14 +375,18 @@ class ItemParser():
     }
 
     item_class_by_glyph_class = {
-        gd.WandGlyph: Wand,
+        gd.AmuletGlyph: Amulet,
         gd.ArmorGlyph: Armor,
         gd.FoodGlyph: Food,
-        gd.ScrollGlyph: Scroll,
-        gd.PotionGlyph: Potion,
-        gd.WeaponGlyph: Weapon,
-        gd.ToolGlyph: Tool,
         gd.GemGlyph: Gem,
+        gd.PotionGlyph: Potion,
+        gd.RingGlyph: Ring,
+        gd.RockGlyph: Rock,
+        gd.ScrollGlyph: Scroll,
+        gd.SpellbookGlyph: Spellbook,
+        gd.ToolGlyph: Tool,
+        gd.WandGlyph: Wand,
+        gd.WeaponGlyph: Weapon,
     }
 
     glyph_class_by_category = {
@@ -467,12 +466,28 @@ class ItemParser():
 
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
+        identity = None
         match_components = cls.parse_inventory_item_string(item_string)
-        try:
-            identity = global_identity_map.identity_by_numeral[item_glyph]
-        except KeyError:
-            print(f"UNIMPLEMENTED ITEM {item_glyph}")
-            identity = None
+
+        # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
+        # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
+        if match_components.instance_name is not None:
+            identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
+            if identity is not None:
+                base_identity = global_identity_map.identity_by_numeral[item_glyph]
+                global_identity_map.associate_identity_and_name(base_identity, identity.name())
+
+        # Second line of defense: figure out if this is the {ARTIFACT NAME}
+        if identity is None:
+            identity = global_identity_map.artifact_identity_by_name.get(match_components.description, None)
+
+        # Third line of defense: this isn't an artifact, get its identity from the numeral
+        if identity is None:
+            try:
+                identity = global_identity_map.identity_by_numeral[item_glyph]
+            except KeyError:
+                print(f"UNIMPLEMENTED ITEM {item_glyph}")
+                identity = None
 
         glyph = gd.GLYPH_NUMERAL_LOOKUP[item_glyph]
         glyph_class = type(glyph)
@@ -490,6 +505,15 @@ class ItemParser():
         match_components = cls.parse_inventory_item_string(item_str)
         description = match_components.description
 
+        if match_components.instance_name is not None:
+            identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
+
+            if identity is not None:
+                # we've found an artifact
+                item_class = cls.item_class_by_glyph_class[identity.associated_glyph_class]
+                return item_class(identity, match_components, inventory_letter=inventory_letter)
+
+        #import pdb; pdb.set_trace()
         # if we are given the category (Ex. pickup from large stack) we can narrow down class
         if category:
             possible_glyph_classes = cls.glyph_class_by_category[category]
@@ -504,6 +528,7 @@ class ItemParser():
         possible_glyphs = []
         identity = None
         for glyph_class in possible_glyph_classes:
+            name = None
             if glyph_class != gd.CorpseGlyph:
                 appearance_match = cls.appearance_from_description_given_glyph_class(global_identity_map, description, glyph_class)
 
@@ -511,8 +536,15 @@ class ItemParser():
                     seen_as = appearance_match.appearance
                     possible_glyphs.extend(list(appearance_match.possible_glyphs))
 
+                # try to extract as an artifact
+                artifact_identity = global_identity_map.identity_by_name.get((glyph_class, match_components.description), None)
+                if artifact_identity is not None and artifact_identity.is_artifact:
+                    item_class = cls.item_class_by_glyph_class[artifact_identity.associated_glyph_class]
+                    return item_class(artifact_identity, match_components, inventory_letter=inventory_letter)
+
                 name = cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
                 #import pdb; pdb.set_trace()
+                # try to name the item as a non artifact
                 if name is not None:
                     seen_as = name
                     # add the possibilities found by name
@@ -526,6 +558,7 @@ class ItemParser():
                         identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
                         identity = identity_class.identity_from_name(name)
                         break
+
 
                 if len(possible_glyphs) > 0:
                     break # we can only ever match in one class by nethack logic, so break if any matches found

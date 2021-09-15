@@ -679,6 +679,7 @@ class ObjectSpoilers():
         ChainGlyph: '',
         VenomGlyph: '',
     }
+
     def __init__(self):
         object_spoilers_by_class = {}
         object_names_by_class = {}
@@ -692,6 +693,10 @@ class ObjectSpoilers():
 
         self.object_spoilers_by_class = object_spoilers_by_class
         self.object_names_by_class = object_names_by_class
+
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", 'artifact_spoiler.csv'), 'r') as f:
+            df = pd.read_csv(f)
+        self.artifact_spoilers = df
 
 OBJECT_SPOILERS = ObjectSpoilers()
 
@@ -726,6 +731,7 @@ class ObjectIdentity():
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
+        self.is_artifact = False
 
     @classmethod
     def identity_from_name(cls, name):
@@ -958,6 +964,43 @@ class WeaponIdentity(ObjectIdentity):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
+class ArtifactWeaponIdentity(WeaponIdentity):
+    associated_glyph_class = WeaponGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+        # keep idx pointed at the base item and override any methods with artifact specific stuff
+
+class ArtifactArmorIdentity(ArmorIdentity):
+    associated_glyph_class = ArmorGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactAmuletIdentity(AmuletIdentity):
+    associated_glyph_class = AmuletGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactGemIdentity(GemIdentity):
+    associated_glyph_class = GemGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactToolIdentity(ToolIdentity):
+    associated_glyph_class = ToolGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
 class GlobalIdentityMap():
     identity_by_glyph_class = {
         ArmorGlyph: ArmorIdentity,
@@ -974,6 +1017,35 @@ class GlobalIdentityMap():
         RockGlyph: RockIdentity,
         BallGlyph: BallIdentity,
     }
+
+    artifact_identity_by_type = {
+        "Weapon": (WeaponGlyph, ArtifactWeaponIdentity),
+        "Tool": (ToolGlyph, ArtifactToolIdentity),
+        "Amulet": (AmuletGlyph, ArtifactAmuletIdentity),
+        "Armor": (ArmorGlyph, ArtifactArmorIdentity),
+        "Gem": (GemGlyph, ArtifactGemIdentity),
+    }
+
+    def load_artifact_identities(self):
+        self.artifact_identity_by_name = {}
+        self.artifact_identity_by_appearance_name = {}
+        artifact_df = OBJECT_SPOILERS.artifact_spoilers
+
+        for _, row in artifact_df.iterrows():
+            #import pdb; pdb.set_trace()
+            glyph_class, artifact_identity_class = self.artifact_identity_by_type[row["BASE OCLASS"]]
+            #import pdb; pdb.set_trace()
+            #base_idx = self.identity_by_name[(glyph_class, row["BASE ITEM"])].idx
+            artifact_name = row["ARTIFACT NAME"]
+
+            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name)
+            self.artifact_identity_by_name[artifact_name] = artifact_identity
+            self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
+            self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity
+        
+        #import pdb; pdb.set_trace()
+        # go through table of artifacts, for each row, find base item row and join it in (dropping some columns)
+        # then instantiate the appropriate artifact identity
 
     def __init__(self):
         self.identity_by_numeral = {}
@@ -1031,6 +1103,7 @@ class GlobalIdentityMap():
             if japanese_name is not None:
                 self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
 
+        self.load_artifact_identities()
         #print(self.identity_by_numeral)
 
     def associate_identity_and_name(self, identity, name):
