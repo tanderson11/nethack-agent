@@ -244,7 +244,7 @@ class RunState():
     def print_action_log(self, total):
         return "||".join([num.name for num in self.action_log[(-1 * total):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
+    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -264,6 +264,7 @@ class RunState():
                 'race': self.character.base_race,
                 'class': self.character.base_class,
                 'level': self.blstats.get('experience_level'),
+                'exp points': self.blstats.get('experience_points'),
                 'depth': self.blstats.get('depth'),
                 'branch': self.blstats.get('dungeon_number'),
                 'branch_level': self.blstats.get('level_number'),
@@ -284,6 +285,8 @@ class RunState():
                 'l1_advised_step_count': self.l1_advised_step_count,
                 'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
                 'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
+                'total damage': self.total_damage,
+                'adjacent monster turns': self.adjacent_monster_turns,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
@@ -335,6 +338,8 @@ class RunState():
         self.last_non_menu_action_failed_advancement = None
         self.last_non_menu_advisor = None
 
+        self.total_damage = 0
+        self.adjacent_monster_turns = 0
         self.last_damage_timestamp = None
 
         self.queued_name_action = None
@@ -423,6 +428,13 @@ class RunState():
         self.step_count += 1
         self.reward += reward
 
+    def log_adjacent_monsters(self, n_adjacent):
+        self.adjacent_monster_turns += n_adjacent
+
+    def log_damage(self, damage, time):
+        self.last_damage_timestamp = time
+        self.total_damage += damage
+
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
@@ -434,7 +446,8 @@ class RunState():
 
         self.hp_log.append(blstats.get('hitpoints'))
         if len(self.hp_log) > 1 and self.hp_log[-1] < self.hp_log[-2]:
-            self.last_damage_timestamp = new_time
+            damage = self.hp_log[-2] - self.hp_log[-1]
+            self.log_damage(damage, new_time)
 
         # Potentially useful for checking stalls
         if self.time == new_time:
@@ -827,6 +840,8 @@ class CustomAgent(BatchedAgent):
         ### NEIGHBORHOOD UPDATED ###
         ############################
         run_state.update_neighborhood(neighborhood)
+
+        run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
         ############################
 
         if blstats.get('depth') == 1:

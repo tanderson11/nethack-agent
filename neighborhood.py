@@ -165,6 +165,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
         self.is_monster = extended_is_monster[neighborhood_view]
+        self.n_adjacent_monsters = np.count_nonzero(self.is_monster)
+
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
         walkable_tile = extended_walkable_tile[neighborhood_view]

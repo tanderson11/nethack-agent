@@ -89,8 +89,6 @@ class Oracle():
     @functools.cached_property
     def deadly_condition(self):
         return (
-            self.blstats.check_condition(nethack.BL_MASK_STONE) or
-            self.blstats.check_condition(nethack.BL_MASK_SLIME) or
             #self.blstats.check_condition(nethack.BL_MASK_TERMILL) or
             self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
             # TODO Requires NLE upgrade:
@@ -140,7 +138,11 @@ class Oracle():
 
     @functools.cached_property
     def urgent_major_trouble(self):
-        return self.deadly_condition
+        return (
+            self.blstats.check_condition(nethack.BL_MASK_STONE) or
+            self.blstats.check_condition(nethack.BL_MASK_SLIME) or
+            self.deadly_condition
+        )
 
     @functools.cached_property
     def major_trouble(self):
