@@ -157,9 +157,9 @@ class DLevelMap():
         self.player_location_mask = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
         # These are our map layers
-        self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE)
-        self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE)
-        self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE)
+        self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
+        self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
+        self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.special_room_map = np.full(constants.GLYPHS_SHAPE, constants.SpecialRoomTypes.NONE.value)
         self.owned_doors = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
