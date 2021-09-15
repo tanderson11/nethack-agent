@@ -712,10 +712,10 @@ class CustomAgent(BatchedAgent):
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
-        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
+        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
             print(run_state.message_log[-2])
             # create the staircases (idempotent)
-            if "You descend the" in run_state.message_log[-2]:
+            if "You descend the" in run_state.message_log[-2] or "You fall down the stairs." in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
             elif "You climb" in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
