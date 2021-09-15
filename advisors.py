@@ -1141,7 +1141,7 @@ class EngraveTestWandsAdvisor(Advisor):
         wands = character.inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
-            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False):
+            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False) and not w.shop_owned:
                 letter = w.inventory_letter
                 break
 
@@ -1163,6 +1163,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("usage fee"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
