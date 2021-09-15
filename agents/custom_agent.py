@@ -658,8 +658,13 @@ class CustomAgent(BatchedAgent):
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
 
-            if run_state.character.ready_for_mines():
-                run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+            if run_state.character.inventory.get_item(inv.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
+                if run_state.character.ready_for_mines() and run_state.dmap.target_dcoords[-1].branch != map.Branches.GnomishMines:
+                    run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+            else:
+                if run_state.dmap.target_dcoords[-1].branch != map.Branches.DungeonsOfDoom:
+                    #import pdb; pdb.set_trace()
+                    run_state.dmap.add_top_target(DCoord(map.Branches.DungeonsOfDoom, 60))
 
             #run_state.dmap.current_
 
