@@ -50,7 +50,7 @@ new_advisors = [
         ]),
     ###### OUT OF DANGER ###### ()
     DrinkHealingForMaxHPAdvisor(),
-    #DipForExcaliburAdvisor(),
+    DipForExcaliburAdvisor(),
     WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
@@ -87,6 +87,7 @@ new_advisors = [
         # like repeatedly back to warning-engraved doors. Or into shops.
         # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDesiredEgress(): 1,
+        TravelToFountainAdvisorForExcalibur(): 3,
         #TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),

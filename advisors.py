@@ -825,26 +825,27 @@ class PathAdvisor(Advisor):
 class ExcaliburAdvisor(Advisor):
     @staticmethod
     def hankering_for_excalibur(character):
-        if character.base_alignment == 'Lawful' and character.experience_level >= 5:
-            current_weapon = character.inventory.wielded_weapon()
-            if current_weapon.identity.name() == 'long sword' and current_weapon.instance_name is None:
+        if character.base_alignment == 'lawful' and character.experience_level >= 5:
+            current_weapon = character.inventory.wielded_weapon
+            if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
                 return True
         return False
 
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-            if self.hankering_for_excalibur(character) and neighborhood.dungeon_glyph_on_player and neighborhood.dungeon_glyph_on_player.is_fountain:
-                dip = nethack.actions.Command.DIP
-                long_sword = character.inventory.wielded_weapon()
-                menu_plan = menuplan.MenuPlan(
-                    "dip long sword", self, [
-                        menuplan.CharacterMenuResponse("What do you want to dip?", ord(long_sword.inventory_letter)),
-                        menuplan.YesMenuResponse("into fountain?"),
-                    ],
-                )
-
-                return ActionAdvice(from_advisor=self, action=dip, new_menu_plan=menu_plan)
+        if not (self.hankering_for_excalibur(character) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+            return None
+        dip = nethack.actions.Command.DIP
+        long_sword = character.inventory.wielded_weapon
+        menu_plan = menuplan.MenuPlan(
+            "dip long sword", self, [
+                menuplan.CharacterMenuResponse("What do you want to dip?", chr(long_sword.inventory_letter)),
+                menuplan.YesMenuResponse("into the fountain?"),
+            ],
+        )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=dip, new_menu_plan=menu_plan)
 
 class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
@@ -852,16 +853,21 @@ class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
             return None
 
         travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
 
-        menu_plan = menuplan.MenuPlan(
-            "travel to fountain", self, [
-                menuplan.CharacterMenuResponse("Where do you want to travel to?", "}"),
-                menuplan.EscapeMenuResponse("Can't find dungeon feature"),
-            ],
-            fallback=ord('.')
-        )
-     
-        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+        fountains = np.transpose(np.where(lmap.fountain_map))
+
+        if len(fountains > 0):
+            nearest_square_idx = np.argmin(np.sum(np.abs(fountains - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            target_square = physics.Square(*fountains[nearest_square_idx])
+            menu_plan = menuplan.MenuPlan(
+                "travel to fountain", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square),
+                ],
+                fallback=ord('.')
+            )
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
 
 class TravelToDesiredEgress(Advisor):
     def advice(self, rng, run_state, character, oracle):

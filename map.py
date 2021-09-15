@@ -165,6 +165,8 @@ class DLevelMap():
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+
 
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)
@@ -217,6 +219,7 @@ class DLevelMap():
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
+        self.fountain_map = (glyphs == gd.CMapGlyph.OFFSET + 31)
 
         # Basic terrain types
 
