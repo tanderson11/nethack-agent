@@ -180,7 +180,7 @@ class Character():
     }
 
     def am_willing_to_descend(self, depth):
-        willing_to_descend = self.current_hp == self.max_hp
+        willing_to_descend = self.current_hp >= self.max_hp * 0.9
         if self.inventory.have_item_oclass(inv.Food):
             willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60) > depth
         else:
