@@ -1030,7 +1030,10 @@ class DropUndesirableAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan(
             "drop all undesirable objects",
             self,
-            [],
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.MoreMenuResponse("You drop"),
+            ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
                 menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
