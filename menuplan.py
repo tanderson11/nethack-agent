@@ -464,7 +464,8 @@ class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
             try:
                 self.item = self.interactive_menu.inventory.items_by_letter[ord(self.character)]
             except KeyError:
-                import pdb; pdb.set_trace()
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
                 print("In interactive player inventory menu and haven't loaded class that letter {} belongs to".format(self.character))
                 self.item = None
 
