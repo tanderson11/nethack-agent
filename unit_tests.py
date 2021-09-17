@@ -1152,5 +1152,10 @@ class TestFloodMap(unittest.TestCase):
         self.assertTrue((end_mask == target_mask).all(), end_mask)
         self.assertEqual(end_mask.dtype, np.dtype('bool'))
 
+class TestSpecialLevelLoader(unittest.TestCase):
+    def test_sokoban_1a(self):
+        special_level = map.SpecialLevelLoader('sokoban_1a')
+        self.assertEqual(special_level.glyphs[0,0], 2359)
+
 if __name__ == '__main__':
     unittest.main()

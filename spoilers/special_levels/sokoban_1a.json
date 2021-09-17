@@ -1,0 +1,13 @@
+{
+    "branch": "Sokoban",
+    "offset": {
+        "x": 0,
+        "y": 0
+    },
+    "level_properties": {
+        "mappable": true,
+        "teleportable": false,
+        "diggable_walls": true,
+        "diggable_floor": false
+    }
+}

@@ -2,6 +2,8 @@ from collections import defaultdict
 from dataclasses import dataclass
 import enum
 from typing import NamedTuple
+import json
+import os
 
 import numpy as np
 import scipy.signal
@@ -575,3 +577,122 @@ class ThreatMap(FloodMap):
 
         can_hit_mask = np.logical_or.reduce(masks)
         return can_hit_mask
+
+class SpecialLevelLoader():
+    CHARACTER_TO_GLYPH_NAME = [
+        # 'stone', # 0
+        # '|': 'vwall', # 1
+        # '-': 'hwall', # 2
+        'tlcorn', # 3
+        'trcorn', # 4
+        'blcorn', # 5
+        'brcorn', # 6
+        'crwall', # 7
+        'tuwall', # 8
+        'tdwall', # 9
+        'tlwall', # 10
+        'trwall', # 11
+        'ndoor', # 12
+        'vodoor', # 13
+        'hodoor', # 14
+        'vcdoor', # 15
+        'hcdoor', # 16
+        'bars', # 17
+        'tree', # 18
+        'room', # 19
+        'darkroom', # 20
+        'corr', # 21
+        'litcorr', # 22
+        'upstair', # 23
+        'dnstair', # 24
+        'upladder', # 25
+        'dnladder', # 26
+        'altar', # 27
+        'grave', # 28
+        'throne', # 29
+        'sink', # 30
+        'fountain', # 31
+        'pool', # 32
+        'ice', # 33
+        'lava', # 34
+        'vodbridge', # 35
+        'hodbridge', # 36
+        'vcdbridge', # 37
+        'hcdbridge', # 38
+        'air', # 39
+        'cloud', # 40
+        'water', # 41
+        'arrow_trap', # 42
+        'dart_trap', # 43
+        'falling_rock_trap', # 44
+        'squeaky_board', # 45
+        'bear_trap', # 46
+        'land_mine', # 47
+        'rolling_boulder_trap', # 48
+        'sleeping_gas_trap', # 49
+        'rust_trap', # 50
+        'fire_trap', # 51
+        'pit', # 52
+        'spiked_pit', # 53
+        'hole', # 54
+        'trap_door', # 55
+        'teleportation_trap', # 56
+        'level_teleporter', # 57
+        'magic_portal', # 58
+        'web', # 59
+        'statue_trap', # 60
+        'magic_trap', # 61
+        'anti_magic_trap', # 62
+        'polymorph_trap', # 63
+        'vibrating_square', # 64
+        'vbeam', # 65
+        'hbeam', # 66
+        'lslant', # 67
+        'rslant', # 68
+        'digbeam', # 69
+        'flashbeam', # 70
+        'boomleft', # 71
+        'boomright', # 72
+        'ss1', # 73
+        'ss2', # 74
+        'ss3', # 75
+        'ss4', # 76
+        'poisoncloud', # 77
+        'goodpos', # 78
+        'sw_tl', # 79
+        'sw_tc', # 80
+        'sw_tr', # 81
+        'sw_ml', # 82
+        'sw_mr', # 83
+        'sw_bl', # 84
+        'sw_bc', # 85
+        'sw_br', # 86
+    ]
+    CHARACTER_TO_GLYPH = {}
+    def __init__(self, level_name):
+        self.level_name = level_name
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.txt"), 'r') as f:
+            characters = f.readlines()
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
+            self.properties = json.load(f)
+
+        self.glyphs = self.characters_to_glyphs(characters)
+
+    @staticmethod
+    def characters_to_glyphs(characters):
+        glyphs = np.full(constants.GLYPHS_SHAPE, 2359)
+
+        offset_x = 0
+        offset_y = 0
+
+        for line in characters:
+
+            for character in line:
+                glyph = SpecialLevelLoader.CHARACTER_TO_GLYPH.get(character, 2359)
+                glyphs[offset_x, offset_y] = glyph
+                offset_x += 1
+            offset_x = 0
+            offset_y += 1
+
+        return glyphs
+
