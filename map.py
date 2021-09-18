@@ -157,14 +157,16 @@ class DLevelMap():
         self.player_location_mask = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
         # These are our map layers
-        self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE)
-        self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE)
-        self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE)
+        self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
+        self.visits_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
+        self.searches_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.special_room_map = np.full(constants.GLYPHS_SHAPE, constants.SpecialRoomTypes.NONE.value)
         self.owned_doors = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+
 
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)
@@ -217,6 +219,7 @@ class DLevelMap():
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
+        self.fountain_map = (glyphs == gd.CMapGlyph.OFFSET + 31)
 
         # Basic terrain types
 
@@ -371,21 +374,20 @@ class ThreatMap(FloodMap):
         #self.calculate_implied_threat()
 
     @classmethod
-    def calculate_can_occupy(cls, monster, start, glyph_grid):
-        #print(monster)
+    def calculate_can_occupy(cls, monster, start, raw_glyph_grid):
+        walkable = gd.walkable(raw_glyph_grid)
         if isinstance(monster, gd.MonsterGlyph):
             free_moves = np.ceil(monster.monster_spoiler.speed / monster.monster_spoiler.__class__.NORMAL_SPEED) - 1 # -1 because we are interested in move+hit turns not just move turns
             #print("speed, free_moves:", monster.monster_spoiler.speed, free_moves)
         elif isinstance(monster, gd.InvisibleGlyph):
             free_moves = 0
         
-        mons_square_mask = np.full_like(glyph_grid, False, dtype='bool')
+        mons_square_mask = np.full_like(raw_glyph_grid, False, dtype='bool')
         mons_square_mask[start] = True
         can_occupy_mask = mons_square_mask
 
         if free_moves > 0: # if we can move+attack, we need to know where we can move
-            walkable = utilities.vectorized_map(lambda g: g.walkable(monster), glyph_grid)
-            already_checked_mask = np.full_like(glyph_grid, False, dtype='bool')
+            already_checked_mask = np.full_like(raw_glyph_grid, False, dtype='bool')
 
         while free_moves > 0:
             # flood from newly identified squares that we can occupy
@@ -430,7 +432,7 @@ class ThreatMap(FloodMap):
                 if isinstance(glyph, gd.MonsterGlyph) or is_invis:
                     if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
                         ### SHARED ###
-                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.glyph_grid)
+                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.raw_glyph_grid)
                         ###
 
                         ### MELEE ###

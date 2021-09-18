@@ -36,6 +36,7 @@ class Character():
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
     held_by: HeldBy = None
+    near_burdened: bool = False
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -89,6 +90,12 @@ class Character():
             #import pdb; pdb.set_trace()
             pass
 
+        try:
+            self.update_held_by_from_message(message_text, time)
+        except Exception as e:
+            print(f"Exception while finding holding monster. Are we hallu? {e}")
+
+    def update_held_by_from_message(self, message_text, time):
         monster_name = None
 
         possible_grabs = [monster_messages.RecordedSeaMonsterGrab.involved_monster(message_text),
@@ -173,7 +180,7 @@ class Character():
     }
 
     def am_willing_to_descend(self, depth):
-        willing_to_descend = self.current_hp == self.max_hp
+        willing_to_descend = self.current_hp >= self.max_hp * 0.9
         if self.inventory.have_item_oclass(inv.Food):
             willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60) > depth
         else:

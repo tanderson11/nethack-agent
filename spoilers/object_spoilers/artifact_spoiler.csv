@@ -1,0 +1,34 @@
+IDX,ARTIFACT NAME,ARTIFACT APPEARANCE,BASE OCLASS,BASE ITEM,ALIGNMENT,INTELLIGENT,WHEN_CARRIED,WHEN_USED,WHEN_INVOKED,Obtaining
+2084,Eye of the Aethiopica,The Eye of the Aethiopica,Amulet,amulet of ESP,neutral,Yes,Energy regeneration. Half spell damage.,Magic resistance. Telepathy.,Branchport.,Quest artifact of Wizards.
+1985,Mitre of Holiness,The Mitre of Holiness,Armor,helm of brilliance,lawful,Yes,Fire resistance.,Protection. Half damage from undead and demons.,Energy boost.,Quest artifact of Priests.
+2348,Heart of Ahriman,The Heart of Ahriman,Gem,luckstone,neutral,Yes,Stealth.,"As projectile, +d5 to-hit and double damage.",Levitation.,Quest artifact of Barbarians.
+2104,Platinum Yendorian Express Card,The Platinum Yendorian Express Card,Tool,credit card,neutral,Yes,Magic resistance. Half spell damage. Telepathy.,,Charging.,Quest artifact of Tourists.
+2112,Orb of Detection,The Orb of Detection,Tool,crystal ball,lawful,Yes,Magic resistance. Half spell damage. Telepathy.,,Invisibility.,Quest artifact of Archeologists.
+2112,Orb of Fate,The Orb of Fate,Tool,crystal ball,neutral,Yes,Half physical damage. Half spell damage. Warning. Luck.,,Level teleport.,Quest artifact of Valkyries.
+2111,Magic Mirror of Merlin,The Magic Mirror of Merlin,Tool,mirror,lawful,Yes,Magic resistance. Telepathy. ×2 to some spell damage.,Rumors.,,Quest artifact of Knights.
+2113,Eyes of the Overworld,The Eyes of the Overworld,Tool,pair of lenses,neutral,Yes,,Astral vision. Protection against blindness and gazes. Magic resistance.,Enlightenment.,Quest artifact of Monks.
+2102,Master Key of Thievery,The Master Key of Thievery,Tool,skeleton key,chaotic,Yes,Warning. Half physical damage. Teleport control.,"Rumors. As of 3.6.1, automatically untraps when used to unlock.",Untraps.,Quest artifact of Rogues.
+1927,Magicbane,Magicbane,Weapon,athame,neutral,No,,+d3 to-hit. Special damage. Magic resistance. Protects against cursing.,,First sacrifice gift for Wizards.
+1934,Cleaver,Cleaver,Weapon,battle-axe,neutral,No,,+d3 to-hit and +d6 damage. Arc-swing hits up to 3 monsters at once,,First sacrifice gift for Barbarians.
+1971,Longbow of Diana,The Longbow of Diana,Weapon,bow,chaotic,Yes,Telepathy.,+d5 to-hit. Reflection.,Create arrows.,Quest artifact of Rangers.
+1941,Dragonbane,Dragonbane,Weapon,broadsword,unaligned,No,,+d5 to-hit and double damage to dragons. Reflection.,,
+1942,Orcrist,Orcrist,Weapon,elven broadsword,chaotic,No,,+d5 to-hit and double damage to orcs.,,May be produced by naming an ordinary elven broadsword Orcrist.
+1924,Sting,Sting,Weapon,elven dagger,chaotic,No,,+d5 to-hit and double damage to orcs. Warning of orcs. Cuts through webs.,,May be produced by naming an ordinary elven dagger Sting.
+1945,Snickersnee,Snickersnee,Weapon,katana,lawful,No,,+d8 damage.,,First sacrifice gift for Samurai.
+1943,Demonbane,Demonbane,Weapon,long sword,lawful,No,,+d5 to-hit and double damage to major demons.,,May be given to a new angelic being.
+1943,Excalibur,Excalibur,Weapon,long sword,lawful,Yes,,+d5 to-hit and +d10 damage. Drain resistance. Searching. Hostile demon princes. Monsters track player.,,May be produced for lawful adventurers at fountains. Lawful crowning gift.
+1943,Fire Brand,Fire Brand,Weapon,long sword,unaligned,No,,+d5 to-hit and double damage to non-fire-resistant monsters. Fire resistance.,,
+1943,Frost Brand,Frost Brand,Weapon,long sword,unaligned,No,,+d5 to-hit and double damage to non-cold-resistant monsters. Cold resistance.,,
+1943,Giantslayer,Giantslayer,Weapon,long sword,neutral,No,,+d5 to-hit and double damage to giants.,,
+1943,Sunsword,Sunsword,Weapon,long sword,lawful,No,,+d5 to-hit and double damage to undead. Light. Protection from light-based blinding.,,May be given to a new angelic being.
+1943,Vorpal Blade,Vorpal Blade,Weapon,long sword,neutral,No,,+d5 to-hit and +1 damage. 5% chance of beheading (100% for jabberwocks).,,Neutral crowning gift.
+1962,Sceptre of Might,The Sceptre of Might,Weapon,mace,lawful,Yes,(Magic resistance prior to v3.6.0),+d5 to-hit and double damage to cross-aligned monsters. Magic resistance,Conflict.,Quest artifact of Cavepeople.
+1963,Trollsbane,Trollsbane,Weapon,morning star,unaligned,No,,+d5 to-hit and double damage to trolls. Prevents trolls from reviving.,,
+1925,Grimtooth,Grimtooth,Weapon,orcish dagger,chaotic,No,,+d2 to-hit and +d6 damage.,,
+1967,Staff of Aesculapius,The Staff of Aesculapius,Weapon,quarterstaff,neutral,Yes,,Double damage and level drain to non-drain-resistant monsters. Hungerless regeneration. Drain resistance.,"Healing, cures sickness, blindness, and sliming.",Quest artifact of Healers.
+1947,Stormbringer,Stormbringer,Weapon,runesword,chaotic,Yes,,"+d5 to-hit, +d2 damage and level drain to non-drain-resistant monsters. Drain resistance. Bloodthirsty.",,Chaotic crowning gift.
+1940,Grayswandir,Grayswandir,Weapon,silver saber,lawful,No,,+d5 to-hit and double damage. Protection against hallucination. Silver damage,,
+1940,Werebane,Werebane,Weapon,silver saber,unaligned,No,,+d5 to-hit and double damage to werecreatures. Silver damage,,
+1946,Tsurugi of Muramasa,The Tsurugi of Muramasa,Weapon,tsurugi,lawful,Yes,Luck.,Protection. +d8 damage. 5% chance of bisection.,,Quest artifact for Samurai.
+1964,Mjollnir,Mjollnir,Weapon,war hammer,neutral,No,,+d5 to-hit and +d24 damage to non-shock-resistant monsters. Can return when thrown.,,First sacrifice gift for Valkyries.
+1964,Ogresmasher,Ogresmasher,Weapon,war hammer,unaligned,No,,+d5 to-hit and double damage to ogres. 25 constitution.,,

@@ -62,9 +62,6 @@ class Glyph():
         self.offset = self.numeral - self.__class__.OFFSET
         self.name = None
 
-    def walkable(self, character):
-        return False
-
     @classmethod
     def numeral_mapping(cls):
         mapping = {}
@@ -81,6 +78,10 @@ class Glyph():
     def numerals(cls):
         numerals = range(cls.OFFSET, cls.OFFSET + cls.COUNT)
         return numerals
+    
+    @classmethod
+    def where_is(cls, glyphs):
+        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
 class MonsterAlikeGlyph(Glyph):
     NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
@@ -190,9 +191,6 @@ class ObjectGlyph(Glyph):
 
         self.appearance = appearance
         self.name = name # not accurate for shuffled glyphs
-
-    def walkable(self, character):
-        return True
 
     def desirable_glyph(self, global_identity_map, character):
         identity = global_identity_map.identity_by_numeral[self.numeral]
@@ -447,10 +445,11 @@ class CMapGlyph(Glyph):
     @classmethod
     def is_safely_walkable_check(cls, offsets):
          return (
-            ((offsets >= 12) & (offsets <= 14)) | # Doors
+             ~((offsets < 0) | (offsets > cls.OFFSET + cls.COUNT)) &
+            (((offsets >= 12) & (offsets <= 14)) | # Doors
             ((offsets >= 19) & (offsets <= 34) & (~cls.is_liquid_check(offsets))) | # Room-like
             (offsets == 58) | # Magic portal
-            (offsets == 64) # Vibrating square
+            (offsets == 64)) # Vibrating square
          )
 
     @staticmethod
@@ -479,10 +478,9 @@ class CMapGlyph(Glyph):
 
         self.is_open_door = self.offset > 12 and self.offset < 15
         self.is_closed_door = self.offset == 15 or self.offset == 16
-        
-    def walkable(self, character):
-        return self.is_safely_walkable_check(np.array([self.offset])).all()
 
+        self.is_fountain = self.offset == 31
+        
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
         OFFSET = offset
@@ -498,9 +496,6 @@ class PetGlyph(MonsterAlikeGlyph):
         super().__init__(numeral)
 
         self.name = "pet" + self.name
-    
-    def walkable(self, character):
-        return True
 
 class InvisibleGlyph(Glyph):
     OFFSET = nethack.GLYPH_INVIS_OFF
@@ -529,9 +524,6 @@ class CorpseGlyph(Glyph):
         super().__init__(numeral)
 
         self.always_safe_non_perishable = (self.offset in self.always_safe_non_perishable_offsets)
-
-    def walkable(self, character):
-        return True
 
     # TODO hard-coding this for now until we have a CorpseIdentity that we can use
     def desirable_glyph(self, global_identity_map, character):
@@ -572,9 +564,17 @@ class StatueGlyph(Glyph):
 
     def __init__(self, numeral):
         super().__init__(numeral)
-    
-    def walkable(self, character):
-        return True
+
+def walkable(glyphs):
+    # Object, Statue, Pet, Corpse, CMap
+    walkable_glyphs = np.full_like(glyphs, False, dtype=bool)
+    walkable_glyphs = np.where(CMapGlyph.where_is(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
+    walkable_glyphs = np.where(CorpseGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(PetGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(StatueGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(ObjectGlyph.where_is(glyphs), True, walkable_glyphs)
+
+    return walkable_glyphs
 
 klasses = [
     MonsterGlyph,
@@ -679,6 +679,7 @@ class ObjectSpoilers():
         ChainGlyph: '',
         VenomGlyph: '',
     }
+
     def __init__(self):
         object_spoilers_by_class = {}
         object_names_by_class = {}
@@ -692,6 +693,10 @@ class ObjectSpoilers():
 
         self.object_spoilers_by_class = object_spoilers_by_class
         self.object_names_by_class = object_names_by_class
+
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "object_spoilers", 'artifact_spoiler.csv'), 'r') as f:
+            df = pd.read_csv(f)
+        self.artifact_spoilers = df
 
 OBJECT_SPOILERS = ObjectSpoilers()
 
@@ -726,6 +731,7 @@ class ObjectIdentity():
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
+        self.is_artifact = False
 
     @classmethod
     def identity_from_name(cls, name):
@@ -809,6 +815,18 @@ class AmuletIdentity(ObjectIdentity):
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
 
+    def desirable_identity(self, character):
+        if self.name() is not None and 'healing' in self.name():
+            return True
+
+        if self.name() == 'gain level':
+            return True
+
+        if self.name() == 'fruit juice':
+            return True
+
+        return False
+
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
@@ -830,8 +848,29 @@ class FoodIdentity(ObjectIdentity):
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
 
+    def desirable_identity(self, character):
+        if self.name() == 'unicorn horn':
+            return True
+
+        if self.name() in ['lock pick', 'key', 'credit card']:
+            return True
+
+        if self.name() in ['sack', 'bag of holding', 'oilskin sack']:
+            return True
+
+        if self.name() == 'magic marker':
+            return True
+
+        return False
+
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+
+    def desirable_identity(self, character):
+        if self.name() == 'luckstone':
+            return True
+
+        return False
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
@@ -843,6 +882,11 @@ class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
+
+        if action == nethack.actions.Command.ZAP:
+            if "Nothing happens." in message_obj.message and self.name() is not None:
+                return "NO_CHARGE"
+
 
         # engrave testing
         if action == nethack.actions.Command.ENGRAVE:
@@ -920,6 +964,43 @@ class WeaponIdentity(ObjectIdentity):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
+class ArtifactWeaponIdentity(WeaponIdentity):
+    associated_glyph_class = WeaponGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+        # keep idx pointed at the base item and override any methods with artifact specific stuff
+
+class ArtifactArmorIdentity(ArmorIdentity):
+    associated_glyph_class = ArmorGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactAmuletIdentity(AmuletIdentity):
+    associated_glyph_class = AmuletGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactGemIdentity(GemIdentity):
+    associated_glyph_class = GemGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
+class ArtifactToolIdentity(ToolIdentity):
+    associated_glyph_class = ToolGlyph
+    def __init__(self, idx, artifact_name):
+        super().__init__(idx)
+        self.artifact_name = artifact_name
+        self.is_artifact = True
+
 class GlobalIdentityMap():
     identity_by_glyph_class = {
         ArmorGlyph: ArmorIdentity,
@@ -936,6 +1017,35 @@ class GlobalIdentityMap():
         RockGlyph: RockIdentity,
         BallGlyph: BallIdentity,
     }
+
+    artifact_identity_by_type = {
+        "Weapon": (WeaponGlyph, ArtifactWeaponIdentity),
+        "Tool": (ToolGlyph, ArtifactToolIdentity),
+        "Amulet": (AmuletGlyph, ArtifactAmuletIdentity),
+        "Armor": (ArmorGlyph, ArtifactArmorIdentity),
+        "Gem": (GemGlyph, ArtifactGemIdentity),
+    }
+
+    def load_artifact_identities(self):
+        self.artifact_identity_by_name = {}
+        self.artifact_identity_by_appearance_name = {}
+        artifact_df = OBJECT_SPOILERS.artifact_spoilers
+
+        for _, row in artifact_df.iterrows():
+            #import pdb; pdb.set_trace()
+            glyph_class, artifact_identity_class = self.artifact_identity_by_type[row["BASE OCLASS"]]
+            #import pdb; pdb.set_trace()
+            #base_idx = self.identity_by_name[(glyph_class, row["BASE ITEM"])].idx
+            artifact_name = row["ARTIFACT NAME"]
+
+            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name)
+            self.artifact_identity_by_name[artifact_name] = artifact_identity
+            self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
+            self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity
+        
+        #import pdb; pdb.set_trace()
+        # go through table of artifacts, for each row, find base item row and join it in (dropping some columns)
+        # then instantiate the appropriate artifact identity
 
     def __init__(self):
         self.identity_by_numeral = {}
@@ -993,6 +1103,7 @@ class GlobalIdentityMap():
             if japanese_name is not None:
                 self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
 
+        self.load_artifact_identities()
         #print(self.identity_by_numeral)
 
     def associate_identity_and_name(self, identity, name):

@@ -68,6 +68,33 @@ class Oracle():
         max_hp = self.character.max_hp
         return current_hp < max_hp * 0.6
 
+    """// From botl.h.
+    mn.attr("BL_MASK_STONE") = py::int_(static_cast<int>(BL_MASK_STONE));
+    mn.attr("BL_MASK_SLIME") = py::int_(static_cast<int>(BL_MASK_SLIME));
+    mn.attr("BL_MASK_STRNGL") = py::int_(static_cast<int>(BL_MASK_STRNGL));
+    mn.attr("BL_MASK_FOODPOIS") =
+        py::int_(static_cast<int>(BL_MASK_FOODPOIS));
+    mn.attr("BL_MASK_TERMILL") = py::int_(static_cast<int>(BL_MASK_TERMILL));
+    mn.attr("BL_MASK_BLIND") = py::int_(static_cast<int>(BL_MASK_BLIND));
+    mn.attr("BL_MASK_DEAF") = py::int_(static_cast<int>(BL_MASK_DEAF));
+    mn.attr("BL_MASK_STUN") = py::int_(static_cast<int>(BL_MASK_STUN));
+    mn.attr("BL_MASK_CONF") = py::int_(static_cast<int>(BL_MASK_CONF));
+    mn.attr("BL_MASK_HALLU") = py::int_(static_cast<int>(BL_MASK_HALLU));
+    mn.attr("BL_MASK_LEV") = py::int_(static_cast<int>(BL_MASK_LEV));
+    mn.attr("BL_MASK_FLY") = py::int_(static_cast<int>(BL_MASK_FLY));
+    mn.attr("BL_MASK_RIDE") = py::int_(static_cast<int>(BL_MASK_RIDE));
+    mn.attr("BL_MASK_BITS") = py::int_(static_cast<int>(BL_MASK_BITS));"""
+
+
+    @functools.cached_property
+    def deadly_condition(self):
+        return (
+            #self.blstats.check_condition(nethack.BL_MASK_TERMILL) or
+            self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
+            # TODO Requires NLE upgrade:
+            # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
+        )
+
     @functools.cached_property
     def nuisance_condition(self):
         return (
@@ -114,9 +141,7 @@ class Oracle():
         return (
             self.blstats.check_condition(nethack.BL_MASK_STONE) or
             self.blstats.check_condition(nethack.BL_MASK_SLIME) or
-            self.blstats.check_condition(nethack.BL_MASK_FOODPOIS)
-            # TODO Requires NLE upgrade:
-            # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
+            self.deadly_condition
         )
 
     @functools.cached_property
@@ -279,25 +304,54 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
-class DrinkHealingPotionAdvisor(Advisor):
+class PotionAdvisor(Advisor):
+    def make_menu_plan(self, letter):
+        menu_plan = menuplan.MenuPlan(
+            "drink potion", self, [
+                menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
+                menuplan.NoMenuResponse("Drink from the fountain?"),
+                menuplan.NoMenuResponse("Drink from the sink?"),
+            ])
+        
+        return menu_plan
+
+class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
-        potions = character.inventory.get_oclass(inv.Potion)
+        healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != 'cursed', identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
 
-        for potion in potions:
-            if potion and potion.identity and potion.identity.name() and 'healing' in potion.identity.name():
+        for potion in healing_potions:
+            expected_healing = potion.expected_healing(character)
+            if expected_healing < (character.max_hp / 2):
+                menu_plan = self.make_menu_plan(potion.inventory_letter)
+                #import pdb; pdb.set_trace()
+                return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+        return None
+
+class DrinkHealingPotionAdvisor(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        quaff = nethack.actions.Command.QUAFF
+        healing_potions = character.inventory.get_items(inv.Potion, identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
+
+        for potion in healing_potions:
                 letter = potion.inventory_letter
-                menu_plan = menuplan.MenuPlan(
-                    "drink healing potion", self, [
-                        menuplan.CharacterMenuResponse("What do you want to drink?", chr(letter)),
-                        menuplan.NoMenuResponse("Drink from the fountain?"),
-                        menuplan.NoMenuResponse("Drink from the sink?"),
-                    ])
+                menu_plan = self.make_menu_plan(letter)
                 return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
         return None
 
 class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [DrinkHealingPotionAdvisor]
+
+class ApplyUnicornHornAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != 'cursed')
+        if unicorn_horn is not None:
+            apply = nethack.actions.Command.APPLY
+            menu_plan = menuplan.MenuPlan("apply unicorn horn", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(unicorn_horn.inventory_letter)),
+            ], listening_item=unicorn_horn)
+            return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
 
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -307,24 +361,23 @@ class ZapDiggingDownAdvisor(Advisor):
         zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 
-        if wand_of_digging is not None:
+        if wand_of_digging is not None and (wand_of_digging.charges is None or wand_of_digging.charges > 0):
             menu_plan = menuplan.MenuPlan("zap digging wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
-            ])
+            ], listening_item=wand_of_digging)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
-
 
 class ZapTeleportOnSelfAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         zap = nethack.actions.Command.ZAP
         wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation')
 
-        if wand_of_teleport is not None:
+        if wand_of_teleport is not None and (wand_of_teleport.charges is None or wand_of_teleport.charges > 0):
             menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
                 menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
-            ])
+            ], listening_item=wand_of_teleport)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
 class ReadTeleportAdvisor(Advisor):
@@ -769,8 +822,52 @@ class PathAdvisor(Advisor):
 
             return ActionAdvice(from_advisor=self, action=path.path_action)
 
-class DownstairsAdvisor(Advisor):
-    pass
+class ExcaliburAdvisor(Advisor):
+    @staticmethod
+    def hankering_for_excalibur(character):
+        if character.base_alignment == 'lawful' and character.experience_level >= 5:
+            current_weapon = character.inventory.wielded_weapon
+            if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
+                return True
+        return False
+
+
+class DipForExcaliburAdvisor(ExcaliburAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not (self.hankering_for_excalibur(character) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+            return None
+        dip = nethack.actions.Command.DIP
+        long_sword = character.inventory.wielded_weapon
+        menu_plan = menuplan.MenuPlan(
+            "dip long sword", self, [
+                menuplan.CharacterMenuResponse("What do you want to dip?", chr(long_sword.inventory_letter)),
+                menuplan.YesMenuResponse("into the fountain?"),
+            ],
+        )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=dip, new_menu_plan=menu_plan)
+
+class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not self.hankering_for_excalibur(character):
+            return None
+
+        travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
+
+        fountains = np.transpose(np.where(lmap.fountain_map))
+
+        if len(fountains > 0):
+            nearest_square_idx = np.argmin(np.sum(np.abs(fountains - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            target_square = physics.Square(*fountains[nearest_square_idx])
+            menu_plan = menuplan.MenuPlan(
+                "travel to fountain", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square),
+                ],
+                fallback=ord('.')
+            )
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
 
 class TravelToDesiredEgress(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -862,6 +959,11 @@ class TakeStaircaseAdvisor(Advisor):
         current_level = run_state.neighborhood.level_map.dcoord
         traversed_staircase = run_state.neighborhood.level_map.staircases.get(run_state.neighborhood.absolute_player_location, None)
         heading = run_state.dmap.dungeon_direction_to_best_target(current_level)
+        if heading is None:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+            return None
+
         if traversed_staircase is not None:
             if traversed_staircase.matches_heading(heading):
                 action = nethack.actions.MiscDirection.DOWN if oracle.on_downstairs else nethack.actions.MiscDirection.UP
@@ -918,6 +1020,32 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
+class DropUndesirableAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.near_burdened:
+            return None
+
+        character.near_burdened = False
+        undesirable_items = character.inventory.all_undesirable_items(character)
+        if len(undesirable_items) == 0:
+            return None
+
+        undesirable_letters = [item.inventory_letter for item in undesirable_items]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.MoreMenuResponse("You drop"),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
@@ -928,7 +1056,7 @@ class PickupDesirableItems(Advisor):
             "pick up all desirable objects",
             self,
             [],
-            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
@@ -953,6 +1081,10 @@ class FallbackSearchAdvisor(Advisor):
 class WieldBetterWeaponAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         wield = nethack.actions.Command.WIELD
+
+        if character.inventory.wielded_weapon.BUC == 'cursed':
+            return None
+
         best_weapon = character.inventory.proposed_weapon_changes(character)
         if best_weapon is None:
             return None
@@ -1017,7 +1149,7 @@ class EngraveTestWandsAdvisor(Advisor):
         wands = character.inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
-            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False):
+            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False) and not w.shop_owned:
                 letter = w.inventory_letter
                 break
 
@@ -1039,6 +1171,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("usage fee"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
@@ -1053,3 +1186,17 @@ class EngraveTestWandsAdvisor(Advisor):
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
 
+class NameItemAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        name_action = run_state.queued_name_action
+        run_state.queued_name_action = None
+        if name_action is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("name item", self, [
+                    menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),
+                    menuplan.CharacterMenuResponse("What do you want to name? [", chr(name_action.letter)),
+                    menuplan.PhraseMenuResponse("What do you want to name this", name_action.name)
+            ])
+
+        return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)

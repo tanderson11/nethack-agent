@@ -139,6 +139,7 @@ class Message():
         "A pit opens up under you": gd.get_by_name(gd.CMapGlyph, 'pit'),
         "A pit full of spikes opens up under you": gd.get_by_name(gd.CMapGlyph, 'spiked_pit'),
         "You step onto a polymorph trap!": gd.get_by_name(gd.CMapGlyph, 'polymorph_trap'),
+        "The fountain dries up!": gd.get_by_name(gd.CMapGlyph, 'room'),
     }
 
     class Feedback():
@@ -160,8 +161,6 @@ class Message():
 
 
     def get_dungeon_feature_here(self, raw_message):
-        if not " here" in raw_message:
-            return
         for k, v in self.match_to_feature.items():
             if k in raw_message:
                 return v
@@ -244,7 +243,7 @@ class RunState():
     def print_action_log(self, total):
         return "||".join([num.name for num in self.action_log[(-1 * total):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency']
+    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -264,6 +263,7 @@ class RunState():
                 'race': self.character.base_race,
                 'class': self.character.base_class,
                 'level': self.blstats.get('experience_level'),
+                'exp points': self.blstats.get('experience_points'),
                 'depth': self.blstats.get('depth'),
                 'branch': self.blstats.get('dungeon_number'),
                 'branch_level': self.blstats.get('level_number'),
@@ -284,6 +284,8 @@ class RunState():
                 'l1_advised_step_count': self.l1_advised_step_count,
                 'l1_need_downstairs_step_count': self.l1_need_downstairs_step_count,
                 'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
+                'total damage': self.total_damage,
+                'adjacent monster turns': self.adjacent_monster_turns,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
@@ -335,7 +337,11 @@ class RunState():
         self.last_non_menu_action_failed_advancement = None
         self.last_non_menu_advisor = None
 
+        self.total_damage = 0
+        self.adjacent_monster_turns = 0
         self.last_damage_timestamp = None
+
+        self.queued_name_action = None
         
         self.time_hung = 0
         self.time_stuck = 0
@@ -360,7 +366,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'UNC1Ug=='
+        #seed = b'oDEhDQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -421,6 +427,13 @@ class RunState():
         self.step_count += 1
         self.reward += reward
 
+    def log_adjacent_monsters(self, n_adjacent):
+        self.adjacent_monster_turns += n_adjacent
+
+    def log_damage(self, damage, time):
+        self.last_damage_timestamp = time
+        self.total_damage += damage
+
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
@@ -432,7 +445,8 @@ class RunState():
 
         self.hp_log.append(blstats.get('hitpoints'))
         if len(self.hp_log) > 1 and self.hp_log[-1] < self.hp_log[-2]:
-            self.last_damage_timestamp = new_time
+            damage = self.hp_log[-2] - self.hp_log[-1]
+            self.log_damage(damage, new_time)
 
         # Potentially useful for checking stalls
         if self.time == new_time:
@@ -480,7 +494,9 @@ class RunState():
         self.message_log.append(message.message)
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
-            self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+            name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+            if name_action is not None:
+                self.queued_name_action = name_action
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:
@@ -490,6 +506,8 @@ class RunState():
                     if environment.env.debug: import pdb; pdb.set_trace()
 
         if message.feedback.trouble_lifting or message.feedback.nothing_to_pickup:
+            if message.feedback.trouble_lifting:
+                self.character.near_burdened = True
             if self.last_non_menu_action in physics.direction_actions:
                 # Autopickup
                 pass
@@ -639,8 +657,13 @@ class CustomAgent(BatchedAgent):
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
 
-            if run_state.character.ready_for_mines():
-                run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+            if run_state.character.inventory.get_item(inv.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
+                if run_state.character.ready_for_mines() and run_state.dmap.target_dcoords[-1].branch != map.Branches.GnomishMines:
+                    run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
+            else:
+                if run_state.dmap.target_dcoords[-1].branch != map.Branches.DungeonsOfDoom:
+                    #import pdb; pdb.set_trace()
+                    run_state.dmap.add_top_target(DCoord(map.Branches.DungeonsOfDoom, 60))
 
             #run_state.dmap.current_
 
@@ -689,10 +712,10 @@ class CustomAgent(BatchedAgent):
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
-        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
+        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
             print(run_state.message_log[-2])
             # create the staircases (idempotent)
-            if "You descend the" in run_state.message_log[-2]:
+            if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
             elif "You climb" in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
@@ -821,6 +844,8 @@ class CustomAgent(BatchedAgent):
         ### NEIGHBORHOOD UPDATED ###
         ############################
         run_state.update_neighborhood(neighborhood)
+
+        run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
         ############################
 
         if blstats.get('depth') == 1:

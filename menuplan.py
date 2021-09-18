@@ -309,8 +309,8 @@ class InteractiveMenu():
                 item_match = re.match(self.menu_item_pattern, potential_menu)
                 if item_match:
                     if not self.active_category:
-                        if environment.env.debug: pdb.set_trace()
-
+                        #if environment.env.debug: import pdb; pdb.set_trace()
+                        pass
                     #import pdb; pdb.set_trace()
                     next_item = self.MenuItem(
                         self,
@@ -371,13 +371,14 @@ class ParsingInventoryMenu(InteractiveMenu):
         'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)),
     }
 
-    def __init__(self, run_state, selector_name=None, select_desirable=False):
+    def __init__(self, run_state, selector_name=None, select_desirable=None):
         self.run_state = run_state
         if selector_name and select_desirable:
             raise Exception("Please only specify one of these")
         super().__init__(selector_name=selector_name)
 
-        if select_desirable:
+        if select_desirable is not None:
+            assert select_desirable in ['undesirable', 'desirable']
             def select_desirable_func(menu_item):
                 if menu_item.item is None:
                     if 'corpse' in menu_item.item_text:
@@ -408,7 +409,10 @@ class ParsingInventoryMenu(InteractiveMenu):
                 else:
                     if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
                     return menu_item.item.desirable(run_state.character)
-            self.item_selector = lambda x: select_desirable_func(x)
+            if select_desirable == 'desirable':
+                self.item_selector = lambda x: select_desirable_func(x)
+            else:
+                self.item_selector = lambda x: not select_desirable_func(x)
 
     class MenuItem:
         def __init__(self, ambient_menu, category, character, selected, item_text):
@@ -418,6 +422,16 @@ class ParsingInventoryMenu(InteractiveMenu):
             self.selected = selected
             self.item_text = item_text
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
+
+class InteractiveDropTypeChooseTypeMenu(InteractiveMenu):
+    first_page_header_rows = 2
+    trigger_phrase = "Drop what type of items?"
+    trigger_action = None
+    confirm_choice = True
+
+    selectors = {
+        'all types': lambda x: x.item_text == 'All types'
+    }
 
 class InteractivePickupMenu(ParsingInventoryMenu):
     first_page_header_rows = 2
@@ -432,7 +446,12 @@ class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
 
         if desired_letter is not None:
             self.desired_letter = desired_letter
-            self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == ord(self.desired_letter)
+
+            if isinstance(desired_letter, list):
+                #desired_letters = [l for l in desired_letter]
+                self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter in self.desired_letter
+            else:
+                self.item_selector = lambda menu_item: menu_item.item and menu_item.item.inventory_letter == ord(self.desired_letter)
 
     class MenuItem:
         def __init__(self, interactive_menu, category, character, selected, item_text):
@@ -445,8 +464,16 @@ class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
             try:
                 self.item = self.interactive_menu.inventory.items_by_letter[ord(self.character)]
             except KeyError:
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
                 print("In interactive player inventory menu and haven't loaded class that letter {} belongs to".format(self.character))
                 self.item = None
+
+class InteractiveDropTypeMenu(InteractivePlayerInventoryMenu):
+    first_page_header_rows = 2
+    trigger_action = None
+    trigger_phrase = "What would you like to drop?"
+    multi_select = True
 
 class InteractiveIdentifyMenu(InteractivePlayerInventoryMenu):
     trigger_phrase = "What would you like to identify first?"

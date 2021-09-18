@@ -29,6 +29,7 @@ class TestItemRegex(unittest.TestCase):
         "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
+        #"a blessed tin of yellow mold": "tin", # currently broken, waiting on a better pattern
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
         "a thoroughly rusty +0 battle-axe (weapon in hands)": "battle-axe",
@@ -446,11 +447,12 @@ class TestCMapGlyphs(unittest.TestCase):
             'sw_br': False, # 86
         }
         for k, v in true_labels.items():
-            self.assertEqual(v, gd.CMapGlyph.is_safely_walkable_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
+            glyph = gd.GLYPH_NAME_LOOKUP[k]
+            self.assertEqual(v, gd.walkable(np.array(glyph.numeral)), k)
 
         for k, v in true_labels.items():
             glyph = gd.GLYPH_NAME_LOOKUP[k]
-            self.assertEqual(glyph.walkable(None), v, k)
+            self.assertEqual(gd.walkable(np.array(glyph.numeral)), v, k)
 
     def test_room_floor(self):
         true_labels = {
@@ -604,9 +606,80 @@ def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
 
-class TestArmorProposals(unittest.TestCase):
-    def test(self):
-        pass
+class TestArtifacts(unittest.TestCase):
+    test_header = "Pick up what?\n\nWeapons\n"
+
+    class ArtifactValue(NamedTuple):
+        artifact_name: str
+        base_item_name: str
+
+    from_str_test_values = {
+        "n - a runed broadsword named Stormbringer": ArtifactValue("Stormbringer", "runesword"),
+        "n - the blessed +5 Stormbringer": ArtifactValue("Stormbringer", "runesword"),
+        "m - a gray stone named The Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
+        "m - the uncursed Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
+        "o - a long sword named Excalibur": ArtifactValue("Excalibur", "long sword"),
+        "o - the +0 Excalibur": ArtifactValue("Excalibur", "long sword"),
+    }
+
+    from_glyph_test_values = {
+        (1947, "a runed broadsword named Stormbringer"): ArtifactValue("Stormbringer", "runesword"),
+        (1947, "the blessed +5 Stormbringer"): ArtifactValue("Stormbringer", "runesword"),
+        (2348, "a gray stone named The Heart of Ahriman"): ArtifactValue("Heart of Ahriman", "luckstone"),
+        (2348, "the uncursed Heart of Ahriman"): ArtifactValue("Heart of Ahriman", "luckstone"),
+        (1943, "a long sword named Excalibur"): ArtifactValue("Excalibur", "long sword"),
+        (1943, "the +0 Excalibur"): ArtifactValue("Excalibur", "long sword"),
+        # different amulet glyphs still can be the Eye because shuffled
+        (2090, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+        (2091, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+        (2092, "the blessed Eye of the Aethiopica"): ArtifactValue("Eye of the Aethiopica", "amulet of ESP"),
+    }
+
+    def test_base_gets_identified(self):
+        numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
+        global_identity_map = gd.GlobalIdentityMap()
+        run_state = agents.custom_agent.RunState()
+        run_state.global_identity_map = global_identity_map
+
+        artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+        numeral, item_str = (2090, "a hexagonal amulet")
+        base = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+        self.assertEqual(base.identity.name(), "amulet of ESP")
+
+
+    def test_from_glyph(self):
+        for k,v in self.from_glyph_test_values.items():
+            numeral, item_str = k
+            print(k,v)
+
+            global_identity_map = gd.GlobalIdentityMap()
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+            #print(result.item.artifact_identity)
+            artifact_name, name = v
+            self.assertEqual(artifact_name, artifact.identity.artifact_name)
+            self.assertEqual(name, artifact.identity.name())
+
+    def test_from_string(self):
+        for k,v in self.from_str_test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            menu_text = string_to_tty_chars(k)
+            interactive_menu = menuplan.ParsingInventoryMenu(run_state)
+            result = interactive_menu.search_through_rows(menu_text)
+            print(result.item.identity.name())
+
+            artifact_name, name = v
+
+            self.assertEqual(artifact_name, result.item.identity.artifact_name)
+            self.assertEqual(name, result.item.identity.name())
+
 
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
@@ -638,9 +711,8 @@ class TestWeaponPickup(unittest.TestCase):
         run_state.character.inventory = inventory
 
         for k,v in self.test_values.items():
-
             menu_text = string_to_tty_chars(self.test_header + k)
-            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
             result = interactive_menu.search_through_rows(menu_text)
             print(result)
 
@@ -665,7 +737,7 @@ f - a scroll labeled VE FORBRYDERNE >> desirable
 g - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
 Potions
 h - a smoky potion
-i - a blessed potion of full healing >> healing potions
+i - a blessed potion of full healing >> healing potions|desirable
 Wands
 j - an iron wand >> desirable
 k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
@@ -713,7 +785,7 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
-        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable=True)
+        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
         results = []
         for i in range(0, 20):
             try:
@@ -840,6 +912,69 @@ class TestCharacterUpdateFromMessage(unittest.TestCase):
             character.update_from_message(m, 0)
             self.assertEqual(None, character.held_by)
 
+class ItemTestInputs(NamedTuple):
+    numeral: int
+    item_class: type
+    item_str: str
+
+class TestDrop(unittest.TestCase):
+
+    #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
+    test_values = {
+        ItemTestInputs(2104, inv.Tool, "an uncursed credit card"): False,
+        #ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
+        ItemTestInputs(1978, inv.Armor, "an iron skull cap"): False,
+        #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
+        ItemTestInputs(2103, inv.Tool, "an osaku"): False,
+        ItemTestInputs(2042, inv.Armor, "a +0 pair of yugake (being worn)"): False,
+        ItemTestInputs(2042, inv.Armor, "a +0 pair of old gloves (being worn)"): False,
+        ItemTestInputs(2034, inv.Armor, "a blessed +2 tattered cape"): False,
+        ItemTestInputs(2181, inv.Potion, "2 cursed yellow potions"): True,
+        ItemTestInputs(2181, inv.Potion, "3 uncursed potions of healing"): False,
+        ItemTestInputs(2349, inv.Gem, "an uncursed gray stone"): True, # lodestone
+        #ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
+        ItemTestInputs(2311, inv.Wand, "a long wand"): False,
+        ItemTestInputs(1974, inv.Weapon, "a +0 yumi"): False,
+        ItemTestInputs(1911, inv.Weapon, "38 +0 ya"): False,
+        ItemTestInputs(2174, inv.Food, "6 food rations"): False,
+    }
+
+    def test_single_items(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Caveperson,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        for inputs, do_drop in self.test_values.items():
+            global_identity_map = gd.GlobalIdentityMap()
+            numeral, item_class, item_str = inputs
+            string = np.array(string_to_tty_chars(item_str), dtype='uint8')
+            oclass = item_class.glyph_class.class_number
+            inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
+            character.inventory = inventory
+            undesirable = inventory.all_undesirable_items(character)
+
+            try:
+                if do_drop:
+                    self.assertEqual(len(undesirable), 1, item_str)
+                else:
+                    self.assertEqual(len(undesirable), 0, item_str)
+            except:
+                import pdb; pdb.set_trace()
+
+class TestSpecialItemNames(unittest.TestCase):
+    def test_no_charges(self):
+        numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
+
+        global_identity_map = gd.GlobalIdentityMap()
+        string = np.array(string_to_tty_chars(item_str), dtype='uint8')
+        oclass = item_class.glyph_class.class_number
+        inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
+        item = inventory.all_items()[0]
+        self.assertEqual(item.charges, 0)
 
 if __name__ == '__main__':
     unittest.main()

@@ -37,7 +37,7 @@ class BatchedEnv:
         for i, env, a in zip(range(len(self.envs)), self.envs, actions):
             observation, reward, done, info = env.step(a)
             if done:
-                if environment.env.debug:
+                if environment.env.debug or environment.env.print_seed:
                     env.unwrapped.seed(None, None, False)
                 observation = env.reset()
                 log_new_run(i, env)
@@ -52,7 +52,7 @@ class BatchedEnv:
         """
         Resets all the environments in self.envs
         """
-        #[env.unwrapped.seed(core=7225585048089617083, disp=7391845646563007834, reseed=False) for env in self.envs]
+        #[env.unwrapped.seed(core=2983010866637129815, disp=6799593555009102601, reseed=False) for env in self.envs]
         observation = [env.reset() for env in self.envs]
         [log_new_run(i, env) for i, env in enumerate(self.envs)]
         return observation

@@ -11,8 +11,11 @@ import pandas as pd
 
 from utilities import ARS
 
-
 class Item():
+    class NameAction(NamedTuple):
+        letter: str
+        name: str
+
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
         self.identity = identity
@@ -20,6 +23,7 @@ class Item():
         self.enhancement = instance_attributes.enhancement
         self.BUC = instance_attributes.BUC
         self.condition = instance_attributes.condition
+        self.instance_name = instance_attributes.instance_name
 
         self.parenthetical_status = instance_attributes.parenthetical_status_str
         if instance_attributes.parenthetical_status_str is not None:
@@ -33,13 +37,21 @@ class Item():
         self._seen_as = seen_as
 
     def process_message(self, *args):
-        self.identity.process_message(*args)
+        name = self.identity.process_message(*args)
+        if name is not None:
+            return self.NameAction(self.inventory_letter, name)
 
     def shop_owned(self):
         return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
 
     def desirable(self, character):
+        if self.identity is None: # stupid: for lichens and so on
+            return True
+
         return not self.shop_owned() and self.identity.desirable_identity(character)
+
+class Amulet(Item):
+    glyph_class = gd.AmuletGlyph
 
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
@@ -51,7 +63,12 @@ class Armor(Item):
             return -20 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
-            best_case_enhancement = 5
+            if self.BUC == 'cursed':
+                return -10
+            elif self.BUC is None:
+                best_case_enhancement = 0
+            else:
+                best_case_enhancement = 5
         else:
             best_case_enhancement = self.enhancement
 
@@ -81,14 +98,49 @@ class Armor(Item):
         slot = self.identity.slot
         armaments = character.inventory.armaments
         current = armaments[armaments._fields.index(slot)]
+
+        if self == current and instance_desirability >= 0:
+            return True
+
         current_desirability = 0
         if current is not None and isinstance(current, Armor):
             current_desirability = current.instance_desirability_to_wear(character)
 
-        return instance_desirability > 0 and (instance_desirability > current_desirability)
+        return instance_desirability >= 0 and (instance_desirability > current_desirability)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
+    charge_pattern = re.compile("\(([0-9]+):([0-9]+)\)")
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        self.charges = None
+
+        if self.instance_name == "NO_CHARGE":
+            self.charges = 0
+
+        p_status = instance_attributes.parenthetical_status_str
+        if p_status is not None:
+            charge_match = re.match(self.charge_pattern, p_status)
+
+            if charge_match:
+                self.recharges = int(charge_match[1])
+                self.charges = int(charge_match[2])
+
+    def desirable(self, character):
+        desirable_identity = super().desirable(character)
+
+        # keep even a 0 charge wand of wishing
+        if self.identity.name() == 'wishing':
+            return True
+
+        # keep even a 0 charge wand of death
+        if self.identity.name() == 'death':
+            return True
+
+        if self.charges == 0:
+            return False
+
+        return desirable_identity
 
 class Food(Item):
     glyph_class = gd.FoodGlyph
@@ -98,6 +150,29 @@ class Scroll(Item):
 
 class Potion(Item):
     glyph_class = gd.PotionGlyph
+
+    healing_dice_by_BUC = {
+        'uncursed': 6,
+        'cursed': 4,
+        'blessed': 8,
+    }
+    def expected_healing(self, character):
+        name = self.identity.name()
+        if name is None or 'healing' not in name:
+            return 0
+
+        if name == 'full healing':
+            return character.max_hp
+
+        BUC = self.BUC if self.BUC is not None else 'uncursed'
+        n_dice = self.healing_dice_by_BUC[BUC]
+        if name == 'healing':
+            return n_dice * 4
+            #return min(n_dice * 4, character.max_hp)
+
+        if name == 'extra healing':
+            return n_dice * 8
+            #return min(n_dice * 8, character.max_hp)
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
@@ -150,6 +225,12 @@ class Weapon(Item):
         if self.shop_owned():
             return False
 
+        if self == character.inventory.wielded_weapon:
+            return True
+
+        if (self.BUC is not None or self.enhancement is not None) and self.BUC != 'cursed' and (self.identity.is_ranged or self.identity.is_ammunition):
+            return True
+
         is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
         if is_better: print(f"Found better weapon: {self.identity.name()}")
         return is_better
@@ -158,6 +239,8 @@ class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
         self.inventory_letter = '-'
+        self.BUC = 'uncursed'
+        self.identity = None
 
     def which_skill(self, character):
         bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
@@ -188,6 +271,8 @@ class BareHands(Weapon):
             damage = 2.5
         return damage
 
+class Spellbook(Item):
+    glyph_class = gd.SpellbookGlyph
 
 class Tool(Item):
     glyph_class = gd.ToolGlyph
@@ -205,8 +290,26 @@ class Gem(Item):
 class Rock(Item):
     glyph_class = gd.RockGlyph
 
+class Ring(Item):
+    glyph_class = gd.RingGlyph
+
 class UnimplementedItemClassException(Exception):
     pass
+
+ALL_ITEM_CLASSES = [
+    Amulet,
+    Armor,
+    Food,
+    Gem,
+    Potion,
+    Ring,
+    Rock,
+    Scroll,
+    Spellbook,
+    Tool,
+    Wand,
+    Weapon,
+]
 
 class EquippedStatus():
     def __init__(self, item, parenthetical_status):
@@ -242,7 +345,7 @@ class EquippedStatus():
                 self.slot = 'quiver'
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+[a-zA-Z9]) ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z _]+))? ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #
@@ -273,14 +376,18 @@ class ItemParser():
     }
 
     item_class_by_glyph_class = {
-        gd.WandGlyph: Wand,
+        gd.AmuletGlyph: Amulet,
         gd.ArmorGlyph: Armor,
         gd.FoodGlyph: Food,
-        gd.ScrollGlyph: Scroll,
-        gd.PotionGlyph: Potion,
-        gd.WeaponGlyph: Weapon,
-        gd.ToolGlyph: Tool,
         gd.GemGlyph: Gem,
+        gd.PotionGlyph: Potion,
+        gd.RingGlyph: Ring,
+        gd.RockGlyph: Rock,
+        gd.ScrollGlyph: Scroll,
+        gd.SpellbookGlyph: Spellbook,
+        gd.ToolGlyph: Tool,
+        gd.WandGlyph: Wand,
+        gd.WeaponGlyph: Weapon,
     }
 
     glyph_class_by_category = {
@@ -360,12 +467,28 @@ class ItemParser():
 
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
+        identity = None
         match_components = cls.parse_inventory_item_string(item_string)
-        try:
-            identity = global_identity_map.identity_by_numeral[item_glyph]
-        except KeyError:
-            print(f"UNIMPLEMENTED ITEM {item_glyph}")
-            identity = None
+
+        # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
+        # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
+        if match_components.instance_name is not None:
+            identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
+            if identity is not None:
+                base_identity = global_identity_map.identity_by_numeral[item_glyph]
+                global_identity_map.associate_identity_and_name(base_identity, identity.name())
+
+        # Second line of defense: figure out if this is the {ARTIFACT NAME}
+        if identity is None:
+            identity = global_identity_map.artifact_identity_by_name.get(match_components.description, None)
+
+        # Third line of defense: this isn't an artifact, get its identity from the numeral
+        if identity is None:
+            try:
+                identity = global_identity_map.identity_by_numeral[item_glyph]
+            except KeyError:
+                print(f"UNIMPLEMENTED ITEM {item_glyph}")
+                identity = None
 
         glyph = gd.GLYPH_NUMERAL_LOOKUP[item_glyph]
         glyph_class = type(glyph)
@@ -383,6 +506,15 @@ class ItemParser():
         match_components = cls.parse_inventory_item_string(item_str)
         description = match_components.description
 
+        if match_components.instance_name is not None:
+            identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
+
+            if identity is not None:
+                # we've found an artifact
+                item_class = cls.item_class_by_glyph_class[identity.associated_glyph_class]
+                return item_class(identity, match_components, inventory_letter=inventory_letter)
+
+        #import pdb; pdb.set_trace()
         # if we are given the category (Ex. pickup from large stack) we can narrow down class
         if category:
             possible_glyph_classes = cls.glyph_class_by_category[category]
@@ -397,6 +529,7 @@ class ItemParser():
         possible_glyphs = []
         identity = None
         for glyph_class in possible_glyph_classes:
+            name = None
             if glyph_class != gd.CorpseGlyph:
                 appearance_match = cls.appearance_from_description_given_glyph_class(global_identity_map, description, glyph_class)
 
@@ -404,8 +537,15 @@ class ItemParser():
                     seen_as = appearance_match.appearance
                     possible_glyphs.extend(list(appearance_match.possible_glyphs))
 
+                # try to extract as an artifact
+                artifact_identity = global_identity_map.identity_by_name.get((glyph_class, match_components.description), None)
+                if artifact_identity is not None and artifact_identity.is_artifact:
+                    item_class = cls.item_class_by_glyph_class[artifact_identity.associated_glyph_class]
+                    return item_class(artifact_identity, match_components, inventory_letter=inventory_letter)
+
                 name = cls.extract_name_from_description_given_glyph_class(global_identity_map, description, glyph_class)
                 #import pdb; pdb.set_trace()
+                # try to name the item as a non artifact
                 if name is not None:
                     seen_as = name
                     # add the possibilities found by name
@@ -419,6 +559,7 @@ class ItemParser():
                         identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
                         identity = identity_class.identity_from_name(name)
                         break
+
 
                 if len(possible_glyphs) > 0:
                     break # we can only ever match in one class by nethack logic, so break if any matches found
@@ -451,6 +592,7 @@ class ItemParser():
         parenthetical_status_str: str
         BUC: str
         condition: str
+        instance_name: str
 
     @classmethod
     def parse_inventory_item_string(cls, item_string):
@@ -474,10 +616,12 @@ class ItemParser():
                 enhancement = int(enhancement)
 
             description = match[8]
-            
-            equipped_status = match[9]
 
-            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition)
+            instance_name = match[10]
+            
+            equipped_status = match[11]
+
+            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name)
 
         else:
             raise Exception("couldn't match item string")
@@ -683,7 +827,6 @@ class PlayerInventory():
 
         return self.AttireProposal(proposed_items, proposal_blockers)
 
-
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
@@ -704,6 +847,22 @@ class PlayerInventory():
             return items[0]
         else:
             return None
+
+    def all_undesirable_items(self, character):
+        all_items = self.all_items()
+        #import pdb; pdb.set_trace()
+        return [item for item in all_items if item is not None and not item.desirable(character)]
+
+    def all_items(self):
+        all = []
+
+        for oclass in ALL_ITEM_CLASSES:
+            oclass_contents = self.get_oclass(oclass)
+            all.extend(oclass_contents)
+
+        #if None in all:
+        #    import pdb; pdb.set_trace()
+        return all
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
