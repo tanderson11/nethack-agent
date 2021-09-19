@@ -108,7 +108,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         self.in_shop = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.shop.value
         if not self.in_shop:
-            extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
+            pass
+            #extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
         self.extended_boulders = self.zoom_glyph_alike(
