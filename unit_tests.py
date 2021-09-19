@@ -1028,5 +1028,22 @@ class TestFloodMap(unittest.TestCase):
         self.assertTrue((end_mask == target_mask).all(), end_mask)
         self.assertEqual(end_mask.dtype, np.dtype('bool'))
 
+    def test_flood_corner(self):
+        start_mask = np.array([
+            [True, False, False, False],
+            [False, False, False, False],
+            [False, False, False, False],
+            [False, False, False, False],
+        ])
+        target_mask = np.array([
+            [True, True, False, False],
+            [True, True, False, False],
+            [False, False, False, False],
+            [False, False, False, False],
+        ])
+        end_mask = map.FloodMap.flood_one_level_from_mask(start_mask)
+        self.assertTrue((end_mask == target_mask).all(), end_mask)
+        self.assertEqual(end_mask.dtype, np.dtype('bool'))
+
 if __name__ == '__main__':
     unittest.main()
