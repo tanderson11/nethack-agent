@@ -195,7 +195,9 @@ class ObjectGlyph(Glyph):
     def desirable_glyph(self, global_identity_map, character):
         identity = global_identity_map.identity_by_numeral[self.numeral]
         if not identity:
-            import pdb; pdb.set_trace()
+            if not self.numeral == RandomClassGlyph.OFFSET + RandomClassGlyph.COUNT: # strange objecst
+                import pdb; pdb.set_trace()
+            return False
         return identity.desirable_identity(character)
 
     @classmethod
