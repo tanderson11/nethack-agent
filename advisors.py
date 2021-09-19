@@ -966,8 +966,6 @@ class TravelToSearchAdvisor(Advisor):
         if len(desirable_unvisited) > 0:
             nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
             self.target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
-            if lmap.visits_count_map[self.target_square] != 0:
-                import pdb; pdb.set_trace()
             self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to search", self, [
