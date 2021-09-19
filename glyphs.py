@@ -1032,6 +1032,30 @@ class GlobalIdentityMap():
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
 
+    def make_buc_factory(self, base_role):
+        if base_role == constants.BaseRole.Priest:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.uncursed
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                assert False, "bad buc string for priest"
+        else:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.unknown
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                elif buc_string == 'uncursed':
+                    return constants.BUC.uncursed
+                assert False, "bad buc string for non-priest"
+        
+        self.buc_from_string = buc_from_string
+
     def load_artifact_identities(self):
         self.artifact_identity_by_name = {}
         self.artifact_identity_by_appearance_name = {}
