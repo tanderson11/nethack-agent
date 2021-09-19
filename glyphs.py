@@ -863,6 +863,9 @@ class ToolIdentity(ObjectIdentity):
         if self.name() == 'magic marker':
             return True
 
+        if self.name() == 'magic lamp':
+            return True
+
         return False
 
 class GemIdentity(ObjectIdentity):
