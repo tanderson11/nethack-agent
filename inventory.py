@@ -126,6 +126,9 @@ class Wand(Item):
                 self.recharges = int(charge_match[1])
                 self.charges = int(charge_match[2])
 
+        if self.BUC == constants.BUC.unknown and self.charges is not None:
+            self.BUC = constants.BUC.uncursed
+
     def desirable(self, character):
         desirable_identity = super().desirable(character)
 
@@ -176,6 +179,12 @@ class Potion(Item):
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
+
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+
+        if self.BUC == constants.BUC.unknown and self.enhancement is not None:
+            self.BUC = constants.BUC.uncursed
 
     def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
