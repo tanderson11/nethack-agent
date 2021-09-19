@@ -166,7 +166,7 @@ class MonsterGlyph(MonsterAlikeGlyph):
         self.is_shopkeeper = self.offset == 267
         
         self.always_peaceful = False
-        if self.is_shopkeeper or self.offset in [278, 279]: # shopkeeper and watch people
+        if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
             self.always_peaceful = True
 
 class ObjectGlyph(Glyph):
