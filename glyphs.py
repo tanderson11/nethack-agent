@@ -430,6 +430,7 @@ class CMapGlyph(Glyph):
     def is_poorly_understood_check(cls, offsets):
         # Christian: Glyphs that I don't really know what they are
         return (
+            ((offsets >= 7) & (offsets <= 11)) | # weird walls
             ((offsets >= 39) & (offsets <= 41)) | # air, cloud, water. Planes only?
             (offsets == 60) | # statue trap uses this glyph or not?
             (offsets >= 65) # cruft?
@@ -466,14 +467,16 @@ class CMapGlyph(Glyph):
     def is_wall_check(offsets):
         return (offsets < 12)
 
+    @staticmethod
+    def is_possible_secret_check(offsets):
+        return (offsets < 3)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.OFFSET
         self.name = self.NAMES[self.offset]
 
         self.is_wall = self.offset < 12
-
-        self.possible_secret_door = self.offset < 3
 
         self.is_upstairs = self.offset == 23 or self.offset == 25
         self.is_downstairs = self.offset == 24 or self.offset == 26
