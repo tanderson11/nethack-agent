@@ -1053,7 +1053,7 @@ class GlobalIdentityMap():
                 elif buc_string == 'uncursed':
                     return constants.BUC.uncursed
                 assert False, "bad buc string for non-priest"
-        
+
         self.buc_from_string = buc_from_string
 
     def load_artifact_identities(self):
