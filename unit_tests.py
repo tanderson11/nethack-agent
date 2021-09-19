@@ -976,5 +976,57 @@ class TestSpecialItemNames(unittest.TestCase):
         item = inventory.all_items()[0]
         self.assertEqual(item.charges, 0)
 
+class TestFloodMap(unittest.TestCase):
+    def test_flood_center(self):
+        start_mask = np.array([
+            [False, False, False, False],
+            [False, True, False, False],
+            [False, False, False, False],
+            [False, False, False, False],
+        ])
+        target_mask = np.array([
+            [True, True, True, False],
+            [True, True, True, False],
+            [True, True, True, False],
+            [False, False, False, False],
+        ])
+        end_mask = map.FloodMap.flood_one_level_from_mask(start_mask)
+        self.assertTrue((end_mask == target_mask).all(), end_mask)
+        self.assertEqual(end_mask.dtype, np.dtype('bool'))
+
+    def test_flood_multi(self):
+        start_mask = np.array([
+            [False, False, False, False],
+            [False, True, False, False],
+            [False, False, True, False],
+            [False, False, False, False],
+        ])
+        target_mask = np.array([
+            [True, True, True, False],
+            [True, True, True, True],
+            [True, True, True, True],
+            [False, True, True, True],
+        ])
+        end_mask = map.FloodMap.flood_one_level_from_mask(start_mask)
+        self.assertTrue((end_mask == target_mask).all(), end_mask)
+        self.assertEqual(end_mask.dtype, np.dtype('bool'))
+
+    def test_flood_edge(self):
+        start_mask = np.array([
+            [False, False, False, False],
+            [True, False, False, False],
+            [False, False, False, False],
+            [False, False, False, False],
+        ])
+        target_mask = np.array([
+            [True, True, False, False],
+            [True, True, False, False],
+            [True, True, False, False],
+            [False, False, False, False],
+        ])
+        end_mask = map.FloodMap.flood_one_level_from_mask(start_mask)
+        self.assertTrue((end_mask == target_mask).all(), end_mask)
+        self.assertEqual(end_mask.dtype, np.dtype('bool'))
+
 if __name__ == '__main__':
     unittest.main()
