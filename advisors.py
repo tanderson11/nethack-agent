@@ -520,6 +520,9 @@ class EnhanceSkillsAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.in_shop:
+            return None
+
         if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
             return None
 
