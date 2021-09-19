@@ -201,7 +201,11 @@ class DLevelMap():
         return self.edible_corpse_dict[square][0].monster_glyph
 
     def record_eat_succeeded_or_failed(self, square):
-        self.edible_corpse_dict[square].pop(0)
+        try:
+            self.edible_corpse_dict[square].pop(0)
+        except:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return
         if not self.edible_corpse_dict[square]:
             # Ate it empty
             del(self.edible_corpse_dict[square])
