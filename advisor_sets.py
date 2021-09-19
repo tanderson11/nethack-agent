@@ -88,7 +88,7 @@ new_advisors = [
         # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
-        # TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
+        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),
 ]

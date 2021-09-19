@@ -915,9 +915,12 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
         travel = nethack.actions.Command.TRAVEL
         lmap = run_state.neighborhood.level_map
 
+        adjacent_to_fog = map.FloodMap.flood_one_level_from_mask(lmap.fog_of_war)
+
         desirable_unvisited = np.transpose(np.where(
             (lmap.visits_count_map == 0) &
             (lmap.safely_walkable | lmap.doors) &
+            (adjacent_to_fog) &
             (~lmap.owned_doors) &
             (~lmap.boulder_map) &
             (~lmap.exhausted_travel_map) &

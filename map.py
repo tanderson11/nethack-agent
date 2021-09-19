@@ -4,6 +4,7 @@ import enum
 from typing import NamedTuple
 
 import numpy as np
+import scipy.signal
 
 import environment
 import glyphs as gd
@@ -234,6 +235,9 @@ class DLevelMap():
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
         self.fountain_map = (glyphs == gd.CMapGlyph.OFFSET + 31)
 
+        # Solid stone and fog of war both show up here
+        self.fog_of_war = (glyphs == gd.CMapGlyph.OFFSET)
+
         # Basic terrain types
 
         offsets = np.where(
@@ -361,19 +365,12 @@ class DLevelMap():
 class FloodMap():
     @staticmethod
     def flood_one_level_from_mask(mask):
-        flooded_mask = np.full_like(mask, False, dtype='bool')
+        if not mask.dtype == np.dtype('bool'):
+            raise Exception("Bad mask")
 
-        # for every square
-        it = np.nditer(mask, flags=['multi_index'])
-        for b in it: 
-            # if we occupy it
-            if b: 
-                # take a radius one box around it
-                row_slice, col_slice = utilities.centered_slices_bounded_on_array(it.multi_index, (1, 1), flooded_mask)
-                # and flood all those squares
-                flooded_mask[row_slice, col_slice] = True
+        flooded_mask = scipy.signal.convolve2d(mask, np.ones((3,3)), mode='same')
 
-        return flooded_mask
+        return (flooded_mask >= 1)
 
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
