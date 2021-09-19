@@ -928,7 +928,6 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
         desirable_unvisited = np.transpose(np.where(
             (lmap.frontier_squares) &
-            (~lmap.boulder_map) &
             (~lmap.exhausted_travel_map)
         ))
 
