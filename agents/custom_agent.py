@@ -896,6 +896,8 @@ class CustomAgent(BatchedAgent):
         run_state.log_action(advice)
 
         if isinstance(advice, ActionAdvice):
+            if advice.from_advisor:
+                advice.from_advisor.advice_selected()
             return utilities.ACTION_LOOKUP[advice.action]
         else:
             return utilities.ACTION_LOOKUP[advice.keypress]
