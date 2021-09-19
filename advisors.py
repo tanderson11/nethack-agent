@@ -19,6 +19,7 @@ import inventory as inv
 import constants
 import re
 
+SEARCH_THRESHOLD = 30
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -165,6 +166,10 @@ class Oracle():
     def on_stairs(self):
         return self.on_downstairs or self.on_upstairs
 
+    @functools.cached_property
+    def must_find_secret(self):
+        return self.neighborhood.level_map.must_find_secret
+
 class Advisor(abc.ABC):
     def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
         self.consult = oracle_consultation
@@ -280,6 +285,12 @@ class SearchForSecretDoorAdvisor(Advisor):
         to_search_count = np.count_nonzero(run_state.neighborhood.local_possible_secret_mask)
         if to_search_count == 0:
             return None
+        lowest_search_count = run_state.neighborhood.zoom_glyph_alike(
+            run_state.neighborhood.level_map.searches_count_map,
+            neighborhood.ViewField.Local
+        ).min()
+        if lowest_search_count > SEARCH_THRESHOLD:
+            return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
 class SearchDeadEndAdvisor(Advisor):
@@ -303,7 +314,7 @@ class SearchDeadEndAdvisor(Advisor):
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
         ).min()
-        if lowest_search_count > 30:
+        if lowest_search_count > SEARCH_THRESHOLD:
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
@@ -929,6 +940,37 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
             self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to unexplored", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, self.target_square), # offset because cursor row 0 = top line
+                ],
+                fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
+
+            #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
+            return ActionAdvice(self, travel, menu_plan)
+
+    def advice_selected(self):
+        self.lmap.travel_attempt_count_map[self.target_square] += 1
+        if self.lmap.travel_attempt_count_map[self.target_square] > 5:
+            self.lmap.exhausted_travel_map[self.target_square] = True
+
+class TravelToSearchAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        travel = nethack.actions.Command.TRAVEL
+        lmap = run_state.neighborhood.level_map
+
+        desirable_unvisited = np.transpose(np.where(
+            (lmap.possible_secret_doors) &
+            (lmap.searches_count_map < SEARCH_THRESHOLD) &
+            (~lmap.exhausted_travel_map)
+        ))
+
+        if len(desirable_unvisited) > 0:
+            nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            self.target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
+            if lmap.visits_count_map[self.target_square] != 0:
+                import pdb; pdb.set_trace()
+            self.lmap = lmap
+            menu_plan = menuplan.MenuPlan(
+                "travel to search", self, [
                     menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, self.target_square), # offset because cursor row 0 = top line
                 ],
                 fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
