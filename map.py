@@ -237,6 +237,7 @@ class DLevelMap():
 
         # Solid stone and fog of war both show up here
         self.fog_of_war = (glyphs == gd.CMapGlyph.OFFSET)
+        adjacent_to_fog = FloodMap.flood_one_level_from_mask(self.fog_of_war)
 
         # Basic terrain types
 
@@ -262,6 +263,35 @@ class DLevelMap():
         self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
+
+        reachable = (
+            (self.safely_walkable | self.doors) &
+            (~self.owned_doors) &
+            (self.special_room_map == constants.SpecialRoomTypes.NONE.value)
+        )
+
+        self.frontier_squares = (
+            (self.visits_count_map == 0) &
+            reachable &
+            (adjacent_to_fog)
+        )
+
+        adjacent_to_reachable = FloodMap.flood_one_level_from_mask(reachable)
+
+        self.possible_secret_doors = (
+            adjacent_to_reachable &
+            gd.CMapGlyph.is_possible_secret_check(glyphs)
+        )
+
+        self.must_find_secret = (
+            self.need_egress() and
+            np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0
+        )
+        if self.must_find_secret and environment.env.debug and np.count_nonzero(self.frontier_squares) != 0:
+            # Frontier squares that we can't get to.
+            # Is it really the case that we "must find secret"
+            # Or is there something else going on?
+            import pdb; pdb.set_trace()
 
     def build_room_mask_from_square(self, square_in_room):
         room_mask = np.full_like(self.dungeon_feature_map, False, dtype=bool)
@@ -324,11 +354,12 @@ class DLevelMap():
                 self.add_room(room_mask, constants.SpecialRoomTypes.vault_closet)
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
+        location = physics.Square(*location)
         try:
             existing = self.staircases[location]
             if existing.direction != direction:
                 if environment.env.debug:
-                    #import pdb; pdb.set_trace()
+                    import pdb; pdb.set_trace()
                     pass
                 # Some sort of bug
                 # descend message lingers
