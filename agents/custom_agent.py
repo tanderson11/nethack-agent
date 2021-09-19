@@ -251,7 +251,8 @@ class RunState():
         print_stats(True, self, self.blstats)
         if self.scumming:
             if not environment.env.debug:
-                raise Exception("Should not scum except to debug")
+                pass
+                #raise Exception("Should not scum except to debug")
             if not self.reward == 0:
                 # Weird to scum and get reward > 0
                 import pdb; pdb.set_trace()
@@ -598,7 +599,8 @@ class CustomAgent(BatchedAgent):
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
-            if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
+            #if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
+            if run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
         # Two cases when we reset inventory: new run or something changed
