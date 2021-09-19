@@ -168,7 +168,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.n_adjacent_monsters = np.count_nonzero(self.is_monster)
 
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
-
         walkable_tile = extended_walkable_tile[neighborhood_view]
 
         # in the narrow sense
@@ -207,6 +206,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### CORPSE STUFF ###
         ####################
         self.fresh_corpse_on_square_glyph = level_map.next_corpse(self.absolute_player_location)
+
+    def search_success_probability(self, prior=0.05, search_success_rate=0.14):
+        searches_count = self.level_map.searches_count_map[self.vision][self.neighborhood_view]
+        possible_secrets = self.extended_possible_secret_mask[self.neighborhood_view]
+
+        probability = np.sum((search_success_rate * (prior * possible_secrets) * (1-search_success_rate) ** searches_count))
+        return probability
+
 
     def count_adjacent_searches(self, search_threshold):
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold

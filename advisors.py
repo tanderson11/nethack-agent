@@ -166,16 +166,17 @@ class Oracle():
         return self.on_downstairs or self.on_upstairs
 
 class Advisor(abc.ABC):
-    def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
+    def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False, skip_probability=None):
         self.consult = oracle_consultation
         self.threat_tolerance = threat_tolerance
         self.threat_threshold = threat_threshold
         self.no_adjacent_monsters = no_adjacent_monsters
+        self.skip_probability = skip_probability
 
-    def check_conditions(self, run_state, character, oracle):
-        if self.threat_tolerance == 0. and (oracle.critically_injured or oracle.life_threatened):
-            #import pdb; pdb.set_trace()
-            pass
+    def check_conditions(self, rng, run_state, character, oracle):
+        if self.skip_probability is not None:
+            if rng.random() < self.skip_probability:
+                return False
 
         if self.threat_tolerance is not None and run_state.neighborhood.threat_on_player > (character.current_hp * self.threat_tolerance):
             return False
@@ -192,7 +193,7 @@ class Advisor(abc.ABC):
         return True
 
     def advice_on_conditions(self, rng, run_state, character, oracle):
-        if self.check_conditions(run_state, character, oracle):
+        if self.check_conditions(rng, run_state, character, oracle):
             return self.advice(rng, run_state, character, oracle)
         else:
             return None
@@ -276,7 +277,18 @@ class WaitAdvisor(Advisor):
         return ActionAdvice(from_advisor=self, action=wait)
 
 class SearchForSecretDoorAdvisor(Advisor):
+    def __init__(self, min_search_prob=None, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False, skip_probability=None):
+        super().__init__(oracle_consultation=oracle_consultation, threat_tolerance=threat_tolerance, threat_threshold=threat_threshold, no_adjacent_monsters=no_adjacent_monsters, skip_probability=skip_probability)
+        self.min_search_prob = min_search_prob
+
     def advice(self, rng, run_state, character, oracle):
+        # estimate probability of success
+        if self.min_search_prob is not None:
+            success_probability = run_state.neighborhood.search_success_probability()
+            #print(success_probability)
+            if success_probability < self.min_search_prob:
+                return None
+
         to_search_count = np.count_nonzero(run_state.neighborhood.local_possible_secret_mask)
         if to_search_count == 0:
             return None
