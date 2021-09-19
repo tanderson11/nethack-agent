@@ -414,6 +414,7 @@ class ItemParser():
         'Gems/Stones': gd.GemGlyph,
         'Boulders/Statues': gd.RockGlyph,
         'Iron balls': gd.BallGlyph,
+        'Chains': gd.ChainGlyph,
     }
 
     category_by_glyph_class = {v:k for k,v in glyph_class_by_category.items() if isinstance(v, type)}
