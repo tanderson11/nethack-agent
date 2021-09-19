@@ -941,7 +941,7 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
     def advice_selected(self):
         self.lmap.travel_attempt_count_map[self.target_square] += 1
-        if self.lmap.travel_attempt_count_map[self.target_square] > 20:
+        if self.lmap.travel_attempt_count_map[self.target_square] > 5:
             self.lmap.exhausted_travel_map[self.target_square] = True
 
 
