@@ -627,6 +627,22 @@ class ItemParser():
         else:
             raise Exception("couldn't match item string")
 
+    item_price_message_pattern = re.compile("You see here (.+) \(for sale, ([0-9]+) zorkmids\)")
+    @classmethod
+    def listen_for_item_with_price(cls, global_identity_map, character, message):
+        item_price_match = re.search(cls.item_price_message_pattern, message)
+        if item_price_match:
+            item_string = item_price_match[1]
+            item_price = int(item_price_match[2])
+
+            import pdb; pdb.set_trace()
+            item = cls.make_item_with_string(global_identity_map, item_string)
+
+            if item is not None and item.identity is not None and not isinstance(item, Gem):
+                base_prices = character.find_base_price_from_listed(item, item_price)
+                item.identity.restrict_by_base_prices(base_prices)
+
+
 class Slot():
     blockers = []
     def __init__(self, name):

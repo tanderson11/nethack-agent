@@ -793,6 +793,15 @@ class ObjectIdentity():
     def desirable_identity(self, character):
         return False
 
+    def restrict_by_base_prices(self, base_prices):
+        if self.is_identified():
+            return
+        price_matches = ~self.data.loc[self.idx].COST.isna() & self.data.loc[self.idx].COST.apply(lambda v: v in base_prices)
+        import pdb; pdb.set_trace()
+        if price_matches.any():
+            self.apply_filter(price_matches.index[price_matches])
+
+
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 

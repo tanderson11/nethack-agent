@@ -2,6 +2,7 @@ from typing import Optional
 from typing import NamedTuple, Tuple
 
 import pandas as pd
+import numpy as np
 from dataclasses import dataclass
 
 import constants
@@ -187,6 +188,38 @@ class Character():
             willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl_no_food.get(self.experience_level, 60) > depth
 
         return willing_to_descend
+
+    @staticmethod
+    def charisma_price_multiplier(charisma):
+        if charisma <= 5: return 2
+        elif charisma < 8: return 1.5
+        elif charisma < 11: return 4/3
+        elif charisma < 16: return 1
+        elif charisma < 18: return 0.75
+        elif charisma < 19: return 2/3
+        elif charisma >= 19: return 1/2
+
+    def am_dupe(self):
+        # shirt without body armor/cloak
+        # tourist < exp 15
+        # dunce cap
+        if self.base_class == constants.BaseRole.Tourist and self.experience_level < 15:
+            return True
+
+        return False
+
+    def find_base_price_from_listed(self, item, price):
+        cha_mult = self.charisma_price_multiplier(self.attributes.charisma)
+        dupe_mult = 4/3 if self.am_dupe() else 1
+        unidentified_surcharge = 4/3 # gems are different but we catch those ahead of time
+
+        base1 = price / (cha_mult * dupe_mult)
+        base2 = price / (cha_mult * dupe_mult * unidentified_surcharge)
+
+        base_prices = [np.ceil(base1), np.floor(base1), np.ceil(base2), np.floor(base2)]
+        if base2 <= 5:
+            base_prices.append(0)
+        return base_prices
 
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:

@@ -494,6 +494,8 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
+        inv.ItemParser.listen_for_item_with_price(self.global_identity_map, self.character, message.message)
+
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
             name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
             if name_action is not None:
