@@ -62,6 +62,7 @@ new_advisors = [
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
+        DropUnknownOnAltarAdvisor(),
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
@@ -88,6 +89,7 @@ new_advisors = [
         # TravelToUnexploredSquareAdvisor(): 2,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
+        TravelToAltarAdvisor(): 2
         #TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),

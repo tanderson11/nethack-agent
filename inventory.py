@@ -840,11 +840,14 @@ class PlayerInventory():
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
-    def get_items(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
-        oclass = self.get_oclass(oclass)
+    def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+        if oclass is None:
+            items = self.all_items()
+        else:
+            items = self.get_oclass(oclass)
         matches = []
 
-        for item in oclass:
+        for item in items:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
                 matches.append(item)
 
