@@ -318,7 +318,7 @@ class PotionAdvisor(Advisor):
 class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
-        healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != 'cursed', identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
+        healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != constants.BUC.cursed, identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
 
         for potion in healing_potions:
             expected_healing = potion.expected_healing(character)
@@ -345,7 +345,7 @@ class DoCombatHealingAdvisor(PrebakedSequentialCompositeAdvisor):
 
 class ApplyUnicornHornAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != 'cursed')
+        unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
         if unicorn_horn is not None:
             apply = nethack.actions.Command.APPLY
             menu_plan = menuplan.MenuPlan("apply unicorn horn", self, [
@@ -429,7 +429,7 @@ class ReadUnidentifiedScrollsAdvisor(Advisor):
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
-            if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != 'cursed':
+            if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != constants.BUC.cursed:
                 letter = scroll.inventory_letter
 
                 interactive_menus = [
@@ -458,7 +458,7 @@ class EnchantArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
 
-        enchant_armor_scroll = character.inventory.get_item(inv.Scroll, name='enchant armor', instance_selector=lambda i: i.BUC != 'cursed')
+        enchant_armor_scroll = character.inventory.get_item(inv.Scroll, name='enchant armor', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
 
         if enchant_armor_scroll is not None:
             armaments = character.inventory.get_slots('armaments')
@@ -477,7 +477,7 @@ class EnchantWeaponAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
 
-        enchant_weapon_scroll = character.inventory.get_item(inv.Scroll, name='enchant weapon', instance_selector=lambda i: i.BUC != 'cursed')
+        enchant_weapon_scroll = character.inventory.get_item(inv.Scroll, name='enchant weapon', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
 
         if enchant_weapon_scroll is not None:
             armaments = character.inventory.get_slots('armaments')
@@ -1082,7 +1082,7 @@ class WieldBetterWeaponAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         wield = nethack.actions.Command.WIELD
 
-        if character.inventory.wielded_weapon.BUC == 'cursed':
+        if character.inventory.wielded_weapon.BUC == constants.BUC.cursed:
             return None
 
         best_weapon = character.inventory.proposed_weapon_changes(character)
@@ -1129,7 +1129,7 @@ class WearEvenBlockedArmorAdvisor(Advisor):
                 return ActionAdvice(from_advisor=self, action=wear, new_menu_plan=menu_plan)
 
             else:
-                if blockers[0].BUC != 'cursed':
+                if blockers[0].BUC != constants.BUC.cursed:
                     takeoff = nethack.actions.Command.TAKEOFF
                     menu_plan = menuplan.MenuPlan("take off blocking armor", self, [
                         menuplan.CharacterMenuResponse("What do you want to take off?", chr(blockers[0].inventory_letter)),
