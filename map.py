@@ -19,6 +19,8 @@ class Branches(enum.Enum):
     GnomishMines = 2
     Quest = 3
     Sokoban = 4
+    FortLudios = 5
+    MysteryBranch = 128
 
 @dataclass
 class DCoord():
@@ -26,7 +28,12 @@ class DCoord():
     level: int
 
     def __post_init__(self):
-        self.branch = Branches(self.branch_numeral)
+        try:
+            self.branch = Branches(self.branch_numeral)
+        except ValueError:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+            self.branch = Branches.MysteryBranch
     
     def __eq__(self, y):
         return (self.branch_numeral == y.branch_numeral) and (self.level == y.level)
@@ -302,7 +309,8 @@ class DLevelMap():
 
     def add_vault_closet(self, engraving_location):
         for offset in physics.ortholinear_offsets:
-            if self.walls[engraving_location[0] + offset[0], engraving_location[1] + offset[1]]:
+            adjacent_coord = (engraving_location[0] + offset[0], engraving_location[1] + offset[1])
+            if self.walls[adjacent_coord] or self.doors[adjacent_coord]:
                 room_mask = np.full_like(self.walls, False, dtype=bool)
                 room_mask[engraving_location[0] + 2 * offset[0], engraving_location[1] + 2 * offset[1]] = True
                 self.add_room(room_mask, constants.SpecialRoomTypes.vault_closet)
