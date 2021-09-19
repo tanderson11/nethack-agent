@@ -166,6 +166,8 @@ class DLevelMap():
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
+        self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
 
         self.staircases = {}

@@ -201,6 +201,9 @@ class Advisor(abc.ABC):
     def advice(self, rng, run_state, character, oracle):
         pass
 
+    def advice_selected(self):
+        pass
+
 class Advice():
     pass
 
@@ -914,26 +917,33 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
 
         desirable_unvisited = np.transpose(np.where(
             (lmap.visits_count_map == 0) &
-            (lmap.safely_walkable) &
-            (lmap.room_floor | lmap.corridors | lmap.doors) &
+            (lmap.safely_walkable | lmap.doors) &
             (~lmap.owned_doors) &
             (~lmap.boulder_map) &
+            (~lmap.exhausted_travel_map) &
             (lmap.special_room_map == constants.SpecialRoomTypes.NONE.value)
         ))
 
         if len(desirable_unvisited) > 0:
             nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
-            target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
-            if lmap.visits_count_map[target_square] != 0:
+            self.target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
+            if lmap.visits_count_map[self.target_square] != 0:
                 import pdb; pdb.set_trace()
+            self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to unexplored", self, [
-                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square), # offset because cursor row 0 = top line
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, self.target_square), # offset because cursor row 0 = top line
                 ],
                 fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
 
             #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
             return ActionAdvice(self, travel, menu_plan)
+
+    def advice_selected(self):
+        self.lmap.travel_attempt_count_map[self.target_square] += 1
+        if self.lmap.travel_attempt_count_map[self.target_square] > 20:
+            self.lmap.exhausted_travel_map[self.target_square] = True
+
 
 class TravelToUnexploredSquareAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
