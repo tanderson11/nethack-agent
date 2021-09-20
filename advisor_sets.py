@@ -62,10 +62,10 @@ new_advisors = [
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
+        EngraveTestWandsAdvisor(),
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
-        EngraveTestWandsAdvisor(),
         ]),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
