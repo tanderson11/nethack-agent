@@ -76,7 +76,6 @@ new_advisors = [
         ]),
     # MOVE TO DESIRABLE
     PathfindDesirableObjectsAdvisor(),
-    TravelToFountainAdvisorForExcalibur(),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
@@ -85,10 +84,13 @@ new_advisors = [
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving),
         TravelToSearchAdvisor(lambda o: not o.recently_damaged),
     ]),
-    SequentialCompositeAdvisor(advisors=[
-        TravelToDesiredEgress(),
-        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged),
-    ]),
-    MostNovelMoveAdvisor(square_threat_tolerance=0.),
+    RandomCompositeAdvisor(advisors={
+        MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
+        RandomMoveAdvisor(square_threat_tolerance=0.): 2,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
+        TravelToDesiredEgress(): 1,
+        TravelToFountainAdvisorForExcalibur(): 3,
+        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
+    }),
     FallbackSearchAdvisor(),
 ]
