@@ -614,22 +614,26 @@ def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
 class TestBUC(unittest.TestCase):
+    class BUCTestOut(NamedTuple):
+        non_priest_out: enum.Enum
+        priest_out: enum.Enum
+
     from_glyph_test_values = {
-        (1947, "a runed broadsword named Stormbringer"): constants.BUC.unknown,
-        (1947, "the blessed +5 Stormbringer"): constants.BUC.blessed,
-        (2348, "a gray stone named The Heart of Ahriman"): constants.BUC.unknown,
-        (2348, "the uncursed Heart of Ahriman"): constants.BUC.uncursed,
-        (1943, "a long sword named Excalibur"): constants.BUC.unknown,
-        (1943, "the +0 Excalibur"): constants.BUC.uncursed,
+        (1947, "a runed broadsword named Stormbringer"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (1947, "the blessed +5 Stormbringer"): BUCTestOut(constants.BUC.blessed, constants.BUC.blessed),
+        (2348, "a gray stone named The Heart of Ahriman"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (2348, "the uncursed Heart of Ahriman"): BUCTestOut(constants.BUC.uncursed, constants.BUC.uncursed),
+        (1943, "a long sword named Excalibur"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (1943, "the +0 Excalibur"): BUCTestOut(constants.BUC.uncursed, constants.BUC.uncursed),
         # different amulet glyphs still can be the Eye because shuffled
-        (2090, "the blessed Eye of the Aethiopica"): constants.BUC.blessed,
-        (2091, "the cursed Eye of the Aethiopica"): constants.BUC.cursed,
+        (2090, "the blessed Eye of the Aethiopica"): BUCTestOut(constants.BUC.blessed, constants.BUC.blessed),
+        (2091, "the cursed Eye of the Aethiopica"): BUCTestOut(constants.BUC.cursed, constants.BUC.cursed),
     }
 
     def test(self):
         for k,buc in self.from_glyph_test_values.items():
             numeral, item_str = k
-            print(k,buc)
+            print(k,buc.non_priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
             global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
@@ -639,7 +643,22 @@ class TestBUC(unittest.TestCase):
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
             #print(result.item.artifact_identity)
-            self.assertEqual(artifact.BUC, buc)
+            self.assertEqual(artifact.BUC, buc.non_priest_out)
+
+    def priest_test(self):
+        for k,buc in self.from_glyph_test_values.items():
+            numeral, item_str = k
+            print(k,buc.priest_out)
+
+            global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Priest)
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+            #print(result.item.artifact_identity)
+            self.assertEqual(artifact.BUC, buc.priest_out)
 
 class TestArtifacts(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
