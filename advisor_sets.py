@@ -85,11 +85,13 @@ new_advisors = [
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving),
         TravelToSearchAdvisor(lambda o: not o.recently_damaged),
     ]),
+    SequentialCompositeAdvisor(advisors=[
+        TravelToDesiredEgress(),
+        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged),
+    ]),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
-        TravelToDesiredEgress(): 1,
-        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),
 ]
