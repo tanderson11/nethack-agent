@@ -791,7 +791,7 @@ class CustomAgent(BatchedAgent):
             )
             return advice
 
-        if run_state.scumming:
+        if run_state.scumming or (environment.env.max_score and run_state.reward > environment.env.max_score):
             scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
                 menuplan.YesMenuResponse("Really quit?"),
                 menuplan.NoMenuResponse("Dump core?")
