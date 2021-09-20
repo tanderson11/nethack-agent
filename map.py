@@ -276,7 +276,7 @@ class DLevelMap():
 
         self.possible_secret_doors = (
             adjacent_to_reachable &
-            gd.CMapGlyph.is_possible_secret_check(glyphs)
+            gd.CMapGlyph.is_possible_secret_check(glyphs - gd.CMapGlyph.OFFSET)
         )
 
         self.must_find_secret = (
