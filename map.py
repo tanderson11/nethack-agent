@@ -276,23 +276,6 @@ class DLevelMap():
             (adjacent_to_fog)
         )
 
-        adjacent_to_reachable = FloodMap.flood_one_level_from_mask(reachable)
-
-        self.possible_secret_doors = (
-            adjacent_to_reachable &
-            gd.CMapGlyph.is_possible_secret_check(glyphs)
-        )
-
-        self.must_find_secret = (
-            self.need_egress() and
-            np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0
-        )
-        if self.must_find_secret and environment.env.debug and np.count_nonzero(self.frontier_squares) != 0:
-            # Frontier squares that we can't get to.
-            # Is it really the case that we "must find secret"
-            # Or is there something else going on?
-            import pdb; pdb.set_trace()
-
     def build_room_mask_from_square(self, square_in_room):
         room_mask = np.full_like(self.dungeon_feature_map, False, dtype=bool)
         room_mask[square_in_room] = True

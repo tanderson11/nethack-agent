@@ -125,7 +125,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, extended_visible_glyphs)
-        self.extended_possible_secret_mask = gd.CMapGlyph.is_possible_secret_check(extended_visible_raw_glyphs)
+        self.extended_possible_secret_mask = gd.CMapGlyph.is_possible_secret_check(extended_visible_raw_glyphs - gd.CMapGlyph.OFFSET)
         self.extended_has_item_stack = utilities.vectorized_map(
             lambda g: gd.stackable_glyph(g),
             extended_visible_glyphs
