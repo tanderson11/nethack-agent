@@ -100,7 +100,8 @@ class Oracle():
         return (
             self.blstats.check_condition(nethack.BL_MASK_HALLU) or
             self.blstats.check_condition(nethack.BL_MASK_STUN) or
-            self.blstats.check_condition(nethack.BL_MASK_CONF)
+            self.blstats.check_condition(nethack.BL_MASK_CONF) or
+            self.blstats.check_condition(nethack.BL_MASK_BLIND)
         )
 
     @functools.cached_property
