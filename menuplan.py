@@ -136,6 +136,18 @@ class TravelNavigationMenuResponse(MenuResponse):
             else:
                 raise EndOfSequence()
 
+class ConnectedSequenceMenuResponse(MenuResponse):
+    def __init__(self, match_str, sequence):
+        super().__init__(match_str)
+        self.sequence = (c for c in sequence)
+
+    def value(self, message_obj, expect_getline=True):
+        try:
+            next_chr = next(self.sequence)
+            return ord(next_chr)
+        except StopIteration:
+            return ord('\r')
+
 class PhraseMenuResponse(MenuResponse):
     def __init__(self, match_str, phrase):
         super().__init__(match_str)
@@ -430,7 +442,8 @@ class InteractiveDropTypeChooseTypeMenu(InteractiveMenu):
     confirm_choice = True
 
     selectors = {
-        'all types': lambda x: x.item_text == 'All types'
+        'all types': lambda x: x.item_text == 'All types',
+        'unknown BUC': lambda x: x.item_text == 'Items of unknown Bless/Curse status'
     }
 
 class InteractivePickupMenu(ParsingInventoryMenu):

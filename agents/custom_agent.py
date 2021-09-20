@@ -684,6 +684,11 @@ class CustomAgent(BatchedAgent):
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
 
+        if "lands on the altar" in message.message:
+            #import pdb; pdb.set_trace()
+            run_state.current_square.stack_on_square = True
+            level_map.lootable_squares_map[player_location] = True
+
         killed_monster_name = monster_messages.RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies

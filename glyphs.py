@@ -482,6 +482,7 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
 
         self.is_fountain = self.offset == 31
+        self.is_altar = self.offset == 27
         
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):

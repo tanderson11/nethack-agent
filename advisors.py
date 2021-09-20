@@ -834,6 +834,44 @@ class ExcaliburAdvisor(Advisor):
                 return True
         return False
 
+class TravelToAltarAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        any_unknown = character.inventory.get_item(instance_selector=lambda i: (i.BUC == constants.BUC.unknown and (i.equipped_status is None or i.equipped_status.status != 'worn')))
+        if any_unknown is None:
+            return None
+
+        travel = nethack.actions.Command.TRAVEL
+        menu_plan = menuplan.MenuPlan(
+            "travel down", self, [
+                menuplan.CharacterMenuResponse("Where do you want to travel to?", '_'),
+                menuplan.EscapeMenuResponse("Can't find dungeon feature"),
+            ],
+            fallback=ord('.')
+        )
+        return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+
+class DropUnknownOnAltarAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not (run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_altar):
+            return None
+
+        any_unknown = character.inventory.get_item(instance_selector=lambda i: (i.BUC == constants.BUC.unknown and (i.equipped_status is None or i.equipped_status.status != 'worn')))
+        if any_unknown is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.NoMenuResponse("Sell it?"),
+                menuplan.MoreMenuResponse("You drop"),
+                menuplan.ConnectedSequenceMenuResponse("What would you like to drop?", ".")
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='unknown BUC'),
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
