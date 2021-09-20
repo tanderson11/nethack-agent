@@ -76,6 +76,7 @@ new_advisors = [
         ]),
     # MOVE TO DESIRABLE
     PathfindDesirableObjectsAdvisor(),
+    TravelToFountainAdvisorForExcalibur(),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
@@ -88,7 +89,6 @@ new_advisors = [
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
         TravelToDesiredEgress(): 1,
-        TravelToFountainAdvisorForExcalibur(): 3,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
     }),
     FallbackSearchAdvisor(),
