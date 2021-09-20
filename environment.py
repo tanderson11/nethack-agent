@@ -10,6 +10,7 @@ class EnvironmentVariable(NamedTuple):
     log_runs: bool
     target_roles: set[str]
     wizard: bool
+    max_score: int
 
 def try_cast(type, var):
     if var is None:
@@ -29,7 +30,8 @@ def make_environment(**kwargs):
     'print_seed':(os.getenv("NLE_DEV_PRINT_SEED") == "true"),
     'log_runs':((os.getenv("NLE_DEV_LOG_RUNS") == "true")),
     'target_roles':parse_target_roles(os.getenv("NLE_DEV_TARGET_ROLES")),
-    'wizard':(os.getenv("NLE_DEV_WIZARD") == "true"),}
+    'wizard':(os.getenv("NLE_DEV_WIZARD") == "true"),
+    'max_score':try_cast(int, os.getenv("NLE_DEV_MAX_SCORE")),}
 
     environment.update(kwargs)
 
