@@ -620,7 +620,7 @@ class CustomAgent(BatchedAgent):
 
         changed_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
-            change_square = True
+            changed_square = True
 
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
