@@ -87,7 +87,6 @@ new_advisors = [
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 2,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
