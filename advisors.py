@@ -137,6 +137,10 @@ class Oracle():
         return np.count_nonzero(self.neighborhood.is_monster)
 
     @functools.cached_property
+    def in_shop(self):
+        return self.neighborhood.in_shop
+
+    @functools.cached_property
     def urgent_major_trouble(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_STONE) or
@@ -1054,6 +1058,33 @@ class DropUndesirableAdvisor(Advisor):
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
+class DropShopOwnedAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+
+        shop_owned = [i for i in character.inventory.all_items() if i.shop_owned]
+
+        if len(shop_owned) == 0:
+            return None
+
+        #import pdb; pdb.set_trace()
+        shop_owned_letters = [item.inventory_letter for item in shop_owned]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all shop owned objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.MoreMenuResponse("You drop"),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=shop_owned_letters)
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):
@@ -1080,6 +1111,10 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         return run_state.neighborhood.path_to_desirable_objects()
+
+class PathfindUnvisitedShopSquares(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        return run_state.neighborhood.path_to_unvisited_shop_sqaures()
 
 class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

@@ -498,7 +498,7 @@ class RunState():
         self.current_square.item_on_square = item_on_square
 
         if item_on_square is not None:
-            if self.neighborhood.level_map is not None:
+            if self.neighborhood is not None and self.neighborhood.level_map is not None:
                 self.neighborhood.level_map.lootable_squares_map[self.current_square.location] = True
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:

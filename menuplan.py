@@ -408,6 +408,7 @@ class ParsingInventoryMenu(InteractiveMenu):
                         return False
                 else:
                     if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
+                    menu_item.item.price_id(run_state.character)
                     return menu_item.item.desirable(run_state.character)
             if select_desirable == 'desirable':
                 self.item_selector = lambda x: select_desirable_func(x)
@@ -422,8 +423,6 @@ class ParsingInventoryMenu(InteractiveMenu):
             self.selected = selected
             self.item_text = item_text
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
-            if self.item is not None:
-                self.item.price_id(character)
 
 class InteractiveDropTypeChooseTypeMenu(InteractiveMenu):
     first_page_header_rows = 2

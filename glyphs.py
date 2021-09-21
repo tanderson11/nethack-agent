@@ -800,6 +800,9 @@ class ObjectIdentity():
         #import pdb; pdb.set_trace()
         if price_matches.any():
             self.apply_filter(price_matches.index[price_matches])
+        
+        if self.is_identified():
+            print(f"Identified by price id! name={self.name()}")
 
 
 class ScrollIdentity(ObjectIdentity):

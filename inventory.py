@@ -54,13 +54,19 @@ class Item():
     def price_id(self, character):
         if self.identity is None:
             return None
+        if self.identity.is_identified():
+            return None
         if self.try_to_price_id == False:
             return None
         if self.price is None:
             return None
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
+        old_idx_len = len(self.identity.idx)
         base_prices = character.find_base_price_from_listed(self, self.price)
         self.identity.restrict_by_base_prices(base_prices)
+        new_idx_len = len(self.identity.idx)
+
+        print(f"Attempted to price ID. Old possibilites={old_idx_len}. New={new_idx_len}")
 
     def process_message(self, *args):
         name = self.identity.process_message(*args)
@@ -512,7 +518,7 @@ class ItemParser():
             try:
                 identity = global_identity_map.identity_by_numeral[item_glyph]
             except KeyError:
-                print(f"UNIMPLEMENTED ITEM {item_glyph}")
+                #print(f"UNIMPLEMENTED ITEM {item_glyph}")
                 identity = None
 
         glyph = gd.GLYPH_NUMERAL_LOOKUP[item_glyph]
