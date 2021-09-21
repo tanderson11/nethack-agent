@@ -483,14 +483,9 @@ class EnchantWeaponAdvisor(Advisor):
         enchant_weapon_scroll = character.inventory.get_item(inv.Scroll, name='enchant weapon', instance_selector=lambda i: i.BUC != 'cursed')
 
         if enchant_weapon_scroll is not None:
-            armaments = character.inventory.get_slots('armaments')
-
-            for item in armaments:
-                if isinstance(item, inv.Weapon):
-                    # don't enchant if it could implode an item
-                    # weapon enhancements don't auto id, so possibly we should fail if item.enhancement is None 
-                    if item.enhancement is not None and item.enhancement > 5: 
-                        return None
+            wielded_weapon = character.inventory.wielded_weapon
+            if isinstance(wielded_weapon, inv.BareHands) or wielded_weapon.enhancement > 5:
+                return None
             
             menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
                 menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_weapon_scroll.inventory_letter))

@@ -797,7 +797,7 @@ class ObjectIdentity():
         if self.is_identified():
             return
         price_matches = ~self.data.loc[self.idx].COST.isna() & self.data.loc[self.idx].COST.apply(lambda v: v in base_prices)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if price_matches.any():
             self.apply_filter(price_matches.index[price_matches])
 

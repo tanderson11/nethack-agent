@@ -422,6 +422,8 @@ class ParsingInventoryMenu(InteractiveMenu):
             self.selected = selected
             self.item_text = item_text
             self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
+            if self.item is not None:
+                self.item.price_id(character)
 
 class InteractiveDropTypeChooseTypeMenu(InteractiveMenu):
     first_page_header_rows = 2

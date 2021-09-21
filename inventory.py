@@ -12,6 +12,8 @@ import pandas as pd
 from utilities import ARS
 
 class Item():
+    try_to_price_id = True
+    price_pattern = re.compile("\(for sale, ([0-9]+) zorkmids\)")
     class NameAction(NamedTuple):
         letter: str
         name: str
@@ -28,27 +30,48 @@ class Item():
         self.parenthetical_status = instance_attributes.parenthetical_status_str
         if instance_attributes.parenthetical_status_str is not None:
             self.equipped_status = EquippedStatus(self, instance_attributes.parenthetical_status_str)
+            self.shop_owned = self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
+            
+            if self.shop_owned:
+                price_match = re.match(self.price_pattern, self.parenthetical_status)
+                if price_match is not None:
+                    self.price = int(price_match[1])
+                else:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+            else:
+                self.price = None
+
         else:
             self.equipped_status = None
+            self.shop_owned = False
+            self.price = None
 
         # optional arguments
         self.inventory_letter = inventory_letter
 
         self._seen_as = seen_as
 
+    def price_id(self, character):
+        if self.identity is None:
+            return None
+        if self.try_to_price_id == False:
+            return None
+        if self.price is None:
+            return None
+        import pdb; pdb.set_trace()
+        base_prices = character.find_base_price_from_listed(self, self.price)
+        self.identity.restrict_by_base_prices(base_prices)
+
     def process_message(self, *args):
         name = self.identity.process_message(*args)
         if name is not None:
             return self.NameAction(self.inventory_letter, name)
 
-    def shop_owned(self):
-        return self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
-
     def desirable(self, character):
         if self.identity is None: # stupid: for lichens and so on
             return True
 
-        return not self.shop_owned() and self.identity.desirable_identity(character)
+        return not self.shop_owned and self.identity.desirable_identity(character)
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph
@@ -88,7 +111,7 @@ class Armor(Item):
         return desirability
 
     def desirable(self, character):
-        if self.shop_owned():
+        if self.shop_owned:
             return False
 
         if self.identity.potentially_magic():
@@ -222,7 +245,7 @@ class Weapon(Item):
         return max_rank * 17 + (enhancement + melee_damage)
 
     def desirable(self, character):
-        if self.shop_owned():
+        if self.shop_owned:
             return False
 
         if self == character.inventory.wielded_weapon:
@@ -285,6 +308,7 @@ class Tool(Item):
         return 0
 
 class Gem(Item):
+    try_to_price_id = False
     glyph_class = gd.GemGlyph
 
 class Rock(Item):
@@ -625,23 +649,22 @@ class ItemParser():
             return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name)
 
         else:
-            raise Exception("couldn't match item string")
+            raise Exception(f"couldn't match item string {item_string}")
 
-    item_price_message_pattern = re.compile("You see here (.+) \(for sale, ([0-9]+) zorkmids\)")
+    item_on_square_pattern = re.compile("You see here (.+?)\.")
     @classmethod
-    def listen_for_item_with_price(cls, global_identity_map, character, message):
-        item_price_match = re.search(cls.item_price_message_pattern, message)
-        if item_price_match:
-            item_string = item_price_match[1]
-            item_price = int(item_price_match[2])
-
-            import pdb; pdb.set_trace()
-            item = cls.make_item_with_string(global_identity_map, item_string)
-
-            if item is not None and item.identity is not None and not isinstance(item, Gem):
-                base_prices = character.find_base_price_from_listed(item, item_price)
-                item.identity.restrict_by_base_prices(base_prices)
-
+    def listen_for_item_on_square(cls, global_identity_map, character, message, glyph=None):
+        item_match = re.search(cls.item_on_square_pattern, message)
+        if item_match:
+            item_string = item_match[1]
+            if glyph is None:
+                item = cls.make_item_with_string(global_identity_map, item_string)
+            else:
+                item = cls.make_item_with_glyph(global_identity_map, glyph.numeral, item_string)
+            if item is not None:
+                item.price_id(character)
+            #import pdb; pdb.set_trace()
+            return item
 
 class Slot():
     blockers = []

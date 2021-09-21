@@ -219,7 +219,7 @@ class Character():
         base_prices = [np.ceil(base1), np.floor(base1), np.ceil(base2), np.floor(base2)]
         if base2 <= 5:
             base_prices.append(0)
-        return base_prices
+        return set(base_prices)
 
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:

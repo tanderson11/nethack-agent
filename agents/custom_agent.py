@@ -494,7 +494,12 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
-        inv.ItemParser.listen_for_item_with_price(self.global_identity_map, self.character, message.message)
+        item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
+        self.current_square.item_on_square = item_on_square
+
+        if item_on_square is not None:
+            if self.neighborhood.level_map is not None:
+                self.neighborhood.level_map.lootable_squares_map[self.current_square.location] = True
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
             name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
@@ -842,6 +847,7 @@ class CustomAgent(BatchedAgent):
             run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
         if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.global_identity_map, run_state.character):
+            #import pdb; pdb.set_trace()
             level_map.lootable_squares_map[player_location] = False
 
         ############################

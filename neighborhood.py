@@ -18,6 +18,7 @@ import utilities
 from utilities import ARS
 from physics import Square
 from typing import NamedTuple, Tuple, List
+import inventory
 
 @dataclass
 class CurrentSquare:
@@ -26,6 +27,7 @@ class CurrentSquare:
     arrival_time: int
     glyph_under_player: gd.Glyph = None
     stack_on_square: bool = False
+    item_on_square: inventory.Item = None
     failed_moves_on_square: List[int] = field(default_factory=list)
 
 class ViewField(enum.Enum):
@@ -58,6 +60,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         absolute_player_location = Square(*current_square.location)
 
         self.previous_glyph_on_player = current_square.glyph_under_player
+        self.item_on_player = current_square.item_on_square
         self.absolute_player_location = absolute_player_location
         self.dcoord = level_map.dcoord
         self.level_map = level_map
@@ -272,12 +275,13 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         return self.path_to_targets(weak_monsters)
 
     def desirable_object_on_space(self, global_identity_map, character):
+        #if self.item_on_player is not None: import pdb; pdb.set_trace()
+        item_recognized_and_desirable = self.item_on_player is not None and self.item_on_player.desirable(character)
         desirable_object_on_space = (
             (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
             self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
         )
-
-        return desirable_object_on_space
+        return item_recognized_and_desirable or (self.item_on_player is None and desirable_object_on_space)
 
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
