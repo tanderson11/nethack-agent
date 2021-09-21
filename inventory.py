@@ -28,6 +28,7 @@ class Item():
         self.instance_name = instance_attributes.instance_name
 
         self.parenthetical_status = instance_attributes.parenthetical_status_str
+        self.price = None
         if instance_attributes.parenthetical_status_str is not None:
             self.equipped_status = EquippedStatus(self, instance_attributes.parenthetical_status_str)
             self.shop_owned = self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
@@ -38,9 +39,6 @@ class Item():
                     self.price = int(price_match[1])
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
-            else:
-                self.price = None
-
         else:
             self.equipped_status = None
             self.shop_owned = False
