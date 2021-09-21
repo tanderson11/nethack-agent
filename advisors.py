@@ -488,7 +488,7 @@ class EnchantWeaponAdvisor(Advisor):
 
         if enchant_weapon_scroll is not None:
             wielded_weapon = character.inventory.wielded_weapon
-            if isinstance(wielded_weapon, inv.BareHands) or wielded_weapon.enhancement > 5:
+            if isinstance(wielded_weapon, inv.BareHands) or (wielded_weapon.enhancement is not None and wielded_weapon.enhancement > 5):
                 return None
             
             menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
