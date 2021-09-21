@@ -1192,7 +1192,7 @@ class EngraveTestWandsAdvisor(Advisor):
         wands = character.inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
-            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False) and not w.shop_owned:
+            if w and not w.identity.is_identified() and not w.shop_owned and not w.identity.listened_actions.get(engrave, False):
                 letter = w.inventory_letter
                 break
 
