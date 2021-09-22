@@ -142,7 +142,7 @@ class DLevelMap():
         # distinguish between solid stone that we've seen with our own eyes vs. not
 
         dungeon_features = np.where(
-            gd.CMapGlyph.class_mask(glyphs),
+            gd.CMapGlyph.class_mask_without_stone(glyphs),
             glyphs,
             prior
         )
@@ -271,7 +271,7 @@ class DLevelMap():
                 break
             else:
                 room_mask = new_mask
-
+        import pdb; pdb.set_trace()
         return room_mask
 
     def add_room(self, room_mask, room_type):

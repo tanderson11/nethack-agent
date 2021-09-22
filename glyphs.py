@@ -421,6 +421,9 @@ class CMapGlyph(Glyph):
         'sw_bc', # 85
         'sw_br', # 86
     ]
+    @classmethod
+    def class_mask_without_stone(cls, glyphs):
+        return (glyphs >= cls.OFFSET + 1) & (glyphs < cls.OFFSET + cls.COUNT)
 
     @classmethod
     def is_poorly_understood_check(cls, offsets):

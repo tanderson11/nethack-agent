@@ -764,6 +764,9 @@ class CustomAgent(BatchedAgent):
             #import pdb; pdb.set_trace()
             pass
 
+        if "You bite that, you pay for it!" in message.message:
+            import pdb; pdb.set_trace()
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
