@@ -259,20 +259,31 @@ class DLevelMap():
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
+        # flood special rooms in case new squares have been discovered
+        for special_room_type in constants.SpecialRoomTypes:
+            if special_room_type != constants.SpecialRoomTypes.NONE:
+                room_mask = self.special_room_map == special_room_type.value
+                expanded_mask = self.expand_mask_along_room_floor(room_mask)
+                self.add_room(expanded_mask, special_room_type)
+
+
+    def expand_mask_along_room_floor(self, mask):
+        while True:
+            new_mask = FloodMap.flood_one_level_from_mask(mask)
+            new_mask = new_mask & self.room_floor
+
+            if (new_mask == mask).all():
+                break
+            else:
+                mask = new_mask
+
+        return mask
+
     def build_room_mask_from_square(self, square_in_room):
         room_mask = np.full_like(self.dungeon_feature_map, False, dtype=bool)
         room_mask[square_in_room] = True
 
-        while True:
-            new_mask = FloodMap.flood_one_level_from_mask(room_mask)
-            new_mask = new_mask & self.room_floor
-
-            if (new_mask == room_mask).all():
-                break
-            else:
-                room_mask = new_mask
-        import pdb; pdb.set_trace()
-        return room_mask
+        return self.expand_mask_along_room_floor(room_mask)
 
     def add_room(self, room_mask, room_type):
         self.special_room_map[room_mask] = room_type.value
