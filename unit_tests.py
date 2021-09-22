@@ -39,6 +39,10 @@ class TestItemRegex(unittest.TestCase):
         "a blessed fireproof +10 ornamental cope": "ornamental cope", # You'd actually know the cloak
         "the blessed +7 silver saber": "silver saber", # Change to a Grayswandir test at some point
     }
+    paperback_values = {
+        "a paperback book named Guards! Guards! (for sale, 30 zorkmids)": None,
+        "a paperback book named The Shepherd's Crown (for sale, 30 zorkmids)": None,
+    }
     def test_all_test_values(self):
         for key, value in self.test_values.items():
             print(key)
@@ -48,6 +52,17 @@ class TestItemRegex(unittest.TestCase):
             if item.item is None:
                 import pdb; pdb.set_trace()
             self.assertEqual(value, item.item._seen_as)
+
+    def test_paperbacks_dont_crash(self):
+        for key, value in self.paperback_values.items():
+            print(key)
+
+            item = menuplan.ParsingInventoryMenu.MenuItem(
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+            #if item.item is None:
+            #    import pdb; pdb.set_trace()
+            self.assertEqual(value, item.item)
+
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
