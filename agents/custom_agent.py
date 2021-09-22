@@ -368,7 +368,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'rKJESw=='
+        #seed = b'rKJESw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -765,7 +765,8 @@ class CustomAgent(BatchedAgent):
             pass
 
         if "You bite that, you pay for it!" in message.message:
-            import pdb; pdb.set_trace()
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
 
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
