@@ -55,7 +55,7 @@ class Glyph():
 
     @classmethod
     def class_mask(cls, glyphs):
-        return (glyphs > cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
+        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
     def __init__(self, numeral):
         self.numeral = numeral
@@ -78,10 +78,6 @@ class Glyph():
     def numerals(cls):
         numerals = range(cls.OFFSET, cls.OFFSET + cls.COUNT)
         return numerals
-    
-    @classmethod
-    def where_is(cls, glyphs):
-        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
 class MonsterAlikeGlyph(Glyph):
     NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
@@ -570,11 +566,11 @@ class StatueGlyph(Glyph):
 def walkable(glyphs):
     # Object, Statue, Pet, Corpse, CMap
     walkable_glyphs = np.full_like(glyphs, False, dtype=bool)
-    walkable_glyphs = np.where(CMapGlyph.where_is(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
-    walkable_glyphs = np.where(CorpseGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(PetGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(StatueGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(ObjectGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(CMapGlyph.class_mask(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
+    walkable_glyphs = np.where(CorpseGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(PetGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(StatueGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(ObjectGlyph.class_mask(glyphs), True, walkable_glyphs)
 
     return walkable_glyphs
 
