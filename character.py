@@ -6,6 +6,7 @@ import numpy as np
 from dataclasses import dataclass
 
 import constants
+import environment
 import glyphs as gd
 import inventory as inv
 from utilities import ARS
@@ -207,6 +208,22 @@ class Character():
             return True
 
         return False
+
+    def find_base_price_from_sell(self, item, price):
+        dupe_mult = 3 if self.am_dupe() else 2
+        base1 = price * dupe_mult
+        base2 = np.ceil(price * dupe_mult * 4/3)
+        base3 = np.floor(price * dupe_mult * 4/3)
+
+        if np.round(base2/2 * 3/4) == price:
+            base_prices = [base1, base2]
+        elif np.round(base3/2 * 3/4) == price:
+            base_prices = [base1, base3]
+        else:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
+        return set(base_prices)
 
     def find_base_price_from_listed(self, item, price):
         cha_mult = self.charisma_price_multiplier(self.attributes.charisma)

@@ -1032,12 +1032,40 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
-class DropUndesirableAdvisor(Advisor):
+class DropToPriceIDAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.near_burdened:
+        if not oracle.in_shop:
             return None
 
-        character.near_burdened = False
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        unidentified_items = character.inventory.all_unidentified_items()
+        if len(unidentified_items) == 0:
+            return None
+
+        unidentified_letters = [i.inventory_letter for i in unidentified_items]
+        #import pdb; pdb.set_trace()
+        menu_plan = menuplan.MenuPlan(
+            "drop all objects to price id",
+            self,
+            [
+                menuplan.NoMenuResponse("Sell it?"),
+                menuplan.NoMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=unidentified_letters),
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+class DropUndesirableAdvisor(Advisor):
+    def drop_undesirable(self, run_state, character):
         undesirable_items = character.inventory.all_undesirable_items(character)
         if len(undesirable_items) == 0:
             return None
@@ -1049,7 +1077,9 @@ class DropUndesirableAdvisor(Advisor):
             self,
             [
                 menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1057,6 +1087,25 @@ class DropUndesirableAdvisor(Advisor):
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+        return self.drop_undesirable(run_state, character)
+
+class DropUndesirableNearBurdenedAdvisor(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.near_burdened:
+            return None
+
+        character.near_burdened = False
+
+        return self.drop_undesirable(run_state, character)
 
 class DropShopOwnedAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1076,7 +1125,9 @@ class DropShopOwnedAdvisor(Advisor):
             self,
             [
                 menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),

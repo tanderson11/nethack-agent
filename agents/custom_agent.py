@@ -507,6 +507,8 @@ class RunState():
             if name_action is not None:
                 self.queued_name_action = name_action
 
+        inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message)
+
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:
                 self.current_square.failed_moves_on_square.append(self.last_non_menu_action)

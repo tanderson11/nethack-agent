@@ -49,6 +49,17 @@ class Item():
 
         self._seen_as = seen_as
 
+    def price_id_from_sell(self, character, sell_price):
+        if self.identity is None:
+            return None
+        if self.identity.is_identified():
+            return None
+        if self.try_to_price_id == False:
+            return None
+
+        base_prices = character.find_base_price_from_sell(self, sell_price)
+        self.identity.restrict_by_base_prices(base_prices)
+
     def price_id(self, character):
         if self.identity is None:
             return None
@@ -59,12 +70,12 @@ class Item():
         if self.price is None:
             return None
         #import pdb; pdb.set_trace()
-        old_idx_len = len(self.identity.idx)
+        #old_idx_len = len(self.identity.idx)
         base_prices = character.find_base_price_from_listed(self, self.price)
         self.identity.restrict_by_base_prices(base_prices)
-        new_idx_len = len(self.identity.idx)
+        #new_idx_len = len(self.identity.idx)
 
-        print(f"Attempted to price ID. Old possibilites={old_idx_len}. New={new_idx_len}")
+        #print(f"Attempted to price ID. Old possibilites={old_idx_len}. New={new_idx_len}")
 
     def process_message(self, *args):
         name = self.identity.process_message(*args)
@@ -177,6 +188,16 @@ class Scroll(Item):
 
 class Potion(Item):
     glyph_class = gd.PotionGlyph
+
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        if identity.name() == 'water':
+            if 'unholy' in instance_attributes.full_str:
+                self.BUC = 'cursed'
+            # carefully now: elif because holy is in 'unholy'
+            elif 'holy' in instance_attributes.full_str:
+                self.BUC = 'blessed'
+                #import pdb; pdb.set_trace()
 
     healing_dice_by_BUC = {
         'uncursed': 6,
@@ -373,7 +394,7 @@ class EquippedStatus():
                 self.slot = 'quiver'
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #
@@ -398,7 +419,7 @@ class ItemParser():
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
         gd.RingGlyph: re.compile('ring of ([a-zA-Z ]+)$'),
         gd.AmuletGlyph: re.compile('amulet of ([a-zA-Z ]+)$'),
-        gd.PotionGlyph: re.compile('potions? of ([a-zA-Z ]+)$'),
+        gd.PotionGlyph: re.compile('potions? of (holy |unholy )?([a-zA-Z ]+)$'),
         gd.ScrollGlyph: re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
         gd.SpellbookGlyph: re.compile('spellbook of ([a-zA-Z ]+)$'),
     }
@@ -451,7 +472,12 @@ class ItemParser():
         match = re.search(pattern, description)
         if match:
             # we defuzz using the appropriate pattern
-            defuzzed_name = match[1]
+            if glyph_class == gd.PotionGlyph:
+                #holiness = match[1]
+                # handled using full match string in potion init
+                defuzzed_name = match[2]
+            else:
+                defuzzed_name = match[1]
 
             identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
             class_names    = identity_class.names()
@@ -622,6 +648,7 @@ class ItemParser():
         BUC: str
         condition: str
         instance_name: str
+        full_str: str
 
     @classmethod
     def parse_inventory_item_string(cls, item_string):
@@ -629,7 +656,7 @@ class ItemParser():
 
         if match:
             quantity_match = match[1]
-            if quantity_match == "a" or quantity_match == "an" or quantity_match == "the":
+            if quantity_match == "a" or quantity_match == "an" or quantity_match == "the" or quantity_match == "your":
                 quantity = 1
             else:
                 quantity = int(match[1])
@@ -650,7 +677,7 @@ class ItemParser():
             
             equipped_status = match[11]
 
-            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name)
+            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name, match[0])
 
         else:
             raise Exception(f"couldn't match item string {item_string}")
@@ -669,6 +696,21 @@ class ItemParser():
                 item.price_id(character)
             #import pdb; pdb.set_trace()
             return item
+
+    item_sell_pattern = re.compile("offers ([0-9]+) gold pieces for (.+?)\.")
+    @classmethod
+    def listen_for_price_offer(cls, global_identity_map, character, message):
+        item_match = re.search(cls.item_sell_pattern, message)
+        if item_match:
+            price = int(item_match[1])
+            item_string = item_match[2]
+
+            item = cls.make_item_with_string(global_identity_map, item_string)
+            if item is None:
+                import pdb; pdb.set_trace()
+                return None
+            item.price_id_from_sell(character, price)
+            #import pdb; pdb.set_trace()
 
 class Slot():
     blockers = []
@@ -896,6 +938,10 @@ class PlayerInventory():
         all_items = self.all_items()
         #import pdb; pdb.set_trace()
         return [item for item in all_items if item is not None and not item.desirable(character)]
+
+    def all_unidentified_items(self):
+        all_items = self.all_items()
+        return [item for item in all_items if item is not None and item.identity is not None and not item.identity.is_identified()]
 
     def all_items(self):
         all = []
