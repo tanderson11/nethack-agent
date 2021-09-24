@@ -88,7 +88,11 @@ class Item():
 
         can_afford = True
         if self.shop_owned:
-            can_afford = character.gold >= self.price
+            if self.price is not None:
+                can_afford = character.gold >= self.price
+            else:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                can_afford = True
 
         return can_afford and self.identity.desirable_identity(character)
 
