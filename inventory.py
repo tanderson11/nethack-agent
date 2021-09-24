@@ -711,7 +711,7 @@ class ItemParser():
 
             item = cls.make_item_with_string(global_identity_map, item_string)
             if item is None:
-                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
                 return None
             item.price_id_from_sell(character, price)
             #import pdb; pdb.set_trace()
