@@ -55,7 +55,6 @@ new_advisors = [
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
         DropUndesirableInShopAdvisor(),
-        BuyDesirableAdvisor(),
         DropShopOwnedAdvisor(),
         DropToPriceIDAdvisor(),
         DropUndesirableNearBurdenedAdvisor(),
@@ -66,6 +65,7 @@ new_advisors = [
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
+        BuyDesirableAdvisor(),
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),

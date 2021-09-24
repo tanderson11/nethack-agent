@@ -770,7 +770,7 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug:
                 import pdb; pdb.set_trace()
 
-        if "You bought a " in message.message:
+        if "You bought" in message.message:
             print(message.message)
 
         if run_state.debugger_on:
