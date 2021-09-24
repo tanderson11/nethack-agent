@@ -1107,6 +1107,28 @@ class DropUndesirableNearBurdenedAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
+class BuyDesirableAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        shop_owned = [i for i in character.inventory.all_items() if i.shop_owned]
+
+        if len(shop_owned) == 0:
+            return None
+
+        pay = nethack.actions.Command.PAY
+
+        menu_plan = menuplan.MenuPlan(
+            "buy items",
+            self,
+            [
+                menuplan.EscapeMenuResponse("Pay whom?"),
+                menuplan.NoMenuResponse("Itemized billing?"),
+                menuplan.YesMenuResponse("Pay?"),
+            ],
+        )
+        return ActionAdvice(from_advisor=self, action=pay, new_menu_plan=menu_plan)
+
 class DropShopOwnedAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not oracle.in_shop:

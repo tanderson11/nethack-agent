@@ -13,7 +13,7 @@ from utilities import ARS
 
 class Item():
     try_to_price_id = True
-    price_pattern = re.compile("\(for sale, ([0-9]+) zorkmids\)")
+    price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids\)")
     class NameAction(NamedTuple):
         letter: str
         name: str
@@ -36,7 +36,7 @@ class Item():
             if self.shop_owned:
                 price_match = re.match(self.price_pattern, self.parenthetical_status)
                 if price_match is not None:
-                    self.price = int(price_match[1])
+                    self.price = int(price_match[2])
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
         else:
@@ -86,7 +86,11 @@ class Item():
         if self.identity is None: # stupid: for lichens and so on
             return True
 
-        return not self.shop_owned and self.identity.desirable_identity(character)
+        can_afford = True
+        if self.shop_owned:
+            can_afford = character.gold >= self.price
+
+        return can_afford and self.identity.desirable_identity(character)
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph

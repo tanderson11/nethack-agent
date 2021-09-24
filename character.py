@@ -39,6 +39,7 @@ class Character():
     can_enhance: bool = False
     held_by: HeldBy = None
     near_burdened: bool = False
+    gold: int = 0
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -79,6 +80,10 @@ class Character():
         old_AC = self.AC
         if old_AC != blstats.get('armor_class'):
             self.AC = blstats.get('armor_class')
+
+        old_gold = self.gold
+        if old_gold != blstats.get('gold'):
+            self.gold = blstats.get('gold')
 
     def update_from_message(self, message_text, time):
         if "You feel feverish." in message_text:
