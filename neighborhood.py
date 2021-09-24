@@ -78,6 +78,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         vision_start = Square(self.vision[0].start, self.vision[1].start)
 
         extended_visible_raw_glyphs = glyphs[self.vision]
+        self.vision_glyphs = extended_visible_raw_glyphs
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
 
         # index of player in the full vision

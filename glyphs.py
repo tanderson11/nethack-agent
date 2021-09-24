@@ -165,6 +165,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
         if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
             self.always_peaceful = True
 
+    def always_peaceful_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
+
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF # kept around so that ObjectGlyph.numerals() gives all object glyphs
     COUNT = nethack.NUM_OBJECTS
