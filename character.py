@@ -219,14 +219,14 @@ class Character():
         base1 = price * dupe_mult
         base2 = np.ceil(price * dupe_mult * 4/3)
         base3 = np.floor(price * dupe_mult * 4/3)
+        base4 = base1 - 1
 
         if np.round(base2/2 * 3/4) == price:
-            base_prices = [base1, base2]
+            base_prices = [base1, base2, base4]
         elif np.round(base3/2 * 3/4) == price:
-            base_prices = [base1, base3]
+            base_prices = [base1, base3, base4]
         else:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+            base_prices = [base1, base4]
 
         return set(base_prices)
 
