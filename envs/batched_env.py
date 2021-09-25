@@ -22,7 +22,7 @@ class BatchedEnv:
         if environment.env.use_seed_whitelist:
             self.seeds = []
         # If you want to manually try a single seed
-        self.seeds = [(1920827579925652853, 73832244036727981)]
+        # self.seeds = [(1920827579925652853, 73832244036727981)]
         self.num_envs = num_envs
         self.env_make_fn = env_make_fn
         self.envs = []
