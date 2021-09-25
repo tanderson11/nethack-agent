@@ -1053,29 +1053,25 @@ class GlobalIdentityMap():
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
 
-    def make_buc_factory(self, base_role):
-        if base_role == constants.BaseRole.Priest:
-            def buc_from_string(buc_string):
-                if buc_string is None:
-                    return constants.BUC.uncursed
-                elif buc_string == 'cursed':
-                    return constants.BUC.cursed
-                elif buc_string == 'blessed':
-                    return constants.BUC.blessed
-                assert False, "bad buc string for priest"
+    def buc_from_string(self, buc_string):
+        if self.is_priest:
+            if buc_string is None:
+                return constants.BUC.uncursed
+            elif buc_string == 'cursed':
+                return constants.BUC.cursed
+            elif buc_string == 'blessed':
+                return constants.BUC.blessed
+            assert False, "bad buc string for priest"
         else:
-            def buc_from_string(buc_string):
-                if buc_string is None:
-                    return constants.BUC.unknown
-                elif buc_string == 'cursed':
-                    return constants.BUC.cursed
-                elif buc_string == 'blessed':
-                    return constants.BUC.blessed
-                elif buc_string == 'uncursed':
-                    return constants.BUC.uncursed
-                assert False, "bad buc string for non-priest"
-
-        self.buc_from_string = buc_from_string
+            if buc_string is None:
+                return constants.BUC.unknown
+            elif buc_string == 'cursed':
+                return constants.BUC.cursed
+            elif buc_string == 'blessed':
+                return constants.BUC.blessed
+            elif buc_string == 'uncursed':
+                return constants.BUC.uncursed
+            assert False, "bad buc string for non-priest"
 
     def load_artifact_identities(self):
         self.artifact_identity_by_name = {}
@@ -1107,6 +1103,8 @@ class GlobalIdentityMap():
         self.glyph_by_appearance = {}
 
         self.appearance_counts = {} # when we '#name' or identify an object, we can decrement this
+
+        self.is_priest = False # If we are a priest then we see BUC differently
 
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]

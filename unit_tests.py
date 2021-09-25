@@ -50,7 +50,6 @@ class TestItemRegex(unittest.TestCase):
     }
     def test_all_test_values(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.test_values.items():
@@ -65,7 +64,6 @@ class TestItemRegex(unittest.TestCase):
 
     def test_holy_water(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.holy_water_values.items():
@@ -81,7 +79,6 @@ class TestItemRegex(unittest.TestCase):
 
     def test_paperbacks_dont_crash(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.paperback_values.items():
@@ -97,7 +94,6 @@ class TestItemRegex(unittest.TestCase):
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
-    global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
     def test_from_numeral(self):
         test_values = {
             # Amulets
@@ -178,7 +174,6 @@ class TestItemParsing(unittest.TestCase):
         #return
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
             self.assertEqual(item.identity.name(), values.name_in_inventory)
 
@@ -187,7 +182,6 @@ class TestItemParsing(unittest.TestCase):
         for inputs, values in self.test_values.items():
             print(inputs)
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
             #print(item)
@@ -200,7 +194,6 @@ class TestItemParsing(unittest.TestCase):
     def test_recognition_with_only_str(self):
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str)
             self.assertTrue(isinstance(item, values.oclass))
             if values.name_in_stack == SpecialValues.same_name:
@@ -678,7 +671,6 @@ class TestBUC(unittest.TestCase):
             print(k,buc.non_priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -693,7 +685,7 @@ class TestBUC(unittest.TestCase):
             print(k,buc.priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Priest)
+            global_identity_map.is_priest = True
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -734,7 +726,6 @@ class TestArtifacts(unittest.TestCase):
     def test_base_gets_identified(self):
         numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
 
@@ -751,7 +742,6 @@ class TestArtifacts(unittest.TestCase):
             print(k,v)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -765,7 +755,6 @@ class TestArtifacts(unittest.TestCase):
     def test_from_string(self):
         for k,v in self.from_str_test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -809,7 +798,6 @@ class TestWeaponPickup(unittest.TestCase):
         run_state.character = character
         run_state.character.inventory = inventory
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         for k,v in self.test_values.items():
@@ -852,7 +840,6 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
         # TK `e - a lichen corpse >> comestibles`
         run_state = agents.custom_agent.RunState()
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
@@ -885,7 +872,6 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
         run_state = agents.custom_agent.RunState()
         run_state.character = character
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         character.inventory = inv.PlayerInventory([], [], [], [])
@@ -1059,7 +1045,6 @@ class TestDrop(unittest.TestCase):
 
         for inputs, do_drop in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             numeral, item_class, item_str = inputs
             string = np.array(string_to_tty_chars(item_str), dtype='uint8')
             oclass = item_class.glyph_class.class_number
@@ -1080,7 +1065,6 @@ class TestSpecialItemNames(unittest.TestCase):
         numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
 
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')
         oclass = item_class.glyph_class.class_number
         inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))

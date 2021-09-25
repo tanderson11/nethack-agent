@@ -427,7 +427,8 @@ class RunState():
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
         self.reading_base_attributes = False
 
-        self.global_identity_map.make_buc_factory(self.character.base_class)
+        if self.character.base_class == constants.BaseRole.Priest:
+            self.global_identity_map.is_priest = True
 
     def update_reward(self, reward):
         self.step_count += 1
