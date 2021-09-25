@@ -1,11 +1,10 @@
+import csv
 import os
 
 from collections.abc import Iterable
 import pandas as pd
 
 import environment
-
-seeds = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "seed_whitelist.csv"))
 
 def log_new_run(env):
     if not (environment.env.print_seed or environment.env.debug): return
@@ -18,9 +17,16 @@ class BatchedEnv:
         """
         Creates multiple copies of the environment with the same env_make_fn function
         """
-        self.seeds = None
+        self.seeds = []
         if environment.env.use_seed_whitelist:
-            self.seeds = []
+            with open(os.path.join(os.path.dirname(__file__), "..", "spoilers", "seed_whitelist.csv"), newline='') as csvfile:
+                seed_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+                for i, row in enumerate(seed_reader):
+                    if i == 0:
+                        assert row[0] == 'core'
+                        assert row[1] == 'display'
+                        continue
+                    self.seeds.append((int(row[0]), int(row[1])))
         # If you want to manually try a single seed
         # self.seeds = [(1920827579925652853, 73832244036727981)]
         self.num_envs = num_envs

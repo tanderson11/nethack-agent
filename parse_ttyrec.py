@@ -154,8 +154,9 @@ def parse_dir(dr, outpath=None):
     df = df.set_index('replay_number')
     #import pdb; pdb.set_trace()
 
-    print('Killers')
-    print(df.groupby("killer").count().sort_values("score", ascending=False))
+    if 'killer' in df:
+        print('Killers')
+        print(df.groupby("killer").count().sort_values("score", ascending=False))
     print('Status when dead')
     print(df.groupby("status").count().sort_values("score", ascending=False))
     print("Score by role")
