@@ -45,8 +45,8 @@ class TestItemRegex(unittest.TestCase):
     }
 
     holy_water_values = {
-        "4 potions of holy water": ("water", "blessed"),
-        "4 potions of unholy water": ("water", "cursed"),
+        "4 potions of holy water": ("water", constants.BUC.blessed),
+        "4 potions of unholy water": ("water", constants.BUC.cursed),
     }
     def test_all_test_values(self):
         global_identity_map = gd.GlobalIdentityMap()
@@ -57,28 +57,39 @@ class TestItemRegex(unittest.TestCase):
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=run_state), None, "a", False, key            )
+                MagicMock(run_state=run_state), None, "a", False, key
+            )
             if item.item is None:
                 import pdb; pdb.set_trace()
             self.assertEqual(value, item.item._seen_as)
 
     def test_holy_water(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state = agents.custom_agent.RunState()
+        run_state.global_identity_map = global_identity_map
         for key, value in self.holy_water_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+                MagicMock(run_state=run_state), None, "a", False, key
+            )
             #if item.item is None:
             #    import pdb; pdb.set_trace()
             self.assertEqual(value[0], item.item.identity.name())
             self.assertEqual(value[1], item.item.BUC)
 
     def test_paperbacks_dont_crash(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state = agents.custom_agent.RunState()
+        run_state.global_identity_map = global_identity_map
         for key, value in self.paperback_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+                MagicMock(run_state=run_state), None, "a", False, key
+            )
             #if item.item is None:
             #    import pdb; pdb.set_trace()
             self.assertEqual(value, item.item)

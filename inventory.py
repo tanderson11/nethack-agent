@@ -204,10 +204,10 @@ class Potion(Item):
         super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
         if identity.name() == 'water':
             if 'unholy' in instance_attributes.full_str:
-                self.BUC = 'cursed'
+                self.BUC = constants.BUC.cursed
             # carefully now: elif because holy is in 'unholy'
             elif 'holy' in instance_attributes.full_str:
-                self.BUC = 'blessed'
+                self.BUC = constants.BUC.blessed
                 #import pdb; pdb.set_trace()
 
     healing_dice_by_BUC = {
