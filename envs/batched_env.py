@@ -1,26 +1,61 @@
-import aicrowd_gym
-import numpy as np
+import os
 
 from collections.abc import Iterable
+import pandas as pd
 
 import environment
 
-def log_new_run(batch_number, env):
+seeds = pd.read_csv(os.path.join(os.path.dirname(__file__), "..", "seed_whitelist.csv"))
+
+def log_new_run(env):
     if not (environment.env.print_seed or environment.env.debug): return
     env = env.unwrapped
     core_seed, disp_seed, reseed = env.get_seeds()
-    print(f"[{batch_number} {env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
+    print(f"[{env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
 
 class BatchedEnv:
     def __init__(self, env_make_fn, num_envs=32):
         """
         Creates multiple copies of the environment with the same env_make_fn function
         """
+        self.seeds = None
+        if environment.env.use_seed_whitelist:
+            self.seeds = []
+        # If you want to manually try a single seed
+        self.seeds = [(1920827579925652853, 73832244036727981)]
         self.num_envs = num_envs
-        self.envs = [env_make_fn() for _ in range(self.num_envs)]
-        if environment.env.print_seed or environment.env.debug:
-            [env.unwrapped.seed(None, None, False) for env in self.envs]
+        self.env_make_fn = env_make_fn
+        self.envs = []
+        self.initial_observations = []
+        for _ in range(self.num_envs):
+            env, observation = self.make_environment()
+            self.envs.append(env)
+            self.initial_observations.append(observation)
         self.num_actions = self.envs[0].action_space.n
+
+    def next_seed(self):
+        if not self.seeds:
+            return None
+        return self.seeds.pop(0)
+
+    def make_environment(self):
+        env = self.env_make_fn()
+        observation = self.reset_environment(env)
+        return env, observation
+
+    def reset_environment(self, env):
+        next_seed = self.next_seed()
+        if next_seed:
+            env.unwrapped.seed(next_seed[0], next_seed[1], False)
+        else:
+            if environment.env.use_seed_whitelist:
+                print("Ran out of seeds!")
+            if environment.env.debug or environment.env.print_seed:
+                env.unwrapped.seed(None, None, False)
+
+        observation = env.reset()
+        log_new_run(env)
+        return observation
 
     def apply_batch_actions(self, actions):
         """
@@ -37,22 +72,10 @@ class BatchedEnv:
         for i, env, a in zip(range(len(self.envs)), self.envs, actions):
             observation, reward, done, info = env.step(a)
             if done:
-                if environment.env.debug or environment.env.print_seed:
-                    env.unwrapped.seed(None, None, False)
-                observation = env.reset()
-                log_new_run(i, env)
+                observation = self.reset_environment(env)
             observations.append(observation)
             rewards.append(reward)
             dones.append(done)
             infos.append(info)
 
         return observations, rewards, dones, infos
-
-    def batch_reset(self):
-        """
-        Resets all the environments in self.envs
-        """
-        #[env.unwrapped.seed(core=1920827579925652853, disp=73832244036727981, reseed=False) for env in self.envs]
-        observation = [env.reset() for env in self.envs]
-        [log_new_run(i, env) for i, env in enumerate(self.envs)]
-        return observation
