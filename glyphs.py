@@ -485,6 +485,7 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
 
         self.is_fountain = self.offset == 31
+        self.is_altar = self.offset == 27
         
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -1034,6 +1035,30 @@ class GlobalIdentityMap():
         "Armor": (ArmorGlyph, ArtifactArmorIdentity),
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
+
+    def make_buc_factory(self, base_role):
+        if base_role == constants.BaseRole.Priest:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.uncursed
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                assert False, "bad buc string for priest"
+        else:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.unknown
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                elif buc_string == 'uncursed':
+                    return constants.BUC.uncursed
+                assert False, "bad buc string for non-priest"
+
+        self.buc_from_string = buc_from_string
 
     def load_artifact_identities(self):
         self.artifact_identity_by_name = {}

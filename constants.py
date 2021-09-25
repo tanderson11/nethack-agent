@@ -206,3 +206,9 @@ RACE_TO_INTRINSIC = {
         1: Intrinsics.infravision| Intrinsics.poison_resistance,
     },
 }
+
+class BUC(enum.Enum):
+    cursed = 0
+    uncursed = 1
+    blessed = 2
+    unknown = 3

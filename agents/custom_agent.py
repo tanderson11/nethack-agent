@@ -426,6 +426,8 @@ class RunState():
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
         self.reading_base_attributes = False
 
+        self.global_identity_map.make_buc_factory(self.character.base_class)
+
     def update_reward(self, reward):
         self.step_count += 1
         self.reward += reward
@@ -683,6 +685,11 @@ class CustomAgent(BatchedAgent):
 
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
+
+        if "lands on the altar" in message.message:
+            #import pdb; pdb.set_trace()
+            run_state.current_square.stack_on_square = True
+            level_map.lootable_squares_map[player_location] = True
 
         killed_monster_name = monster_messages.RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:

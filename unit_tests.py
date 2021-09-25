@@ -40,17 +40,22 @@ class TestItemRegex(unittest.TestCase):
         "the blessed +7 silver saber": "silver saber", # Change to a Grayswandir test at some point
     }
     def test_all_test_values(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state = agents.custom_agent.RunState()
+        run_state.global_identity_map = global_identity_map
         for key, value in self.test_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+                MagicMock(run_state=run_state), None, "a", False, key            )
             if item.item is None:
                 import pdb; pdb.set_trace()
             self.assertEqual(value, item.item._seen_as)
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
+    global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
     def test_from_numeral(self):
         test_values = {
             # Amulets
@@ -131,6 +136,7 @@ class TestItemParsing(unittest.TestCase):
         #return
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
             self.assertEqual(item.identity.name(), values.name_in_inventory)
 
@@ -139,6 +145,7 @@ class TestItemParsing(unittest.TestCase):
         for inputs, values in self.test_values.items():
             print(inputs)
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
             #print(item)
@@ -151,6 +158,7 @@ class TestItemParsing(unittest.TestCase):
     def test_recognition_with_only_str(self):
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str)
             self.assertTrue(isinstance(item, values.oclass))
             if values.name_in_stack == SpecialValues.same_name:
@@ -605,6 +613,52 @@ def labeled_string_to_raw_and_expected(multiline_str):
 def string_to_tty_chars(multiline_str):
     return [[ord(c) for c in line] for line in multiline_str.split("\n")]
 
+class TestBUC(unittest.TestCase):
+    class BUCTestOut(NamedTuple):
+        non_priest_out: enum.Enum
+        priest_out: enum.Enum
+
+    from_glyph_test_values = {
+        (1947, "a runed broadsword named Stormbringer"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (1947, "the blessed +5 Stormbringer"): BUCTestOut(constants.BUC.blessed, constants.BUC.blessed),
+        (2348, "a gray stone named The Heart of Ahriman"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (2348, "the uncursed Heart of Ahriman"): BUCTestOut(constants.BUC.uncursed, constants.BUC.uncursed),
+        (1943, "a long sword named Excalibur"): BUCTestOut(constants.BUC.unknown, constants.BUC.uncursed),
+        (1943, "the +0 Excalibur"): BUCTestOut(constants.BUC.uncursed, constants.BUC.uncursed),
+        # different amulet glyphs still can be the Eye because shuffled
+        (2090, "the blessed Eye of the Aethiopica"): BUCTestOut(constants.BUC.blessed, constants.BUC.blessed),
+        (2091, "the cursed Eye of the Aethiopica"): BUCTestOut(constants.BUC.cursed, constants.BUC.cursed),
+    }
+
+    def test(self):
+        for k,buc in self.from_glyph_test_values.items():
+            numeral, item_str = k
+            print(k,buc.non_priest_out)
+
+            global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+            #print(result.item.artifact_identity)
+            self.assertEqual(artifact.BUC, buc.non_priest_out)
+
+    def priest_test(self):
+        for k,buc in self.from_glyph_test_values.items():
+            numeral, item_str = k
+            print(k,buc.priest_out)
+
+            global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Priest)
+            run_state = agents.custom_agent.RunState()
+            run_state.global_identity_map = global_identity_map
+
+            artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
+
+            #print(result.item.artifact_identity)
+            self.assertEqual(artifact.BUC, buc.priest_out)
 
 class TestArtifacts(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
@@ -638,6 +692,7 @@ class TestArtifacts(unittest.TestCase):
     def test_base_gets_identified(self):
         numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
         global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
 
@@ -654,6 +709,7 @@ class TestArtifacts(unittest.TestCase):
             print(k,v)
 
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -667,6 +723,7 @@ class TestArtifacts(unittest.TestCase):
     def test_from_string(self):
         for k,v in self.from_str_test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -709,6 +766,9 @@ class TestWeaponPickup(unittest.TestCase):
         inventory.wielded_weapon = inv.BareHands()
         run_state.character = character
         run_state.character.inventory = inventory
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state.global_identity_map = global_identity_map
 
         for k,v in self.test_values.items():
             menu_text = string_to_tty_chars(self.test_header + k)
@@ -740,7 +800,7 @@ h - a smoky potion
 i - a blessed potion of full healing >> healing potions|desirable
 Wands
 j - an iron wand >> desirable
-k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
+k - a wand of teleportation (0:6) >> teleport wands|desirable
 
 (end)
 """
@@ -748,6 +808,10 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
     def test_pickup(self):
         # use | between selectors for items picked by many selectors
         # TK `e - a lichen corpse >> comestibles`
+        run_state = agents.custom_agent.RunState()
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state.global_identity_map = global_identity_map
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
@@ -758,7 +822,7 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
             self.assertTrue(selector_name in expected.keys())
 
             #import pdb; pdb.set_trace()
-            interactive_menu = menuplan.InteractivePickupMenu(agents.custom_agent.RunState(), selector_name)
+            interactive_menu = menuplan.InteractivePickupMenu(run_state, selector_name)
             result = interactive_menu.search_through_rows(text)
             print(result)
 
@@ -778,6 +842,9 @@ k - an uncursed wand of teleportation (0:6) >> teleport wands|desirable
         character.set_class_skills()
         run_state = agents.custom_agent.RunState()
         run_state.character = character
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
+        run_state.global_identity_map = global_identity_map
 
         character.inventory = inv.PlayerInventory([], [], [], [])
         character.inventory.armaments = inv.ArmamentSlots()
@@ -950,6 +1017,7 @@ class TestDrop(unittest.TestCase):
 
         for inputs, do_drop in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
+            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             numeral, item_class, item_str = inputs
             string = np.array(string_to_tty_chars(item_str), dtype='uint8')
             oclass = item_class.glyph_class.class_number
@@ -970,6 +1038,7 @@ class TestSpecialItemNames(unittest.TestCase):
         numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
 
         global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')
         oclass = item_class.glyph_class.class_number
         inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
