@@ -677,7 +677,7 @@ class TestBUC(unittest.TestCase):
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
             #print(result.item.artifact_identity)
-            self.assertEqual(artifact.BUC, buc.non_priest_out)
+            self.assertEqual(artifact.BUC, buc.non_priest_out, artifact.identity.name())
 
     def priest_test(self):
         for k,buc in self.from_glyph_test_values.items():
@@ -807,7 +807,7 @@ class TestWeaponPickup(unittest.TestCase):
             print(result)
 
             if v is None:
-                self.assertEqual(result, None)
+                self.assertEqual(result, None, result)
             else:
                 self.assertEqual(result.character, v)
 
