@@ -139,6 +139,8 @@ class Message():
         "A pit opens up under you": gd.get_by_name(gd.CMapGlyph, 'pit'),
         "A pit full of spikes opens up under you": gd.get_by_name(gd.CMapGlyph, 'spiked_pit'),
         "You step onto a polymorph trap!": gd.get_by_name(gd.CMapGlyph, 'polymorph_trap'),
+        "A cloud of gas puts you to sleep!": gd.get_by_name(gd.CMapGlyph, 'sleeping_gas_trap'),
+        "bear trap closes": gd.get_by_name(gd.CMapGlyph, 'bear_trap'),
         "The fountain dries up!": gd.get_by_name(gd.CMapGlyph, 'room'),
     }
 
@@ -618,7 +620,7 @@ class CustomAgent(BatchedAgent):
 
         changed_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
-            change_square = True
+            changed_square = True
 
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
