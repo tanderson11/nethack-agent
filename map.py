@@ -352,14 +352,7 @@ class DLevelMap():
         try:
             existing = self.staircases[location]
             if existing.direction != direction:
-                if environment.env.debug:
-                    import pdb; pdb.set_trace()
-                    pass
-                # Some sort of bug
-                # descend message lingers
-                # b'fDS8NA==', 7138506629994509347, 7118309277316884218
-                # raise Exception("Conflicting staircases")
-                pass
+                raise Exception("Conflicting staircases")
         except KeyError:
             staircase = Staircase(
                 self.dcoord,

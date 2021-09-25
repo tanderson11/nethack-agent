@@ -775,27 +775,28 @@ class CustomAgent(BatchedAgent):
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
-        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-            print(run_state.message_log[-2])
-            # create the staircases (idempotent)
-            if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
-            elif "You climb" in run_state.message_log[-2]:
-                direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+        if previous_square and previous_square.dcoord != dcoord:
+            if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
+                print(run_state.message_log[-2])
+                # create the staircases (idempotent)
+                if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
+                    direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                elif "You climb" in run_state.message_log[-2]:
+                    direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
-            if not previous_square:
+                if dcoord.branch != previous_square.dcoord.branch:
+                    run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
+
+                # staircase we just took
+                previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
+                previous_level_map.add_traversed_staircase(
+                    previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                # staircase it's implied we've arrived on (probably breaks in the Valley)
+                level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+                print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
+            elif environment.env.debug:
                 import pdb; pdb.set_trace()
 
-            if dcoord.branch != previous_square.dcoord.branch:
-                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
-
-            # staircase we just took
-            previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
-            previous_level_map.add_traversed_staircase(
-                previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
-            # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
-            print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
