@@ -369,21 +369,21 @@ class RunState():
 
         self.debugger_on = False
 
-        core_seed, disp_seed, _ = self.debug_env.get_seeds()
         self.replay_log_path = None
         self.replay_log = []
         self.replay_index = 0
-        replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
-        if os.path.exists(replay_log_path):
-            self.replay_log_path = replay_log_path
-            with open(self.replay_log_path, newline='') as csvfile:
-                reader = csv.DictReader(csvfile)
-                self.replay_log = [row for row in reader]
-                if self.replay_log:
-                    self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
-                else:
-                    self.replay_run_number = 0
-                # import pdb; pdb.set_trace()
+        if self.debug_env:
+            core_seed, disp_seed, _ = self.debug_env.get_seeds()
+            replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+            if os.path.exists(replay_log_path):
+                self.replay_log_path = replay_log_path
+                with open(self.replay_log_path, newline='') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    self.replay_log = [row for row in reader]
+                    if self.replay_log:
+                        self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
+                    else:
+                        self.replay_run_number = 0
 
     def make_seeded_rng(self):
         import random
