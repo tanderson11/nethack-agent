@@ -109,24 +109,24 @@ class Armor(Item):
             return -20 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
-            if self.BUC == 'cursed':
+            if self.BUC == constants.BUC.cursed:
                 return -10
-            elif self.BUC is None:
+            elif self.BUC is constants.BUC.unknown:
                 best_case_enhancement = 0
             else:
                 best_case_enhancement = 5
         else:
             best_case_enhancement = self.enhancement
 
-        if self.BUC == 'blessed':
+        if self.BUC == constants.BUC.blessed:
             buc_adjustment = 0.5
             raw_value = self.identity.converted_wear_value().max()
-        elif self.BUC == 'uncursed' or (character.base_class == 'Priest' and self.BUC == None):
+        elif self.BUC == constants.BUC.uncursed:
             buc_adjustment = 0
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
         else:
-            buc_adjustment = -2 if self.BUC == 'cursed' else -0.5
+            buc_adjustment = -2 if self.BUC == constants.BUC.cursed else -0.5
             # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
             raw_value = self.identity.converted_wear_value().min()
 
@@ -172,6 +172,9 @@ class Wand(Item):
                 self.recharges = int(charge_match[1])
                 self.charges = int(charge_match[2])
 
+        if self.BUC == constants.BUC.unknown and self.charges is not None:
+            self.BUC = constants.BUC.uncursed
+
     def desirable(self, character):
         desirable_identity = super().desirable(character)
 
@@ -208,9 +211,9 @@ class Potion(Item):
                 #import pdb; pdb.set_trace()
 
     healing_dice_by_BUC = {
-        'uncursed': 6,
-        'cursed': 4,
-        'blessed': 8,
+        constants.BUC.uncursed: 6,
+        constants.BUC.cursed: 4,
+        constants.BUC.blessed: 8,
     }
     def expected_healing(self, character):
         name = self.identity.name()
@@ -220,7 +223,7 @@ class Potion(Item):
         if name == 'full healing':
             return character.max_hp
 
-        BUC = self.BUC if self.BUC is not None else 'uncursed'
+        BUC = self.BUC if self.BUC != constants.BUC.unknown else constants.BUC.uncursed
         n_dice = self.healing_dice_by_BUC[BUC]
         if name == 'healing':
             return n_dice * 4
@@ -232,6 +235,12 @@ class Potion(Item):
 
 class Weapon(Item):
     glyph_class = gd.WeaponGlyph
+
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+
+        if self.BUC == constants.BUC.unknown and self.enhancement is not None:
+            self.BUC = constants.BUC.uncursed
 
     def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
@@ -250,7 +259,7 @@ class Weapon(Item):
         # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
         # and your des is 17 + average damage + enhancement
 
-        if self.BUC == 'cursed' or (self.enhancement is not None and self.enhancement < 0):
+        if self.BUC == constants.BUC.cursed or (self.enhancement is not None and self.enhancement < 0):
             return -10
 
         if self.identity.is_ammunition or self.identity.is_ranged:
@@ -284,7 +293,7 @@ class Weapon(Item):
         if self == character.inventory.wielded_weapon:
             return True
 
-        if (self.BUC is not None or self.enhancement is not None) and self.BUC != 'cursed' and (self.identity.is_ranged or self.identity.is_ammunition):
+        if (self.BUC is not None or self.enhancement is not None) and self.BUC != constants.BUC.cursed and (self.identity.is_ranged or self.identity.is_ammunition):
             return True
 
         is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
@@ -295,7 +304,7 @@ class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
         self.inventory_letter = '-'
-        self.BUC = 'uncursed'
+        self.BUC = constants.BUC.uncursed
         self.identity = None
 
     def which_skill(self, character):
@@ -531,7 +540,7 @@ class ItemParser():
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
-        match_components = cls.parse_inventory_item_string(item_string)
+        match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
 
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
@@ -566,7 +575,7 @@ class ItemParser():
 
     @classmethod
     def make_item_with_string(cls, global_identity_map, item_str, category=None, inventory_letter=None):
-        match_components = cls.parse_inventory_item_string(item_str)
+        match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
         description = match_components.description
 
         if match_components.instance_name is not None:
@@ -659,7 +668,7 @@ class ItemParser():
         full_str: str
 
     @classmethod
-    def parse_inventory_item_string(cls, item_string):
+    def parse_inventory_item_string(cls, global_identity_map, item_string):
         match = re.match(cls.item_pattern, item_string)
 
         if match:
@@ -669,7 +678,7 @@ class ItemParser():
             else:
                 quantity = int(match[1])
 
-            BUC = match[2]
+            BUC = global_identity_map.buc_from_string(match[2])
             condition_intensifier = match[3]
             condition = match[4]
             if condition_intensifier is not None and condition is not None:
@@ -913,7 +922,7 @@ class PlayerInventory():
                         proposal_blockers.append(blockers)
                     else:
                         for b in blockers:
-                            if isinstance(b, Weapon) or b.BUC == 'cursed':
+                            if isinstance(b, Weapon) or b.BUC == constants.BUC.cursed:
                                 pass
                             else:
                                 proposed_items.append(most_desirable)
@@ -925,11 +934,14 @@ class PlayerInventory():
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
-    def get_items(self, oclass, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
-        oclass = self.get_oclass(oclass)
+    def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+        if oclass is None:
+            items = self.all_items()
+        else:
+            items = self.get_oclass(oclass)
         matches = []
 
-        for item in oclass:
+        for item in items:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
                 matches.append(item)
 

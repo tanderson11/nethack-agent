@@ -4,6 +4,7 @@ import enum
 from typing import NamedTuple
 
 import numpy as np
+import scipy.signal
 
 import environment
 import glyphs as gd
@@ -234,6 +235,10 @@ class DLevelMap():
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
         self.fountain_map = (glyphs == gd.CMapGlyph.OFFSET + 31)
 
+        # Solid stone and fog of war both show up here
+        self.fog_of_war = (glyphs == gd.CMapGlyph.OFFSET)
+        adjacent_to_fog = FloodMap.flood_one_level_from_mask(self.fog_of_war)
+
         # Basic terrain types
 
         offsets = np.where(
@@ -259,6 +264,7 @@ class DLevelMap():
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
+
         # flood special rooms in case new squares have been discovered
         for special_room_type in constants.SpecialRoomTypes:
             if special_room_type != constants.SpecialRoomTypes.NONE:
@@ -266,6 +272,17 @@ class DLevelMap():
                 expanded_mask = self.expand_mask_along_room_floor(room_mask)
                 self.add_room(expanded_mask, special_room_type)
 
+        reachable = (
+            (self.safely_walkable | self.doors) &
+            (~self.owned_doors) &
+            (self.special_room_map == constants.SpecialRoomTypes.NONE.value)
+        )
+
+        self.frontier_squares = (
+            (self.visits_count_map == 0) &
+            reachable &
+            (adjacent_to_fog)
+        )
 
     def expand_mask_along_room_floor(self, mask):
         while True:
@@ -331,11 +348,12 @@ class DLevelMap():
                 self.add_room(room_mask, constants.SpecialRoomTypes.vault_closet)
 
     def add_traversed_staircase(self, location, to_dcoord, to_location, direction):
+        location = physics.Square(*location)
         try:
             existing = self.staircases[location]
             if existing.direction != direction:
                 if environment.env.debug:
-                    #import pdb; pdb.set_trace()
+                    import pdb; pdb.set_trace()
                     pass
                 # Some sort of bug
                 # descend message lingers
@@ -372,19 +390,12 @@ class DLevelMap():
 class FloodMap():
     @staticmethod
     def flood_one_level_from_mask(mask):
-        flooded_mask = np.full_like(mask, False, dtype='bool')
+        if not mask.dtype == np.dtype('bool'):
+            raise Exception("Bad mask")
 
-        # for every square
-        it = np.nditer(mask, flags=['multi_index'])
-        for b in it: 
-            # if we occupy it
-            if b: 
-                # take a radius one box around it
-                row_slice, col_slice = utilities.centered_slices_bounded_on_array(it.multi_index, (1, 1), flooded_mask)
-                # and flood all those squares
-                flooded_mask[row_slice, col_slice] = True
+        flooded_mask = scipy.signal.convolve2d(mask, np.ones((3,3)), mode='same')
 
-        return flooded_mask
+        return (flooded_mask >= 1)
 
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol

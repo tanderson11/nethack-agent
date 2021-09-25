@@ -432,6 +432,7 @@ class CMapGlyph(Glyph):
     def is_poorly_understood_check(cls, offsets):
         # Christian: Glyphs that I don't really know what they are
         return (
+            ((offsets >= 7) & (offsets <= 11)) | # weird walls
             ((offsets >= 39) & (offsets <= 41)) | # air, cloud, water. Planes only?
             (offsets == 60) | # statue trap uses this glyph or not?
             (offsets >= 65) # cruft?
@@ -468,14 +469,16 @@ class CMapGlyph(Glyph):
     def is_wall_check(offsets):
         return (offsets < 12)
 
+    @staticmethod
+    def is_possible_secret_check(offsets):
+        return (offsets < 3)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.OFFSET
         self.name = self.NAMES[self.offset]
 
         self.is_wall = self.offset < 12
-
-        self.possible_secret_door = self.offset < 3
 
         self.is_upstairs = self.offset == 23 or self.offset == 25
         self.is_downstairs = self.offset == 24 or self.offset == 26
@@ -484,6 +487,7 @@ class CMapGlyph(Glyph):
         self.is_closed_door = self.offset == 15 or self.offset == 16
 
         self.is_fountain = self.offset == 31
+        self.is_altar = self.offset == 27
         
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -1048,6 +1052,30 @@ class GlobalIdentityMap():
         "Armor": (ArmorGlyph, ArtifactArmorIdentity),
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
+
+    def make_buc_factory(self, base_role):
+        if base_role == constants.BaseRole.Priest:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.uncursed
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                assert False, "bad buc string for priest"
+        else:
+            def buc_from_string(buc_string):
+                if buc_string is None:
+                    return constants.BUC.unknown
+                elif buc_string == 'cursed':
+                    return constants.BUC.cursed
+                elif buc_string == 'blessed':
+                    return constants.BUC.blessed
+                elif buc_string == 'uncursed':
+                    return constants.BUC.uncursed
+                assert False, "bad buc string for non-priest"
+
+        self.buc_from_string = buc_from_string
 
     def load_artifact_identities(self):
         self.artifact_identity_by_name = {}
