@@ -820,6 +820,24 @@ class CustomAgent(BatchedAgent):
             )
             return advice
 
+        def log_seed_and_character(env, character):
+            header = ['core', 'display', 'role', 'race', 'alignment']
+            path = os.path.join(os.path.dirname(__file__), "..", "seed_whitelist.csv")
+            core_seed, disp_seed, _ = ARS.rs.debug_env.get_seeds()
+            with open(path, 'a') as log_file:
+                writer = csv.DictWriter(log_file, fieldnames=header)
+                writer.writerow({
+                    'core': core_seed,
+                    'display': disp_seed,
+                    'race': character.base_race.value,
+                    'role': character.base_class.value,
+                    'alignment': character.base_alignment,
+                })
+
+        if run_state.character:
+            log_seed_and_character(run_state.debug_env, run_state.character)
+            run_state.scumming = True
+
         if run_state.scumming:
             scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
                 menuplan.YesMenuResponse("Really quit?"),
