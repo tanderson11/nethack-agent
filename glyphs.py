@@ -1099,6 +1099,7 @@ class GlobalIdentityMap():
         # then instantiate the appropriate artifact identity
 
     def __init__(self):
+        self.buc_from_string = lambda s: constants.BUC.unknown
         self.identity_by_numeral = {}
         # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
         self.identity_by_name = {} # this we will have to be careful to keep updated
