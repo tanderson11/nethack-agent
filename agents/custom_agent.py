@@ -289,7 +289,7 @@ class RunState():
                 'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
                 'total damage': self.total_damage,
                 'adjacent monster turns': self.adjacent_monster_turns,
-                'died in shop': self.neighborhood.in_shop,
+                'died in shop': self.neighborhood.in_shop if self.neighborhood else False,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
