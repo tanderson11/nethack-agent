@@ -1,5 +1,6 @@
 import base64
 import csv
+from dataclasses import astuple
 import os
 import re
 
@@ -10,7 +11,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, MenuAdvice
+from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice
 import advisor_sets
 
 import menuplan
@@ -231,8 +232,8 @@ BackgroundMenuPlan = menuplan.MenuPlan(
 
 class RunState():
     def __init__(self, debug_env=None):
-        self.reset()
         self.debug_env = debug_env
+        self.reset()
         self.log_path = None
         self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
@@ -243,9 +244,11 @@ class RunState():
                 writer.writeheader()
 
     def print_action_log(self, total):
-        return "||".join([num.name for num in self.action_log[(-1 * total):]])
+        return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
+
+    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -316,7 +319,6 @@ class RunState():
             json.dump(counter, counter_file)
 
     def reset(self):
-        self.reading_base_attributes = False
         self.scumming = False
         self.character = None
         self.gods_by_alignment = {}
@@ -367,12 +369,36 @@ class RunState():
 
         self.debugger_on = False
 
+        core_seed, disp_seed, _ = self.debug_env.get_seeds()
+        self.replay_log_path = None
+        self.replay_log = []
+        self.replay_index = 0
+        replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+        if os.path.exists(replay_log_path):
+            self.replay_log_path = replay_log_path
+            with open(self.replay_log_path, newline='') as csvfile:
+                reader = csv.DictReader(csvfile)
+                self.replay_log = [row for row in reader]
+                if self.replay_log:
+                    self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
+                else:
+                    self.replay_run_number = 0
+                # import pdb; pdb.set_trace()
+
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
         #seed = b'rKJESw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
+
+    def replay_advice(self):
+        if self.replay_index >= len(self.replay_log):
+            return None
+        action = int(self.replay_log[self.replay_index]['action'])
+        menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
+        self.replay_index += 1
+        return ReplayAdvice(action=action, is_menu_action=menu_action)
 
     attribute_pattern_1 = re.compile("You are an? [A-Z][a-z]+, a level 1 (female|male)? ?([a-z]+) ([A-Z][a-z]+).")
     attribute_pattern_2 = re.compile("You are (neutral|lawful|chaotic), on a mission for (.+?)  ")
@@ -395,8 +421,6 @@ class RunState():
     }
 
     def update_base_attributes(self, raw_screen_content):
-        if not self.reading_base_attributes:
-            raise Exception("Shouldn't be doing this")
         attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
         attribute_match_2 = re.search(self.attribute_pattern_2, raw_screen_content)
         attribute_match_3 = re.search(self.attribute_pattern_3, raw_screen_content)
@@ -425,7 +449,6 @@ class RunState():
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
-        self.reading_base_attributes = False
 
         if self.character.base_class == constants.BaseRole.Priest:
             self.global_identity_map.is_priest = True
@@ -537,9 +560,22 @@ class RunState():
     def log_action(self, advice):
         self.advice_log.append(advice)
 
+        if self.replay_log_path and not isinstance(advice, ReplayAdvice):
+            with open(self.replay_log_path, 'a') as log_file:
+                writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
+                writer.writerow({
+                    'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),
+                    'run_number': self.replay_run_number,
+                    'dcoord': str(astuple(self.current_square.dcoord)),
+                    'menu_action': isinstance(advice, MenuAdvice),
+                })
+
         # TODO lots of compatiblility cruft here
 
         if isinstance(advice, MenuAdvice):
+            return
+
+        if isinstance(advice, ReplayAdvice) and advice.is_menu_action:
             return
 
         self.action_log.append(advice.action)
@@ -547,7 +583,9 @@ class RunState():
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
         self.last_non_menu_action_failed_advancement = False
-        self.last_non_menu_advisor = advice.from_advisor
+
+        if isinstance(advice, ActionAdvice):
+            self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood):
         if self.last_non_menu_action in self.actions_without_consequence:
@@ -610,7 +648,8 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
-        if run_state.reading_base_attributes:
+        if not run_state.character and run_state.step_count > 1:
+            # The first action should always be to look at attributes
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
@@ -632,8 +671,10 @@ class CustomAgent(BatchedAgent):
                     run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs))
 
         changed_square = False
+        previous_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
             changed_square = True
+            previous_square = run_state.current_square
 
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
@@ -742,16 +783,19 @@ class CustomAgent(BatchedAgent):
             elif "You climb" in run_state.message_log[-2]:
                 direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
-            if dcoord.branch != run_state.neighborhood.dcoord.branch:
-                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=run_state.neighborhood.dcoord)
+            if not previous_square:
+                import pdb; pdb.set_trace()
+
+            if dcoord.branch != previous_square.dcoord.branch:
+                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
 
             # staircase we just took
-            previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
+            previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
             previous_level_map.add_traversed_staircase(
-                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
             # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1])
-            print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
+            level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+            print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
@@ -790,6 +834,10 @@ class CustomAgent(BatchedAgent):
         # We are done observing and ready to start acting #
         ###################################################
 
+        replay_advice = run_state.replay_advice()
+        if replay_advice:
+            return replay_advice
+
         menu_plan_retval = None
         if message:
             menu_plan_retval = run_state.run_menu_plan(message)
@@ -813,7 +861,6 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
 
         if not run_state.character:
-            run_state.reading_base_attributes = True
             advice = ActionAdvice(
                 from_advisor=None,
                 action=nethack.actions.Command.ATTRIBUTES,
@@ -928,6 +975,8 @@ class CustomAgent(BatchedAgent):
         if isinstance(advice, ActionAdvice):
             if advice.from_advisor:
                 advice.from_advisor.advice_selected()
+            return utilities.ACTION_LOOKUP[advice.action]
+        elif isinstance(advice, ReplayAdvice):
             return utilities.ACTION_LOOKUP[advice.action]
         else:
             return utilities.ACTION_LOOKUP[advice.keypress]

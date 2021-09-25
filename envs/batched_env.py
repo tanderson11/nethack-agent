@@ -19,7 +19,7 @@ class BatchedEnv:
         """
         self.seeds = []
         if environment.env.use_seed_whitelist:
-            with open(os.path.join(os.path.dirname(__file__), "..", "spoilers", "seed_whitelist.csv"), newline='') as csvfile:
+            with open(os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "seed_whitelist.csv"), newline='') as csvfile:
                 seed_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
                 for i, row in enumerate(seed_reader):
                     if i == 0:

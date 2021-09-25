@@ -237,6 +237,12 @@ class MenuAdvice(Advice):
         if not (self.keypress >= 0 and self.keypress < 128):
             raise Exception("Invalid ascii ordinal")
 
+@dataclass
+class ReplayAdvice(Advice):
+    action: int
+    is_menu_action: bool
+    new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
+
 
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
     def advice(self, rng, run_state, character, oracle):
