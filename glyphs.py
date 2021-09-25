@@ -55,7 +55,7 @@ class Glyph():
 
     @classmethod
     def class_mask(cls, glyphs):
-        return (glyphs > cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
+        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
     def __init__(self, numeral):
         self.numeral = numeral
@@ -78,10 +78,6 @@ class Glyph():
     def numerals(cls):
         numerals = range(cls.OFFSET, cls.OFFSET + cls.COUNT)
         return numerals
-    
-    @classmethod
-    def where_is(cls, glyphs):
-        return (glyphs >= cls.OFFSET) & (glyphs < cls.OFFSET + cls.COUNT)
 
 class MonsterAlikeGlyph(Glyph):
     NEVER_CORPSE = {'lich', 'nalfeshnee', 'yellow light', 'Geryon', 'couatl', 'Baalzebub', 'hezrou', 'ki-rin', 'iron golem', 'lemure', 'master lich', 'djinni', 'flaming sphere', 'sandestin', 'shade', 'straw golem', 'leather golem', 'clay golem', 'Demogorgon', 'fire elemental', 'energy vortex', 'black light', 'ice vortex', 'Angel', 'rope golem', 'Dark One', 'Yeenoghu', 'air elemental', 'Nazgul', 'gas spore', 'steam vortex', 'ice devil', 'Juiblex', 'pit fiend', 'succubus', 'mail daemon', 'stone golem', 'earth elemental', 'manes', 'Orcus', 'bone devil', 'dust vortex', 'Asmodeus', 'Dispater', 'erinys', 'barbed devil', 'barrow wight', 'vrock', 'ghost', 'Minion of Huhetotl', 'fire vortex', 'glass golem', 'marilith', 'balrog', 'Archon', 'skeleton', 'ghoul', 'Ashikaga Takauji', 'water demon', 'Thoth Amon', 'fog cloud', 'shocking sphere', 'Vlad the Impaler', 'incubus', 'wood golem', 'paper golem', 'freezing sphere', 'Nalzok', 'horned devil', 'arch-lich', 'grid bug', 'Aleax', 'demilich', 'gold golem', 'water elemental', 'brown pudding', 'black pudding'}
@@ -168,6 +164,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
         self.always_peaceful = False
         if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
             self.always_peaceful = True
+
+    def always_peaceful_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF # kept around so that ObjectGlyph.numerals() gives all object glyphs
@@ -425,6 +424,9 @@ class CMapGlyph(Glyph):
         'sw_bc', # 85
         'sw_br', # 86
     ]
+    @classmethod
+    def class_mask_without_stone(cls, glyphs):
+        return (glyphs >= cls.OFFSET + 1) & (glyphs < cls.OFFSET + cls.COUNT)
 
     @classmethod
     def is_poorly_understood_check(cls, offsets):
@@ -574,11 +576,11 @@ class StatueGlyph(Glyph):
 def walkable(glyphs):
     # Object, Statue, Pet, Corpse, CMap
     walkable_glyphs = np.full_like(glyphs, False, dtype=bool)
-    walkable_glyphs = np.where(CMapGlyph.where_is(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
-    walkable_glyphs = np.where(CorpseGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(PetGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(StatueGlyph.where_is(glyphs), True, walkable_glyphs)
-    walkable_glyphs = np.where(ObjectGlyph.where_is(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(CMapGlyph.class_mask(glyphs), CMapGlyph.is_safely_walkable_check(glyphs - CMapGlyph.OFFSET), walkable_glyphs)
+    walkable_glyphs = np.where(CorpseGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(PetGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(StatueGlyph.class_mask(glyphs), True, walkable_glyphs)
+    walkable_glyphs = np.where(ObjectGlyph.class_mask(glyphs), True, walkable_glyphs)
 
     return walkable_glyphs
 
@@ -797,6 +799,18 @@ class ObjectIdentity():
     def desirable_identity(self, character):
         return False
 
+    def restrict_by_base_prices(self, base_prices):
+        if self.is_identified():
+            return
+        price_matches = ~self.data.loc[self.idx].COST.isna() & self.data.loc[self.idx].COST.apply(lambda v: v in base_prices)
+        #import pdb; pdb.set_trace()
+        if price_matches.any():
+            self.apply_filter(price_matches.index[price_matches])
+        
+        if self.is_identified():
+            print(f"Identified by price id! name={self.name()}")
+
+
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
@@ -865,6 +879,9 @@ class ToolIdentity(ObjectIdentity):
             return True
 
         if self.name() == 'magic marker':
+            return True
+
+        if self.name() == 'magic lamp':
             return True
 
         return False

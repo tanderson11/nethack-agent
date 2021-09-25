@@ -245,7 +245,7 @@ class RunState():
     def print_action_log(self, total):
         return "||".join([num.name for num in self.action_log[(-1 * total):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns']
+    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -289,6 +289,7 @@ class RunState():
                 'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
                 'total damage': self.total_damage,
                 'adjacent monster turns': self.adjacent_monster_turns,
+                'died in shop': self.neighborhood.in_shop,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
@@ -369,7 +370,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'oDEhDQ=='
+        #seed = b'rKJESw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -498,10 +499,19 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
+        item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
+        self.current_square.item_on_square = item_on_square
+
+        if item_on_square is not None:
+            if self.neighborhood is not None and self.neighborhood.level_map is not None:
+                self.neighborhood.level_map.lootable_squares_map[self.current_square.location] = True
+
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
             name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
             if name_action is not None:
                 self.queued_name_action = name_action
+
+        inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message)
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
             if self.last_non_menu_action in physics.direction_actions:
@@ -765,6 +775,13 @@ class CustomAgent(BatchedAgent):
             #import pdb; pdb.set_trace()
             pass
 
+        if "You bite that, you pay for it!" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
+        if "You bought" in message.message:
+            print(message.message)
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
@@ -849,6 +866,7 @@ class CustomAgent(BatchedAgent):
             run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
         if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.global_identity_map, run_state.character):
+            #import pdb; pdb.set_trace()
             level_map.lootable_squares_map[player_location] = False
 
         ############################

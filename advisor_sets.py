@@ -53,8 +53,12 @@ new_advisors = [
     DipForExcaliburAdvisor(),
     WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # WHEN SAFE IMPROVEMENTS
+    BuyDesirableAdvisor(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
-        DropUndesirableAdvisor(),
+        DropUndesirableInShopAdvisor(),
+        DropShopOwnedAdvisor(),
+        DropToPriceIDAdvisor(),
+        DropUndesirableNearBurdenedAdvisor(),
         AnyWardrobeChangeAdvisor(),
         IdentifyPotentiallyMagicArmorAdvisor(),
         ReadKnownBeneficialScrolls(),
@@ -76,7 +80,8 @@ new_advisors = [
         OpenClosedDoorAdvisor(),
         ]),
     # MOVE TO DESIRABLE
-    PathfindDesirableObjectsAdvisor(),
+    PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
+    PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),

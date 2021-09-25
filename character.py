@@ -2,9 +2,11 @@ from typing import Optional
 from typing import NamedTuple, Tuple
 
 import pandas as pd
+import numpy as np
 from dataclasses import dataclass
 
 import constants
+import environment
 import glyphs as gd
 import inventory as inv
 from utilities import ARS
@@ -37,6 +39,7 @@ class Character():
     can_enhance: bool = False
     held_by: HeldBy = None
     near_burdened: bool = False
+    gold: int = 0
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -77,6 +80,10 @@ class Character():
         old_AC = self.AC
         if old_AC != blstats.get('armor_class'):
             self.AC = blstats.get('armor_class')
+
+        old_gold = self.gold
+        if old_gold != blstats.get('gold'):
+            self.gold = blstats.get('gold')
 
     def update_from_message(self, message_text, time):
         if "You feel feverish." in message_text:
@@ -187,6 +194,54 @@ class Character():
             willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl_no_food.get(self.experience_level, 60) > depth
 
         return willing_to_descend
+
+    @staticmethod
+    def charisma_price_multiplier(charisma):
+        if charisma <= 5: return 2
+        elif charisma < 8: return 1.5
+        elif charisma < 11: return 4/3
+        elif charisma < 16: return 1
+        elif charisma < 18: return 0.75
+        elif charisma < 19: return 2/3
+        elif charisma >= 19: return 1/2
+
+    def am_dupe(self):
+        # shirt without body armor/cloak
+        # tourist < exp 15
+        # dunce cap
+        if self.base_class == constants.BaseRole.Tourist and self.experience_level < 15:
+            return True
+
+        return False
+
+    def find_base_price_from_sell(self, item, price):
+        dupe_mult = 3 if self.am_dupe() else 2
+        base1 = price * dupe_mult
+        base2 = np.ceil(price * dupe_mult * 4/3)
+        base3 = np.floor(price * dupe_mult * 4/3)
+        base4 = base1 - 1
+
+        if np.round(base2/2 * 3/4) == price:
+            base_prices = [base1, base2, base4]
+        elif np.round(base3/2 * 3/4) == price:
+            base_prices = [base1, base3, base4]
+        else:
+            base_prices = [base1, base4]
+
+        return set(base_prices)
+
+    def find_base_price_from_listed(self, item, price):
+        cha_mult = self.charisma_price_multiplier(self.attributes.charisma)
+        dupe_mult = 4/3 if self.am_dupe() else 1
+        unidentified_surcharge = 4/3 # gems are different but we catch those ahead of time
+
+        base1 = price / (cha_mult * dupe_mult)
+        base2 = price / (cha_mult * dupe_mult * unidentified_surcharge)
+
+        base_prices = [np.ceil(base1), np.floor(base1), np.ceil(base2), np.floor(base2)]
+        if base2 <= 5:
+            base_prices.append(0)
+        return set(base_prices)
 
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:

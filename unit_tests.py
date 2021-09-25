@@ -39,6 +39,15 @@ class TestItemRegex(unittest.TestCase):
         "a blessed fireproof +10 ornamental cope": "ornamental cope", # You'd actually know the cloak
         "the blessed +7 silver saber": "silver saber", # Change to a Grayswandir test at some point
     }
+    paperback_values = {
+        "a paperback book named Guards! Guards! (for sale, 30 zorkmids)": None,
+        "a paperback book named The Shepherd's Crown (for sale, 30 zorkmids)": None,
+    }
+
+    holy_water_values = {
+        "4 potions of holy water": ("water", "blessed"),
+        "4 potions of unholy water": ("water", "cursed"),
+    }
     def test_all_test_values(self):
         global_identity_map = gd.GlobalIdentityMap()
         global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
@@ -52,6 +61,28 @@ class TestItemRegex(unittest.TestCase):
             if item.item is None:
                 import pdb; pdb.set_trace()
             self.assertEqual(value, item.item._seen_as)
+
+    def test_holy_water(self):
+        for key, value in self.holy_water_values.items():
+            print(key)
+
+            item = menuplan.ParsingInventoryMenu.MenuItem(
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+            #if item.item is None:
+            #    import pdb; pdb.set_trace()
+            self.assertEqual(value[0], item.item.identity.name())
+            self.assertEqual(value[1], item.item.BUC)
+
+    def test_paperbacks_dont_crash(self):
+        for key, value in self.paperback_values.items():
+            print(key)
+
+            item = menuplan.ParsingInventoryMenu.MenuItem(
+                MagicMock(run_state=agents.custom_agent.RunState()), None, "a", False, key            )
+            #if item.item is None:
+            #    import pdb; pdb.set_trace()
+            self.assertEqual(value, item.item)
+
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()

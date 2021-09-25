@@ -420,6 +420,7 @@ class ParsingInventoryMenu(InteractiveMenu):
                         return False
                 else:
                     if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
+                    menu_item.item.price_id(run_state.character)
                     return menu_item.item.desirable(run_state.character)
             if select_desirable == 'desirable':
                 self.item_selector = lambda x: select_desirable_func(x)

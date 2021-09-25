@@ -137,6 +137,10 @@ class Oracle():
         return np.count_nonzero(self.neighborhood.is_monster)
 
     @functools.cached_property
+    def in_shop(self):
+        return self.neighborhood.in_shop
+
+    @functools.cached_property
     def urgent_major_trouble(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_STONE) or
@@ -483,14 +487,9 @@ class EnchantWeaponAdvisor(Advisor):
         enchant_weapon_scroll = character.inventory.get_item(inv.Scroll, name='enchant weapon', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
 
         if enchant_weapon_scroll is not None:
-            armaments = character.inventory.get_slots('armaments')
-
-            for item in armaments:
-                if isinstance(item, inv.Weapon):
-                    # don't enchant if it could implode an item
-                    # weapon enhancements don't auto id, so possibly we should fail if item.enhancement is None 
-                    if item.enhancement is not None and item.enhancement > 5: 
-                        return None
+            wielded_weapon = character.inventory.wielded_weapon
+            if isinstance(wielded_weapon, inv.BareHands) or (wielded_weapon.enhancement is not None and wielded_weapon.enhancement > 5):
+                return None
             
             menu_plan = menuplan.MenuPlan("read enchant weapon", self, [
                 menuplan.CharacterMenuResponse("What do you want to read?", chr(enchant_weapon_scroll.inventory_letter))
@@ -520,6 +519,9 @@ class EnhanceSkillsAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.in_shop:
+            return None
+
         if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
             return None
 
@@ -611,12 +613,11 @@ class PrayForLesserMajorTroubleAdvisor(PrayerAdvisor):
 # ATTACK ADVISORS #
 ###################
 
-# CURRENTLY DON'T ATTACK INVISIBLE_ETC
 class DumbMeleeAttackAdvisor(Advisor):
-    def satisfactory_monster(self, monster, rng, run_state, character, oracle):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
         '''Returns True if this is a monster the advisor is willing to target. False otherwise.
 
-        Only called on a monster glyph  as identified by the neighborhood (ex. InvisibleGlyph)'''
+        Only called on a monster glyph as identified by the neighborhood (ex. InvisibleGlyph)'''
         return not isinstance(monster, gd.MonsterGlyph) or not monster.always_peaceful
 
     def prioritize_target(self, monsters, rng, run_state, character, oracle):
@@ -628,9 +629,9 @@ class DumbMeleeAttackAdvisor(Advisor):
         monster_squares = []
         for is_monster in it:
             glyph = run_state.neighborhood.glyphs[it.multi_index]
-            if is_monster and self.satisfactory_monster(glyph, rng, run_state, character, oracle):
+            if is_monster and self.satisfactory_monster(glyph, physics.Square(*it.multi_index), rng, run_state, character, oracle):
                 monsters.append(glyph)
-                monster_squares.append(it.multi_index)
+                monster_squares.append(physics.Square(*it.multi_index))
 
         return monsters, monster_squares
 
@@ -652,8 +653,8 @@ class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
         #import pdb; pdb.set_trace()
         return super().advice(rng, run_state, character, oracle)
 
-    def satisfactory_monster(self, monster, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, rng, run_state, character, oracle):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
         return monster == character.held_by.monster_glyph
@@ -685,8 +686,8 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
         return None
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    def satisfactory_monster(self, monster, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, rng, run_state, character, oracle):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
         if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
@@ -735,12 +736,22 @@ class UnsafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
 
 class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
     unsafe_hp_loss_fraction = 0.5
-    def satisfactory_monster(self, monster, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, rng, run_state, character, oracle):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
         if isinstance(monster, gd.MonsterGlyph):
             spoiler = monster.monster_spoiler
+
+            if monster.has_death_throes:
+                source_square = monster_square + run_state.neighborhood.player_location_in_extended - run_state.neighborhood.local_player_location
+                adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
+                adjacent_to_mon_glyphs = run_state.neighborhood.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
+
+                if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
+                    #import pdb; pdb.set_trace()
+                    return False
+
             trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
 
             if spoiler and spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
@@ -1064,12 +1075,40 @@ class KickLockedDoorAdvisor(Advisor):
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
-class DropUndesirableAdvisor(Advisor):
+class DropToPriceIDAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.near_burdened:
+        if not oracle.in_shop:
             return None
 
-        character.near_burdened = False
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        unidentified_items = character.inventory.all_unidentified_items()
+        if len(unidentified_items) == 0:
+            return None
+
+        unidentified_letters = [i.inventory_letter for i in unidentified_items]
+        #import pdb; pdb.set_trace()
+        menu_plan = menuplan.MenuPlan(
+            "drop all objects to price id",
+            self,
+            [
+                menuplan.NoMenuResponse("Sell it?"),
+                menuplan.NoMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=unidentified_letters),
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+class DropUndesirableAdvisor(Advisor):
+    def drop_undesirable(self, run_state, character):
         undesirable_items = character.inventory.all_undesirable_items(character)
         if len(undesirable_items) == 0:
             return None
@@ -1081,11 +1120,83 @@ class DropUndesirableAdvisor(Advisor):
             self,
             [
                 menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
                 menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+        return self.drop_undesirable(run_state, character)
+
+class DropUndesirableNearBurdenedAdvisor(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.near_burdened:
+            return None
+
+        character.near_burdened = False
+
+        return self.drop_undesirable(run_state, character)
+
+class BuyDesirableAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        shop_owned = [i for i in character.inventory.all_items() if i.shop_owned]
+
+        if len(shop_owned) == 0:
+            return None
+
+        pay = nethack.actions.Command.PAY
+
+        menu_plan = menuplan.MenuPlan(
+            "buy items",
+            self,
+            [
+                menuplan.EscapeMenuResponse("Pay whom?"),
+                menuplan.NoMenuResponse("Itemized billing?"),
+                menuplan.YesMenuResponse("Pay?"),
+            ],
+        )
+        return ActionAdvice(from_advisor=self, action=pay, new_menu_plan=menu_plan)
+
+class DropShopOwnedAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+
+        shop_owned = [i for i in character.inventory.all_items() if i.shop_owned]
+
+        if len(shop_owned) == 0:
+            return None
+
+        #import pdb; pdb.set_trace()
+        shop_owned_letters = [item.inventory_letter for item in shop_owned]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all shop owned objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=shop_owned_letters)
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1116,6 +1227,10 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         return run_state.neighborhood.path_to_desirable_objects()
+
+class PathfindUnvisitedShopSquares(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        return run_state.neighborhood.path_to_unvisited_shop_sqaures()
 
 class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1193,7 +1308,7 @@ class EngraveTestWandsAdvisor(Advisor):
         wands = character.inventory.get_oclass(inv.Wand)
         letter = None
         for w in wands:
-            if w and not w.identity.is_identified() and not w.identity.listened_actions.get(engrave, False) and not w.shop_owned():
+            if w and not w.identity.is_identified() and not w.shop_owned and not w.identity.listened_actions.get(engrave, False):
                 letter = w.inventory_letter
                 break
 

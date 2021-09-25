@@ -18,6 +18,7 @@ import utilities
 from utilities import ARS
 from physics import Square
 from typing import NamedTuple, Tuple, List
+import inventory
 
 @dataclass
 class CurrentSquare:
@@ -26,6 +27,7 @@ class CurrentSquare:
     arrival_time: int
     glyph_under_player: gd.Glyph = None
     stack_on_square: bool = False
+    item_on_square: inventory.Item = None
     failed_moves_on_square: List[int] = field(default_factory=list)
 
 class ViewField(enum.Enum):
@@ -58,6 +60,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         absolute_player_location = Square(*current_square.location)
 
         self.previous_glyph_on_player = current_square.glyph_under_player
+        self.item_on_player = current_square.item_on_square
         self.absolute_player_location = absolute_player_location
         self.dcoord = level_map.dcoord
         self.level_map = level_map
@@ -75,6 +78,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         vision_start = Square(self.vision[0].start, self.vision[1].start)
 
         extended_visible_raw_glyphs = glyphs[self.vision]
+        self.vision_glyphs = extended_visible_raw_glyphs
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
 
         # index of player in the full vision
@@ -105,8 +109,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
 
         extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
-        if extended_special_rooms[self.player_location_in_extended] != constants.SpecialRoomTypes.shop.value:
-            extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
+
+        self.in_shop = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.shop.value
+        if not self.in_shop:
+            pass
+            #extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
         self.extended_boulders = self.zoom_glyph_alike(
@@ -118,7 +125,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             # Corrections to what is moveable in Sokoban
             extended_walkable_tile &= ~(self.extended_boulders)
 
-        extended_is_monster = gd.MonsterGlyph.where_is(extended_visible_raw_glyphs) | gd.SwallowGlyph.where_is(extended_visible_raw_glyphs) | gd.InvisibleGlyph.where_is(extended_visible_raw_glyphs) | gd.WarningGlyph.where_is(extended_visible_raw_glyphs)
+        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         self.extended_is_monster = extended_is_monster
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
@@ -266,12 +273,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         return self.path_to_targets(weak_monsters)
 
     def desirable_object_on_space(self, global_identity_map, character):
+        #if self.item_on_player is not None: import pdb; pdb.set_trace()
+        item_recognized_and_desirable = self.item_on_player is not None and self.item_on_player.identity is not None and self.item_on_player.desirable(character)
+
         desirable_object_on_space = (
             (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
             self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
         )
-
-        return desirable_object_on_space
+        return item_recognized_and_desirable or (self.item_on_player is None and not self.in_shop and desirable_object_on_space)
 
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
@@ -283,6 +292,20 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             ViewField.Extended
         )
         return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
+
+    def path_to_unvisited_shop_sqaures(self):
+        unvisited_squares = self.zoom_glyph_alike(
+            self.level_map.visits_count_map == 0,
+            ViewField.Extended
+        )
+
+        shop_squares = self.zoom_glyph_alike(
+            self.level_map.special_room_map == constants.SpecialRoomTypes.shop.value,
+            ViewField.Extended
+        )
+
+        return self.path_to_targets(unvisited_squares & shop_squares)
+
 
     def lootable_current_square(self):
         return self.level_map.lootable_squares_map[self.absolute_player_location]
