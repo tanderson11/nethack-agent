@@ -728,6 +728,10 @@ class CustomAgent(BatchedAgent):
             run_state.current_square.stack_on_square = True
             level_map.lootable_squares_map[player_location] = True
 
+        if isinstance(run_state.last_non_menu_advisor, advs.DropToPriceIDAdvisor):
+            run_state.current_square.stack_on_square = True
+            level_map.lootable_squares_map[player_location] = True
+
         killed_monster_name = monster_messages.RecordedMonsterDeath.involved_monster(message.message)
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
