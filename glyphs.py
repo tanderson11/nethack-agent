@@ -747,6 +747,7 @@ class ObjectIdentity():
     def __init__(self, idx):
         self.idx = idx
         self.listened_actions = {}
+        self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
@@ -810,7 +811,9 @@ class ObjectIdentity():
     def desirable_identity(self, character):
         return False
 
-    def restrict_by_base_prices(self, base_prices):
+    def restrict_by_base_prices(self, base_prices, method='buy'):
+        self.listened_price_id_methods[method] = True
+
         if self.is_identified():
             return
         price_matches = ~self.data.loc[self.idx].COST.isna() & self.data.loc[self.idx].COST.apply(lambda v: v in base_prices)

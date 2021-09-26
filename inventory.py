@@ -59,7 +59,7 @@ class Item():
             return None
 
         base_prices = character.find_base_price_from_sell(self, sell_price)
-        self.identity.restrict_by_base_prices(base_prices)
+        self.identity.restrict_by_base_prices(base_prices, method='sell')
 
     def price_id(self, character):
         if self.identity is None:
@@ -727,7 +727,7 @@ class ItemParser():
 
     item_sell_pattern = re.compile("offers ([0-9]+) gold pieces for (.+?)\.")
     @classmethod
-    def listen_for_price_offer(cls, global_identity_map, character, message):
+    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped=None):
         item_match = re.search(cls.item_sell_pattern, message)
         if item_match:
             price = int(item_match[1])
@@ -739,6 +739,19 @@ class ItemParser():
                 return None
             item.price_id_from_sell(character, price)
             #import pdb; pdb.set_trace()
+
+        if "uninterested" in message and last_dropped is not None and last_dropped.identity is not None:
+            last_dropped.identity.listened_price_id_methods['sell'] = True
+
+    item_drop_pattern = re.compile("You drop (.+?)\.")
+    @classmethod
+    def listen_for_dropped_item(cls, global_identity_map, character, message):
+        item_match = re.search(cls.item_drop_pattern, message)
+        if item_match:
+            item_string = item_match[1]
+
+            item = cls.make_item_with_string(global_identity_map, item_string)
+            return item
 
 class Slot():
     blockers = []

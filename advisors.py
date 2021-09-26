@@ -1079,6 +1079,7 @@ class DropToPriceIDAdvisor(Advisor):
             return None
 
         unidentified_items = character.inventory.all_unidentified_items()
+        unidentified_items = [i for i in unidentified_items if not i.identity.listened_price_id_methods.get('sell', False)]
         if len(unidentified_items) == 0:
             return None
 
