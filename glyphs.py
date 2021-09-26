@@ -841,11 +841,24 @@ class ObjectIdentity():
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
+    def __init__(self, idx):
+        super().__init__(idx)
+        self.listened_actions = {}
+
     def desirable_identity(self, character):
         return True
 
     bad_scrolls_any_buc = ['destroy armor']
     bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
+
+    def process_message(self, message_obj, action):
+        #import pdb; pdb.set_trace()
+        self.listened_actions[action] = True
+        if action == nethack.actions.Command.READ:
+
+            message_matches = ~self.data.loc[self.idx].READ_MESSAGE.isna() & self.data.loc[self.idx].READ_MESSAGE.apply(lambda v: pd.isnull(v) or v in message_obj.message)
+            if message_matches.any():
+                self.apply_filter(message_matches.index[message_matches])
 
 class SpellbookIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]

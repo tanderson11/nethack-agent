@@ -1,43 +1,43 @@
-NAME,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,COST,WEIGHT,PROB,INK_COST
-amnesia,2219,DUAM XNAHT,TRUE,scroll,amnesia,200,5,35,8
-blank paper,2245,unlabeled,FALSE,,blank paper,60,5,28,0
-charging,2223,HACKEM MUCHE,TRUE,scroll,charging,300,5,15,16
-confuse monster,2206,NR 9,TRUE,scroll,confuse monster,100,5,53,12
-create monster,2210,LEP GEX VEN ZEA,TRUE,scroll,create monster,200,5,45,10
-destroy armor,2205,JUYED AWK YACC,TRUE,scroll,destroy armor,100,5,45,10
-earth,2221,KIRJE,TRUE,scroll,earth,200,5,18,8
-enchant armor,2204,ZELGO MER,TRUE,scroll,enchant armor,80,5,63,16
-enchant weapon,2209,DAIYEN FOOELS,TRUE,scroll,enchant weapon,60,5,80,16
-fire,2220,ANDOVA BEGARIN,TRUE,scroll,fire,100,5,30,8
-food detection,2216,YUM YUM,TRUE,scroll,food detection,100,5,25,8
-genocide,2212,ELBIB YLOH,TRUE,scroll,genocide,300,5,15,30
-gold detection,2215,THARR,TRUE,scroll,gold detection,100,5,33,8
-identify,2217,KERNOD WEL,TRUE,scroll,identify,20,5,180,14
-light,2213,VERR YED HORRE,TRUE,scroll,light,50,5,90,8
-magic mapping,2218,ELAM EBOW,TRUE,scroll,magic mapping,100,5,45,8
-punishment,2222,VE FORBRYDERNE,TRUE,scroll,punishment,300,5,15,10
-remove curse,2208,PRATYAVAYAH,TRUE,scroll,remove curse,80,5,65,16
-scare monster,2207,XIXAXA XOXAXA XUXAXA,TRUE,scroll,scare monster,100,5,35,20
-stinking cloud,2224,VELOX NEB,TRUE,scroll,stinking cloud,300,5,15,20
-taming,2211,PRIRUTSENIE,TRUE,scroll,taming,200,5,15,20
-teleportation,2214,VENZAR BORGAVVE,TRUE,scroll,teleportation,100,5,55,20
-,2225,FOOBIE BLETCH,TRUE,scroll,,,,,
-,2226,TEMOV,TRUE,scroll,,,,,
-,2227,GARVEN DEH,TRUE,scroll,,,,,
-,2228,READ ME,TRUE,scroll,,,,,
-,2229,ETAOIN SHRDLU,TRUE,scroll,,,,,
-,2230,LOREM IPSUM,TRUE,scroll,,,,,
-,2231,FNORD,TRUE,scroll,,,,,
-,2232,KO BATE,TRUE,scroll,,,,,
-,2233,ABRA KA DABRA,TRUE,scroll,,,,,
-,2234,ASHPD SODALG,TRUE,scroll,,,,,
-,2235,ZLORFIK,TRUE,scroll,,,,,
-,2236,GNIK SISI VLE,TRUE,scroll,,,,,
-,2237,HAPAX LEGOMENON,TRUE,scroll,,,,,
-,2238,EIRIS SAZUN IDISI,TRUE,scroll,,,,,
-,2239,PHOL ENDE WODAN,TRUE,scroll,,,,,
-,2240,GHOTI,TRUE,scroll,,,,,
-,2241,MAPIRO MAHAMA DIROMAT,TRUE,scroll,,,,,
-,2242,VAS CORP BET MANI,TRUE,scroll,,,,,
-,2243,XOR OTA,TRUE,scroll,,,,,
-,2244,STRC PRST SKRZ KRK,TRUE,scroll,,,,,
+NAME,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,READ_MESSAGE,COST,WEIGHT,PROB,INK_COST
+amnesia,2219,DUAM XNAHT,TRUE,scroll,amnesia,,200,5,35,8
+blank paper,2245,unlabeled,FALSE,,blank paper,,60,5,28,0
+charging,2223,HACKEM MUCHE,TRUE,scroll,charging,,300,5,15,16
+confuse monster,2206,NR 9,TRUE,scroll,confuse monster,Your hands begin to glow red.,100,5,53,12
+create monster,2210,LEP GEX VEN ZEA,TRUE,scroll,create monster,,200,5,45,10
+destroy armor,2205,JUYED AWK YACC,TRUE,scroll,destroy armor,,100,5,45,10
+earth,2221,KIRJE,TRUE,scroll,earth,,200,5,18,8
+enchant armor,2204,ZELGO MER,TRUE,scroll,enchant armor,glows black for a moment,80,5,63,16
+enchant weapon,2209,DAIYEN FOOELS,TRUE,scroll,enchant weapon,glows black for a moment,60,5,80,16
+fire,2220,ANDOVA BEGARIN,TRUE,scroll,fire,,100,5,30,8
+food detection,2216,YUM YUM,TRUE,scroll,food detection,,100,5,25,8
+genocide,2212,ELBIB YLOH,TRUE,scroll,genocide,,300,5,15,30
+gold detection,2215,THARR,TRUE,scroll,gold detection,,100,5,33,8
+identify,2217,KERNOD WEL,TRUE,scroll,identify,,20,5,180,14
+light,2213,VERR YED HORRE,TRUE,scroll,light,,50,5,90,8
+magic mapping,2218,ELAM EBOW,TRUE,scroll,magic mapping,,100,5,45,8
+punishment,2222,VE FORBRYDERNE,TRUE,scroll,punishment,,300,5,15,10
+remove curse,2208,PRATYAVAYAH,TRUE,scroll,remove curse,You feel like someone is helping you.,80,5,65,16
+scare monster,2207,XIXAXA XOXAXA XUXAXA,TRUE,scroll,scare monster,maniacal laughter,100,5,35,20
+stinking cloud,2224,VELOX NEB,TRUE,scroll,stinking cloud,,300,5,15,20
+taming,2211,PRIRUTSENIE,TRUE,scroll,taming,Nothing interesting,200,5,15,20
+teleportation,2214,VENZAR BORGAVVE,TRUE,scroll,teleportation,,100,5,55,20
+,2225,FOOBIE BLETCH,TRUE,scroll,,,,,,
+,2226,TEMOV,TRUE,scroll,,,,,,
+,2227,GARVEN DEH,TRUE,scroll,,,,,,
+,2228,READ ME,TRUE,scroll,,,,,,
+,2229,ETAOIN SHRDLU,TRUE,scroll,,,,,,
+,2230,LOREM IPSUM,TRUE,scroll,,,,,,
+,2231,FNORD,TRUE,scroll,,,,,,
+,2232,KO BATE,TRUE,scroll,,,,,,
+,2233,ABRA KA DABRA,TRUE,scroll,,,,,,
+,2234,ASHPD SODALG,TRUE,scroll,,,,,,
+,2235,ZLORFIK,TRUE,scroll,,,,,,
+,2236,GNIK SISI VLE,TRUE,scroll,,,,,,
+,2237,HAPAX LEGOMENON,TRUE,scroll,,,,,,
+,2238,EIRIS SAZUN IDISI,TRUE,scroll,,,,,,
+,2239,PHOL ENDE WODAN,TRUE,scroll,,,,,,
+,2240,GHOTI,TRUE,scroll,,,,,,
+,2241,MAPIRO MAHAMA DIROMAT,TRUE,scroll,,,,,,
+,2242,VAS CORP BET MANI,TRUE,scroll,,,,,,
+,2243,XOR OTA,TRUE,scroll,,,,,,
+,2244,STRC PRST SKRZ KRK,TRUE,scroll,,,,,,
