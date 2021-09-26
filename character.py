@@ -145,8 +145,19 @@ class Character():
     def set_attributes(self, attributes):
         self.attributes = attributes
 
-    def set_inventory(self, inventory):
-        self.inventory = inventory
+    def update_inventory_from_observation(self, global_identity_map, am_hallu, observation):
+        if self.inventory and ((observation['inv_strs'] == self.inventory.inv_strs).all()):
+            return
+
+        inv_strs = observation['inv_strs'].copy()
+        inv_letters = observation['inv_letters'].copy()
+        inv_oclasses = observation['inv_oclasses'].copy()
+
+        inv_glyphs = None
+        if not am_hallu:
+            inv_glyphs = observation['inv_glyphs'].copy()
+
+        self.inventory = inv.PlayerInventory(global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs)
 
     def can_cannibalize(self):
         if self.base_race == constants.BaseRace.orc:

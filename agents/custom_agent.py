@@ -639,6 +639,10 @@ class CustomAgent(BatchedAgent):
 
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
+        if run_state.character:
+            run_state.character.update_inventory_from_observation(
+                run_state.global_identity_map, blstats.am_hallu(), observation)
+
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
         dcoord = DCoord(dungeon_number, level_number)
@@ -660,19 +664,6 @@ class CustomAgent(BatchedAgent):
             #if environment.env.debug and run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
             if run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
-
-        # Two cases when we reset inventory: new run or something changed
-        if run_state.character:
-            if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
-                inv_strs = observation['inv_strs'].copy()
-                inv_letters = observation['inv_letters']
-                inv_oclasses = observation['inv_oclasses']
-
-                if blstats.am_hallu():
-                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs))
-                else:
-                    inv_glyphs = observation['inv_glyphs'].copy()
-                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs))
 
         changed_square = False
         previous_square = False

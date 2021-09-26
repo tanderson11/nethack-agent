@@ -955,12 +955,8 @@ class PlayerInventory():
             return None
 
     def get_nutrition(self, character):
-        try:
-            food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
-            return sum(map(lambda x: x.quantity * x.identity.nutrition, food))
-        except AttributeError:
-            # Placeholder until we properly work-around the bug of bad inventory strs from NLE
-            return 1_000
+        food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
+        return sum(map(lambda x: x.quantity * x.identity.nutrition, food))
 
     def all_undesirable_items(self, character):
         all_items = self.all_items()
@@ -989,12 +985,6 @@ class PlayerInventory():
             items = self.items_by_class[object_class]
             return items
         except KeyError:
-            if environment.env.debug:
-                num_of_strs = len(self.inv_strs) - np.sum(~self.inv_strs.any(1))
-                num_of_letters = np.count_nonzero(self.inv_letters)
-                if num_of_strs != num_of_letters:
-                    import pdb; pdb.set_trace()
-
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
             for i in range(len(self.inv_strs[oclass_idx])):
