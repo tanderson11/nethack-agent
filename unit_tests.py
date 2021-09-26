@@ -158,8 +158,10 @@ class TestItemParsing(unittest.TestCase):
     #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
     test_values = {
         ItemTestInputs(2104, "an uncursed credit card"): ItemTestValues(inv.Tool, "credit card"),
-        #ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
+        ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
         ItemTestInputs(1978, "an iron skull cap"): ItemTestValues(inv.Armor, "orcish helm"),
+        ItemTestInputs(1299, "6 lichen corpses"): ItemTestValues(inv.Food, "lichen corpse"),
+        ItemTestInputs(1466, "a lizard corpse"): ItemTestValues(inv.Food, "lizard corpse"),
         #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
         ItemTestInputs(2103, "an osaku"): ItemTestValues(inv.Tool, "lock pick"),
         ItemTestInputs(2042, "a +0 pair of yugake (being worn)"): ItemTestValues(inv.Armor, "leather gloves"),
@@ -824,6 +826,7 @@ Weapons
 d - an uncursed dagger >> extra weapons|desirable
 Comestibles
 e - a food ration >> comestibles|desirable
+e - a lichen corpse >> comestibles|desirable
 Scrolls
 f - a scroll labeled VE FORBRYDERNE >> desirable
 g - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable

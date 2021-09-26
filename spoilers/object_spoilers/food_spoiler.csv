@@ -32,3 +32,5 @@ food ration,food rations,gunyoki,2174,,FALSE,,45,20,380,800,40,5
 K-ration,K-rations,,2175,,FALSE,,25,10,0,400,40,1
 C-ration,C-rations,,2176,,FALSE,,20,10,0,300,30,1
 tin,tins,,2177,,FALSE,,5,10,75,vary,vary,vary
+lichen corpse,lichen corpses,,1299,,FALSE,,0,20,,200,,
+lizard corpse,lizard corpses,,1466,,FALSE,,0,10,,40,,
