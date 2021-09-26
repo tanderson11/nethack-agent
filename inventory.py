@@ -205,6 +205,18 @@ class Coin(Item):
 class Scroll(Item):
     glyph_class = gd.ScrollGlyph
 
+    def safe_to_read(self, character):
+        if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
+            return False
+
+        if self.identity.could_be(self.identity.bad_scrolls_any_buc):
+            return False
+
+        if self.BUC != constants.BUC.blessed and self.identity.could_be(self.identity.bad_scrolls_worse_than_blessed):
+            return False
+
+        return True
+
 class Potion(Item):
     glyph_class = gd.PotionGlyph
 

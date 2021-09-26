@@ -59,6 +59,7 @@ new_advisors = [
         AnyWardrobeChangeAdvisor(),
         IdentifyPotentiallyMagicArmorAdvisor(),
         ReadKnownBeneficialScrolls(),
+        ReadSafeUnidentifiedScrolls(),
         #ReadUnidentifiedScrollsAdvisor()
         ]),
     # IMPROVEMENTS
