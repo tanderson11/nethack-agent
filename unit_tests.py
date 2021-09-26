@@ -829,16 +829,16 @@ Weapons
 d - an uncursed dagger >> extra weapons|desirable
 Comestibles
 e - a food ration >> comestibles|desirable
-e - a lichen corpse >> comestibles|desirable
+f - a lichen corpse >> desirable
 Scrolls
-f - a scroll labeled VE FORBRYDERNE >> desirable
-g - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
+g - a scroll labeled VE FORBRYDERNE >> desirable
+h - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
 Potions
-h - a smoky potion
-i - a blessed potion of full healing >> healing potions|desirable
+i - a smoky potion
+j - a blessed potion of full healing >> healing potions|desirable
 Wands
-j - an iron wand >> desirable
-k - a wand of teleportation (0:6) >> teleport wands|desirable
+k - an iron wand >> desirable
+l - a wand of teleportation (0:6) >> teleport wands|desirable
 
 (end)
 """
@@ -865,9 +865,10 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
 
             # need to collate multiple results TK
             acutally_selected_letters = set([result.character])
+            print(acutally_selected_letters)
 
             # check that selector correctly pulls the letters
-            self.assertEqual(acutally_selected_letters, expected[selector_name])
+            self.assertEqual(acutally_selected_letters, expected[selector_name], acutally_selected_letters)
 
     def test_pickup_desirable(self):
         character = agents.custom_agent.Character(
@@ -900,7 +901,7 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
             text = string_to_tty_chars(string)
             results.append(result)
         # The armor and food ration
-        self.assertEqual(len(expected['desirable']), len(results))
+        self.assertEqual(len(expected['desirable']), len(results), [r.item_text for r in results])
 
 class TestDungeonDirection(unittest.TestCase):
     def test_out_succeed(self):
