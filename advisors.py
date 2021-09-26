@@ -886,7 +886,7 @@ class DropUnknownOnAltarAdvisor(Advisor):
             self,
             [
                 menuplan.NoMenuResponse("Sell it?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.ConnectedSequenceMenuResponse("What would you like to drop?", ".")
             ],
             interactive_menu=[
@@ -1095,7 +1095,7 @@ class DropToPriceIDAdvisor(Advisor):
             [
                 menuplan.NoMenuResponse("Sell it?"),
                 menuplan.NoMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
@@ -1119,7 +1119,7 @@ class DropUndesirableAdvisor(Advisor):
             [
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
@@ -1189,7 +1189,7 @@ class DropShopOwnedAdvisor(Advisor):
             [
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
