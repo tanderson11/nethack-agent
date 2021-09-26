@@ -543,6 +543,7 @@ class EatCorpseAdvisor(Advisor):
             "eat corpse on square", self,
             [
                 menuplan.YesMenuResponse(f"{run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat"),
+                menuplan.YesMenuResponse(f"{run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpses here; eat"),
                 menuplan.NoMenuResponse("here; eat"),
                 menuplan.EscapeMenuResponse("want to eat?"),
                 menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
