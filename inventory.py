@@ -198,6 +198,10 @@ class Food(Item):
 class Coin(Item):
     glyph_class = gd.CoinGlyph
 
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        self.BUC = constants.BUC.uncursed
+
 class Scroll(Item):
     glyph_class = gd.ScrollGlyph
 
