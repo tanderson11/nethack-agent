@@ -871,6 +871,7 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
             base_alignment='neutral',
         )
         character.set_class_skills()
+        character.attributes = MagicMock(charisma=18)
         run_state = agents.custom_agent.RunState()
         run_state.character = character
         global_identity_map = gd.GlobalIdentityMap()
