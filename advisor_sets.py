@@ -49,7 +49,6 @@ new_advisors = [
     ###### OUT OF DANGER ###### ()
     DrinkHealingForMaxHPAdvisor(),
     DipForExcaliburAdvisor(),
-    WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # WHEN SAFE IMPROVEMENTS
     BuyDesirableAdvisor(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
@@ -64,7 +63,7 @@ new_advisors = [
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
-        #DropUnknownOnAltarAdvisor(),
+        DropUnknownOnAltarAdvisor(),
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
@@ -80,6 +79,7 @@ new_advisors = [
     # MOVE TO DESIRABLE
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
+    WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
@@ -89,7 +89,7 @@ new_advisors = [
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
-        #TravelToAltarAdvisor(): 2
+        TravelToAltarAdvisor(): 2,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
     FallbackSearchAdvisor(),
