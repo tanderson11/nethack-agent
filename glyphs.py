@@ -680,7 +680,7 @@ class ObjectSpoilers():
         ScrollGlyph: 'scroll_spoiler.csv',
         SpellbookGlyph: 'spellbook_spoiler.csv',
         WandGlyph: 'wand_spoiler.csv',
-        CoinGlyph: '',
+        CoinGlyph: 'coin_spoiler.csv',
         GemGlyph: 'gem_spoiler.csv',
         RockGlyph: 'rock_spoiler.csv',
         BallGlyph: 'ball_spoiler.csv',
@@ -732,6 +732,17 @@ class ObjectIdentity():
             return cls.data.JAPANESE_NAME
         else:
             return pd.Series(dtype=str)
+
+    @classmethod
+    def stacked_names(cls):
+        if 'STACKED_NAME' in cls.data.columns:
+            return cls.data.STACKED_NAME
+        else:
+            return pd.Series(dtype=str)
+
+    @classmethod
+    def stacked_name_to_singular(cls, stacked_name):
+        return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
     def __init__(self, idx):
         self.idx = idx
@@ -906,6 +917,12 @@ class GemIdentity(ObjectIdentity):
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 
+class CoinIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
+
+    def desirable_identity(self, character):
+        return True
+
 class BallIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[BallGlyph]
 
@@ -1037,6 +1054,7 @@ class ArtifactToolIdentity(ToolIdentity):
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
+        CoinGlyph: CoinIdentity,
         ArmorGlyph: ArmorIdentity,
         WandGlyph: WandIdentity,
         WeaponGlyph: WeaponIdentity,
@@ -1117,51 +1135,57 @@ class GlobalIdentityMap():
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]
             identity_class = self.identity_by_glyph_class.get(type(glyph), ObjectIdentity)
+            self.make_identity(numeral, glyph, identity_class)
 
-            identity = None # if the class hasn't been implemented, we won't futz with its identity
-            idx = [numeral]
-            try:
-                data = identity_class.data
-            except AttributeError:
-                data = None
-
-            if data is not None:
-                spoiler_row = data.loc[numeral]
-
-                if not spoiler_row['SHUFFLED']:
-                    # if it's not shuffled, the numeral accurately picks out the object information
-                    # from the spreadsheet
-                    idx = [numeral]
-                else:
-                    # if it is shuffled, it could be any object in the shuffled class
-                    same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
-                    idx = same_shuffle_class.index[same_shuffle_class]
-
-                identity = identity_class(idx)
-
-            self.identity_by_numeral[numeral] = identity
-
-            try:
-                self.appearance_counts[(type(glyph), glyph.appearance)] += 1
-                # class + appearance no longer uniquely identifies but we can add to the list
-                self.glyph_by_appearance[(type(glyph), glyph.appearance)].append(glyph)
-            except KeyError:
-                self.appearance_counts[(type(glyph), glyph.appearance)] = 1
-                self.glyph_by_appearance[(type(glyph), glyph.appearance)] = [glyph] 
-
-            
-            name = identity.name() if identity else None
-            japanese_name = identity.japanese_name() if identity else None
-
-
-            if name is not None:
-                self.identity_by_name[(type(glyph), name)] = identity
-
-            if japanese_name is not None:
-                self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
+        special_corpses = [1299, 1466]
+        for corpse_numeral in special_corpses:
+            glyph = GLYPH_NUMERAL_LOOKUP[numeral]
+            identity_class = FoodIdentity
+            self.make_identity(corpse_numeral, glyph, identity_class)
 
         self.load_artifact_identities()
         #print(self.identity_by_numeral)
+
+    def make_identity(self, numeral, glyph, identity_class):
+        identity = None # if the class hasn't been implemented, we won't futz with its identity
+        idx = [numeral]
+        try:
+            data = identity_class.data
+        except AttributeError:
+            data = None
+
+        if data is not None:
+            spoiler_row = data.loc[numeral]
+
+            if (not spoiler_row['SHUFFLED']) or pd.isna(spoiler_row['SHUFFLED']):
+                # if it's not shuffled, the numeral accurately picks out the object information
+                # from the spreadsheet
+                idx = [numeral]
+            else:
+                # if it is shuffled, it could be any object in the shuffled class
+                same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
+                idx = same_shuffle_class.index[same_shuffle_class]
+
+            identity = identity_class(idx)
+
+        self.identity_by_numeral[numeral] = identity
+
+        try:
+            self.appearance_counts[(type(glyph), glyph.appearance)] += 1
+            # class + appearance no longer uniquely identifies but we can add to the list
+            self.glyph_by_appearance[(type(glyph), glyph.appearance)].append(glyph)
+        except KeyError:
+            self.appearance_counts[(type(glyph), glyph.appearance)] = 1
+            self.glyph_by_appearance[(type(glyph), glyph.appearance)] = [glyph] 
+
+        name = identity.name() if identity else None
+        japanese_name = identity.japanese_name() if identity else None
+
+        if name is not None:
+            self.identity_by_name[(type(glyph), name)] = identity
+
+        if japanese_name is not None:
+            self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
 
     def associate_identity_and_name(self, identity, name):
         self.identity_by_name[name] = identity

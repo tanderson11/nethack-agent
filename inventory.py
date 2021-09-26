@@ -34,11 +34,12 @@ class Item():
             self.shop_owned = self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
             
             if self.shop_owned:
-                price_match = re.match(self.price_pattern, self.parenthetical_status)
+                price_match = re.search(self.price_pattern, self.parenthetical_status)
                 if price_match is not None:
                     self.price = int(price_match[2])
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
+                    pass
         else:
             self.equipped_status = None
             self.shop_owned = False
@@ -193,6 +194,9 @@ class Wand(Item):
 
 class Food(Item):
     glyph_class = gd.FoodGlyph
+
+class Coin(Item):
+    glyph_class = gd.CoinGlyph
 
 class Scroll(Item):
     glyph_class = gd.ScrollGlyph
@@ -363,6 +367,7 @@ class UnimplementedItemClassException(Exception):
     pass
 
 ALL_ITEM_CLASSES = [
+    Coin,
     Amulet,
     Armor,
     Food,
@@ -442,6 +447,7 @@ class ItemParser():
     }
 
     item_class_by_glyph_class = {
+        gd.CoinGlyph: Coin,
         gd.AmuletGlyph: Amulet,
         gd.ArmorGlyph: Armor,
         gd.FoodGlyph: Food,
@@ -457,6 +463,7 @@ class ItemParser():
     }
 
     glyph_class_by_category = {
+        'Coins': gd.CoinGlyph,
         'Weapons': gd.WeaponGlyph,
         'Armor': gd.ArmorGlyph,
         'Rings': gd.RingGlyph,
@@ -499,14 +506,18 @@ class ItemParser():
             identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
             class_names    = identity_class.names()
 
-            if defuzzed_name not in class_names.unique():
-                japanese_names = identity_class.japanese_names()
-                if defuzzed_name not in japanese_names.unique():
-                    return None
-                else:
-                    return identity_class.japanese_name_to_english(defuzzed_name)
-            else:
+            if defuzzed_name in class_names.unique():
                 return defuzzed_name
+
+            plural_names = identity_class.stacked_names()
+            if defuzzed_name in plural_names.unique():
+                return identity_class.stacked_name_to_singular(defuzzed_name)
+
+            japanese_names = identity_class.japanese_names()
+            if defuzzed_name in japanese_names.unique():
+                return identity_class.japanese_name_to_english(defuzzed_name)
+
+            return None
 
     @classmethod
     def extract_name_from_description_given_numeral(cls, global_identity_map, description, numeral):
@@ -541,7 +552,6 @@ class ItemParser():
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
         match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
-
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
         if match_components.instance_name is not None:
@@ -571,6 +581,7 @@ class ItemParser():
                 global_identity_map.associate_identity_and_name(identity, name)
 
         item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
+
         return item_class(identity, match_components, inventory_letter=inventory_letter)
 
     @classmethod

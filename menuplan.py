@@ -257,7 +257,7 @@ class MadeSelection(Exception):
     pass
 
 class InteractiveMenu():
-    menu_item_pattern = re.compile("([a-zA-Z]) (-|\+) (.+)$")
+    menu_item_pattern = re.compile("([a-zA-Z\$]) (-|\+) (.+)$")
     terminator_pattern = re.compile("\(([0-9]+) of ([0-9]+)\)")
     first_page_header_rows = 0
     # We define selectors here so that their implementation is close to the MenuItem implementation
@@ -357,7 +357,7 @@ class InteractiveMenu():
                 raise EndOfMenu(None)
 
         if environment.env.debug:
-            pdb.set_trace()
+            import pdb; pdb.set_trace()
             # We should not fall through the menu
 
 class InteractiveLocationPickerMenu(InteractiveMenu):
@@ -394,11 +394,7 @@ class ParsingInventoryMenu(InteractiveMenu):
             assert select_desirable in ['undesirable', 'desirable']
             def select_desirable_func(menu_item):
                 if menu_item.item is None:
-                    if 'corpse' in menu_item.item_text:
-                        # This is expected. Will get better when we have CorpseIdentity implemented
-                        if 'lichen' in menu_item.item_text or 'lizard' in menu_item.item_text:
-                            return True
-                    elif environment.env.debug:
+                    if environment.env.debug:
                         if menu_item.item_text[0] in '123456789':
                             # Known thing that we can't count yet
                             pass

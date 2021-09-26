@@ -29,6 +29,8 @@ class TestItemRegex(unittest.TestCase):
         "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
+        "2 food rations": "food ration",
+        "30 +2 darts": "dart",
         #"a blessed tin of yellow mold": "tin", # currently broken, waiting on a better pattern
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
@@ -156,8 +158,11 @@ class TestItemParsing(unittest.TestCase):
     #ItemTestValues(1299, "a lichen corpse", gd.CorpseGlyph, "lichen"),
     test_values = {
         ItemTestInputs(2104, "an uncursed credit card"): ItemTestValues(inv.Tool, "credit card"),
-        #ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
+        ItemTestInputs(1913, "38 +2 darts (at the ready)"): ItemTestValues(inv.Weapon, "dart"),
         ItemTestInputs(1978, "an iron skull cap"): ItemTestValues(inv.Armor, "orcish helm"),
+        ItemTestInputs(1299, "6 lichen corpses"): ItemTestValues(inv.Food, "lichen corpse"),
+        ItemTestInputs(1466, "a lizard corpse"): ItemTestValues(inv.Food, "lizard corpse"),
+        ItemTestInputs(2316, "a gold piece"): ItemTestValues(inv.Coin, "gold piece"),
         #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
         ItemTestInputs(2103, "an osaku"): ItemTestValues(inv.Tool, "lock pick"),
         ItemTestInputs(2042, "a +0 pair of yugake (being worn)"): ItemTestValues(inv.Armor, "leather gloves"),
@@ -814,6 +819,8 @@ class TestWeaponPickup(unittest.TestCase):
 class InteractiveMenu(unittest.TestCase):
     labeled_text = """Pick up what?
 
+Coins
+$ - 1600 gold pieces >> desirable
 Armor
 a - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
 b - a pair of leather gloves (for sale, 30 zorkmids)
@@ -822,15 +829,16 @@ Weapons
 d - an uncursed dagger >> extra weapons|desirable
 Comestibles
 e - a food ration >> comestibles|desirable
+f - a lichen corpse >> desirable
 Scrolls
-f - a scroll labeled VE FORBRYDERNE >> desirable
-g - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
+g - a scroll labeled VE FORBRYDERNE >> desirable
+h - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
 Potions
-h - a smoky potion
-i - a blessed potion of full healing >> healing potions|desirable
+i - a smoky potion
+j - a blessed potion of full healing >> healing potions|desirable
 Wands
-j - an iron wand >> desirable
-k - a wand of teleportation (0:6) >> teleport wands|desirable
+k - an iron wand >> desirable
+l - a wand of teleportation (0:6) >> teleport wands|desirable
 
 (end)
 """
@@ -857,9 +865,10 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
 
             # need to collate multiple results TK
             acutally_selected_letters = set([result.character])
+            print(acutally_selected_letters)
 
             # check that selector correctly pulls the letters
-            self.assertEqual(acutally_selected_letters, expected[selector_name])
+            self.assertEqual(acutally_selected_letters, expected[selector_name], acutally_selected_letters)
 
     def test_pickup_desirable(self):
         character = agents.custom_agent.Character(
@@ -869,6 +878,7 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
             base_alignment='neutral',
         )
         character.set_class_skills()
+        character.attributes = MagicMock(charisma=18)
         run_state = agents.custom_agent.RunState()
         run_state.character = character
         global_identity_map = gd.GlobalIdentityMap()
@@ -891,7 +901,7 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
             text = string_to_tty_chars(string)
             results.append(result)
         # The armor and food ration
-        self.assertEqual(len(expected['desirable']), len(results))
+        self.assertEqual(len(expected['desirable']), len(results), [r.item_text for r in results])
 
 class TestDungeonDirection(unittest.TestCase):
     def test_out_succeed(self):
