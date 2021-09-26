@@ -122,6 +122,7 @@ class TravelNavigationMenuResponse(MenuResponse):
     def __init__(self, match_str, tty_cursor, target_square):
         super().__init__(match_str)
 
+        self.target_square = target_square
         self.action_generator = self.action_generator(tty_cursor, target_square)
 
     def value(self, message_obj):

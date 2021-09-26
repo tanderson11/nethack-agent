@@ -1227,6 +1227,8 @@ class PathfindUnvisitedShopSquares(PathAdvisor):
 
 class FallbackSearchAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if environment.env.debug:
+            import pdb; pdb.set_trace()
         search = nethack.actions.Command.SEARCH
         return ActionAdvice(from_advisor=self, action=search)
 
