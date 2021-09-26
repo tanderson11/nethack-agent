@@ -45,6 +45,23 @@ class Character():
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
 
+    intrinsic_gain_messages = {
+        "You speed up": constants.Intrinsics.speed,
+        "You feel healthy": constants.Intrinsics.poison_resistance,
+        "You feel a strange mental acuity": constants.Intrinsics.telepathy,
+    }
+
+    def listen_for_intrinsics(self, message):
+        for k,v in self.intrinsic_gain_messages.items():
+            if k in message:
+                if self.has_intrinsic(v) and environment.env.debug:
+                    import pdb; pdb.set_trace()
+
+                self.add_noninnate_intrinsic(v)
+
+    def add_noninnate_intrinsic(self, intrinsic):
+        self.noninnate_intrinsics |= intrinsic
+
     def set_innate_intrinsics(self):
         new_intrinsics = constants.Intrinsics.NONE
         for level in range(1, self.experience_level + 1):

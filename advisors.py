@@ -366,6 +366,22 @@ class ApplyUnicornHornAdvisor(Advisor):
             ], listening_item=unicorn_horn)
             return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
 
+class GainSpeedFromWand(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.has_intrinsic(constants.Intrinsics.speed):
+            return None
+
+        zap = nethack.actions.Command.ZAP
+        wand_of_speed_monster = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'speed monster')
+        if wand_of_speed_monster is not None and (wand_of_speed_monster.charges is None or wand_of_speed_monster.charges > 0):
+            menu_plan = menuplan.MenuPlan("zap speed monster wand", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_speed_monster.inventory_letter)),
+                menuplan.CharacterMenuResponse("In what direction?", '.'),
+            ], listening_item=wand_of_speed_monster)
+
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is not None:
