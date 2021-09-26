@@ -525,6 +525,9 @@ class RunState():
     def handle_message(self, message):
         self.message_log.append(message.message)
 
+        if self.character is not None:
+            self.character.listen_for_intrinsics(message.message)
+
         item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
         self.current_square.item_on_square = item_on_square
 

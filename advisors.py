@@ -366,6 +366,22 @@ class ApplyUnicornHornAdvisor(Advisor):
             ], listening_item=unicorn_horn)
             return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
 
+class GainSpeedFromWand(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.has_intrinsic(constants.Intrinsics.speed):
+            return None
+
+        zap = nethack.actions.Command.ZAP
+        wand_of_speed_monster = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'speed monster')
+        if wand_of_speed_monster is not None and (wand_of_speed_monster.charges is None or wand_of_speed_monster.charges > 0):
+            menu_plan = menuplan.MenuPlan("zap speed monster wand", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_speed_monster.inventory_letter)),
+                menuplan.CharacterMenuResponse("In what direction?", '.'),
+            ], listening_item=wand_of_speed_monster)
+
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is not None:
@@ -711,6 +727,10 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
+        if isinstance(monster, gd.InvisibleGlyph):
+            #import pdb; pdb.set_trace()
+            return None
+
         if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
             return True
         else:
@@ -896,7 +916,7 @@ class DropUnknownOnAltarAdvisor(Advisor):
             self,
             [
                 menuplan.NoMenuResponse("Sell it?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.ConnectedSequenceMenuResponse("What would you like to drop?", ".")
             ],
             interactive_menu=[
@@ -1105,7 +1125,7 @@ class DropToPriceIDAdvisor(Advisor):
             [
                 menuplan.NoMenuResponse("Sell it?"),
                 menuplan.NoMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
@@ -1129,7 +1149,7 @@ class DropUndesirableAdvisor(Advisor):
             [
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[
@@ -1199,7 +1219,7 @@ class DropShopOwnedAdvisor(Advisor):
             [
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
-                menuplan.MoreMenuResponse("You drop"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
             ],
             interactive_menu=[

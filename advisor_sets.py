@@ -20,6 +20,7 @@ new_advisors = [
         ]),
     # WEAPON IMPROVEMENT
     WieldBetterWeaponAdvisor(),
+    GainSpeedFromWand(),
     # WEAK
     CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, threat_tolerance=0.05),
     # HIGHLY THREATENED
