@@ -162,6 +162,7 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(1978, "an iron skull cap"): ItemTestValues(inv.Armor, "orcish helm"),
         ItemTestInputs(1299, "6 lichen corpses"): ItemTestValues(inv.Food, "lichen corpse"),
         ItemTestInputs(1466, "a lizard corpse"): ItemTestValues(inv.Food, "lizard corpse"),
+        ItemTestInputs(2316, "a gold piece"): ItemTestValues(inv.Coin, "gold piece"),
         #ItemTestInputs(2177, "2 uncursed tins of kobold meat"): ItemTestValues(inv.Food, "tin"),
         ItemTestInputs(2103, "an osaku"): ItemTestValues(inv.Tool, "lock pick"),
         ItemTestInputs(2042, "a +0 pair of yugake (being worn)"): ItemTestValues(inv.Armor, "leather gloves"),
@@ -818,6 +819,8 @@ class TestWeaponPickup(unittest.TestCase):
 class InteractiveMenu(unittest.TestCase):
     labeled_text = """Pick up what?
 
+Coins
+$ - 1600 gold pieces >> desirable
 Armor
 a - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
 b - a pair of leather gloves (for sale, 30 zorkmids)

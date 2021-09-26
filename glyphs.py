@@ -680,7 +680,7 @@ class ObjectSpoilers():
         ScrollGlyph: 'scroll_spoiler.csv',
         SpellbookGlyph: 'spellbook_spoiler.csv',
         WandGlyph: 'wand_spoiler.csv',
-        CoinGlyph: '',
+        CoinGlyph: 'coin_spoiler.csv',
         GemGlyph: 'gem_spoiler.csv',
         RockGlyph: 'rock_spoiler.csv',
         BallGlyph: 'ball_spoiler.csv',
@@ -917,6 +917,12 @@ class GemIdentity(ObjectIdentity):
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 
+class CoinIdentity(ObjectIdentity):
+    data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
+
+    def desirable_identity(self, character):
+        return True
+
 class BallIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[BallGlyph]
 
@@ -1048,6 +1054,7 @@ class ArtifactToolIdentity(ToolIdentity):
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
+        CoinGlyph: CoinIdentity,
         ArmorGlyph: ArmorIdentity,
         WandGlyph: WandIdentity,
         WeaponGlyph: WeaponIdentity,
@@ -1150,7 +1157,7 @@ class GlobalIdentityMap():
         if data is not None:
             spoiler_row = data.loc[numeral]
 
-            if not spoiler_row['SHUFFLED']:
+            if (not spoiler_row['SHUFFLED']) or pd.isna(spoiler_row['SHUFFLED']):
                 # if it's not shuffled, the numeral accurately picks out the object information
                 # from the spreadsheet
                 idx = [numeral]

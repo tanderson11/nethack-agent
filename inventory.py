@@ -195,6 +195,9 @@ class Wand(Item):
 class Food(Item):
     glyph_class = gd.FoodGlyph
 
+class Coin(Item):
+    glyph_class = gd.CoinGlyph
+
 class Scroll(Item):
     glyph_class = gd.ScrollGlyph
 
@@ -364,6 +367,7 @@ class UnimplementedItemClassException(Exception):
     pass
 
 ALL_ITEM_CLASSES = [
+    Coin,
     Amulet,
     Armor,
     Food,
@@ -443,6 +447,7 @@ class ItemParser():
     }
 
     item_class_by_glyph_class = {
+        gd.CoinGlyph: Coin,
         gd.AmuletGlyph: Amulet,
         gd.ArmorGlyph: Armor,
         gd.FoodGlyph: Food,
@@ -458,6 +463,7 @@ class ItemParser():
     }
 
     glyph_class_by_category = {
+        'Coins': gd.CoinGlyph,
         'Weapons': gd.WeaponGlyph,
         'Armor': gd.ArmorGlyph,
         'Rings': gd.RingGlyph,
@@ -546,7 +552,6 @@ class ItemParser():
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
         match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
-
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
         if match_components.instance_name is not None:
@@ -576,6 +581,7 @@ class ItemParser():
                 global_identity_map.associate_identity_and_name(identity, name)
 
         item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
+
         return item_class(identity, match_components, inventory_letter=inventory_letter)
 
     @classmethod
