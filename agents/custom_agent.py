@@ -831,6 +831,9 @@ class CustomAgent(BatchedAgent):
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
+        if "unknown comand" in message.message:
+            raise Exception(f"Unknown command: {message.message}")
+
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################
