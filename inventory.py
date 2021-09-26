@@ -994,6 +994,7 @@ class PlayerInventory():
                 num_of_letters = np.count_nonzero(self.inv_letters)
                 if num_of_strs != num_of_letters:
                     import pdb; pdb.set_trace()
+
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
             for i in range(len(self.inv_strs[oclass_idx])):
