@@ -850,6 +850,14 @@ class PotionIdentity(ObjectIdentity):
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
+    def __init__(self, idx):
+        super().__init__(idx)
+        try:
+            self.nutrition = int(self.find_values('NUTRITION'))
+        except Exception:
+            # A placeholder "non-zero" value
+            self.nutrition = 1
+
     def safe_non_perishable(self, character):
         if character.sick_from_tripe() and self.name() == "tripe ration":
             return False

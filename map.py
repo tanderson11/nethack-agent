@@ -8,6 +8,7 @@ import scipy.signal
 
 import environment
 import glyphs as gd
+import inventory
 import physics
 import utilities
 import constants
@@ -15,7 +16,7 @@ import constants
 import functools
 from utilities import ARS
 
-class Branches(enum.Enum):
+class Branches(enum.IntEnum):
     DungeonsOfDoom = 0
     GnomishMines = 2
     Quest = 3
@@ -54,8 +55,48 @@ class DungeonHeading(NamedTuple):
 class DMap():
     def __init__(self):
         self.dlevels = {}
-        self.target_dcoords = [DCoord(0, 60)]
+        self.target_dcoords = {
+            Branches.DungeonsOfDoom: DCoord(Branches.DungeonsOfDoom, 1),
+            Branches.Sokoban: DCoord(Branches.Sokoban, 1),
+        }
         self.branch_connections = {}
+
+    def update_target_dcoords(self, character):
+        new_targets = {}
+
+        # Dungeons of Doom
+        current_dcoord = self.target_dcoords[Branches.DungeonsOfDoom]
+        current_map = self.dlevels.get(current_dcoord, None)
+        if current_map is None or not current_map.clear:
+            new_targets[Branches.DungeonsOfDoom] = current_dcoord
+        elif not character.desperate_for_food() and character.comfortable_depth() <= current_dcoord.level:
+            new_targets[Branches.DungeonsOfDoom] = current_dcoord
+        else:
+            if character.desperate_for_food():
+                print("Going deeper looking for food")
+            first_novel_dcoord = current_dcoord
+            while True:
+                level_map = self.dlevels.get(first_novel_dcoord, None)
+                if level_map is None or not level_map.clear:
+                    break
+                first_novel_dcoord = DCoord(first_novel_dcoord.branch, first_novel_dcoord.level + 1)
+            new_targets[Branches.DungeonsOfDoom] = first_novel_dcoord
+
+        # Sokoban
+        current_dcoord = self.target_dcoords.get(Branches.Sokoban, None)
+        if current_dcoord is None:
+            pass
+        else:
+            level_map = self.dlevels.get(current_dcoord, None)
+            if level_map and not level_map.clear:
+                new_targets[Branches.Sokoban] = current_dcoord
+
+        # Mines
+        if character.ready_for_mines() and character.inventory.get_item(inventory.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
+            new_targets[Branches.GnomishMines] = DCoord(map.Branches.GnomishMines, 20)
+
+        self.target_dcoords = new_targets        
+
 
     def add_branch_traversal(self, start_dcoord, end_dcoord):
         exists = self.branch_connections.get((start_dcoord, end_dcoord), False)
@@ -81,10 +122,14 @@ class DMap():
         self.target_dcoords.append(target_dcoord)
 
     def dungeon_direction_to_best_target(self, current_dcoord):
-        for dcoord in reversed(self.target_dcoords):
+        for branch in [Branches.Sokoban, Branches.GnomishMines, Branches.DungeonsOfDoom]:
+            dcoord = self.target_dcoords.get(branch, None)
+            if dcoord is None:
+                continue
             heading = self.dungeon_direction_to_target(current_dcoord, dcoord)
             if heading is not None:
                 return heading
+        raise Exception("Can't figure out how to get anywhere")
 
     def dungeon_direction_to_target(self, current_dcoord, target_dcoord):
         if current_dcoord.branch == target_dcoord.branch:
@@ -131,7 +176,7 @@ class Staircase():
         return (self.end_dcoord.branch == heading.target_branch and not self.start_dcoord.branch == self.end_dcoord.branch) or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
 
 class TimedCorpse(NamedTuple):
-    ACCEPTABLE_CORPSE_AGE = 40
+    ACCEPTABLE_CORPSE_AGE = 50
 
     time: int
     monster_glyph: gd.MonsterGlyph
@@ -283,6 +328,8 @@ class DLevelMap():
             reachable &
             (adjacent_to_fog)
         )
+
+        self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
 
     def expand_mask_along_room_floor(self, mask):
         while True:

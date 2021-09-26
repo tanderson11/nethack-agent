@@ -934,13 +934,8 @@ class TravelToDesiredEgress(Advisor):
         lmap = run_state.neighborhood.level_map
 
         heading = run_state.dmap.dungeon_direction_to_best_target(lmap.dcoord)
-        if heading is None:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
-                pass
-            return None
 
-        if heading.direction == map.DirectionThroughDungeon.down and not character.am_willing_to_descend(run_state.blstats.get('depth')+1):
+        if heading.direction == map.DirectionThroughDungeon.flat:
             return None
 
         for location, staircase in lmap.staircases.items():
@@ -1021,16 +1016,10 @@ class TakeStaircaseAdvisor(Advisor):
         current_level = run_state.neighborhood.level_map.dcoord
         traversed_staircase = run_state.neighborhood.level_map.staircases.get(run_state.neighborhood.absolute_player_location, None)
         heading = run_state.dmap.dungeon_direction_to_best_target(current_level)
-        if heading is None:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
-            return None
 
         if traversed_staircase is not None:
             if traversed_staircase.matches_heading(heading):
                 action = nethack.actions.MiscDirection.DOWN if oracle.on_downstairs else nethack.actions.MiscDirection.UP
-                #if heading.direction == map.DirectionThroughDungeon.flat:
-                #action = nethack.actions.MiscDirection.DOWN if heading.direction == map.DirectionThroughDungeon.down else nethack.actions.MiscDirection.UP
             else:
                 return None
         if traversed_staircase is None:
@@ -1043,9 +1032,6 @@ class TakeStaircaseAdvisor(Advisor):
             else:
                 import pdb; pdb.set_trace()
                 assert False, "on stairs but not on up or downstairs"
-
-        if heading.direction == map.DirectionThroughDungeon.down and not character.am_willing_to_descend(run_state.blstats.get('depth')+1):
-            return None
 
         return ActionAdvice(from_advisor=self, action=action)
 

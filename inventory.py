@@ -954,6 +954,10 @@ class PlayerInventory():
         else:
             return None
 
+    def get_nutrition(self, character):
+        food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
+        return sum(map(lambda x: x.identity.nutrition, food))
+
     def all_undesirable_items(self, character):
         all_items = self.all_items()
         #import pdb; pdb.set_trace()

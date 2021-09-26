@@ -902,7 +902,7 @@ class TestDungeonDirection(unittest.TestCase):
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_succeed_overlapping_branches(self):
@@ -914,7 +914,7 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_fail(self):
@@ -922,16 +922,17 @@ class TestDungeonDirection(unittest.TestCase):
         current_dcoord = map.DCoord(0, 5)
         target_dcoord = map.DCoord(2,100)
         dmap = map.DMap()
-        dmap.target_dcoords = [target_dcoord]
-        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(heading, None)
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
+        with self.assertRaisesRegex(Exception, "Can't figure out how to get anywhere"):
+            dmap.dungeon_direction_to_best_target(current_dcoord)
+
     def test_same_level(self):
         # trying to get out of dungones
         current_dcoord = map.DCoord(0, 4)
         target_dcoord = map.DCoord(2,2)
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.flat)
     def test_in_succeed(self):
@@ -940,7 +941,7 @@ class TestDungeonDirection(unittest.TestCase):
         target_dcoord = map.DCoord(0,1)
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
     def test_through_succeed(self):
@@ -952,9 +953,10 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
         dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
+
     def test_through_fail(self):
         # out of dungeons of doom, trying to go through but can't find
         current_dcoord = map.DCoord(3, 2)
@@ -963,9 +965,9 @@ class TestDungeonDirection(unittest.TestCase):
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
-        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(heading, None)
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
+        with self.assertRaisesRegex(Exception, "Can't figure out how to get anywhere"):
+            dmap.dungeon_direction_to_best_target(current_dcoord)
 
         
 class TestCharacterUpdateFromMessage(unittest.TestCase):

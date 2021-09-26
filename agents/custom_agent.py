@@ -649,6 +649,9 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
+        if run_state.character:
+            run_state.dmap.update_target_dcoords(run_state.character)
+
         if not run_state.character and run_state.step_count > 2:
             # The first action should always be to look at attributes
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
@@ -715,16 +718,6 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
-
-            if run_state.character.inventory.get_item(inv.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
-                if run_state.character.ready_for_mines() and run_state.dmap.target_dcoords[-1].branch != map.Branches.GnomishMines:
-                    run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
-            else:
-                if run_state.dmap.target_dcoords[-1].branch != map.Branches.DungeonsOfDoom:
-                    #import pdb; pdb.set_trace()
-                    run_state.dmap.add_top_target(DCoord(map.Branches.DungeonsOfDoom, 60))
-
-            #run_state.dmap.current_
 
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
             if changed_square and environment.env.debug:
@@ -806,7 +799,7 @@ class CustomAgent(BatchedAgent):
         if run_state.character:
             run_state.character.update_from_message(message.message, time)
 
-        if "corpse tastes" in message.message:
+        if " tastes " in message.message or "finish eating" in message.message:
             print(message.message)
 
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
