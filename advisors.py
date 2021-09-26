@@ -697,6 +697,10 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
+        if isinstance(monster, gd.InvisibleGlyph):
+            #import pdb; pdb.set_trace()
+            return None
+
         if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
             return True
         else:
