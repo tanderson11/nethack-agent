@@ -357,7 +357,7 @@ class InteractiveMenu():
                 raise EndOfMenu(None)
 
         if environment.env.debug:
-            pdb.set_trace()
+            import pdb; pdb.set_trace()
             # We should not fall through the menu
 
 class InteractiveLocationPickerMenu(InteractiveMenu):

@@ -34,11 +34,12 @@ class Item():
             self.shop_owned = self.parenthetical_status is not None and ("for sale" in self.parenthetical_status or "unpaid" in self.parenthetical_status)
             
             if self.shop_owned:
-                price_match = re.match(self.price_pattern, self.parenthetical_status)
+                price_match = re.search(self.price_pattern, self.parenthetical_status)
                 if price_match is not None:
                     self.price = int(price_match[2])
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
+                    pass
         else:
             self.equipped_status = None
             self.shop_owned = False
