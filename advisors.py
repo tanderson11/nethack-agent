@@ -259,7 +259,7 @@ class RandomCompositeAdvisor(CompositeAdvisor):
         weights = []
         for advisor, weight in self.advisors.items():
             advice = advisor.advice_on_conditions(rng, run_state, character, oracle)
-            if advice is not None:
+            if advice is not None and advice.action not in run_state.actions_without_consequence:
                 all_advice.append(advice)
                 weights.append(weight)
 
@@ -270,7 +270,7 @@ class SequentialCompositeAdvisor(CompositeAdvisor):
     def advice(self, rng, run_state, character, oracle):
         for advisor in self.advisors:
             advice = advisor.advice_on_conditions(rng, run_state, character, oracle)
-            if advice is not None:
+            if advice is not None and advice.action not in run_state.actions_without_consequence:
                 return advice
 
 class PrebakedSequentialCompositeAdvisor(SequentialCompositeAdvisor):
