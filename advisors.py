@@ -452,7 +452,42 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
 
         return ActionAdvice(self, read, menu_plan)
 
-class ReadUnidentifiedScrollsAdvisor(Advisor):
+class AnyScrollAdvisor(Advisor):
+    def make_menu_plan(self, run_state, character, letter):
+        interactive_menus = [
+            menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+        ]
+
+        menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+            menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
+            menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
+            menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
+            # most remote square for placements
+            menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=ord('.')),
+            menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=ord('\r')),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
+            menuplan.MoreMenuResponse("This is a scroll of"),
+            menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
+            menuplan.MoreMenuResponse("You have found a scroll of"),
+            menuplan.EscapeMenuResponse("What do you want to charge?"),
+            menuplan.NoMenuResponse("Do you wish to teleport?"),
+        ], interactive_menu=interactive_menus)
+
+        return menu_plan
+
+class ReadSafeUnidentifiedScrolls(AnyScrollAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        safe_scroll = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.safe_to_read(character), identity_selector=lambda i:not i.is_identified())
+
+        if safe_scroll is not None:
+            letter = safe_scroll.inventory_letter
+            menu_plan = self.make_menu_plan(run_state, character, letter)
+            import pdb; pdb.set_trace()
+            return ActionAdvice(self, read, menu_plan)
+
+class ReadUnidentifiedScrollsAdvisor(AnyScrollAdvisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
         scrolls = character.inventory.get_oclass(inv.Scroll)
@@ -460,27 +495,7 @@ class ReadUnidentifiedScrollsAdvisor(Advisor):
         for scroll in scrolls:
             if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != constants.BUC.cursed:
                 letter = scroll.inventory_letter
-
-                interactive_menus = [
-                    menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
-                ]
-
-                menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
-                    menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
-                    menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
-                    menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
-                    # most remote square for placements
-                    menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=ord('.')),
-                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=ord('\r')),
-                    menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
-                    menuplan.MoreMenuResponse("This is a scroll of"),
-                    menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
-                    menuplan.MoreMenuResponse("You have found a scroll of"),
-                    menuplan.EscapeMenuResponse("What do you want to charge?"),
-                    menuplan.NoMenuResponse("Do you wish to teleport?"),
-                ], interactive_menu=interactive_menus)
-
+                menu_plan = self.make_menu_plan(run_state, character, letter)
                 return ActionAdvice(self, read, menu_plan)
 
 class EnchantArmorAdvisor(Advisor):

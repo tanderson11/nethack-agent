@@ -770,18 +770,31 @@ class ObjectIdentity():
     def is_identified(self):
         return len(self.idx) == 1
 
+    def could_be(self, names):
+        if not isinstance(names, list):
+            names = [names]
+
+        for name in names:
+            if name in self.find_values('NAME', dropna=True):
+                return True
+
+        return False
+
     def process_message(self, message_obj, action):
         pass
 
     def apply_filter(self, idx):
         self.idx = idx
 
-    def find_values(self, column):
+    def find_values(self, column, dropna=False):
         value = self.unique_values.get(column, None)
         if value is not None:
             return value
 
-        unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
+        if dropna:
+            unique = np.unique(self.data.loc[self.idx][column].dropna()) # the filtered dataframe values
+        else:
+            unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
         if len(unique) == 1:
             self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
@@ -830,6 +843,9 @@ class ScrollIdentity(ObjectIdentity):
 
     def desirable_identity(self, character):
         return True
+
+    bad_scrolls_any_buc = ['destroy armor']
+    bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
 
 class SpellbookIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
