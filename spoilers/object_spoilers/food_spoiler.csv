@@ -1,34 +1,34 @@
-NAME,JAPANESE_NAME,GLYPH,APPEARANCE,SHUFFLED,PERISHABLE,COST,WEIGHT,PROB,NUTRITION,NUTR/WGT,TIME
-tripe ration,,2145,tripe ration,FALSE,,15,10,140,200,20,2
-corpse,,2146,corpse,FALSE,,,,,,,
-egg,,2147,egg,FALSE,TRUE,9,1,85,80,80,1
-meatball,,2148,meatball,FALSE,,5.00,1,0,5,5,1
-meat stick,,2149,meat stick,FALSE,,5,1,0,5,5,1
-huge chunk of meat,,2150,huge chunk of meat,FALSE,,105,400,0,2000,5,20
-meat ring,,2151,meat ring,FALSE,,5,1,0,5,5,1
-glob of gray ooze,,2152,glob of gray ooze,FALSE,TRUE,,,,,,
-glob of brown pudding,,2153,glob of brown pudding,FALSE,TRUE,,,,,,
-glob of green slime,,2154,glob of green slime,FALSE,TRUE,,,,,,
-glob of black pudding,,2155,glob of black pudding,FALSE,TRUE,,,,,,
-kelp frond,,2156,kelp frond,FALSE,,6,1,0,30,30,1
-eucalyptus leaf,,2157,eucalyptus leaf,FALSE,,6,1,3,30,30,1
-apple,,2158,apple,FALSE,,7,2,15,50,25,1
-orange,,2159,orange,FALSE,,9,2,10,80,40,1
-pear,,2160,pear,FALSE,,7,2,10,50,25,1
-melon,,2161,melon,FALSE,,10,5,10,100,20,1
-banana,,2162,banana,FALSE,,9,2,10,80,40,1
-carrot,,2163,carrot,FALSE,,7,2,15,50,25,1
-sprig of wolfsbane,,2164,sprig of wolfsbane,FALSE,,7,1,7,40,40,1
-clove of garlic,,2165,clove of garlic,FALSE,,7,1,7,40,40,1
-slime mold,,2166,slime mold,FALSE,,17,5,75,250,50,1
-lump of royal jelly,,2167,lump of royal jelly,FALSE,,15,2,0,200,100,1
-cream pie,,2168,cream pie,FALSE,,10,10,25,100,10,1
-candy bar,,2169,candy bar,FALSE,,10,2,13,100,50,1
-fortune cookie,,2170,fortune cookie,FALSE,,7,1,55,40,40,1
-pancake,,2171,pancake,FALSE,,15,2,25,200,100,2
-lembas wafer,,2172,lembas wafer,FALSE,,45,5,20,800,160,2
-cram ration,,2173,cram ration,FALSE,,35,15,20,600,40,3
-food ration,gunyoki,2174,food ration,FALSE,,45,20,380,800,40,5
-K-ration,,2175,K-ration,FALSE,,25,10,0,400,40,1
-C-ration,,2176,C-ration,FALSE,,20,10,0,300,30,1
-tin,,2177,tin,FALSE,,5,10,75,vary,vary,vary
+NAME,STACKED_NAME,JAPANESE_NAME,GLYPH,APPEARANCE,SHUFFLED,PERISHABLE,COST,WEIGHT,PROB,NUTRITION,NUTR/WGT,TIME
+tripe ration,tripe rations,,2145,,FALSE,,15,10,140,200,20,2
+corpse,corpses,,2146,,FALSE,,,,,,,
+egg,eggs,,2147,,FALSE,TRUE,9,1,85,80,80,1
+meatball,meatballs,,2148,,FALSE,,5.00,1,0,5,5,1
+meat stick,meat sticks,,2149,,FALSE,,5,1,0,5,5,1
+huge chunk of meat,huge chunks of meat,,2150,,FALSE,,105,400,0,2000,5,20
+meat ring,meat rings,,2151,,FALSE,,5,1,0,5,5,1
+glob of gray ooze,globs of gray ooze,,2152,,FALSE,TRUE,,,,,,
+glob of brown pudding,globs of brown pudding,,2153,,FALSE,TRUE,,,,,,
+glob of green slime,globs of green slime,,2154,,FALSE,TRUE,,,,,,
+glob of black pudding,globs of black pudding,,2155,,FALSE,TRUE,,,,,,
+kelp frond,kelp fronds,,2156,,FALSE,,6,1,0,30,30,1
+eucalyptus leaf,eucalyptus leaves,,2157,,FALSE,,6,1,3,30,30,1
+apple,apples,,2158,,FALSE,,7,2,15,50,25,1
+orange,oranges,,2159,,FALSE,,9,2,10,80,40,1
+pear,pears,,2160,,FALSE,,7,2,10,50,25,1
+melon,melons,,2161,,FALSE,,10,5,10,100,20,1
+banana,bananas,,2162,,FALSE,,9,2,10,80,40,1
+carrot,carrots,,2163,,FALSE,,7,2,15,50,25,1
+sprig of wolfsbane,sprigs of wolfsbane,,2164,,FALSE,,7,1,7,40,40,1
+clove of garlic,cloves of garlic,,2165,,FALSE,,7,1,7,40,40,1
+slime mold,slime molds,,2166,,FALSE,,17,5,75,250,50,1
+lump of royal jelly,lumps of royal jelly,,2167,,FALSE,,15,2,0,200,100,1
+cream pie,cream pies,,2168,,FALSE,,10,10,25,100,10,1
+candy bar,candy bars,,2169,,FALSE,,10,2,13,100,50,1
+fortune cookie,fortune cookies,,2170,,FALSE,,7,1,55,40,40,1
+pancake,pancakes,,2171,,FALSE,,15,2,25,200,100,2
+lembas wafer,lembas wafers,,2172,,FALSE,,45,5,20,800,160,2
+cram ration,cram rations,,2173,,FALSE,,35,15,20,600,40,3
+food ration,food rations,gunyoki,2174,,FALSE,,45,20,380,800,40,5
+K-ration,K-rations,,2175,,FALSE,,25,10,0,400,40,1
+C-ration,C-rations,,2176,,FALSE,,20,10,0,300,30,1
+tin,tins,,2177,,FALSE,,5,10,75,vary,vary,vary

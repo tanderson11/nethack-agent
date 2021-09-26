@@ -29,6 +29,8 @@ class TestItemRegex(unittest.TestCase):
         "a puce potion": "puce",
         "a scroll labeled READ ME": "READ ME",
         "a scroll labeled NR 9": "NR 9",
+        "2 food rations": "food ration",
+        "30 +2 darts": "dart",
         #"a blessed tin of yellow mold": "tin", # currently broken, waiting on a better pattern
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",

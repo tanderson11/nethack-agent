@@ -499,14 +499,18 @@ class ItemParser():
             identity_class = global_identity_map.identity_by_glyph_class[glyph_class]
             class_names    = identity_class.names()
 
-            if defuzzed_name not in class_names.unique():
-                japanese_names = identity_class.japanese_names()
-                if defuzzed_name not in japanese_names.unique():
-                    return None
-                else:
-                    return identity_class.japanese_name_to_english(defuzzed_name)
-            else:
+            if defuzzed_name in class_names.unique():
                 return defuzzed_name
+
+            plural_names = identity_class.stacked_names()
+            if defuzzed_name in plural_names.unique():
+                return identity_class.stacked_name_to_singular(defuzzed_name)
+
+            japanese_names = identity_class.japanese_names()
+            if defuzzed_name in japanese_names.unique():
+                return identity_class.japanese_name_to_english(defuzzed_name)
+
+            return None
 
     @classmethod
     def extract_name_from_description_given_numeral(cls, global_identity_map, description, numeral):

@@ -733,6 +733,17 @@ class ObjectIdentity():
         else:
             return pd.Series(dtype=str)
 
+    @classmethod
+    def stacked_names(cls):
+        if 'STACKED_NAME' in cls.data.columns:
+            return cls.data.STACKED_NAME
+        else:
+            return pd.Series(dtype=str)
+
+    @classmethod
+    def stacked_name_to_singular(cls, stacked_name):
+        return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
+
     def __init__(self, idx):
         self.idx = idx
         self.listened_actions = {}
