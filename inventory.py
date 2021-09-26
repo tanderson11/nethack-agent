@@ -957,7 +957,7 @@ class PlayerInventory():
     def get_nutrition(self, character):
         try:
             food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
-            return sum(map(lambda x: x.identity.nutrition, food))
+            return sum(map(lambda x: x.quantity * x.identity.nutrition, food))
         except AttributeError:
             # Placeholder until we properly work-around the bug of bad inventory strs from NLE
             return 1_000
