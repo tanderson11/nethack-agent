@@ -50,7 +50,6 @@ class TestItemRegex(unittest.TestCase):
     }
     def test_all_test_values(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.test_values.items():
@@ -65,7 +64,6 @@ class TestItemRegex(unittest.TestCase):
 
     def test_holy_water(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.holy_water_values.items():
@@ -81,7 +79,6 @@ class TestItemRegex(unittest.TestCase):
 
     def test_paperbacks_dont_crash(self):
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
         for key, value in self.paperback_values.items():
@@ -97,7 +94,6 @@ class TestItemRegex(unittest.TestCase):
 
 class TestObjectGlyphIdentities(unittest.TestCase):
     global_identity_map = gd.GlobalIdentityMap()
-    global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
     def test_from_numeral(self):
         test_values = {
             # Amulets
@@ -178,7 +174,6 @@ class TestItemParsing(unittest.TestCase):
         #return
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
             self.assertEqual(item.identity.name(), values.name_in_inventory)
 
@@ -187,7 +182,6 @@ class TestItemParsing(unittest.TestCase):
         for inputs, values in self.test_values.items():
             print(inputs)
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             category = inv.ItemParser.category_by_glyph_class[values.oclass.glyph_class]
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str, category=category)
             #print(item)
@@ -200,7 +194,6 @@ class TestItemParsing(unittest.TestCase):
     def test_recognition_with_only_str(self):
         for inputs, values in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             item = inv.ItemParser.make_item_with_string(global_identity_map, inputs.item_str)
             self.assertTrue(isinstance(item, values.oclass))
             if values.name_in_stack == SpecialValues.same_name:
@@ -678,14 +671,13 @@ class TestBUC(unittest.TestCase):
             print(k,buc.non_priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
             #print(result.item.artifact_identity)
-            self.assertEqual(artifact.BUC, buc.non_priest_out)
+            self.assertEqual(artifact.BUC, buc.non_priest_out, artifact.identity.name())
 
     def priest_test(self):
         for k,buc in self.from_glyph_test_values.items():
@@ -693,7 +685,7 @@ class TestBUC(unittest.TestCase):
             print(k,buc.priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Priest)
+            global_identity_map.is_priest = True
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -734,7 +726,6 @@ class TestArtifacts(unittest.TestCase):
     def test_base_gets_identified(self):
         numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state = agents.custom_agent.RunState()
         run_state.global_identity_map = global_identity_map
 
@@ -751,7 +742,6 @@ class TestArtifacts(unittest.TestCase):
             print(k,v)
 
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -765,7 +755,6 @@ class TestArtifacts(unittest.TestCase):
     def test_from_string(self):
         for k,v in self.from_str_test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             run_state = agents.custom_agent.RunState()
             run_state.global_identity_map = global_identity_map
 
@@ -809,7 +798,6 @@ class TestWeaponPickup(unittest.TestCase):
         run_state.character = character
         run_state.character.inventory = inventory
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         for k,v in self.test_values.items():
@@ -819,7 +807,7 @@ class TestWeaponPickup(unittest.TestCase):
             print(result)
 
             if v is None:
-                self.assertEqual(result, None)
+                self.assertEqual(result, None, result)
             else:
                 self.assertEqual(result.character, v)
 
@@ -852,7 +840,6 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
         # TK `e - a lichen corpse >> comestibles`
         run_state = agents.custom_agent.RunState()
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
@@ -885,7 +872,6 @@ k - a wand of teleportation (0:6) >> teleport wands|desirable
         run_state = agents.custom_agent.RunState()
         run_state.character = character
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         run_state.global_identity_map = global_identity_map
 
         character.inventory = inv.PlayerInventory([], [], [], [])
@@ -916,7 +902,7 @@ class TestDungeonDirection(unittest.TestCase):
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_succeed_overlapping_branches(self):
@@ -928,7 +914,7 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.up)
     def test_out_fail(self):
@@ -936,16 +922,17 @@ class TestDungeonDirection(unittest.TestCase):
         current_dcoord = map.DCoord(0, 5)
         target_dcoord = map.DCoord(2,100)
         dmap = map.DMap()
-        dmap.target_dcoords = [target_dcoord]
-        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(heading, None)
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
+        with self.assertRaisesRegex(Exception, "Can't figure out how to get anywhere"):
+            dmap.dungeon_direction_to_best_target(current_dcoord)
+
     def test_same_level(self):
         # trying to get out of dungones
         current_dcoord = map.DCoord(0, 4)
         target_dcoord = map.DCoord(2,2)
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.flat)
     def test_in_succeed(self):
@@ -954,7 +941,7 @@ class TestDungeonDirection(unittest.TestCase):
         target_dcoord = map.DCoord(0,1)
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(2, 3))
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
     def test_through_succeed(self):
@@ -966,9 +953,10 @@ class TestDungeonDirection(unittest.TestCase):
         dmap.add_branch_traversal(map.DCoord(0, 4), map.DCoord(3, 3))
         dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
         direction = dmap.dungeon_direction_to_best_target(current_dcoord).direction
         self.assertEqual(direction, map.DirectionThroughDungeon.down)
+
     def test_through_fail(self):
         # out of dungeons of doom, trying to go through but can't find
         current_dcoord = map.DCoord(3, 2)
@@ -977,9 +965,9 @@ class TestDungeonDirection(unittest.TestCase):
         dmap = map.DMap()
         dmap.add_branch_traversal(map.DCoord(0, 7), map.DCoord(2, 3))
 
-        dmap.target_dcoords = [target_dcoord]
-        heading = dmap.dungeon_direction_to_best_target(current_dcoord)
-        self.assertEqual(heading, None)
+        dmap.target_dcoords = {target_dcoord.branch: target_dcoord}
+        with self.assertRaisesRegex(Exception, "Can't figure out how to get anywhere"):
+            dmap.dungeon_direction_to_best_target(current_dcoord)
 
         
 class TestCharacterUpdateFromMessage(unittest.TestCase):
@@ -1059,7 +1047,6 @@ class TestDrop(unittest.TestCase):
 
         for inputs, do_drop in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
             numeral, item_class, item_str = inputs
             string = np.array(string_to_tty_chars(item_str), dtype='uint8')
             oclass = item_class.glyph_class.class_number
@@ -1080,7 +1067,6 @@ class TestSpecialItemNames(unittest.TestCase):
         numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
 
         global_identity_map = gd.GlobalIdentityMap()
-        global_identity_map.make_buc_factory(constants.BaseRole.Archeologist)
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')
         oclass = item_class.glyph_class.class_number
         inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))

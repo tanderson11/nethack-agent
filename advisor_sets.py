@@ -31,7 +31,6 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
         SafeMeleeAttackAdvisor(),
-        RandomMoveAdvisor(square_threat_tolerance=0.),
         PassiveMonsterRangedAttackAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
         ]),
@@ -46,7 +45,6 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
         RandomMoveAdvisor(square_threat_tolerance=0.),
         HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
-        RandomMoveAdvisor(), # sometimes we can't find our way to the enemy and we can't get out of threat
         ]),
     ###### OUT OF DANGER ###### ()
     DrinkHealingForMaxHPAdvisor(),
@@ -87,12 +85,12 @@ new_advisors = [
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
-        RandomMoveAdvisor(square_threat_tolerance=0.): 2,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 6,
+        RandomMoveAdvisor(square_threat_tolerance=0.): 1,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         #TravelToAltarAdvisor(): 2
-        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 1,
+        TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
     FallbackSearchAdvisor(),
 ]

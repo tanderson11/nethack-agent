@@ -23,7 +23,7 @@ def run_batched_rollout(num_episodes, batched_env, agent):
     num_envs = batched_env.num_envs
 
     # This part can be left as is
-    observations = batched_env.batch_reset()
+    observations = batched_env.initial_observations
     rewards = [0.0 for _ in range(num_envs)]
     dones = [False for _ in range(num_envs)]
     infos = [{} for _ in range(num_envs)]
@@ -64,17 +64,3 @@ def run_batched_rollout(num_episodes, batched_env, agent):
             returns[done_idx] = 0.0
     pbar.close()
     return ascension_count, all_returns
-
-if __name__ == "__main__":
-    # AIcrowd will cut the assessment early duing the dev phase
-    NUM_ASSESSMENTS = 4096
-
-    env_make_fn = SubmissionConfig.MAKE_ENV_FN
-    num_envs = SubmissionConfig.NUM_ENVIRONMENTS
-    Agent = SubmissionConfig.AGENT
-
-
-    batched_env = BatchedEnv(env_make_fn=env_make_fn, num_envs=num_envs)
-    agent = Agent(num_envs, batched_env.num_actions)
-
-    run_batched_rollout(NUM_ASSESSMENTS, batched_env, agent)

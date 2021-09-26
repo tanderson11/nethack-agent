@@ -40,6 +40,7 @@ class Character():
     held_by: HeldBy = None
     near_burdened: bool = False
     gold: int = 0
+    hunger_state: int = 1
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -85,17 +86,16 @@ class Character():
         if old_gold != blstats.get('gold'):
             self.gold = blstats.get('gold')
 
+        old_hunger_state = self.hunger_state
+        if old_hunger_state != blstats.get('hunger_state'):
+            self.hunger_state = blstats.get('hunger_state')
+
     def update_from_message(self, message_text, time):
         if "You feel feverish." in message_text:
             self.afflicted_with_lycanthropy = True
 
         if "You feel purified." in message_text:
             self.afflicted_with_lycanthropy = False
-
-        "grabs you!"
-        if "You cannot escape" in message_text or "grabs you!" in message_text or "swings itself around you" in message_text:
-            #import pdb; pdb.set_trace()
-            pass
 
         try:
             self.update_held_by_from_message(message_text, time)
@@ -145,8 +145,19 @@ class Character():
     def set_attributes(self, attributes):
         self.attributes = attributes
 
-    def set_inventory(self, inventory):
-        self.inventory = inventory
+    def update_inventory_from_observation(self, global_identity_map, am_hallu, observation):
+        if self.inventory and ((observation['inv_strs'] == self.inventory.inv_strs).all()):
+            return
+
+        inv_strs = observation['inv_strs'].copy()
+        inv_letters = observation['inv_letters'].copy()
+        inv_oclasses = observation['inv_oclasses'].copy()
+
+        inv_glyphs = None
+        if not am_hallu:
+            inv_glyphs = observation['inv_glyphs'].copy()
+
+        self.inventory = inv.PlayerInventory(global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs)
 
     def can_cannibalize(self):
         if self.base_race == constants.BaseRace.orc:
@@ -166,34 +177,27 @@ class Character():
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
         2: 1,
-        3: 2,
-        4: 2,
-        5: 3,
-        6: 5,
+        3: 1,
+        4: 1,
+        5: 2,
+        6: 4,
         7: 6,
-        #8: 8,
     }
 
-    # getting slightly less aggressive now that we eat corpses
-    exp_lvl_to_max_mazes_lvl_no_food = {
-        1:1,
-        2:2,
-        3:3,
-        4:4,
-        5:5,
-        6:6,
-        7:6,
-        #8:8,
-    }
+    def comfortable_depth(self):
+        return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
 
-    def am_willing_to_descend(self, depth):
-        willing_to_descend = self.current_hp >= self.max_hp * 0.9
-        if self.inventory.have_item_oclass(inv.Food):
-            willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60) > depth
-        else:
-            willing_to_descend = willing_to_descend and self.exp_lvl_to_max_mazes_lvl_no_food.get(self.experience_level, 60) > depth
+    def desperate_for_food(self):
+        if self.hunger_state == 0:
+            return False 
 
-        return willing_to_descend
+        if self.hunger_state == 1 and self.inventory.get_nutrition(self) > 0:
+            return False
+
+        if self.inventory.get_nutrition(self) >= 1_000:
+            return False
+
+        return True
 
     @staticmethod
     def charisma_price_multiplier(charisma):

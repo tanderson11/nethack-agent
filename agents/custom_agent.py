@@ -1,5 +1,6 @@
 import base64
 import csv
+from dataclasses import astuple
 import os
 import re
 
@@ -10,7 +11,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, MenuAdvice
+from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice
 import advisor_sets
 
 import menuplan
@@ -231,8 +232,8 @@ BackgroundMenuPlan = menuplan.MenuPlan(
 
 class RunState():
     def __init__(self, debug_env=None):
-        self.reset()
         self.debug_env = debug_env
+        self.reset()
         self.log_path = None
         self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
@@ -243,9 +244,11 @@ class RunState():
                 writer.writeheader()
 
     def print_action_log(self, total):
-        return "||".join([num.name for num in self.action_log[(-1 * total):]])
+        return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
+
+    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -289,7 +292,7 @@ class RunState():
                 'search_efficiency': len([x for x in self.search_log if x[1]]) / len(self.search_log) if self.search_log else None,
                 'total damage': self.total_damage,
                 'adjacent monster turns': self.adjacent_monster_turns,
-                'died in shop': self.neighborhood.in_shop,
+                'died in shop': self.neighborhood.in_shop if self.neighborhood else False,
             })
 
         with open(os.path.join(self.log_root, 'search_log.csv'), 'a') as search_log_file:
@@ -316,9 +319,9 @@ class RunState():
             json.dump(counter, counter_file)
 
     def reset(self):
-        self.reading_base_attributes = False
         self.scumming = False
         self.character = None
+        self.auto_pickup = True # defaults on
         self.gods_by_alignment = {}
 
         self.step_count = 0
@@ -367,12 +370,36 @@ class RunState():
 
         self.debugger_on = False
 
+        self.replay_log_path = None
+        self.replay_log = []
+        self.replay_index = 0
+        if self.debug_env:
+            core_seed, disp_seed, _ = self.debug_env.get_seeds()
+            replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+            if os.path.exists(replay_log_path):
+                self.replay_log_path = replay_log_path
+                with open(self.replay_log_path, newline='') as csvfile:
+                    reader = csv.DictReader(csvfile)
+                    self.replay_log = [row for row in reader]
+                    if self.replay_log:
+                        self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
+                    else:
+                        self.replay_run_number = 0
+
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
         #seed = b'rKJESw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
+
+    def replay_advice(self):
+        if self.replay_index >= len(self.replay_log):
+            return None
+        action = int(self.replay_log[self.replay_index]['action'])
+        menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
+        self.replay_index += 1
+        return ReplayAdvice(action=action, is_menu_action=menu_action)
 
     attribute_pattern_1 = re.compile("You are an? [A-Z][a-z]+, a level 1 (female|male)? ?([a-z]+) ([A-Z][a-z]+).")
     attribute_pattern_2 = re.compile("You are (neutral|lawful|chaotic), on a mission for (.+?)  ")
@@ -395,8 +422,6 @@ class RunState():
     }
 
     def update_base_attributes(self, raw_screen_content):
-        if not self.reading_base_attributes:
-            raise Exception("Shouldn't be doing this")
         attribute_match_1 = re.search(self.attribute_pattern_1, raw_screen_content)
         attribute_match_2 = re.search(self.attribute_pattern_2, raw_screen_content)
         attribute_match_3 = re.search(self.attribute_pattern_3, raw_screen_content)
@@ -425,9 +450,9 @@ class RunState():
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
-        self.reading_base_attributes = False
 
-        self.global_identity_map.make_buc_factory(self.character.base_class)
+        if self.character.base_class == constants.BaseRole.Priest:
+            self.global_identity_map.is_priest = True
 
     def update_reward(self, reward):
         self.step_count += 1
@@ -536,9 +561,22 @@ class RunState():
     def log_action(self, advice):
         self.advice_log.append(advice)
 
+        if self.replay_log_path and not isinstance(advice, ReplayAdvice):
+            with open(self.replay_log_path, 'a') as log_file:
+                writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
+                writer.writerow({
+                    'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),
+                    'run_number': self.replay_run_number,
+                    'dcoord': str(astuple(self.current_square.dcoord)),
+                    'menu_action': isinstance(advice, MenuAdvice),
+                })
+
         # TODO lots of compatiblility cruft here
 
         if isinstance(advice, MenuAdvice):
+            return
+
+        if isinstance(advice, ReplayAdvice) and advice.is_menu_action:
             return
 
         self.action_log.append(advice.action)
@@ -546,7 +584,9 @@ class RunState():
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
         self.last_non_menu_action_failed_advancement = False
-        self.last_non_menu_advisor = advice.from_advisor
+
+        if isinstance(advice, ActionAdvice):
+            self.last_non_menu_advisor = advice.from_advisor
 
     def check_gamestate_advancement(self, neighborhood):
         if self.last_non_menu_action in self.actions_without_consequence:
@@ -599,6 +639,10 @@ class CustomAgent(BatchedAgent):
 
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
+        if run_state.character:
+            run_state.character.update_inventory_from_observation(
+                run_state.global_identity_map, blstats.am_hallu(), observation)
+
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
         dcoord = DCoord(dungeon_number, level_number)
@@ -609,7 +653,11 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
-        if run_state.reading_base_attributes:
+        if run_state.character:
+            run_state.dmap.update_target_dcoords(run_state.character)
+
+        if not run_state.character and run_state.step_count > 2:
+            # The first action should always be to look at attributes
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
 
@@ -617,22 +665,11 @@ class CustomAgent(BatchedAgent):
             if run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
-        # Two cases when we reset inventory: new run or something changed
-        if run_state.character:
-            if (run_state.character.inventory is None) or ((observation['inv_strs'] != run_state.character.inventory.inv_strs).any()):
-                inv_strs = observation['inv_strs'].copy()
-                inv_letters = observation['inv_letters']
-                inv_oclasses = observation['inv_oclasses']
-
-                if blstats.am_hallu():
-                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs))
-                else:
-                    inv_glyphs = observation['inv_glyphs'].copy()
-                    run_state.character.set_inventory(inv.PlayerInventory(run_state.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs))
-
         changed_square = False
+        previous_square = False
         if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
             changed_square = True
+            previous_square = run_state.current_square
 
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
@@ -672,16 +709,6 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character: # None until we C-X at the start of game
             run_state.character.update_from_observation(blstats)
-
-            if run_state.character.inventory.get_item(inv.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
-                if run_state.character.ready_for_mines() and run_state.dmap.target_dcoords[-1].branch != map.Branches.GnomishMines:
-                    run_state.dmap.add_top_target(DCoord(map.Branches.GnomishMines, 20))
-            else:
-                if run_state.dmap.target_dcoords[-1].branch != map.Branches.DungeonsOfDoom:
-                    #import pdb; pdb.set_trace()
-                    run_state.dmap.add_top_target(DCoord(map.Branches.DungeonsOfDoom, 60))
-
-            #run_state.dmap.current_
 
         if isinstance(run_state.last_non_menu_advisor, advs.EatCorpseAdvisor):
             if changed_square and environment.env.debug:
@@ -733,24 +760,28 @@ class CustomAgent(BatchedAgent):
                 print("WARNING: {} for fleeing monster. Are we hallucinating?".format(str(e)))
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
-        if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-            print(run_state.message_log[-2])
-            # create the staircases (idempotent)
-            if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
-            elif "You climb" in run_state.message_log[-2]:
-                direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+        if previous_square and previous_square.dcoord != dcoord:
+            if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
+                print(run_state.message_log[-2])
+                # create the staircases (idempotent)
+                if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
+                    direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                elif "You climb" in run_state.message_log[-2]:
+                    direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
-            if dcoord.branch != run_state.neighborhood.dcoord.branch:
-                run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=run_state.neighborhood.dcoord)
+                if dcoord.branch != previous_square.dcoord.branch:
+                    run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
 
-            # staircase we just took
-            previous_level_map = run_state.dmap.dlevels[run_state.neighborhood.dcoord]
-            previous_level_map.add_traversed_staircase(
-                run_state.neighborhood.absolute_player_location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
-            # staircase it's implied we've arrived on (probably breaks in the Valley)
-            level_map.add_traversed_staircase(player_location, to_dcoord=run_state.neighborhood.dcoord, to_location=run_state.neighborhood.absolute_player_location, direction=direction[1])
-            print("OLD DCOORD: {} NEW DCOORD: {}".format(run_state.neighborhood.dcoord, dcoord))
+                # staircase we just took
+                previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
+                previous_level_map.add_traversed_staircase(
+                    previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                # staircase it's implied we've arrived on (probably breaks in the Valley)
+                level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+                print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
+            elif environment.env.debug:
+                import pdb; pdb.set_trace()
+
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
@@ -759,7 +790,7 @@ class CustomAgent(BatchedAgent):
         if run_state.character:
             run_state.character.update_from_message(message.message, time)
 
-        if "corpse tastes" in message.message:
+        if " tastes " in message.message or "finish eating" in message.message:
             print(message.message)
 
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
@@ -785,9 +816,16 @@ class CustomAgent(BatchedAgent):
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
+        if "unknown comand" in message.message:
+            raise Exception(f"Unknown command: {message.message}")
+
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################
+
+        replay_advice = run_state.replay_advice()
+        if replay_advice:
+            return replay_advice
 
         menu_plan_retval = None
         if message:
@@ -811,15 +849,22 @@ class CustomAgent(BatchedAgent):
         if message.has_more:
             if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
 
+        if run_state.auto_pickup:
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=nethack.actions.Command.AUTOPICKUP,
+            )
+            run_state.auto_pickup = False
+            return advice
+
         if not run_state.character:
-            run_state.reading_base_attributes = True
             advice = ActionAdvice(
                 from_advisor=None,
                 action=nethack.actions.Command.ATTRIBUTES,
             )
             return advice
 
-        if run_state.scumming:
+        if run_state.scumming or (environment.env.max_score and run_state.reward > environment.env.max_score):
             scumming_menu_plan = menuplan.MenuPlan("scumming", None, [
                 menuplan.YesMenuResponse("Really quit?"),
                 menuplan.NoMenuResponse("Dump core?")
@@ -927,6 +972,8 @@ class CustomAgent(BatchedAgent):
         if isinstance(advice, ActionAdvice):
             if advice.from_advisor:
                 advice.from_advisor.advice_selected()
+            return utilities.ACTION_LOOKUP[advice.action]
+        elif isinstance(advice, ReplayAdvice):
             return utilities.ACTION_LOOKUP[advice.action]
         else:
             return utilities.ACTION_LOOKUP[advice.keypress]

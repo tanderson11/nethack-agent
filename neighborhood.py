@@ -222,65 +222,78 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         delta: tuple
         threat: float
 
-    def path_to_targets(self, target_mask):
-        if target_mask.any():
-            pathfinder = Pathfinder(
-                walkable_mesh=((self.extended_walkable & ~self.extended_boulders) | target_mask), # pretend the targets are walkable so we can actually reach them in pathfinding
-                doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
-            )
-            it = np.nditer(target_mask, flags=['multi_index'])
+    def path_to_targets(self, target_mask, target_monsters=False):
+        if not target_mask.any():
+            return None
 
-            shortest_path = None
-            shortest_length = None
+        walkable_mesh = ((self.extended_walkable & ~self.extended_boulders) | target_mask)
+        if not target_monsters:
+            walkable_mesh = walkable_mesh & ~self.extended_is_monster
 
-            for is_target in it:
-                if is_target:
-                    # start, goal
-                    path_iterator = pathfinder.astar(self.player_location_in_extended, Square(*it.multi_index))
-                    if path_iterator is None:
-                        path = None
-                        path_length = None
-                    else:
-                        path = list(path_iterator)
-                        path_length = len(path)
-                    if shortest_path is None or (shortest_length and path_length and shortest_length > path_length):
-                        shortest_path = path
-                        shortest_length = path_length
+        # pretend the targets are walkable so we can actually reach them in pathfinding
+        pathfinder = Pathfinder(
+            walkable_mesh=walkable_mesh,
+            doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
+        )
+        it = np.nditer(target_mask, flags=['multi_index'])
 
-            if shortest_path is None or len(shortest_path) == 1: # couldn't pathfind to any / already on target
-                return None
-            else:
-                first_square_in_path = shortest_path[1] # the 0th square is just your starting location
+        shortest_path = None
+        shortest_length = None
 
-                delta = first_square_in_path - self.player_location_in_extended
+        for is_target in it:
+            if is_target:
+                # start, goal
+                path_iterator = pathfinder.astar(self.player_location_in_extended, Square(*it.multi_index))
+                if path_iterator is None:
+                    path = None
+                    path_length = None
+                else:
+                    path = list(path_iterator)
+                    path_length = len(path)
+                if shortest_path is None or (shortest_length and path_length and shortest_length > path_length):
+                    shortest_path = path
+                    shortest_length = path_length
 
-                threat = 0.
-                for square in shortest_path:
-                    threat += self.extended_threat[square]
+        if shortest_path is None or len(shortest_path) == 1: # couldn't pathfind to any / already on target
+            return None
+        else:
+            first_square_in_path = shortest_path[1] # the 0th square is just your starting location
 
-                path_action = physics.delta_to_action[delta]
-                return self.Path(path_action, delta, threat)
+            delta = first_square_in_path - self.player_location_in_extended
+
+            threat = 0.
+            for square in shortest_path:
+                threat += self.extended_threat[square]
+
+            path_action = physics.delta_to_action[delta]
+            return self.Path(path_action, delta, threat)
 
     def path_to_nearest_monster(self):
         monsters = self.extended_is_monster & (~self.extended_is_peaceful_monster)
         monsters[self.neighborhood_view] = False
-        return self.path_to_targets(monsters)
+        return self.path_to_targets(monsters, target_monsters=True)
 
     def path_to_nearest_weak_monster(self):
         weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster & (~self.extended_is_peaceful_monster)
         weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
 
-        return self.path_to_targets(weak_monsters)
+        return self.path_to_targets(weak_monsters, target_monsters=True)
 
     def desirable_object_on_space(self, global_identity_map, character):
-        #if self.item_on_player is not None: import pdb; pdb.set_trace()
-        item_recognized_and_desirable = self.item_on_player is not None and self.item_on_player.identity is not None and self.item_on_player.desirable(character)
+        item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
+
+        if item_recognized:
+            return self.item_on_player.desirable(character)
+
+        if self.in_shop:
+            return False
 
         desirable_object_on_space = (
             (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
             self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
         )
-        return item_recognized_and_desirable or (self.item_on_player is None and not self.in_shop and desirable_object_on_space)
+
+        return desirable_object_on_space
 
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
