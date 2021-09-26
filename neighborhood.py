@@ -280,14 +280,20 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         return self.path_to_targets(weak_monsters, target_monsters=True)
 
     def desirable_object_on_space(self, global_identity_map, character):
-        #if self.item_on_player is not None: import pdb; pdb.set_trace()
-        item_recognized_and_desirable = self.item_on_player is not None and self.item_on_player.identity is not None and self.item_on_player.desirable(character)
+        item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
+
+        if item_recognized:
+            return self.item_on_player.desirable(character)
+
+        if self.in_shop:
+            return False
 
         desirable_object_on_space = (
             (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
             self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
         )
-        return item_recognized_and_desirable or (self.item_on_player is None and not self.in_shop and desirable_object_on_space)
+
+        return desirable_object_on_space
 
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(

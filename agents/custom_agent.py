@@ -321,6 +321,7 @@ class RunState():
     def reset(self):
         self.scumming = False
         self.character = None
+        self.auto_pickup = True # defaults on
         self.gods_by_alignment = {}
 
         self.step_count = 0
@@ -648,7 +649,7 @@ class CustomAgent(BatchedAgent):
         except KeyError:
             level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
-        if not run_state.character and run_state.step_count > 1:
+        if not run_state.character and run_state.step_count > 2:
             # The first action should always be to look at attributes
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
@@ -863,6 +864,14 @@ class CustomAgent(BatchedAgent):
 
         if message.has_more:
             if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
+
+        if run_state.auto_pickup:
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=nethack.actions.Command.AUTOPICKUP,
+            )
+            run_state.auto_pickup = False
+            return advice
 
         if not run_state.character:
             advice = ActionAdvice(
