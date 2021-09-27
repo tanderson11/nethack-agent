@@ -28,7 +28,7 @@ new_advisors = [
     # IN GNOMISH MINES
     TakeStaircaseAdvisor(),
     # COMBAT
-    ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.nuisance_condition),
+    ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
         SafeMeleeAttackAdvisor(),

@@ -96,6 +96,13 @@ class Oracle():
         )
 
     @functools.cached_property
+    def minor_unicorn_condition(self):
+        return (
+            self.nuisance_condition or
+            self.blstats.check_condition(nethack.BL_MASK_BLIND)
+        )
+
+    @functools.cached_property
     def nuisance_condition(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_HALLU) or
