@@ -716,25 +716,19 @@ class DumbMeleeAttackAdvisor(Advisor):
             return ActionAdvice(from_advisor=self, action=attack_direction)
         return None
 
-class MeleeWearCreature(DumbMeleeAttackAdvisor):
+class MeleePriorityTargets(DumbMeleeAttackAdvisor):
     def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
         if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
         if not isinstance(monster, gd.MonsterGlyph):
-            return None
-
-        return monster.monster_spoiler.melee_attack_bundle.damage_types.lycanthropy
-
-class MeleeThief(DumbMeleeAttackAdvisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
-        if not isinstance(monster, gd.MonsterGlyph):
-            return None
+        if character.melee_prioritize_monster_beyond_damage(monster.monster_spoiler):
+            #import pdb; pdb.set_trace()
+            return True
 
-        return (monster.monster_spoiler.melee_attack_bundle.damage_types.steal or monster.monster_spoiler.melee_attack_bundle.damage_types.seduce)
+        return False
 
 class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):

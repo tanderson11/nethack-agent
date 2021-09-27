@@ -212,6 +212,28 @@ class Character():
         7: 6,
     }
 
+    def melee_prioritize_monster_beyond_damage(self, monster_spoiler):
+        melee_types = monster_spoiler.melee_attack_bundle.damage_types
+        always_prioritize = (
+            melee_types.steal or
+            melee_types.seduce or 
+            melee_types.stone or
+            melee_types.spell or
+            (melee_types.sleep and not self.has_intrinsic(constants.Intrinsics.sleep_resistance))
+        )
+
+        if always_prioritize:
+            return True
+
+        prioritize_early = (
+            melee_types.lycanthropy
+        )
+
+        if prioritize_early and self.experience_level < 10:
+            return True
+
+        return False
+
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
 

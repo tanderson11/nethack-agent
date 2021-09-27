@@ -31,8 +31,7 @@ new_advisors = [
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
-        MeleeWearCreature(),
-        MeleeThief(),
+        MeleePriorityTargets(),
         SafeMeleeAttackAdvisor(),
         PassiveMonsterRangedAttackAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
