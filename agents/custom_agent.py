@@ -546,6 +546,8 @@ class RunState():
         inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
+            if message.feedback.carrying_too_much_message:
+                self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
                 self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
@@ -711,6 +713,11 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if run_state.character:
+            if run_state.last_non_menu_action == nethack.actions.Command.DROP or run_state.last_non_menu_action == nethack.actions.Command.DROPTYPE:
+                run_state.character.clear_weight_knowledge()
+
         if message.dungeon_feature_here:
             level_map.add_feature(player_location, message.dungeon_feature_here)
 

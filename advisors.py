@@ -1194,13 +1194,12 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
             return None
         return self.drop_undesirable(run_state, character)
 
-class DropUndesirableNearBurdenedAdvisor(DropUndesirableAdvisor):
+class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.near_burdened:
+        if not character.want_less_weight():
             return None
 
-        character.near_burdened = False
-
+        #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
