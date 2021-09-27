@@ -91,7 +91,7 @@ class Item():
         can_afford = True
         if self.shop_owned:
             if self.price is not None:
-                can_afford = character.gold >= self.price
+                can_afford = character.gold >= (self.price + character.inventory.get_current_balance())
             else:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
@@ -1067,6 +1067,15 @@ class PlayerInventory():
             slots = SlotFactory.make_from_inventory(self.slot_cluster_mapping[group_name], self)
             self.slot_groups_by_name[group_name] = slots
             return slots
+
+    def get_current_balance(self):
+        all = self.all_items()
+        unpaid = [i.price for i in all if (i.shop_owned and i.price is not None)]
+
+        balance = sum(unpaid)
+        if balance > 0:
+            import pdb; pdb.set_trace()
+        return balance
 
     @functools.cached_property
     def wielded_weapon(self):

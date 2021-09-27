@@ -48,10 +48,10 @@ new_advisors = [
         HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
         ]),
     ###### OUT OF DANGER ###### ()
+    BuyDesirableAdvisor(),
     DrinkHealingForMaxHPAdvisor(),
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
-    BuyDesirableAdvisor(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),

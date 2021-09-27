@@ -437,7 +437,7 @@ class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
 class IdentifyUnidentifiedScrolls(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
-        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify")
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify", instance_selector=lambda i: not i.shop_owned)
 
         if identify_scroll is None:
             return None
@@ -462,7 +462,7 @@ class IdentifyUnidentifiedScrolls(Advisor):
 class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
-        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify")
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify", instance_selector=lambda i: not i.shop_owned)
 
         if identify_scroll is None:
             return None
@@ -496,8 +496,8 @@ class AnyScrollAdvisor(Advisor):
                 menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
                 menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
                 # most remote square for placements
-                menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=ord('.')),
-                menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=ord('\r')),
+                menuplan.ConnectedSequenceMenuResponse("(For instructions type a '?')", "Z."),
+                menuplan.ConnectedSequenceMenuResponse("What class of monsters do you wish to genocide?", "a\r"),
                 menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
                 menuplan.MoreMenuResponse("This is a scroll of"),
                 menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
