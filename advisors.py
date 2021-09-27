@@ -912,10 +912,12 @@ class ReduceThreatFromManyEnemiesWithMove(MoveAdvisor):
 
         if (cost < 0).any():
             idx = np.argmin(cost)
+        else:
+            return None
 
         desired_action = possible_actions[idx]
         #import pdb; pdb.set_trace()
-        return rng.choice(desired_action)
+        return desired_action
 
 class UnvisitedSquareMoveAdvisor(MoveAdvisor):
     def get_move(self, move_mask, rng, run_state, character, oracle):
