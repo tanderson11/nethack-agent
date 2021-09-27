@@ -894,6 +894,29 @@ class MostNovelMoveAdvisor(MoveAdvisor):
 
             return rng.choice(most_novel)
 
+class ReduceThreatFromManyEnemiesWithMove(MoveAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.adjacent_monsters > 1:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+    def get_move(self, move_mask, rng, run_state, character, oracle):
+        possible_actions = run_state.neighborhood.action_grid[move_mask]
+
+        if not possible_actions.any():
+            return None
+
+        threat = run_state.neighborhood.threat[move_mask]
+        current_threat = run_state.neighborhood.threat_on_player
+        cost = threat - current_threat
+
+        if (cost < 0).any():
+            idx = np.argmin(cost)
+
+        desired_action = possible_actions[idx]
+        #import pdb; pdb.set_trace()
+        return rng.choice(desired_action)
+
 class UnvisitedSquareMoveAdvisor(MoveAdvisor):
     def get_move(self, move_mask, rng, run_state, character, oracle):
         visits = run_state.neighborhood.visits[move_mask]
