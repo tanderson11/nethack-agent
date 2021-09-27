@@ -433,7 +433,7 @@ class EquippedStatus():
                 self.slot = 'quiver'
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
     
     ############## TODO ##################
     # These patterns are currently a bit #
@@ -692,6 +692,7 @@ class ItemParser():
         parenthetical_status_str: str
         BUC: str
         condition: str
+        container_str: str
         instance_name: str
         full_str: str
 
@@ -718,11 +719,13 @@ class ItemParser():
 
             description = match[8]
 
-            instance_name = match[10]
-            
-            equipped_status = match[11]
+            container_str = match[10]
 
-            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name, match[0])
+            instance_name = match[11]
+            
+            equipped_status = match[12]
+
+            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, container_str, instance_name, match[0])
 
         else:
             raise Exception(f"couldn't match item string {item_string}")
