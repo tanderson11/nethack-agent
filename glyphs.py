@@ -848,7 +848,7 @@ class ScrollIdentity(ObjectIdentity):
     def desirable_identity(self, character):
         return True
 
-    bad_scrolls_any_buc = ['destroy armor']
+    bad_scrolls_any_buc = ['destroy armor', 'amensia']
     bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
 
     def process_message(self, message_obj, action):
