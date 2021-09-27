@@ -905,10 +905,12 @@ class PlayerInventory():
         if len(extra_weapons) == 0:
             return None
 
-
         for weapon in extra_weapons:
             desirability = weapon.instance_desirability_to_wield(character)
             if desirability > max_desirability:
+                # if two hands insist we don't have a shield
+                if isinstance(weapon.identity.slot, list) and isinstance(self.armaments.off_hand, Armor):
+                    continue
                 most_desirable = weapon
                 max_desirability = desirability
 

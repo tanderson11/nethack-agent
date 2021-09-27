@@ -841,6 +841,9 @@ class CustomAgent(BatchedAgent):
         if "unknown comand" in message.message:
             raise Exception(f"Unknown command: {message.message}")
 
+        if "while wearing a shield" in message.message:
+            print(message.message)
+
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################
