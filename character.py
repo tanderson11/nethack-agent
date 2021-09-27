@@ -50,6 +50,8 @@ class Character():
         "You speed up": constants.Intrinsics.speed,
         "You feel healthy": constants.Intrinsics.poison_resistance,
         "You feel a strange mental acuity": constants.Intrinsics.telepathy,
+        "You feel wide awake": constants.Intrinsics.sleep_resistance,
+        "You feel full of hot air": constants.Intrinsics.fire_resistance,
     }
 
     def listen_for_intrinsics(self, message):
