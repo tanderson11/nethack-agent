@@ -37,6 +37,7 @@ class Item():
                 price_match = re.search(self.price_pattern, self.parenthetical_status)
                 if price_match is not None:
                     self.price = int(price_match[2])
+                    self.unit_price = self.price / self.quantity
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
                     pass
@@ -72,7 +73,7 @@ class Item():
             return None
         #import pdb; pdb.set_trace()
         #old_idx_len = len(self.identity.idx)
-        base_prices = character.find_base_price_from_listed(self, self.price)
+        base_prices = character.find_base_price_from_listed(self, self.unit_price)
         self.identity.restrict_by_base_prices(base_prices)
         #new_idx_len = len(self.identity.idx)
 
@@ -743,17 +744,17 @@ class ItemParser():
 
     item_sell_pattern = re.compile("offers ([0-9]+) gold pieces for (.+?)\.")
     @classmethod
-    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped=None):
+    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped):
         item_match = re.search(cls.item_sell_pattern, message)
         if item_match:
             price = int(item_match[1])
-            item_string = item_match[2]
+            #item_string = item_match[2]
 
-            item = cls.make_item_with_string(global_identity_map, item_string)
-            if item is None:
-                if environment.env.debug: import pdb; pdb.set_trace()
-                return None
-            item.price_id_from_sell(character, price)
+            #item = cls.make_item_with_string(global_identity_map, item_string)
+            #if item is None:
+            #    if environment.env.debug: import pdb; pdb.set_trace()
+            #    return None
+            last_dropped.price_id_from_sell(character, price / last_dropped.quantity)
             #import pdb; pdb.set_trace()
 
         if "uninterested" in message and last_dropped is not None and last_dropped.identity is not None:
