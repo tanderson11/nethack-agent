@@ -308,15 +308,20 @@ class RunState():
         try:
             with open(os.path.join(self.log_root, filename), 'r') as counter_file:
                 state = json.load(counter_file)
+                #import pdb; pdb.set_trace()
+                new_key = max([int(key) for key in state.keys()]) + 1
+                #import pdb; pdb.set_trace()
         except FileNotFoundError:
             state = {}
+            new_key = 0
 
-        counter = Counter(state)
-        additional_counter = Counter(counter_list)
-        counter.update(additional_counter)
+        state[new_key] = Counter(counter_list)
+        #counter = Counter(state)
+        #additional_counter = Counter(counter_list)
+        #counter.update(additional_counter)
 
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
-            json.dump(counter, counter_file)
+            json.dump(state, counter_file)
 
     def reset(self):
         self.scumming = False
