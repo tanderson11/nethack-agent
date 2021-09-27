@@ -649,6 +649,8 @@ class InventoryEatAdvisor(Advisor):
 
 class CombatEatAdvisor(InventoryEatAdvisor):
     def check_comestible(self, comestible, rng, run_state, character, oracle):
+        if not super().check_comestible(comestible, rng, run_state, character, oracle):
+            return False
         if comestible.identity: # if statement = bandaid for lack of corpse identities
             return comestible.identity and comestible.identity.name() != 'tin'
         else:

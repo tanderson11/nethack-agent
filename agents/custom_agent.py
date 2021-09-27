@@ -835,6 +835,10 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug:
                 import pdb; pdb.set_trace()
 
+        if "Yak" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
