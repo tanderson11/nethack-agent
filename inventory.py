@@ -754,6 +754,10 @@ class ItemParser():
             #if item is None:
             #    if environment.env.debug: import pdb; pdb.set_trace()
             #    return None
+            if last_dropped is None:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                return
+
             last_dropped.price_id_from_sell(character, price / last_dropped.quantity)
             #import pdb; pdb.set_trace()
 
