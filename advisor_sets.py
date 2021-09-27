@@ -58,6 +58,7 @@ new_advisors = [
         DropToPriceIDAdvisor(),
         DropUndesirableNearBurdenedAdvisor(),
         AnyWardrobeChangeAdvisor(),
+        IdentifyUnidentifiedScrolls(),
         IdentifyPotentiallyMagicArmorAdvisor(),
         ReadKnownBeneficialScrolls(),
         ReadSafeUnidentifiedScrolls(),

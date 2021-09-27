@@ -824,6 +824,10 @@ class CustomAgent(BatchedAgent):
         if "You bought" in message.message:
             print(message.message)
 
+        if "cannibal" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 

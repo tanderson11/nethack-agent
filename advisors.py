@@ -427,6 +427,31 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
+class IdentifyUnidentifiedScrolls(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify")
+
+        if identify_scroll is None:
+            return None
+
+        unidentified_scrolls = character.inventory.get_item(
+            inv.Scroll,
+            identity_selector=lambda i: i.name() is None
+        )
+
+        if unidentified_scrolls is None:
+            return None
+
+        print("Trying to identify")
+
+        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
+
+        return ActionAdvice(self, read, menu_plan)
+
 class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
@@ -444,7 +469,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
             return None
 
         print("Trying to identify")
-        
+
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
