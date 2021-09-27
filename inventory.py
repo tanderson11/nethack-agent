@@ -1091,7 +1091,7 @@ class PlayerInventory():
         unpaid = [i.price for i in all if (i.shop_owned and i.price is not None)]
 
         balance = sum(unpaid)
-        if balance > 0:
+        if balance > 0 and environment.env.debug:
             import pdb; pdb.set_trace()
         return balance
 
