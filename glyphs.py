@@ -114,7 +114,7 @@ class MonsterAlikeGlyph(Glyph):
             return False
 
         # For these remaining checks, maybe skip them if I'm hungry enough
-        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race):
+        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race.value):
             return False
         if character.can_cannibalize() and self.corpse_spoiler.aggravate:
             return False
