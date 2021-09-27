@@ -362,6 +362,24 @@ class Spellbook(Item):
 
 class Tool(Item):
     glyph_class = gd.ToolGlyph
+    charge_pattern = re.compile("\(([0-9]+):([0-9]+)\)")
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        self.charges = None
+
+        if self.instance_name == "NO_CHARGE":
+            self.charges = 0
+
+        p_status = instance_attributes.parenthetical_status_str
+        if p_status is not None:
+            charge_match = re.match(self.charge_pattern, p_status)
+
+            if charge_match:
+                self.recharges = int(charge_match[1])
+                self.charges = int(charge_match[2])
+
+        if self.BUC == constants.BUC.unknown and self.charges is not None:
+            self.BUC = constants.BUC.uncursed
 
     def melee_damage(self, character, monster_spoiler):
         # TK know about pick-axe and unicorn horn
