@@ -32,6 +32,7 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
         MeleeWearCreature(),
+        MeleeThief(),
         SafeMeleeAttackAdvisor(),
         PassiveMonsterRangedAttackAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),

@@ -724,6 +724,16 @@ class MeleeWearCreature(DumbMeleeAttackAdvisor):
 
         return monster.monster_spoiler.damage_types.lycanthropy
 
+class MeleeThief(DumbMeleeAttackAdvisor):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
+            return False
+
+        if not isinstance(monster, gd.MonsterGlyph):
+            return None
+
+        return (monster.monster_spoiler.damage_types.steal or monster.monster_spoiler.damage_types.seduce)
+
 class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is None:
