@@ -714,6 +714,16 @@ class DumbMeleeAttackAdvisor(Advisor):
             return ActionAdvice(from_advisor=self, action=attack_direction)
         return None
 
+class MeleeWearCreature(DumbMeleeAttackAdvisor):
+    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
+        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
+            return False
+
+        if not isinstance(monster, gd.MonsterGlyph):
+            return None
+
+        return monster.monster_spoiler.damage_types.lycanthropy
+
 class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is None:
@@ -759,8 +769,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
             return False
 
-        if isinstance(monster, gd.InvisibleGlyph):
-            #import pdb; pdb.set_trace()
+        if not isinstance(monster, gd.MonsterGlyph):
             return None
 
         if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
