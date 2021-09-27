@@ -1008,7 +1008,7 @@ class WeaponIdentity(ObjectIdentity):
             has_second_slot = pd.isnull(second_slot).any()
             second_slot = set(second_slot).pop()
         else:
-            has_second_slot = pd.isnull(second_slot)
+            has_second_slot = not pd.isnull(second_slot)
 
 
         if has_second_slot:
