@@ -47,6 +47,7 @@ new_advisors = [
         RandomMoveAdvisor(square_threat_tolerance=0.),
         HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
         ]),
+    WaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
     ###### OUT OF DANGER ###### ()
     BuyDesirableAdvisor(),
     DrinkHealingForMaxHPAdvisor(),
@@ -72,6 +73,10 @@ new_advisors = [
         UnblockedWardrobeChangesAdvisor(),
         EngraveTestWandsAdvisor(),
         ]),
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.low_hp and not (o.am_threatened or o.recently_damaged), advisors=[
+        PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop and o.character.desperate_for_food()),
+        WaitAdvisor(),
+    ]),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # OPEN PATHS
@@ -82,7 +87,6 @@ new_advisors = [
     # MOVE TO DESIRABLE
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
-    WaitAdvisor(oracle_consultation=lambda o: (o.low_hp or o.nuisance_condition) and not (o.am_threatened or o.recently_damaged)),
     # EXPLORE
     SearchDeadEndAdvisor(),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
