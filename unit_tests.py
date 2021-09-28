@@ -176,6 +176,19 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(2311, "a long wand"): ItemTestValues(inv.Wand, None),
     }
 
+    test_elimination_values = {
+        ItemTestInputs(2031, "a blessed +2 cloak of magic resistance"): ItemTestValues(inv.Armor, "cloak of magic resistance"),
+        ItemTestInputs(2032, "a blessed +2 cloak of protection"): ItemTestValues(inv.Armor, "cloak of protection"),
+        ItemTestInputs(2033, "a blessed +2 cloak of invisibility"): ItemTestValues(inv.Armor, "cloak of invisibility"),
+        ItemTestInputs(2034, "a blessed +2 ornamental cope"): ItemTestValues(inv.Armor, "cloak of displacement"),
+    }
+
+    def test_elimination(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        for inputs, values in self.test_elimination_values.items():
+            item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
+            self.assertEqual(item.identity.name(), values.name_in_inventory)
+
     def test_recognition_with_numeral(self):
         #return
         for inputs, values in self.test_values.items():
