@@ -153,6 +153,7 @@ class Message():
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
             self.boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
             self.carrying_too_much_message = "You are carrying too much to get through." in message.message
+            self.solid_stone = "It's solid stone" in message.message
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
@@ -567,11 +568,19 @@ class RunState():
             self.last_dropped_item = dropped
         inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
 
-        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
+        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
             if message.feedback.carrying_too_much_message:
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
                 self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
+
+                if message.feedback.solid_stone:
+                    if environment.env.debug:
+                        import pdb; pdb.set_trace()
+                    #target_location = physics.Square(*physics.action_to_delta[self.last_non_menu_action]) + self.neighborhood.absolute_player_location
+                    # can't add stone: we'll assume it's fog and trample it.
+                    # hacky solution: add a wall
+                    #self.neighborhood.level_map.add_feature(target_location, gd.GLYPH_NAME_LOOKUP['vwall'])
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
