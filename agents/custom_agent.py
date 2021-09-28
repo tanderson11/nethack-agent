@@ -300,10 +300,28 @@ class RunState():
             for line in self.search_log:
                 writer.writerow(list(line[0]) + [line[1]])
 
-        self.update_counter_json("message_counter.json", self.message_log)
-        self.update_counter_json("advisor_counter.json", [advice.from_advisor.__class__.__name__ for advice in self.advice_log if isinstance(advice, ActionAdvice)])
+        self.update_counter_json("message_counter.json", Counter(self.message_log))
+        #import pdb; pdb.set_trace()
+        message_score_df = pd.DataFrame(self.message_log, columns=['message'], index=pd.Series(self.score_against_message_log, name='score'))
+        self.dump_dataframe("message_by_score.csv", message_score_df)
+        self.update_counter_json("advisor_counter.json", Counter([advice.from_advisor.__class__.__name__ for advice in self.advice_log if isinstance(advice, ActionAdvice)]))
 
-    def update_counter_json(self, filename, counter_list):
+    def dump_dataframe(self, filename, dataframe):
+        import json
+        try:
+            with open(os.path.join(self.log_root, "message_counter.json"), 'r') as counter_file:
+                state = json.load(counter_file)
+                new_key = max([int(key) for key in state.keys()])
+        except FileNotFoundError:
+            #state = pd.DataFrame()
+            new_key = 0
+
+        dataframe['replay'] = new_key
+
+        with open(os.path.join(self.log_root,  filename), 'a') as f:
+            dataframe.to_csv(f, mode='a', header=False)
+
+    def update_counter_json(self, filename, counter):
         import json
         try:
             with open(os.path.join(self.log_root, filename), 'r') as counter_file:
@@ -315,10 +333,7 @@ class RunState():
             state = {}
             new_key = 0
 
-        state[new_key] = Counter(counter_list)
-        #counter = Counter(state)
-        #additional_counter = Counter(counter_list)
-        #counter.update(additional_counter)
+        state[new_key] = counter
 
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(state, counter_file)
@@ -337,6 +352,7 @@ class RunState():
 
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
+        self.score_against_message_log = []
         self.action_log = []
         self.advice_log = []
         self.search_log = []
@@ -395,7 +411,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'rKJESw=='
+        seed = b'C3GzzQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -529,6 +545,7 @@ class RunState():
 
     def handle_message(self, message):
         self.message_log.append(message.message)
+        self.score_against_message_log.append(self.reward)
 
         if self.character is not None:
             self.character.listen_for_intrinsics(message.message)
