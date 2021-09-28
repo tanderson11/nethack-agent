@@ -744,14 +744,17 @@ class ObjectIdentity():
     def stacked_name_to_singular(cls, stacked_name):
         return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
-    def __init__(self, idx):
-        self.idx = idx
+    def __init__(self, idx, shuffle_class=None):
+        self.idx = idx.copy()
         self.listened_actions = {}
         self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
         self.is_artifact = False
+
+        self.shuffle_class_idx = shuffle_class
+        self.is_shuffled = shuffle_class is not None
 
     @classmethod
     def identity_from_name(cls, name):
@@ -841,8 +844,8 @@ class ObjectIdentity():
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.listened_actions = {}
 
     def desirable_identity(self, character):
@@ -893,8 +896,8 @@ class PotionIdentity(ObjectIdentity):
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         try:
             self.nutrition = int(self.find_values('NUTRITION'))
         except Exception:
@@ -986,8 +989,8 @@ class WandIdentity(ObjectIdentity):
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
 
         try:
             self.slot = self.find_values('SLOT')
@@ -1024,8 +1027,8 @@ class ArmorIdentity(ObjectIdentity):
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
 
         self.is_ammunition = self.find_values('AMMUNITION')
         self.is_ranged = self.find_values('RANGED')
@@ -1049,8 +1052,8 @@ class WeaponIdentity(ObjectIdentity):
 
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
@@ -1058,29 +1061,29 @@ class ArtifactWeaponIdentity(WeaponIdentity):
 
 class ArtifactArmorIdentity(ArmorIdentity):
     associated_glyph_class = ArmorGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactAmuletIdentity(AmuletIdentity):
     associated_glyph_class = AmuletGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactGemIdentity(GemIdentity):
     associated_glyph_class = GemGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactToolIdentity(ToolIdentity):
     associated_glyph_class = ToolGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
@@ -1193,12 +1196,14 @@ class GlobalIdentityMap():
                 # if it's not shuffled, the numeral accurately picks out the object information
                 # from the spreadsheet
                 idx = [numeral]
+                shuffle_class_idx = None
             else:
                 # if it is shuffled, it could be any object in the shuffled class
                 same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
                 idx = same_shuffle_class.index[same_shuffle_class]
+                shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
 
-            identity = identity_class(idx)
+            identity = identity_class(idx, shuffle_class=shuffle_class_idx)
 
         self.identity_by_numeral[numeral] = identity
 
@@ -1222,6 +1227,17 @@ class GlobalIdentityMap():
     def associate_identity_and_name(self, identity, name):
         self.identity_by_name[name] = identity
         identity.give_name(name)
+
+        if identity.is_shuffled:
+            data_idx = identity.idx[0]
+            # go through the shuffled class and remove that entry from the idx
+            for shuffled_item_idx in identity.shuffle_class_idx:
+                other_identity = self.identity_by_numeral[shuffled_item_idx]
+                if other_identity == identity:
+                    continue
+                if data_idx in other_identity.idx:
+                    if isinstance(other_identity.idx, pd.Index):
+                        other_identity.idx = other_identity.idx.drop(data_idx)
 
 #####################
 # UTILITY FUNCTIONS #
