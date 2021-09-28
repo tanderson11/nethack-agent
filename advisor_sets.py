@@ -102,5 +102,6 @@ new_advisors = [
         TravelToAltarAdvisor(): 2,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
+    RandomMoveAdvisor(),
     FallbackSearchAdvisor(),
 ]
