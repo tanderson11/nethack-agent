@@ -314,7 +314,7 @@ class Weapon(Item):
         if self == character.inventory.wielded_weapon:
             return True
 
-        if self.BUC != constants.BUC.unknown and self.BUC != constants.BUC.cursed and (self.identity.is_ranged or self.identity.is_ammunition):
+        if self.enhancement is not None and (self.identity.is_ranged or self.identity.is_ammunition):
             return True
 
         is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
