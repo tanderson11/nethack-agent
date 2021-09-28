@@ -201,18 +201,20 @@ class Character():
             return False
         return True
 
+    def prefer_ranged(self):
+        if self.base_class == constants.BaseRole.Tourist:
+            if not isinstance(self.inventory.wielded_weapon, inv.BareHands):
+                return False
+            quivered = self.inventory.quivered
+            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'dart'
+        if self.base_class == constants.BaseRole.Ranger:
+            quivered = self.inventory.quivered
+            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'arrow'
+
+        return False
+
     def ready_for_mines(self):
         return self.experience_level > 7
-
-    exp_lvl_to_max_mazes_lvl = {
-        1: 1,
-        2: 1,
-        3: 1,
-        4: 1,
-        5: 2,
-        6: 4,
-        7: 6,
-    }
 
     def melee_prioritize_monster_beyond_damage(self, monster_spoiler):
         melee_types = monster_spoiler.melee_attack_bundle.damage_types
@@ -235,6 +237,16 @@ class Character():
             return True
 
         return False
+
+    exp_lvl_to_max_mazes_lvl = {
+        1: 1,
+        2: 1,
+        3: 1,
+        4: 1,
+        5: 2,
+        6: 4,
+        7: 6,
+    }
 
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)

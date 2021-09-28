@@ -1030,10 +1030,17 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
+        self.slot = self.find_values('SLOT')
         self.is_ammunition = self.find_values('AMMUNITION')
+        self.is_thrown = self.find_values('THROWN')
+
+        self.ammo_type = None
+        if self.is_ammunition:
+            self.ammo_type = self.find_values('AMMO_TYPE')
+        self.ammo_type_used = self.find_values('USES_AMMO')
+
         self.is_ranged = self.find_values('RANGED')
         self.skill = self.find_values('SKILL')
-        self.slot = self.find_values('SLOT')
 
         second_slot = self.find_values('SECOND_SLOT')
         if isinstance(second_slot, np.ndarray):

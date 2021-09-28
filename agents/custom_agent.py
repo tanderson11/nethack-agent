@@ -580,6 +580,7 @@ class RunState():
                     #target_location = physics.Square(*physics.action_to_delta[self.last_non_menu_action]) + self.neighborhood.absolute_player_location
                     # can't add stone: we'll assume it's fog and trample it.
                     # hacky solution: add a wall
+                    # no, this also gets trampled
                     #self.neighborhood.level_map.add_feature(target_location, gd.GLYPH_NAME_LOOKUP['vwall'])
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:

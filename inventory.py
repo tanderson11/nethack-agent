@@ -283,7 +283,13 @@ class Weapon(Item):
         if self.BUC == constants.BUC.cursed or (self.enhancement is not None and self.enhancement < 0):
             return -10
 
-        if self.identity.is_ammunition or self.identity.is_ranged:
+        if self.identity.is_ammunition:
+            return -10
+
+        if self.identity.is_ranged:
+            if character.prefer_ranged() and self.identity.ammo_type_used == character.inventory.quivered.identity.ammo_type:
+                #import pdb; pdb.set_trace()
+                return 27
             return -10
 
         if character.base_class == constants.BaseRole.Monk:
@@ -446,7 +452,7 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = 'left_ring'
 
-            elif "in quiver" in parenthetical_status:
+            elif "in quiver" in parenthetical_status or "at the ready" in parenthetical_status:
                 self.status = 'quivered'
                 self.slot = 'quiver'
 
@@ -1006,7 +1012,11 @@ class PlayerInventory():
         if oclass is None:
             items = self.all_items()
         else:
-            items = self.get_oclass(oclass)
+            if isinstance(oclass, list):
+                classes = [self.get_oclass(kls) for kls in oclass]
+                items = [item for kls in classes for item in kls]
+            else:
+                items = self.get_oclass(oclass)
         matches = []
 
         for item in items:
@@ -1107,6 +1117,26 @@ class PlayerInventory():
             return hand_occupant
         else:
             if environment.env.debug: pdb.set_trace()
+
+    @functools.cached_property
+    def quivered(self):
+        quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
+        return quivered_item
+
+    def prepared_for_ranged(self):
+        if self.quivered is None:
+            return False
+
+        if self.quivered.identity.is_thrown:
+            return True
+
+        if self.quivered.identity.is_ammo:
+            if isinstance(self.wielded_weapon, BareHands):
+                return False
+            return self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type
+
+        return False
+
 
     def to_hit_modifiers(self, character, monster):
         weapon = self.wielded_weapon
