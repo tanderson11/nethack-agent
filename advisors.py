@@ -963,13 +963,7 @@ class PathAdvisor(Advisor):
             return ActionAdvice(from_advisor=self, action=path.path_action)
 
 class ExcaliburAdvisor(Advisor):
-    @staticmethod
-    def hankering_for_excalibur(character):
-        if character.base_alignment == 'lawful' and character.experience_level >= 5:
-            current_weapon = character.inventory.wielded_weapon
-            if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
-                return True
-        return False
+    pass
 
 class TravelToAltarAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1012,7 +1006,7 @@ class DropUnknownOnAltarAdvisor(Advisor):
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not (self.hankering_for_excalibur(character) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+        if not (character.hankering_for_excalibur() and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
             return None
         dip = nethack.actions.Command.DIP
         long_sword = character.inventory.wielded_weapon
@@ -1027,7 +1021,7 @@ class DipForExcaliburAdvisor(ExcaliburAdvisor):
 
 class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not self.hankering_for_excalibur(character):
+        if not character.hankering_for_excalibur():
             return None
 
         travel = nethack.actions.Command.TRAVEL
