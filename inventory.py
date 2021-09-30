@@ -84,10 +84,7 @@ class Item():
         if name is not None:
             return self.NameAction(self.inventory_letter, name)
 
-    def desirable(self, character):
-        if self.identity is None: # stupid: for lichens and so on
-            return True
-
+    def can_afford(self, character):
         can_afford = True
         if self.shop_owned:
             if self.price is not None:
@@ -96,7 +93,11 @@ class Item():
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
 
-        return can_afford and self.identity.desirable_identity(character)
+    def desirable(self, character):
+        if self.identity is None:
+            return False
+
+        return self.can_afford(character) and self.identity.desirable_identity(character)
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph
@@ -136,7 +137,7 @@ class Armor(Item):
         return desirability
 
     def desirable(self, character):
-        if self.shop_owned:
+        if not self.can_afford(character):
             return False
 
         if self.identity.potentially_magic():
@@ -314,7 +315,7 @@ class Weapon(Item):
         return max_rank * 17 + (enhancement + melee_damage)
 
     def desirable(self, character):
-        if self.shop_owned:
+        if not self.can_afford(character):
             return False
 
         if self == character.inventory.wielded_weapon:
