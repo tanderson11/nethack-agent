@@ -880,6 +880,9 @@ class CustomAgent(BatchedAgent):
         if "while wearing a shield" in message.message:
             print(message.message)
 
+        if " stole " in message.message:
+            print(message.message)
+
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################

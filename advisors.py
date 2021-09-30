@@ -713,19 +713,6 @@ class DumbMeleeAttackAdvisor(Advisor):
             target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
             target_square = monster_squares[target_index]
             attack_direction = run_state.neighborhood.action_grid[target_square]
-            if character.prefer_ranged() and character.inventory.prepared_for_ranged():
-                fire = nethack.actions.Command.FIRE
-                menu_plan = menuplan.MenuPlan(
-                    "ranged attack", self, [
-                        menuplan.DirectionMenuResponse("In what direction?", attack_direction),
-                        menuplan.MoreMenuResponse("You have no ammunition"),
-                        menuplan.MoreMenuResponse("You ready"),
-                        # note throw: means we didn't have anything quivered
-                        #menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
-                    ])
-                #import pdb; pdb.set_trace()
-                return ActionAdvice(from_advisor=self, action=fire, new_menu_plan=menu_plan)
-
             return ActionAdvice(from_advisor=self, action=attack_direction)
         return None
 

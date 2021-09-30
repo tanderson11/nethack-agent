@@ -966,6 +966,13 @@ class ChainIdentity(ObjectIdentity):
 
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
+
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+
+        self.direction = self.find_values('DIRECTION', dropna=True)
+        self.is_attack = self.find_values('ATTACK')
+
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
 
