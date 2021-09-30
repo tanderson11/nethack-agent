@@ -70,7 +70,7 @@ new_advisors = [
         ]),
     # IMPROVEMENTS
     SequentialCompositeAdvisor(advisors=[
-        DropUnknownOnAltarAdvisor(),
+        #DropUnknownOnAltarAdvisor(),
         PickupDesirableItems(),
         EatCorpseAdvisor(),
         UnblockedWardrobeChangesAdvisor(),
@@ -99,7 +99,7 @@ new_advisors = [
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
-        TravelToAltarAdvisor(): 2,
+        #TravelToAltarAdvisor(): 2,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
     RandomMoveAdvisor(),
