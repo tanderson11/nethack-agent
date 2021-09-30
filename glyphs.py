@@ -824,8 +824,12 @@ class ObjectIdentity():
         else:
             return None
 
+    desirability_if_unidentified = constants.IdentityDesirability.desire_none
     def desirable_identity(self, character):
-        return False
+        if self.is_identified():
+            return constants.IdentityDesirability(self.find_values('IDENTITY_DESIRABILITY'))
+
+        return self.desirability_if_unidentified
 
     def restrict_by_base_prices(self, base_prices, method='buy'):
         self.listened_price_id_methods[method] = True
@@ -843,13 +847,10 @@ class ObjectIdentity():
 
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
-
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.listened_actions = {}
-
-    def desirable_identity(self, character):
-        return True
 
     bad_scrolls_any_buc = ['destroy armor', 'amensia']
     bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
@@ -868,30 +869,15 @@ class SpellbookIdentity(ObjectIdentity):
 
 class RingIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-
-    def desirable_identity(self, character):
-        return True
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
 class AmuletIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
-
-    def desirable_identity(self, character):
-        return True
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
-
-    def desirable_identity(self, character):
-        if self.name() is not None and 'healing' in self.name():
-            return True
-
-        if self.name() == 'gain level':
-            return True
-
-        if self.name() == 'fruit juice':
-            return True
-
-        return False
+    desirability_if_unidentified = constants.IdentityDesirability.desire_none
 
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
@@ -913,50 +899,17 @@ class FoodIdentity(ObjectIdentity):
 
         return True
 
-    def desirable_identity(self, character):
-        if "glob" in self.name() or self.name() == "egg":
-            return False
-
-        return True
-
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
 
-    def desirable_identity(self, character):
-        if self.name() == 'unicorn horn':
-            return True
-
-        if self.name() in ['lock pick', 'key', 'credit card']:
-            return True
-
-        if self.name() in ['sack', 'bag of holding', 'oilskin sack']:
-            return True
-
-        if self.name() == 'magic marker':
-            return True
-
-        if self.name() == 'magic lamp':
-            return True
-
-        return False
-
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
-
-    def desirable_identity(self, character):
-        if self.name() == 'luckstone':
-            return True
-
-        return False
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 
 class CoinIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
-
-    def desirable_identity(self, character):
-        return True
 
 class BallIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[BallGlyph]
@@ -966,6 +919,7 @@ class ChainIdentity(ObjectIdentity):
 
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
@@ -990,11 +944,9 @@ class WandIdentity(ObjectIdentity):
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
-    def desirable_identity(self, character):
-        return True
-
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
@@ -1027,9 +979,6 @@ class ArmorIdentity(ObjectIdentity):
 
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')
-
-    def desirable_identity(self, character):
-        return True
 
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]

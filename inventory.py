@@ -97,7 +97,13 @@ class Item():
         if self.identity is None:
             return False
 
-        return self.can_afford(character) and self.identity.desirable_identity(character)
+        identity_desirability = self.identity.desirable_identity(character)
+        if identity_desirability == constants.IdentityDesirability.desire_none:
+            return False
+
+        desirable_identity = identity_desirability == constants.IdentityDesirability.desire_all
+
+        return self.can_afford(character) and desirable_identity
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph

@@ -10,6 +10,13 @@ class SpecialRoomTypes(enum.Enum):
     shop = 1
     vault_closet = 2
 
+class IdentityDesirability(enum.Enum):
+    desire_all = "desire all"
+    desire_one = "desire one"
+    desire_seven = "desire seven"
+    desire_as_raw_material = "desire as raw"
+    desire_none = False
+
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
     Barbarian = 'Barbarian'
