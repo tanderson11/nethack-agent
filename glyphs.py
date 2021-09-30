@@ -1243,10 +1243,10 @@ class GlobalIdentityMap():
         identity.give_name(name)
 
         if identity.is_shuffled:
-            data_idx = identity.idx[0]
-            if len(data_idx) == 0:
+            if len(identity.idx) == 0:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 return None
+            data_idx = identity.idx[0]
             # go through the shuffled class and remove that entry from the idx
             for shuffled_item_idx in identity.shuffle_class_idx:
                 other_identity = self.identity_by_numeral[shuffled_item_idx]
