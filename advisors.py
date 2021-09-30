@@ -1180,11 +1180,11 @@ class DropToPriceIDAdvisor(Advisor):
 
         unidentified_items = character.inventory.all_unidentified_items()
         unidentified_items = [i for i in unidentified_items if not i.identity.listened_price_id_methods.get('sell', False)]
+        unidentified_items = [i for i in unidentified_items if i.equipped_status is None or i.equipped_status.status != 'worn']
         if len(unidentified_items) == 0:
             return None
 
         unidentified_letters = [i.inventory_letter for i in unidentified_items]
-        #import pdb; pdb.set_trace()
         menu_plan = menuplan.MenuPlan(
             "drop all objects to price id",
             self,
@@ -1192,7 +1192,7 @@ class DropToPriceIDAdvisor(Advisor):
                 menuplan.NoMenuResponse("Sell it?"),
                 menuplan.NoMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
-                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1204,6 +1204,7 @@ class DropToPriceIDAdvisor(Advisor):
 class DropUndesirableAdvisor(Advisor):
     def drop_undesirable(self, run_state, character):
         undesirable_items = character.inventory.all_undesirable_items(character)
+        undesirable_items = [item for item in undesirable_items if item.equipped_status is None or item.equipped_status.status != 'worn']
         if len(undesirable_items) == 0:
             return None
 
@@ -1216,7 +1217,7 @@ class DropUndesirableAdvisor(Advisor):
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
-                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1233,6 +1234,7 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
         if np.count_nonzero(doors) > 0:
             # don't drop if on the first square of the shop next to the door
             return None
+
         return self.drop_undesirable(run_state, character)
 
 class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
