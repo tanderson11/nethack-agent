@@ -767,6 +767,8 @@ class ObjectIdentity():
     def give_name(self, name):
         matches_name = self.data.loc[self.idx].NAME == name
         self.idx = matches_name.index[matches_name]
+        if len(self.idx) == 0:
+            import pdb; pdb.set_trace()
 
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
@@ -1244,6 +1246,7 @@ class GlobalIdentityMap():
 
         if identity.is_shuffled:
             if len(identity.idx) == 0:
+                import pdb; pdb.set_trace()
                 if environment.env.debug: import pdb; pdb.set_trace()
                 return None
             data_idx = identity.idx[0]
@@ -1255,6 +1258,8 @@ class GlobalIdentityMap():
                 if data_idx in other_identity.idx:
                     if isinstance(other_identity.idx, pd.Index):
                         other_identity.idx = other_identity.idx.drop(data_idx)
+                        if len(other_identity.idx) == 0:
+                            import pdb; pdb.set_trace()
 
 #####################
 # UTILITY FUNCTIONS #
