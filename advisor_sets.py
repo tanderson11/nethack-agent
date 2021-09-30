@@ -32,7 +32,7 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         MeleeHoldingMonsterAdvisor(),
         MeleePriorityTargets(),
-        ReduceThreatFromManyEnemiesWithMove(),
+        #ReduceThreatFromManyEnemiesWithMove(),
         SafeMeleeAttackAdvisor(),
         PassiveMonsterRangedAttackAdvisor(),
         RandomMoveAdvisor(),
@@ -62,7 +62,7 @@ new_advisors = [
         DropToPriceIDAdvisor(),
         DropUndesirableWantToLowerWeight(),
         AnyWardrobeChangeAdvisor(),
-        IdentifyUnidentifiedScrolls(),
+        #IdentifyUnidentifiedScrolls(),
         IdentifyPotentiallyMagicArmorAdvisor(),
         ReadKnownBeneficialScrolls(),
         ReadSafeUnidentifiedScrolls(),
