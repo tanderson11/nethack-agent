@@ -12,6 +12,7 @@ class SpecialRoomTypes(enum.Enum):
 
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
+    desire_all_uncursed = "desire all uncursed"
     desire_one = "desire one"
     desire_seven = "desire seven"
     desire_as_raw_material = "desire as raw"

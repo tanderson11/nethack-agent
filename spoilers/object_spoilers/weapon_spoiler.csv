@@ -15,15 +15,15 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,COST,SLOT,SECOND_SLO
 1976,crossbow,none,,,40,hand,,50,45,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,bolt,,,FALSE,crossbow,FALSE
 1912,crossbow bolt,none,crossbow bolts,,2,quiver,,1,55,IRON,,d4+1,3.5,d6+1,4.5,4,FALSE,,bolt,,TRUE,,FALSE
 1932,crysknife,desire one,crysknives,,100,hand,,20,0,MINL,,d10,5.5,d10,5.5,5.5,FALSE,,,,FALSE,knife,FALSE
-1923,dagger,desire all,daggers,,4,hand,,10,30,IRON,,d4,2.5,d3,2,2.25,FALSE,,,,FALSE,dagger,FALSE
-1913,dart,desire all,darts,,2,quiver,,1,60,IRON,,d3,2,d2,1.5,1.75,TRUE,,,TRUE,FALSE,dart,FALSE
+1923,dagger,desire all uncursed,daggers,,4,hand,,10,30,IRON,,d4,2.5,d3,2,2.25,FALSE,,,,FALSE,dagger,FALSE
+1913,dart,desire all uncursed,darts,,2,quiver,,1,60,IRON,,d3,2,d2,1.5,1.75,TRUE,,,TRUE,FALSE,dart,FALSE
 1956,dwarvish mattock,desire one,,,50,hand,off_hand,120,13,IRON,broad pick,d12,6.5,d8+2d6,11.5,9,FALSE,,,,FALSE,pick-axe,FALSE
 1938,dwarvish short sword,desire one,,,10,hand,,30,2,IRON,broad short sword,d7,4,d8,4.5,4.25,FALSE,,,,FALSE,short sword,FALSE
 1919,dwarvish spear,desire one,dwarvish spears,,3,hand,,35,12,IRON,stout spear,d8,4.5,d8,4.5,4.5,FALSE,,,,FALSE,spear,FALSE
 1908,elven arrow,none,elven arrows,,2,quiver,,1,20,WOOD,runed arrow,d7,4,d6,3.5,3.75,FALSE,,arrow,,TRUE,,FALSE
 1972,elven bow,none,,,60,hand,,30,12,WOOD,runed bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,FALSE,bow,FALSE
 1942,elven broadsword,desire one,,,10,hand,,70,4,WOOD,runed broadsword,d6+d4,6,d6+1,4.5,5.25,FALSE,,,,FALSE,broadsword,FALSE
-1924,elven dagger,desire all,elven daggers,,4,hand,,10,10,WOOD,runed dagger,d5,3,d3,2,2.5,FALSE,,,,FALSE,dagger,FALSE
+1924,elven dagger,desire all uncursed,elven daggers,,4,hand,,10,10,WOOD,runed dagger,d5,3,d3,2,2.5,FALSE,,,,FALSE,dagger,FALSE
 1936,elven short sword,desire one,,,10,hand,,30,2,WOOD,runed short sword,d8,4.5,d8,4.5,4.5,FALSE,,,,FALSE,short sword,FALSE
 1917,elven spear,desire one,elven spears,,3,hand,,30,10,WOOD,runed spear,d7,4,d8,4.5,4.25,FALSE,,,,FALSE,spear,FALSE
 1957,fauchard,desire one,,,5,hand,off_hand,60,6,IRON,pole sickle,d6,3.5,d8,4.5,4,FALSE,,,,FALSE,polearm,FALSE
@@ -31,7 +31,7 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,COST,SLOT,SECOND_SLO
 1951,glaive,desire one,,naginata,6,hand,off_hand,75,8,IRON,single-edged polearm,d6,3.5,d10,5.5,4.5,FALSE,,,,FALSE,polearm,FALSE
 1958,guisarme,desire one,,,5,hand,off_hand,80,6,IRON,pruning hook,2d4,5,d8,4.5,4.75,FALSE,,,,FALSE,polearm,FALSE
 1953,halberd,desire one,,,10,hand,off_hand,150,8,IRON,angled poleaxe,d10,5.5,2d6,7,6.25,FALSE,,,,FALSE,polearm,FALSE
-1921,javelin,desire all,javelins,,3,hand,,20,10,IRON,throwing spear,d6,3.5,d6,3.5,3.5,FALSE,,,TRUE,FALSE,spear,FALSE
+1921,javelin,desire all uncursed,javelins,,3,hand,,20,10,IRON,throwing spear,d6,3.5,d6,3.5,3.5,FALSE,,,TRUE,FALSE,spear,FALSE
 1945,katana,desire one,,,80,hand,,40,4,IRON,samurai sword,d10,5.5,d12,6.5,6,FALSE,,,,FALSE,long sword,FALSE
 1929,knife,desire one,knives,shito,4,hand,,5,20,IRON,,d3,2,d2,1.5,1.75,FALSE,,,,FALSE,knife,FALSE
 1952,lance,none,,,10,hand,,180,4,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,FALSE,lance,FALSE
@@ -52,9 +52,9 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,COST,SLOT,SECOND_SLO
 1928,scalpel,desire one,scalepls,,6,hand,,5,0,METL,,d3,2,d3,2,2,FALSE,,,,FALSE,knife,FALSE
 1939,scimitar,desire one,,,15,hand,,40,15,IRON,curved sword,d8,4.5,d8,4.5,4.5,FALSE,,,,FALSE,scimitar,FALSE
 1935,short sword,desire one,,wakizashi,10,hand,,30,8,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,FALSE,short sword,FALSE
-1914,shuriken,desire all,,,5,quiver,,1,35,IRON,throwing star,d8,4.5,d6,3.5,4,FALSE,,,TRUE,FALSE,shuriken,FALSE
+1914,shuriken,desire all uncursed,,,5,quiver,,1,35,IRON,throwing star,d8,4.5,d6,3.5,4,FALSE,,,TRUE,FALSE,shuriken,FALSE
 1910,silver arrow,none,silver arrows,,5,quiver,,1,12,SILV,,d6,3.5,d6,3.5,3.5,FALSE,,arrow,,TRUE,,FALSE
-1926,silver dagger,desire all,silver daggers,,40,hand,,12,3,SILV,,d4,2.5,d3,2,2.25,FALSE,,,,FALSE,dagger,FALSE
+1926,silver dagger,desire all uncursed,silver daggers,,40,hand,,12,3,SILV,,d4,2.5,d3,2,2.25,FALSE,,,,FALSE,dagger,FALSE
 1940,silver saber,desire one,,,75,hand,,40,6,SILV,,d8,4.5,d8,4.5,4.5,FALSE,,,,FALSE,saber,FALSE
 1920,silver spear,desire one,silver spears,,40,hand,,36,2,SILV,,d6,3.5,d8,4.5,4,FALSE,,,,FALSE,spear,FALSE
 1975,sling,none,,,20,hand,,3,40,LEAT,,d2,1.5,d2,1.5,1.5,TRUE,flint stone,,,FALSE,sling,FALSE

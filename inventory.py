@@ -122,6 +122,9 @@ class Item():
         if identity_desirability == constants.IdentityDesirability.desire_all:
             return True
 
+        if identity_desirability == constants.IdentityDesirability.desire_all_uncursed:
+            return self.BUC != constants.BUC.cursed
+
         if identity_desirability == constants.IdentityDesirability.desire_one:
             assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
             same_items = self.find_equivalents(character.inventory)

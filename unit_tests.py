@@ -794,9 +794,9 @@ class TestWeaponPickup(unittest.TestCase):
     test_values = {
         "d - an uncursed dagger": "d",
         "a - a cursed dagger": None,
-        "a - a blessed +5 club": None,
+        "a - a blessed +5 club": "a",
         "a - a scimitar": "a",
-        "a - a blessed -2 scimitar": None,
+        "a - a blessed -2 scimitar": "a",
         "a - a blessed +5 scimitar": "a",
         "a - a runed broadsword": None
     }
@@ -812,7 +812,7 @@ class TestWeaponPickup(unittest.TestCase):
         )
         character.set_class_skills()
 
-        inventory = inv.PlayerInventory([], [], [], [])
+        inventory = inv.PlayerInventory(np.array([]), np.array([]), np.array([]), np.array([]))
         inventory.wielded_weapon = inv.BareHands()
         run_state.character = character
         run_state.character.inventory = inventory
