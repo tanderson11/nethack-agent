@@ -165,6 +165,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
         if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
             self.always_peaceful = True
 
+    def shopkeeper_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 267)
+
     def always_peaceful_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
 
@@ -464,6 +467,10 @@ class CMapGlyph(Glyph):
     @staticmethod
     def is_door_check(offsets):
         return (offsets >= 12) & (offsets <= 16)
+
+    @staticmethod
+    def open_door_mask(numerals):
+        return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
 
     @staticmethod
     def is_wall_check(offsets):
@@ -1242,6 +1249,9 @@ def get_by_name(klass, name):
     if not isinstance(glyph, klass):
         raise Exception(f"bad glyph name: {name}")
     return glyph
+
+def stackable_mask(numerals):
+    return ObjectGlyph.class_mask(numerals) | CorpseGlyph.class_mask(numerals) | StatueGlyph.class_mask(numerals)
 
 def stackable_glyph(glyph):
     if isinstance(glyph, ObjectGlyph): return True
