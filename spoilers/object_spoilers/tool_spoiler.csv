@@ -8,25 +8,25 @@ bag of holding,,desire one,2100,bag,FALSE,100,15,20,,TRUE,,container
 bag of tricks,,none,2101,bag,FALSE,100,15,20,20,TRUE,,container
 tin whistle,,none,2126,whistle,FALSE,10,3,100,,FALSE,,whistle
 magic whistle,,none,2127,whistle,FALSE,10,3,30,,TRUE,,whistle
-wooden flute,,desire one,2128,flute,FALSE,12,5,4,,FALSE,,instrument
-magic flute,,desire one,2129,flute,FALSE,36,5,2,8,TRUE,,instrument
-tooled horn,,desire one,2130,horn,FALSE,15,18,5,,FALSE,,instrument
-frost horn,,desire one,2131,horn,FALSE,50,18,2,8,TRUE,,instrument
-fire horn,,desire one,2132,horn,FALSE,50,18,2,8,TRUE,,instrument
-horn of plenty,,desire one,2133,horn,FALSE,50,18,2,20,TRUE,,instrument
-wooden harp,koto,desire one,2134,harp,FALSE,50,30,4,,FALSE,,instrument
-magic harp,,desire one,2135,harp,FALSE,50,30,2,8,TRUE,,instrument
-bell,,none,2136,bell,FALSE,50,30,2,,FALSE,,instrument
-bugle,,desire one,2137,bugle,FALSE,15,10,4,,FALSE,,instrument
-leather drum,,none,2138,drum,FALSE,25,25,4,,FALSE,,instrument
-drum of earthquake,,none,2139,drum,FALSE,25,25,2,8,TRUE,,instrument
-Bell of Opening,,desire all,2144,silver bell,FALSE,5000,10,0,3,TRUE,,instrument
-tallow candle,,desire seven,2105,candle,FALSE,10,2,20,,FALSE,,light source
-wax candle,,desire seven,2106,candle,FALSE,20,2,5,,FALSE,,light source
+wooden flute,,desire one,2128,flute,FALSE,12,5,4,,FALSE,,tonal instrument
+magic flute,,desire one,2129,flute,FALSE,36,5,2,8,TRUE,,tonal instrument
+tooled horn,,desire one,2130,horn,FALSE,15,18,5,,FALSE,,tonal instrument
+frost horn,,desire one,2131,horn,FALSE,50,18,2,8,TRUE,,tonal instrument
+fire horn,,desire one,2132,horn,FALSE,50,18,2,8,TRUE,,tonal instrument
+horn of plenty,,desire one,2133,horn,FALSE,50,18,2,20,TRUE,,tonal instrument
+wooden harp,koto,desire one,2134,harp,FALSE,50,30,4,,FALSE,,tonal instrument
+magic harp,,desire one,2135,harp,FALSE,50,30,2,8,TRUE,,tonal instrument
+bell,,none,2136,bell,FALSE,50,30,2,,FALSE,,atonal instrument
+bugle,,desire one,2137,bugle,FALSE,15,10,4,,FALSE,,tonal instrument
+leather drum,,none,2138,drum,FALSE,25,25,4,,FALSE,,atonal instrument
+drum of earthquake,,none,2139,drum,FALSE,25,25,2,8,TRUE,,atonal instrument
+Bell of Opening,,desire all,2144,silver bell,FALSE,5000,10,0,3,TRUE,,atonal instrument
+tallow candle,,desire seven,2105,candle,FALSE,10,2,20,,FALSE,,candles
+wax candle,,desire seven,2106,candle,FALSE,20,2,5,,FALSE,,candles
 brass lantern,,none,2107,brass lantern,FALSE,12,30,30,1499,FALSE,,light source
 oil lamp,,none,2108,lamp,FALSE,10,20,45,1499,FALSE,,light source
 magic lamp,,desire all,2109,lamp,FALSE,50,20,15,,TRUE,,light source
-Candelabrum of Invocation,,none,2143,candelabrum,FALSE,5000,10,0,,TRUE,,light source
+Candelabrum of Invocation,,desire all,2143,candelabrum,FALSE,5000,10,0,,TRUE,,light source
 expensive camera,,none,2110,expensive camera,FALSE,200,12,15,99,FALSE,,misc
 mirror,,none,2111,looking glass,FALSE,10,13,45,,FALSE,,misc
 crystal ball,,none,2112,glass orb,FALSE,60,150,15,5,TRUE,,misc

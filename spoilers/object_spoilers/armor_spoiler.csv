@@ -15,13 +15,13 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGH
 2045,gauntlets of dexterity,desire all,1,3,,10,fencing gloves,,TRUE,TRUE,gloves,gloves,50,8,FALSE,1,L,Dex
 2044,gauntlets of power,desire all,1,9,,30,riding gloves,,TRUE,TRUE,gloves,gloves,50,8,FALSE,1,I,Str
 1986,helm of opposite alignment,desire all,1,-10,15,50,crested helmet,,TRUE,TRUE,helmet,helmet,50,6,TRUE,1,I,Align
-1984,helmet,desire all,1,2,,30,plumed helmet,kabuto,FALSE,TRUE,helmet,helmet,10,10,FALSE,1,I,
+1984,helmet,desire one,1,2,,30,plumed helmet,kabuto,FALSE,TRUE,helmet,helmet,10,10,FALSE,1,I,
 1985,helm of brilliance,desire all,1,3,,50,etched helmet,,TRUE,TRUE,helmet,helmet,50,6,FALSE,1,I,Int+Wis
 1987,helm of telepathy,desire all,1,4,,50,visored helmet,,TRUE,TRUE,helmet,helmet,50,2,FALSE,1,I,ESP
-2046,low boots,desire all,1,1,,10,walking shoes,,FALSE,FALSE,,boots,8,25,FALSE,1,L,
+2046,low boots,desire one,1,1,,10,walking shoes,,FALSE,FALSE,,boots,8,25,FALSE,1,L,
 2047,iron shoes,desire all,1,2,,50,hard shoes,,FALSE,FALSE,,boots,16,7,FALSE,2,I,
 2048,high boots,desire all,1,3,,20,jackboots,,FALSE,FALSE,,boots,12,15,FALSE,2,L,
-2023,mummy wrapping,desire all,1,0,,3,mummy wrapping,,FALSE,FALSE,,cloak,2,0,FALSE,0,C,Vis
+2023,mummy wrapping,none,1,0,,3,mummy wrapping,,FALSE,FALSE,,cloak,2,0,FALSE,0,C,Vis
 2025,orcish cloak,desire all,1,0,,10,coarse mantelet,,FALSE,FALSE,,cloak,40,8,FALSE,0,C,
 2026,dwarvish cloak,desire all,1,0,,10,hooded cloak,,FALSE,FALSE,,cloak,50,8,FALSE,0,C,
 2030,leather cloak,desire all,1,1,,15,leather cloak,,FALSE,FALSE,,cloak,40,8,FALSE,1,L,
@@ -34,7 +34,7 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGH
 1977,elven leather helm,desire all,1,1,,3,leather hat,,FALSE,FALSE,,helmet,8,6,FALSE,1,L,
 1981,cornuthaum,desire all,1,1,,4,conical hat,,TRUE,FALSE,,helmet,80,3,FALSE,0,C,Clair
 1978,orcish helm,desire all,1,2,,30,iron skull cap,,FALSE,FALSE,,helmet,10,6,FALSE,1,I,
-1983,dented pot,desire all,1,2,,10,dented pot,,FALSE,FALSE,,helmet,8,2,FALSE,1,I,
+1983,dented pot,desire one,1,2,,10,dented pot,,FALSE,FALSE,,helmet,8,2,FALSE,1,I,
 1979,dwarvish iron helm,desire all,1,3,,40,hard hat,,FALSE,FALSE,,helmet,20,6,FALSE,2,I,
 2035,small shield,desire all,1,1,,30,small shield,,FALSE,FALSE,,off_hand,3,6,FALSE,1,W,
 2037,Uruk-hai shield,desire all,1,1,,50,white-handed shield,,FALSE,FALSE,,off_hand,7,2,FALSE,1,I,
@@ -49,32 +49,32 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGH
 2020,leather jacket,desire all,1,1,,30,leather jacket,,FALSE,FALSE,,suit,10,12,FALSE,1,L,
 2017,ring mail,desire all,1,2,,250,ring mail,,FALSE,FALSE,,suit,100,72,FALSE,3,I,
 2019,leather armor,desire all,1,2,,150,leather armor,,FALSE,FALSE,,suit,5,82,FALSE,2,L,
-1997,gray dragon scales,desire all,1,3,5,40,gray dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Magic
-1998,silver dragon scales,desire all,1,3,5,40,silver dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Reflect
-1999,red dragon scales,desire all,1,3,5,40,red dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Fire
-2000,white dragon scales,desire all,1,3,5,40,white dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Cold
-2001,orange dragon scales,desire all,1,3,5,40,orange dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Sleep
-2002,black dragon scales,desire all,1,3,5,40,black dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Disint
-2003,blue dragon scales,desire all,1,3,5,40,blue dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Elec
-2004,green dragon scales,desire all,1,3,5,40,green dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Poison
-2005,yellow dragon scales,desire all,1,3,5,40,yellow dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Acd
-2014,orcish chain mail,desire all,1,3,,300,crude chain mail,,FALSE,FALSE,,suit,75,20,FALSE,4,I,
-2016,studded leather armor,desire all,1,3,,200,studded leather armor,,FALSE,FALSE,,suit,15,72,FALSE,3,L,
-2015,scale mail,desire all,1,4,,250,scale mail,,FALSE,FALSE,,suit,45,72,FALSE,4,I,
-2008,bronze plate mail,desire all,1,5,,450,bronze plate mail,,FALSE,FALSE,,suit,400,25,FALSE,6,B,
-2009,splint mail,desire all,1,5,,400,splint mail,,FALSE,FALSE,,suit,80,62,FALSE,6,I,
-2013,chain mail,desire all,1,5,,300,chain mail,,FALSE,FALSE,,suit,75,72,FALSE,5,I,
-2006,plate mail,desire all,2,6,,450,plate mail,tanko,FALSE,FALSE,,suit,600,44,FALSE,7,I,
-2007,crystal plate mail,desire all,2,6,,450,crystal plate mail,,FALSE,FALSE,,suit,820,10,FALSE,7,G,
-2010,banded mail,desire all,1,7,,350,banded mail,,FALSE,FALSE,,suit,90,72,FALSE,6,I,
+1997,gray dragon scales,desire one,1,3,5,40,gray dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Magic
+1998,silver dragon scales,desire one,1,3,5,40,silver dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Reflect
+1999,red dragon scales,desire one,1,3,5,40,red dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Fire
+2000,white dragon scales,desire one,1,3,5,40,white dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Cold
+2001,orange dragon scales,desire one,1,3,5,40,orange dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Sleep
+2002,black dragon scales,desire one,1,3,5,40,black dragon scales,,FALSE,FALSE,,suit,700,0,FALSE,3,D,Disint
+2003,blue dragon scales,desire one,1,3,5,40,blue dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Elec
+2004,green dragon scales,desire one,1,3,5,40,green dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Poison
+2005,yellow dragon scales,desire one,1,3,5,40,yellow dragon scales,,FALSE,FALSE,,suit,500,0,FALSE,3,D,Acd
+2014,orcish chain mail,desire one,1,3,,300,crude chain mail,,FALSE,FALSE,,suit,75,20,FALSE,4,I,
+2016,studded leather armor,desire one,1,3,,200,studded leather armor,,FALSE,FALSE,,suit,15,72,FALSE,3,L,
+2015,scale mail,desire one,1,4,,250,scale mail,,FALSE,FALSE,,suit,45,72,FALSE,4,I,
+2008,bronze plate mail,desire one,1,5,,450,bronze plate mail,,FALSE,FALSE,,suit,400,25,FALSE,6,B,
+2009,splint mail,desire one,1,5,,400,splint mail,,FALSE,FALSE,,suit,80,62,FALSE,6,I,
+2013,chain mail,desire one,1,5,,300,chain mail,,FALSE,FALSE,,suit,75,72,FALSE,5,I,
+2006,plate mail,desire one,2,6,,450,plate mail,tanko,FALSE,FALSE,,suit,600,44,FALSE,7,I,
+2007,crystal plate mail,desire one,2,6,,450,crystal plate mail,,FALSE,FALSE,,suit,820,10,FALSE,7,G,
+2010,banded mail,desire one,1,7,,350,banded mail,,FALSE,FALSE,,suit,90,72,FALSE,6,I,
 2012,elven mithril coat,desire all,2,8,,150,elven mithril-coat,,FALSE,FALSE,,suit,240,15,FALSE,5,M,
-1990,red dragon scale mail,desire all,1,10,,40,red dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Fire
-1991,white dragon scale mail,desire all,1,10,,40,white dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Cold
-1992,orange dragon scale mail,desire all,1,10,,40,orange dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Sleep
-1993,black dragon scale mail,desire all,1,10,,40,black dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Disint
-1994,blue dragon scale mail,desire all,1,10,,40,blue dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Elec
-1995,green dragon scale mail,desire all,1,10,,40,green dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Poison
-1996,yellow dragon scale mail,desire all,1,10,,40,yellow dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Acd
+1990,red dragon scale mail,desire one,1,10,,40,red dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Fire
+1991,white dragon scale mail,desire one,1,10,,40,white dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Cold
+1992,orange dragon scale mail,desire one,1,10,,40,orange dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Sleep
+1993,black dragon scale mail,desire one,1,10,,40,black dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Disint
+1994,blue dragon scale mail,desire one,1,10,,40,blue dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Elec
+1995,green dragon scale mail,desire one,1,10,,40,green dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Poison
+1996,yellow dragon scale mail,desire one,1,10,,40,yellow dragon scale mail,,FALSE,FALSE,,suit,900,0,FALSE,9,D,Acd
 2011,dwarvish mithril coat,desire all,2,10,,150,dwarvish mithril-coat,,FALSE,FALSE,,suit,240,10,FALSE,6,M,
-1988,gray dragon scale mail,desire all,1,16,,40,gray dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Magic
-1989,silver dragon scale mail,desire all,1,18,,40,silver dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Reflect
+1988,gray dragon scale mail,desire one,1,16,,40,gray dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Magic
+1989,silver dragon scale mail,desire one,1,18,,40,silver dragon scale mail,,FALSE,FALSE,,suit,1200,0,FALSE,9,D,Reflect

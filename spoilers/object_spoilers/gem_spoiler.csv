@@ -9,7 +9,7 @@ citrine,desire all,2325,yellow,FALSE,citrine,1500,1,4*,soft,yellow
 diamond,desire all,2318,white,FALSE,diamond,4000,1,25*,hard,white
 dilithium crystal,desire all,2317,white,FALSE,dilithium crystal,"4,500.00",1,28*,soft,white
 emerald,desire all,2323,green,FALSE,emerald,2500,1,10*,hard,green
-flintstone,desire all,2351,gray,FALSE,flint,1,10,10,soft,gray stone
+flint stone,desire all,2351,gray,FALSE,flint,1,10,10,soft,gray stone
 fluorite,desire all,2335,violet,FALSE,fluorite,400,1,1*,soft,"green, blue, white, violet"
 garnet,desire all,2332,red,FALSE,garnet,700,1,1*,soft,red
 jacinth,desire all,2320,orange,FALSE,jacinth,3250,1,19*,hard,orange

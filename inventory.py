@@ -93,9 +93,20 @@ class Item():
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
 
-    def better_than_instance(self, y):
+        return can_afford
+
+    def find_equivalents(self, inventory):
+        if self.__class__ == Item:
+            import pdb; pdb.set_trace()
+        same_items = inventory.get_items(self.__class__, name=self.identity.name())
+        return same_items
+
+    def better_than_equivalent(self, y, character):
         # in general, don't drop Y to pick up X if they have the same identity
         return False
+
+    def less_cursed_than(self, y):
+        return y.BUC == constants.BUC.cursed and self.BUC != constants.BUC.cursed
 
     def desirable(self, character, consider_funds=True):
         if self.identity is None:
@@ -113,12 +124,12 @@ class Item():
 
         if identity_desirability == constants.IdentityDesirability.desire_one:
             assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
-            same_items = character.inventory.get_items(self.__class__, name=self.identity.name())
-            equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_instance(i)]
+            same_items = self.find_equivalents(character.inventory)
+            equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_equivalent(i, character)]
 
             if len(equal_or_better_versions) > 0:
                 return False
-            
+
             return True
 
         # now we are in the logic where we want exactly 1 (or exactly 7) of this item
@@ -156,33 +167,24 @@ class Armor(Item):
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
         else:
-            buc_adjustment = -2 if self.BUC == constants.BUC.cursed else -0.5
+            buc_adjustment = -0.5
             # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
             raw_value = self.identity.converted_wear_value().min()
 
-        desirability = raw_value + best_case_enhancement + body_armor_penalty
+        desirability = raw_value + best_case_enhancement + body_armor_penalty + buc_adjustment
         return desirability
 
-    def desirable(self, character):
-        if not self.can_afford(character):
-            return False
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        same_slot = inventory.get_items(Armor, identity_selector=lambda i: i.slot == self.identity.slot)
+        return same_slot
 
-        if self.identity.potentially_magic():
-            return True
+    def better_than_equivalent(self, y, character):
+        return self.instance_desirability_to_wear(character) > y.instance_desirability_to_wear(character)
 
-        instance_desirability = self.instance_desirability_to_wear(character)
-        slot = self.identity.slot
-        armaments = character.inventory.armaments
-        current = armaments[armaments._fields.index(slot)]
-
-        if self == current and instance_desirability >= 0:
-            return True
-
-        current_desirability = 0
-        if current is not None and isinstance(current, Armor):
-            current_desirability = current.instance_desirability_to_wear(character)
-
-        return instance_desirability >= 0 and (instance_desirability > current_desirability)
+    def desirable(self, character, consider_funds=True):
+        return super().desirable(character, consider_funds=consider_funds)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -206,7 +208,7 @@ class Wand(Item):
             self.BUC = constants.BUC.uncursed
 
     def desirable(self, character):
-        desirable_identity = super().desirable(character)
+        des = super().desirable(character)
 
         # keep even a 0 charge wand of wishing
         if self.identity.name() == 'wishing':
@@ -219,10 +221,14 @@ class Wand(Item):
         if self.charges == 0:
             return False
 
-        return desirable_identity
+        return des
 
 class Food(Item):
     glyph_class = gd.FoodGlyph
+
+    def better_than_equivalent(self, y, character):
+        # prefer a not-cursed lizard corpse to a cursed lizard corpse
+        return self.less_cursed_than(y)
 
 class Coin(Item):
     glyph_class = gd.CoinGlyph
@@ -344,19 +350,24 @@ class Weapon(Item):
         
         return max_rank * 17 + (enhancement + melee_damage)
 
-    def desirable(self, character):
-        if not self.can_afford(character):
-            return False
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        return inventory.get_items(Weapon)
 
-        if self == character.inventory.wielded_weapon:
-            return True
+    def better_than_equivalent(self, y, character):
+        is_better = self.instance_desirability_to_wield(character) > y.instance_desirability_to_wield(character)
+        if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded'):
+            #import pdb; pdb.set_trace()
+            print(f"Found better weapon: {self.identity.name()}")
+        return is_better
 
+    def desirable(self, character, consider_funds=True):
         if self.enhancement is not None and (self.identity.is_ranged or self.identity.is_ammunition):
             return True
 
-        is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
-        if is_better: print(f"Found better weapon: {self.identity.name()}")
-        return is_better
+        des = super().desirable(character, consider_funds=consider_funds)
+        return des
 
 class BareHands(Weapon):
     def __init__(self):
@@ -424,6 +435,43 @@ class Tool(Item):
 
     def instance_desirability_to_wield(self, character):
         return 0
+
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        if self.identity.name() == 'unicorn horn' or self.identity.name() == 'pick-axe':
+            return super().find_equivalents(self, inventory)
+
+        same_type = inventory.get_items(Tool, identity_selector=lambda i: i.type == self.identity.type)
+        return same_type
+
+    def better_than_equivalent(self, y, character):
+        if self.identity is None:
+            return False
+
+        if self.identity.name() == 'unicorn horn' or self.identity.name() == 'pick-axe':
+            return self.less_cursed_than(y)
+
+        if self.identity.type == 'container':
+            # TK decide which bag to keep (need to know about which has your items in it)
+            if self.identity.name() == 'bag of holding':
+                return True
+            return False
+
+        return self.identity.weight() < y.identity.weight()
+
+    def desirable(self, character, consider_funds=True):
+        identity_desirability = self.identity.desirable_identity(character)
+
+        if identity_desirability == constants.IdentityDesirability.desire_seven:
+            candles = character.inventory.get_items(Tool, identity_selector=lambda i: i.type == 'candles')
+            seven_stacks = [c for c in candles if c.quantity >= 7]
+
+            if len(seven_stacks) == 0:
+                return True
+            return self == seven_stacks[0]
+
+        return super().desirable(character, consider_funds=consider_funds)
 
 class Gem(Item):
     try_to_price_id = False
@@ -1097,6 +1145,7 @@ class PlayerInventory():
         except KeyError:
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
+
             for i in range(len(self.inv_strs[oclass_idx])):
                 letter, raw_string = self.inv_letters[oclass_idx][i], self.inv_strs[oclass_idx][i]
                 if self.inv_glyphs is not None:

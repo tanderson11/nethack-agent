@@ -812,6 +812,9 @@ class ObjectIdentity():
             return unique[0] # policy: if we find only one value, just return it
         return unique
 
+    def weight(self):
+        return self.find_values('WEIGHT').max()
+
     def name(self):
         if self.is_identified():
             return self.find_values('NAME')
@@ -910,6 +913,11 @@ class FoodIdentity(ObjectIdentity):
 
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
+
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+
+        self.type = self.find_values('TYPE')
 
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
