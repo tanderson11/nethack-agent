@@ -85,7 +85,7 @@ new_advisors = [
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
-        KickLockedDoorAdvisor(),
+        KickLockedDoorAdvisor(oracle_consultation=lambda o: not o.in_shop),
         OpenClosedDoorAdvisor(),
         ]),
     # MOVE TO DESIRABLE

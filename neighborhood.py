@@ -91,7 +91,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         is_shopkeeper = gd.MonsterGlyph.shopkeeper_mask(extended_visible_raw_glyphs)
         shopkeeper_present = is_shopkeeper.any()
 
-        if shopkeeper_present and on_doorway:
+        if shopkeeper_present:
             it = np.nditer(is_shopkeeper, flags=['multi_index'])
             for b in it:
                 if b: # if this is a shopkeeper

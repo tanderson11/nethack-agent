@@ -440,7 +440,7 @@ class Tool(Item):
         if self.identity is None:
             return []
         if self.identity.name() == 'unicorn horn' or self.identity.name() == 'pick-axe':
-            return super().find_equivalents(self, inventory)
+            return super().find_equivalents(inventory)
 
         same_type = inventory.get_items(Tool, identity_selector=lambda i: i.type == self.identity.type)
         return same_type

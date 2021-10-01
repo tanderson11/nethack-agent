@@ -392,6 +392,7 @@ class RunState():
         self.glyphs = None
 
         self.debugger_on = False
+        self.debug_tripwire = False
 
         self.replay_log_path = None
         self.replay_log = []
@@ -552,7 +553,8 @@ class RunState():
             self.character.listen_for_intrinsics(message.message)
 
         item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
-        self.current_square.item_on_square = item_on_square
+        if item_on_square is not None:
+            self.current_square.item_on_square = item_on_square
 
         if item_on_square is not None:
             if self.neighborhood is not None and self.neighborhood.level_map is not None:
