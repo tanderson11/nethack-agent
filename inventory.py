@@ -357,7 +357,7 @@ class Weapon(Item):
 
     def better_than_equivalent(self, y, character):
         is_better = self.instance_desirability_to_wield(character) > y.instance_desirability_to_wield(character)
-        if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded'):
+        if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
             print(f"Found better weapon: {self.identity.name()}")
         return is_better

@@ -1,5 +1,5 @@
 GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGHT,APPEARANCE,JAPANESE_NAME,MAGIC,SHUFFLED,SHUFFLE_CLASS,SLOT,COST,PRICE,GEN_CURSED,AC,MATERIAL,SPECIAL
-2054,fumble boots,FALSE,1,-10,,20,riding boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Fumble
+2054,fumble boots,none,1,-10,,20,riding boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Fumble
 2055,levitation boots,desire all,1,-10,17,15,snow boots,,TRUE,TRUE,boots,boots,30,12,TRUE,1,L,Lev
 2053,kicking boots,desire all,1,2,,15,buckled boots,,TRUE,TRUE,boots,boots,8,12,FALSE,1,I,Kick
 2050,water walking boots,desire all,1,3,4,20,jungle boots,,TRUE,TRUE,boots,boots,50,12,FALSE,1,L,WWalk
