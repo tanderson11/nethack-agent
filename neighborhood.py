@@ -88,7 +88,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ####################
         # SHOPKEEPER STUFF #
         ####################
-        is_shopkeeper = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.is_shopkeeper, extended_visible_glyphs)
+        is_shopkeeper = gd.MonsterGlyph.shopkeeper_mask(extended_visible_raw_glyphs)
         shopkeeper_present = is_shopkeeper.any()
 
         if shopkeeper_present and on_doorway:
@@ -105,7 +105,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ###################################
 
         extended_visits = level_map.visits_count_map[self.vision]
-        extended_open_door = utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_open_door, extended_visible_glyphs)
+        extended_open_door = gd.CMapGlyph.open_door_mask(extended_visible_raw_glyphs)
         extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
 
         extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
@@ -131,12 +131,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
-        self.extended_is_peaceful_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.always_peaceful, extended_visible_glyphs)
+        self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
         self.extended_possible_secret_mask = gd.CMapGlyph.is_possible_secret_check(extended_visible_raw_glyphs - gd.CMapGlyph.OFFSET)
-        self.extended_has_item_stack = utilities.vectorized_map(
-            lambda g: gd.stackable_glyph(g),
-            extended_visible_glyphs
-        )
+        self.extended_has_item_stack = gd.stackable_mask(extended_visible_raw_glyphs)
 
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
