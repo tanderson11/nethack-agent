@@ -580,6 +580,7 @@ class ItemParser():
         gd.ToolGlyph: Tool,
         gd.WandGlyph: Wand,
         gd.WeaponGlyph: Weapon,
+        gd.CorpseGlyph: Food,
     }
 
     glyph_class_by_category = {
