@@ -308,7 +308,13 @@ class Character():
         else:
             base_prices = [base1, base4]
 
-        return set(base_prices)
+        base_prices = set(base_prices)
+
+        if isinstance(item, inv.Armor):
+            # enhancement affects base price of armor
+            for p in base_prices:
+                base_prices = base_prices.union(set([p - 10*x for x in range(0,6)]))
+        return base_prices
 
     def find_base_price_from_listed(self, item, price):
         cha_mult = self.charisma_price_multiplier(self.attributes.charisma)
@@ -321,7 +327,15 @@ class Character():
         base_prices = [np.ceil(base1), np.floor(base1), np.ceil(base2), np.floor(base2)]
         if base2 <= 5:
             base_prices.append(0)
-        return set(base_prices)
+
+        base_prices = set(base_prices)
+
+        if isinstance(item, inv.Armor):
+            # enhancement affects base price of armor
+            for p in base_prices:
+                base_prices = base_prices.union(set([p - 10*x for x in range(0,6)]))
+
+        return base_prices
 
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:
