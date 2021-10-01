@@ -13,7 +13,7 @@ from utilities import ARS
 
 class Item():
     try_to_price_id = True
-    price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids\)")
+    price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids?\)")
     class NameAction(NamedTuple):
         letter: str
         name: str
@@ -292,6 +292,9 @@ class Weapon(Item):
 
         if self.identity.is_ammunition:
             return -10
+
+        #if self.identity.slot == 'quiver':
+        #    return -10
 
         if self.identity.is_ranged:
             if character.prefer_ranged() and self.identity.ammo_type_used == character.inventory.quivered.identity.ammo_type:
@@ -759,6 +762,7 @@ class ItemParser():
             return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, container_str, instance_name, match[0])
 
         else:
+            if environment.env.debug: import pdb; pdb.set_trace()
             raise Exception(f"couldn't match item string {item_string}")
 
     item_on_square_pattern = re.compile("You see here (.+?)\.")
