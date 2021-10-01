@@ -1120,7 +1120,11 @@ class PlayerInventory():
     def all_undesirable_items(self, character):
         all_items = self.all_items()
         #import pdb; pdb.set_trace()
-        return [item for item in all_items if item is not None and not item.desirable(character)]
+        undesirable_items = [item for item in all_items if item is not None and not item.desirable(character)]
+
+        # BAND AID FOR WEAPON DROPPING
+        undesirable_items = [i for i in undesirable_items if i != self.wielded_weapon]
+        return undesirable_items
 
     def all_unidentified_items(self):
         all_items = self.all_items()
