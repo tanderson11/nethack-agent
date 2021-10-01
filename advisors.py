@@ -99,7 +99,7 @@ class Oracle():
     def minor_unicorn_condition(self):
         return (
             self.nuisance_condition or
-            self.blstats.check_condition(nethack.BL_MASK_BLIND)
+            self.blind
         )
 
     @functools.cached_property
@@ -109,6 +109,10 @@ class Oracle():
             self.blstats.check_condition(nethack.BL_MASK_STUN) or
             self.blstats.check_condition(nethack.BL_MASK_CONF)
         )
+
+    @functools.cached_property
+    def blind(self):
+        return self.blstats.check_condition(nethack.BL_MASK_BLIND)
 
     @functools.cached_property
     def am_threatened(self):
