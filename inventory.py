@@ -293,8 +293,8 @@ class Weapon(Item):
         if self.identity.is_ammunition:
             return -10
 
-        #if self.identity.slot == 'quiver':
-        #    return -10
+        if self.identity.slot == 'quiver':
+            return -10
 
         if self.identity.is_ranged:
             if character.prefer_ranged() and self.identity.ammo_type_used == character.inventory.quivered.identity.ammo_type:
