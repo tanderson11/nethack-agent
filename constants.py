@@ -15,7 +15,7 @@ class IdentityDesirability(enum.Enum):
     desire_one = "desire one"
     desire_seven = "desire seven"
     desire_as_raw_material = "desire as raw"
-    desire_none = False
+    desire_none = "none"
 
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'

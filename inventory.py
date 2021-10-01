@@ -93,7 +93,11 @@ class Item():
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
 
-    def desirable(self, character):
+    def better_than_instance(self, y):
+        # in general, don't drop Y to pick up X if they have the same identity
+        return False
+
+    def desirable(self, character, consider_funds=True):
         if self.identity is None:
             return False
 
@@ -101,9 +105,26 @@ class Item():
         if identity_desirability == constants.IdentityDesirability.desire_none:
             return False
 
-        desirable_identity = identity_desirability == constants.IdentityDesirability.desire_all
+        if consider_funds is True and not self.can_afford(character):
+            return False
 
-        return self.can_afford(character) and desirable_identity
+        if identity_desirability == constants.IdentityDesirability.desire_all:
+            return True
+
+        if identity_desirability == constants.IdentityDesirability.desire_one:
+            assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
+            same_items = character.inventory.get_items(self.__class__, name=self.identity.name())
+            equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_instance(i)]
+
+            if len(equal_or_better_versions) > 0:
+                return False
+            
+            return True
+
+        # now we are in the logic where we want exactly 1 (or exactly 7) of this item
+        # these have to get handled differently in different object classes
+
+        #return self.can_afford(character) and desirable_identity
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph

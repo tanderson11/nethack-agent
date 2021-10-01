@@ -10,7 +10,7 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGH
 2034,cloak of displacement,desire all,1,4,,10,piece of cloth,,TRUE,TRUE,cloak,cloak,50,10,FALSE,1,C,Displ
 2031,cloak of protection,desire all,3,6,,10,tattered cape,,TRUE,TRUE,cloak,cloak,50,9,FALSE,3,C,Prot
 2033,cloak of magic resistance,desire all,1,9,,10,ornamental cope,,TRUE,TRUE,cloak,cloak,60,2,FALSE,1,C,Magic
-2043,gauntlets of fumbling,FALSE,1,-10,,10,padded gloves,,TRUE,TRUE,gloves,gloves,50,8,TRUE,1,L,Fumble
+2043,gauntlets of fumbling,none,1,-10,,10,padded gloves,,TRUE,TRUE,gloves,gloves,50,8,TRUE,1,L,Fumble
 2042,leather gloves,desire all,1,1,,10,old gloves,yugake,FALSE,TRUE,gloves,gloves,8,16,FALSE,1,L,
 2045,gauntlets of dexterity,desire all,1,3,,10,fencing gloves,,TRUE,TRUE,gloves,gloves,50,8,FALSE,1,L,Dex
 2044,gauntlets of power,desire all,1,9,,30,riding gloves,,TRUE,TRUE,gloves,gloves,50,8,FALSE,1,I,Str
@@ -30,7 +30,7 @@ GLYPH,NAME,IDENTITY_DESIRABILITY,MC,CONVERTED_WEAR_VALUE,TO_OWN_ADJUSTMENT,WEIGH
 2029,alchemy smock,desire all,1,4,,10,apron,,FALSE,FALSE,,cloak,50,9,FALSE,1,C,Poi+Acid
 2027,oilskin cloak,desire all,2,5,,10,slippery cloak,,FALSE,FALSE,,cloak,50,10,FALSE,1,C,Water
 1980,fedora,desire all,1,0,,3,fedora,,FALSE,FALSE,,helmet,1,0,FALSE,0,C,
-1982,dunce cap,FALSE,1,-10,,4,conical hat,,FALSE,FALSE,,helmet,1,3,FALSE,0,C,Stupid
+1982,dunce cap,none,1,-10,,4,conical hat,,FALSE,FALSE,,helmet,1,3,FALSE,0,C,Stupid
 1977,elven leather helm,desire all,1,1,,3,leather hat,,FALSE,FALSE,,helmet,8,6,FALSE,1,L,
 1981,cornuthaum,desire all,1,1,,4,conical hat,,TRUE,FALSE,,helmet,80,3,FALSE,0,C,Clair
 1978,orcish helm,desire all,1,2,,30,iron skull cap,,FALSE,FALSE,,helmet,10,6,FALSE,1,I,

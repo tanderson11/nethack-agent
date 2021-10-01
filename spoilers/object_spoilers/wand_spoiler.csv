@@ -1,21 +1,21 @@
 ARBITRARY,GLYPH,SHUFFLED,SHUFFLE_CLASS,NAME,IDENTITY_DESIRABILITY,APPEARANCE,ATTACK,ENGRAVE_SELF_IDENTIFY,ENGRAVE_MESSAGE,DURABLE_ENGRAVING,COST,WEIGHT,PROB,CHARGES,DIRECTION
-0,2289,TRUE,wand,light,FALSE,glass,FALSE,TRUE,,FALSE,100.00,7,95,15,NONE
+0,2289,TRUE,wand,light,none,glass,FALSE,TRUE,,FALSE,100.00,7,95,15,NONE
 9,2290,TRUE,wand,secret door detection,desire all,balsa,FALSE,FALSE,,FALSE,150,7,50,15,NONE
-3,2291,TRUE,wand,enlightenment,FALSE,crystal,FALSE,TRUE,,FALSE,150,7,15,15,NONE
-19,2292,TRUE,wand,create monster,FALSE,maple,FALSE,TRUE,,FALSE,200,7,45,15,NONE
+3,2291,TRUE,wand,enlightenment,none,crystal,FALSE,TRUE,,FALSE,150,7,15,15,NONE
+19,2292,TRUE,wand,create monster,none,maple,FALSE,TRUE,,FALSE,200,7,45,15,NONE
 23,2293,TRUE,wand,wishing,desire all,pine,FALSE,TRUE,,FALSE,500,7,5,3!,NONE
-1,2294,TRUE,wand,nothing,FALSE,oak,FALSE,FALSE,,FALSE,100,7,25,15,beam
+1,2294,TRUE,wand,nothing,none,oak,FALSE,FALSE,,FALSE,100,7,25,15,beam
 12,2295,TRUE,wand,striking,desire all,ebony,TRUE,FALSE,The wand unsuccessfully fights your attempt to write!,FALSE,150,7,75,8,beam
-6,2296,TRUE,wand,make invisible,FALSE,marble,FALSE,FALSE,The engraving on the floor vanishes!,FALSE,150,7,45,8,beam
-10,2297,TRUE,wand,slow monster,FALSE,tin,FALSE,FALSE,The bugs on the floor slow down!,FALSE,150,7,50,8,beam
+6,2296,TRUE,wand,make invisible,none,marble,FALSE,FALSE,The engraving on the floor vanishes!,FALSE,150,7,45,8,beam
+10,2297,TRUE,wand,slow monster,none,tin,FALSE,FALSE,The bugs on the floor slow down!,FALSE,150,7,50,8,beam
 11,2298,TRUE,wand,speed monster,desire one,brass,FALSE,FALSE,The bugs on the floor speed up!,FALSE,150,7,50,8,beam
-13,2299,TRUE,wand,undead turning,FALSE,copper,FALSE,FALSE,,FALSE,150,7,50,8,beam
-20,2300,TRUE,wand,polymorph,FALSE,silver,FALSE,FALSE,The engraving now reads:,FALSE,200,7,45,8,beam
-18,2301,TRUE,wand,cancellation,FALSE,platinum,FALSE,FALSE,The engraving on the floor vanishes!,FALSE,200,7,45,8,beam
+13,2299,TRUE,wand,undead turning,none,copper,FALSE,FALSE,,FALSE,150,7,50,8,beam
+20,2300,TRUE,wand,polymorph,none,silver,FALSE,FALSE,The engraving now reads:,FALSE,200,7,45,8,beam
+18,2301,TRUE,wand,cancellation,none,platinum,FALSE,FALSE,The engraving on the floor vanishes!,FALSE,200,7,45,8,beam
 21,2302,TRUE,wand,teleportation,desire all,iridium,FALSE,FALSE,The engraving on the floor vanishes!,FALSE,200,7,45,8,beam
-7,2303,TRUE,wand,opening,FALSE,zinc,FALSE,FALSE,,FALSE,150,7,25,8,beam
-4,2304,TRUE,wand,locking,FALSE,aluminum,FALSE,FALSE,,FALSE,150,7,25,8,beam
-8,2305,TRUE,wand,probing,FALSE,uranium,FALSE,FALSE,,FALSE,150,7,30,8,beam
+7,2303,TRUE,wand,opening,none,zinc,FALSE,FALSE,,FALSE,150,7,25,8,beam
+4,2304,TRUE,wand,locking,none,aluminum,FALSE,FALSE,,FALSE,150,7,25,8,beam
+8,2305,TRUE,wand,probing,none,uranium,FALSE,FALSE,,FALSE,150,7,30,8,beam
 2,2306,TRUE,wand,digging,desire all,iron,FALSE,TRUE,,TRUE,150,7,55,8,ray
 5,2307,TRUE,wand,magic missile,desire all,steel,TRUE,FALSE,The floor is riddled by bullet holes!,FALSE,150,7,50,8,ray
 15,2308,TRUE,wand,fire,desire all,hexagonal,TRUE,TRUE,,TRUE,175,7,40,8,ray

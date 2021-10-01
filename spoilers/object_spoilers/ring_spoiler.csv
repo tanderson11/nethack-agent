@@ -1,29 +1,29 @@
 NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,COST,WEIGHT,PROB,GEN_CURSED,HAS_ENCHANTMENT
-adornment,FALSE,2056,wooden,TRUE,ring,100,3,1,,Y
-aggravate monster,FALSE,2068,sapphire,TRUE,ring,150,3,1,TRUE,
-cold resistance,FALSE,2073,brass,TRUE,ring,150,3,1,,
+adornment,none,2056,wooden,TRUE,ring,100,3,1,,Y
+aggravate monster,none,2068,sapphire,TRUE,ring,150,3,1,TRUE,
+cold resistance,none,2073,brass,TRUE,ring,150,3,1,,
 conflict,desire one,2069,ruby,TRUE,ring,300,3,1,,
-fire resistance,FALSE,2072,iron,TRUE,ring,200,3,1,,
+fire resistance,none,2072,iron,TRUE,ring,200,3,1,,
 free action,desire one,2075,twisted,TRUE,ring,200,3,1,,
-gain constitution,FALSE,2058,opal,TRUE,ring,150,3,1,,Y
-gain strength,FALSE,2057,granite,TRUE,ring,150,3,1,,Y
-hunger,FALSE,2067,topaz,TRUE,ring,100,3,1,TRUE,
-increase accuracy,FALSE,2059,clay,TRUE,ring,150,3,1,,Y
-increase damage,FALSE,2060,coral,TRUE,ring,150,3,1,,Y
-invisibility,FALSE,2081,wire,TRUE,ring,150,3,1,,
+gain constitution,none,2058,opal,TRUE,ring,150,3,1,,Y
+gain strength,none,2057,granite,TRUE,ring,150,3,1,,Y
+hunger,none,2067,topaz,TRUE,ring,100,3,1,TRUE,
+increase accuracy,none,2059,clay,TRUE,ring,150,3,1,,Y
+increase damage,none,2060,coral,TRUE,ring,150,3,1,,Y
+invisibility,none,2081,wire,TRUE,ring,150,3,1,,
 levitation,desire one,2066,agate,TRUE,ring,200,3,1,,
-poison resistance,FALSE,2071,pearl,TRUE,ring,150,3,1,,
-polymorph,FALSE,2079,ivory,TRUE,ring,300,3,1,TRUE,
-polymorph control,FALSE,2080,emerald,TRUE,ring,300,3,1,,
+poison resistance,none,2071,pearl,TRUE,ring,150,3,1,,
+polymorph,none,2079,ivory,TRUE,ring,300,3,1,TRUE,
+polymorph control,none,2080,emerald,TRUE,ring,300,3,1,,
 protection,desire one,2061,black onyx,TRUE,ring,100,3,1,,Y
-protection from shape changers,FALSE,2083,shiny,TRUE,ring,100,3,1,,
-regeneration,FALSE,2062,moonstone,TRUE,ring,200,3,1,,
-searching,FALSE,2063,tiger eye,TRUE,ring,200,3,1,,
-see invisible,FALSE,2082,engagement,TRUE,ring,150,3,1,,
-shock resistance,FALSE,2074,copper,TRUE,ring,150,3,1,,
+protection from shape changers,none,2083,shiny,TRUE,ring,100,3,1,,
+regeneration,none,2062,moonstone,TRUE,ring,200,3,1,,
+searching,none,2063,tiger eye,TRUE,ring,200,3,1,,
+see invisible,none,2082,engagement,TRUE,ring,150,3,1,,
+shock resistance,none,2074,copper,TRUE,ring,150,3,1,,
 slow digestion,desire one,2076,steel,TRUE,ring,200,3,1,,
-stealth,FALSE,2064,jade,TRUE,ring,100,3,1,,
-sustain ability,FALSE,2065,bronze,TRUE,ring,100,3,1,,
-teleport control,FALSE,2078,gold,TRUE,ring,300,3,1,,
-teleportation,FALSE,2077,silver,TRUE,ring,200,3,1,TRUE,
-warning,FALSE,2070,diamond,TRUE,ring,100,3,1,,
+stealth,none,2064,jade,TRUE,ring,100,3,1,,
+sustain ability,none,2065,bronze,TRUE,ring,100,3,1,,
+teleport control,none,2078,gold,TRUE,ring,300,3,1,,
+teleportation,none,2077,silver,TRUE,ring,200,3,1,TRUE,
+warning,none,2070,diamond,TRUE,ring,100,3,1,,

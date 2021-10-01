@@ -1,24 +1,24 @@
 NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,READ_MESSAGE,COST,WEIGHT,PROB,INK_COST
-amnesia,FALSE,2219,DUAM XNAHT,TRUE,scroll,amnesia,,200,5,35,8
+amnesia,none,2219,DUAM XNAHT,TRUE,scroll,amnesia,,200,5,35,8
 blank paper,desire all,2245,unlabeled,FALSE,,blank paper,,60,5,28,0
 charging,desire all,2223,HACKEM MUCHE,TRUE,scroll,charging,,300,5,15,16
-confuse monster,FALSE,2206,NR 9,TRUE,scroll,confuse monster,Your hands begin to glow red.,100,5,53,12
-create monster,FALSE,2210,LEP GEX VEN ZEA,TRUE,scroll,create monster,,200,5,45,10
-destroy armor,FALSE,2205,JUYED AWK YACC,TRUE,scroll,destroy armor,,100,5,45,10
-earth,FALSE,2221,KIRJE,TRUE,scroll,earth,,200,5,18,8
+confuse monster,none,2206,NR 9,TRUE,scroll,confuse monster,Your hands begin to glow red.,100,5,53,12
+create monster,none,2210,LEP GEX VEN ZEA,TRUE,scroll,create monster,,200,5,45,10
+destroy armor,none,2205,JUYED AWK YACC,TRUE,scroll,destroy armor,,100,5,45,10
+earth,none,2221,KIRJE,TRUE,scroll,earth,,200,5,18,8
 enchant armor,desire all,2204,ZELGO MER,TRUE,scroll,enchant armor,glows black for a moment,80,5,63,16
 enchant weapon,desire all,2209,DAIYEN FOOELS,TRUE,scroll,enchant weapon,glows black for a moment,60,5,80,16
-fire,FALSE,2220,ANDOVA BEGARIN,TRUE,scroll,fire,,100,5,30,8
-food detection,FALSE,2216,YUM YUM,TRUE,scroll,food detection,,100,5,25,8
+fire,none,2220,ANDOVA BEGARIN,TRUE,scroll,fire,,100,5,30,8
+food detection,none,2216,YUM YUM,TRUE,scroll,food detection,,100,5,25,8
 genocide,desire all,2212,ELBIB YLOH,TRUE,scroll,genocide,,300,5,15,30
 gold detection,desire all,2215,THARR,TRUE,scroll,gold detection,,100,5,33,8
 identify,desire all,2217,KERNOD WEL,TRUE,scroll,identify,,20,5,180,14
-light,FALSE,2213,VERR YED HORRE,TRUE,scroll,light,,50,5,90,8
+light,none,2213,VERR YED HORRE,TRUE,scroll,light,,50,5,90,8
 magic mapping,desire all,2218,ELAM EBOW,TRUE,scroll,magic mapping,,100,5,45,8
-punishment,FALSE,2222,VE FORBRYDERNE,TRUE,scroll,punishment,,300,5,15,10
+punishment,none,2222,VE FORBRYDERNE,TRUE,scroll,punishment,,300,5,15,10
 remove curse,desire all,2208,PRATYAVAYAH,TRUE,scroll,remove curse,You feel like someone is helping you.,80,5,65,16
 scare monster,desire all,2207,XIXAXA XOXAXA XUXAXA,TRUE,scroll,scare monster,maniacal laughter,100,5,35,20
-stinking cloud,FALSE,2224,VELOX NEB,TRUE,scroll,stinking cloud,,300,5,15,20
+stinking cloud,none,2224,VELOX NEB,TRUE,scroll,stinking cloud,,300,5,15,20
 taming,desire all,2211,PRIRUTSENIE,TRUE,scroll,taming,Nothing interesting,200,5,15,20
 teleportation,desire all,2214,VENZAR BORGAVVE,TRUE,scroll,teleportation,,100,5,55,20
 ,,2225,FOOBIE BLETCH,TRUE,scroll,,,,,,

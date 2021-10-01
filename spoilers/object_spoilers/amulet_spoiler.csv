@@ -1,12 +1,12 @@
 GLYPH,APPEARANCE,NAME,IDENTITY_DESIRABILITY,SHUFFLED,SHUFFLE_CLASS,COST,WEIGHT,PROB,GEN_CURSED,SLOT,EAT
 2084,circular,amulet of ESP,desire one,TRUE,amulet,150,20,175,FALSE,amulet,TRUE
 2085,spherical,amulet of life saving,desire all,TRUE,amulet,150,20,75,FALSE,amulet,FALSE
-2086,oval,amulet of strangulation,FALSE,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
-2087,triangular,amulet of restful sleep,FALSE,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
-2088,pyramidal,amulet versus poison,FALSE,TRUE,amulet,150,20,165,FALSE,amulet,TRUE
-2089,square,amulet of change,FALSE,TRUE,amulet,150.00,20,130,TRUE,amulet,TRUE
-2090,concave,amulet of unchanging,FALSE,TRUE,amulet,150,20,45,FALSE,amulet,TRUE
+2086,oval,amulet of strangulation,none,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
+2087,triangular,amulet of restful sleep,none,TRUE,amulet,150,20,135,TRUE,amulet,TRUE
+2088,pyramidal,amulet versus poison,none,TRUE,amulet,150,20,165,FALSE,amulet,TRUE
+2089,square,amulet of change,none,TRUE,amulet,150.00,20,130,TRUE,amulet,TRUE
+2090,concave,amulet of unchanging,none,TRUE,amulet,150,20,45,FALSE,amulet,TRUE
 2091,hexagonal,amulet of reflection,desire all,TRUE,amulet,150,20,75,FALSE,amulet,FALSE
 2092,octagonal,amulet of magical breathing,desire one,TRUE,amulet,150,20,65,FALSE,amulet,TRUE
-2093,Amulet of Yendor,cheap plastic imitation of the Amulet of Yendor,FALSE,FALSE,,0,20,0,FALSE,amulet,FALSE
+2093,Amulet of Yendor,cheap plastic imitation of the Amulet of Yendor,none,FALSE,,0,20,0,FALSE,amulet,FALSE
 2094,Amulet of Yendor,Amulet of Yendor,desire all,FALSE,,30000,20,0,FALSE,amulet,FALSE

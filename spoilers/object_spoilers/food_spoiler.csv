@@ -1,7 +1,7 @@
 NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,GLYPH,APPEARANCE,SHUFFLED,PERISHABLE,COST,WEIGHT,PROB,NUTRITION,NUTR/WGT,TIME
-tripe ration,FALSE,tripe rations,,2145,,FALSE,,15,10,140,200,20,2
-corpse,FALSE,corpses,,2146,,FALSE,,,,,,,
-egg,FALSE,eggs,,2147,,FALSE,TRUE,9,1,85,80,80,1
+tripe ration,none,tripe rations,,2145,,FALSE,,15,10,140,200,20,2
+corpse,none,corpses,,2146,,FALSE,,,,,,,
+egg,none,eggs,,2147,,FALSE,TRUE,9,1,85,80,80,1
 meatball,desire all,meatballs,,2148,,FALSE,,5.00,1,0,5,5,1
 meat stick,desire all,meat sticks,,2149,,FALSE,,5,1,0,5,5,1
 huge chunk of meat,desire all,huge chunks of meat,,2150,,FALSE,,105,400,0,2000,5,20
