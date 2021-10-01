@@ -81,8 +81,8 @@ class Character():
         if not (self.base_alignment == 'lawful' and self.experience_level >= 5):
             return False
 
-        if not self.has_intrinsic(constants.Intrinsics.poison_resistance):
-            return False
+        #if not self.has_intrinsic(constants.Intrinsics.poison_resistance):
+        #    return False
 
         current_weapon = self.inventory.wielded_weapon
         if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
