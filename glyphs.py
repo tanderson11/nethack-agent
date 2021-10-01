@@ -775,7 +775,10 @@ class ObjectIdentity():
         matches_name = self.data.loc[self.idx].NAME == name
         self.idx = matches_name.index[matches_name]
         if len(self.idx) == 0:
-            import pdb; pdb.set_trace()
+            if environment.env.debug: import pdb; pdb.set_trace()
+            print("FAILED DEDUCTION: giving name and overriding inferences")
+            hard_name_match = (self.data.NAME == name)
+            self.idx = hard_name_match.index[hard_name_match]
 
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
