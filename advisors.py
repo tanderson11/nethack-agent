@@ -1192,6 +1192,7 @@ class DropToPriceIDAdvisor(Advisor):
                 menuplan.NoMenuResponse("Sell it?"),
                 menuplan.NoMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
@@ -1217,6 +1218,7 @@ class DropUndesirableAdvisor(Advisor):
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
@@ -1287,6 +1289,7 @@ class DropShopOwnedAdvisor(Advisor):
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
                 menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
