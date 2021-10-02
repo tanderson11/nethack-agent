@@ -52,7 +52,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             raise Exception("Bad view field")
 
     @staticmethod
-    def extended_position_to_absolute(extended_position, player_location_in_extended, absolute_player_location):
+    def extended_position_to_absolute(extended_position, player_location_in_extended, absolute_player_location, blstats):
         offset = extended_position - player_location_in_extended
         return absolute_player_location + offset
 
@@ -92,15 +92,17 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ####################
         # SHOPKEEPER STUFF #
         ####################
-        is_shopkeeper = gd.MonsterGlyph.shopkeeper_mask(extended_visible_raw_glyphs)
-        shopkeeper_present = is_shopkeeper.any()
+        if not blstats.am_hallu():
+            # don't create shops while we're hallucinating
+            is_shopkeeper = gd.MonsterGlyph.shopkeeper_mask(extended_visible_raw_glyphs)
+            shopkeeper_present = is_shopkeeper.any()
 
-        if shopkeeper_present:
-            it = np.nditer(is_shopkeeper, flags=['multi_index'])
-            for b in it:
-                if b: # if this is a shopkeeper
-                    absolute_shopkeeper_position = self.extended_position_to_absolute(Square(*it.multi_index), self.player_location_in_extended, absolute_player_location)
-                    level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
+            if shopkeeper_present:
+                it = np.nditer(is_shopkeeper, flags=['multi_index'])
+                for b in it:
+                    if b: # if this is a shopkeeper
+                        absolute_shopkeeper_position = self.extended_position_to_absolute(Square(*it.multi_index), self.player_location_in_extended, absolute_player_location)
+                        level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
 
         extended_special_rooms = level_map.special_room_map[self.vision]
 
