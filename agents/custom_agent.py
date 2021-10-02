@@ -154,6 +154,8 @@ class Message():
             self.boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
             self.carrying_too_much_message = "You are carrying too much to get through." in message.message
             self.solid_stone = "It's solid stone" in message.message
+
+            if self.solid_stone and environment.env.debug: import pdb; pdb.set_trace()
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
