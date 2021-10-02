@@ -632,6 +632,7 @@ class TestNeighborhood(unittest.TestCase):
             dmap.make_level_map(map.DCoord(0,1), glyphs, (0,0)),
             None,
             None,
+            False,
         )
 
     def test_attributes(self):

@@ -966,7 +966,7 @@ class CustomAgent(BatchedAgent):
             level_map,
             run_state.character,
             run_state.latest_monster_flight,
-            blstats,
+            blstats.am_hallu(),
         )
         if not (run_state.last_non_menu_action_failed_advancement or run_state.last_non_menu_action == nethack.actions.Command.SEARCH):
             run_state.check_gamestate_advancement(neighborhood)

@@ -56,7 +56,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         offset = extended_position - player_location_in_extended
         return absolute_player_location + offset
 
-    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight, blstats):
+    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight, am_hallu):
         ###################
         ### COPY FIELDS ###
         ###################
@@ -92,7 +92,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ####################
         # SHOPKEEPER STUFF #
         ####################
-        if not blstats.am_hallu():
+        if not am_hallu:
             # don't create shops while we're hallucinating
             is_shopkeeper = gd.MonsterGlyph.shopkeeper_mask(extended_visible_raw_glyphs)
             shopkeeper_present = is_shopkeeper.any()
