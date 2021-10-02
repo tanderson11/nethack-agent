@@ -801,7 +801,7 @@ class ObjectIdentity():
     def apply_filter(self, idx):
         self.idx = idx
 
-    def find_values(self, column, dropna=False):
+    def find_values(self, column, dropna=False, false_if_na=False):
         value = self.unique_values.get(column, None)
         if value is not None:
             return value
@@ -811,6 +811,8 @@ class ObjectIdentity():
         else:
             unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
         if len(unique) == 1:
+            if false_if_na and pd.isna(unique[0]):
+                unique[0] = False
             self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
         return unique
@@ -1007,8 +1009,8 @@ class WeaponIdentity(ObjectIdentity):
         super().__init__(idx, shuffle_class=shuffle_class)
 
         self.slot = self.find_values('SLOT')
-        self.is_ammo = self.find_values('AMMUNITION')
-        self.thrown = self.find_values('THROWN')
+        self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
+        self.thrown = self.find_values('THROWN', false_if_na=True)
         self.thrown_from = self.find_values('THROWN_FROM')
 
         self.ammo_type = None
@@ -1016,7 +1018,7 @@ class WeaponIdentity(ObjectIdentity):
             self.ammo_type = self.find_values('AMMO_TYPE')
         self.ammo_type_used = self.find_values('USES_AMMO')
 
-        self.ranged = self.find_values('RANGED')
+        self.ranged = self.find_values('RANGED', false_if_na=True)
         self.skill = self.find_values('SKILL')
 
         second_slot = self.find_values('SECOND_SLOT')

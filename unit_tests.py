@@ -1139,6 +1139,28 @@ class TestRangedAttack(unittest.TestCase):
         ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
+    def test_many(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Ranger,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1923, inv.Weapon, "a +1 dagger (weapon in hand)", ord("a")),
+            ItemTestInputs(1972, inv.Weapon, "a +1 elven bow (alternate weapon; not wielded)", ord("b")),
+            ItemTestInputs(1908, inv.Weapon, "26 +2 elven arrows (in quiver)", ord("c")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "b")
+
     def test_dont_throw_wielded(self):
         character = agents.custom_agent.Character(
             base_class=constants.BaseRole.Rogue,
