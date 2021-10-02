@@ -51,6 +51,7 @@ class Character():
     intrinsic_gain_messages = {
         "You speed up": constants.Intrinsics.speed,
         "You feel healthy": constants.Intrinsics.poison_resistance,
+        "You feel especially healthy": constants.Intrinsics.poison_resistance,
         "You feel a strange mental acuity": constants.Intrinsics.telepathy,
         "You feel wide awake": constants.Intrinsics.sleep_resistance,
         "You feel full of hot air": constants.Intrinsics.fire_resistance,

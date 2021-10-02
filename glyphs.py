@@ -1007,15 +1007,16 @@ class WeaponIdentity(ObjectIdentity):
         super().__init__(idx, shuffle_class=shuffle_class)
 
         self.slot = self.find_values('SLOT')
-        self.is_ammunition = self.find_values('AMMUNITION')
-        self.is_thrown = self.find_values('THROWN')
+        self.is_ammo = self.find_values('AMMUNITION')
+        self.thrown = self.find_values('THROWN')
+        self.thrown_from = self.find_values('THROWN_FROM')
 
         self.ammo_type = None
-        if self.is_ammunition:
+        if self.is_ammo:
             self.ammo_type = self.find_values('AMMO_TYPE')
         self.ammo_type_used = self.find_values('USES_AMMO')
 
-        self.is_ranged = self.find_values('RANGED')
+        self.ranged = self.find_values('RANGED')
         self.skill = self.find_values('SKILL')
 
         second_slot = self.find_values('SECOND_SLOT')
@@ -1035,37 +1036,49 @@ class WeaponIdentity(ObjectIdentity):
 
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
-    def __init__(self, idx, artifact_name, shuffle_class=None):
+
+    class ArtifactWeaponDamage(NamedTuple):
+        damage_mod: int = 0
+        damage_mult: int = 1
+
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
+
+        bonus = artifact_row['DAMAGE BONUS']
+        if pd.isna(bonus): bonus = 0
+        mult  = artifact_row['DAMAGE MULT']
+        if pd.isna(mult): mult = 1
+
+        self.artifact_damage = self.ArtifactWeaponDamage(bonus, mult)
 
         # keep idx pointed at the base item and override any methods with artifact specific stuff
 
 class ArtifactArmorIdentity(ArmorIdentity):
     associated_glyph_class = ArmorGlyph
-    def __init__(self, idx, artifact_name, shuffle_class=None):
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactAmuletIdentity(AmuletIdentity):
     associated_glyph_class = AmuletGlyph
-    def __init__(self, idx, artifact_name, shuffle_class=None):
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactGemIdentity(GemIdentity):
     associated_glyph_class = GemGlyph
-    def __init__(self, idx, artifact_name, shuffle_class=None):
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactToolIdentity(ToolIdentity):
     associated_glyph_class = ToolGlyph
-    def __init__(self, idx, artifact_name, shuffle_class=None):
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
@@ -1129,7 +1142,7 @@ class GlobalIdentityMap():
             #base_idx = self.identity_by_name[(glyph_class, row["BASE ITEM"])].idx
             artifact_name = row["ARTIFACT NAME"]
 
-            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name)
+            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name, row)
             self.artifact_identity_by_name[artifact_name] = artifact_identity
             self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
             self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity

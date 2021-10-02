@@ -787,7 +787,6 @@ class TestArtifacts(unittest.TestCase):
             self.assertEqual(artifact_name, result.item.identity.artifact_name)
             self.assertEqual(name, result.item.identity.name())
 
-
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
 
@@ -1041,6 +1040,127 @@ class ItemTestInputs(NamedTuple):
     numeral: int
     item_class: type
     item_str: str
+    inventory_letter: int = None
+
+class TestWeaponWield(unittest.TestCase):
+    pass
+
+def make_inventory(global_identity_map, inventory_inputs):
+    numerals = []
+    strings = []
+    oclasses = []
+    letters = []
+    for item_inputs in inventory_inputs:
+        numeral, item_class, item_str, inventory_letter = item_inputs
+        zeroed_string = np.zeros((128), dtype='uint8')
+        string = np.array(string_to_tty_chars(item_str)[0], dtype='uint8')
+        zeroed_string[0:len(string)] = string
+        oclass = item_class.glyph_class.class_number
+
+        numerals.append(numeral)
+        strings.append(zeroed_string)
+        oclasses.append(oclass)
+        letters.append(inventory_letter)
+    
+    #print(np.array(strings))
+    inventory = inv.PlayerInventory(global_identity_map, np.array(letters), np.array(oclasses), np.array(strings), inv_glyphs=np.array(numerals))
+    return inventory
+
+class TestRangedAttack(unittest.TestCase):
+    def test_samurai_yumi(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "a")
+
+        inventory = [
+            #ItemTestInputs(1913, "38 +2 darts (at the ready)"),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi (weapon in hand)", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "b")
+
+        inventory = [
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi (weapon in hand)", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya (in quiver)", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+    def test_throw(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Rogue,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+        
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "c")
+
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+    def test_aklys(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Caveperson,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1968, inv.Weapon, "a blessed +5 aklys (tethered weapon in hand)", ord("d")),
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.THROW)
 
 class TestDrop(unittest.TestCase):
 

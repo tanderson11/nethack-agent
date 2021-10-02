@@ -1356,6 +1356,7 @@ class WieldBetterWeaponAdvisor(Advisor):
             menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
             ], listening_item=best_weapon)
 
+        print(f"Wielding better weapon: {character.inventory.wielded_weapon} -> {best_weapon}")
         return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 
 class WearUnblockedArmorAdvisor(Advisor):

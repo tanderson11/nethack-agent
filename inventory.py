@@ -8,6 +8,7 @@ import environment
 import numpy as np
 import constants
 import pandas as pd
+import nle.nethack as nethack
 
 from utilities import ARS
 
@@ -50,6 +51,10 @@ class Item():
         self.inventory_letter = inventory_letter
 
         self._seen_as = seen_as
+        self._full_str = instance_attributes.full_str
+
+    def __repr__(self):
+        return self._full_str
 
     def price_id_from_sell(self, character, sell_price):
         if self.identity is None:
@@ -306,6 +311,10 @@ class Weapon(Item):
         #import pdb; pdb.set_trace()
         weapon_damage += 0 or enhancement
 
+        if self.identity.is_artifact:
+            weapon_damage *= self.identity.artifact_damage.damage_mult
+            weapon_damage += self.identity.artifact_damage.damage_mod
+
         # TK know about silver damage etc
         return weapon_damage
 
@@ -366,6 +375,9 @@ class BareHands(Weapon):
         self.BUC = constants.BUC.uncursed
         self.identity = None
 
+    def __repr__(self):
+        return "bare hands dummy weapon"
+
     def which_skill(self, character):
         bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
         martial_arts_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['martial arts']]
@@ -423,7 +435,7 @@ class Tool(Item):
         # TK know about pick-axe and unicorn horn
         return 1
 
-    def melee_desirability(self, character):
+    def melee_desirability(self, character, desperate=None):
         return self.melee_damage(character)
 
     def find_equivalents(self, inventory):
@@ -970,6 +982,15 @@ class ArmamentSlots(NamedTuple):
 
         return blockers
 
+class RangedAttackPlan(NamedTuple):
+    attack_action: int = None
+    attack_item: Item = None
+
+class RangedPreparednessProposal(NamedTuple):
+    quiver_item: Item = None
+    wield_item: Item = None
+    attack_plan: RangedAttackPlan = RangedAttackPlan()
+
 class PlayerInventory():
     slot_cluster_mapping = {
         'armaments': ArmamentSlots,
@@ -1077,6 +1098,44 @@ class PlayerInventory():
                                 proposal_blockers.append(blockers)
 
         return self.AttireProposal(proposed_items, proposal_blockers)
+
+    def get_ordinary_ranged_attack(self, character):
+        # shoot from your bow
+        if not isinstance(self.wielded_weapon, BareHands): 
+            if self.wielded_weapon.identity.ranged:
+                if self.quivered is not None and self.quivered.identity.is_ammo and self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type:
+                    plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
+                    return RangedPreparednessProposal(attack_plan=plan)
+
+                # quiver your arrows
+                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
+                if len(matching_ammo) > 0:
+                    return RangedPreparednessProposal(quiver_item=matching_ammo[0])
+
+            # throw your aklys or Mjollnir
+            if self.wielded_weapon.identity.thrown and self.wielded_weapon.identity.thrown_from == 'hand':
+                plan = RangedAttackPlan(attack_action=nethack.actions.Command.THROW, attack_item=self.wielded_weapon)
+                return RangedPreparednessProposal(attack_plan=plan)
+
+        # fire your quivered thrown weapon
+        if self.quivered is not None and self.quivered.identity.thrown:
+            plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
+            return RangedPreparednessProposal(attack_plan=plan)
+
+        # quiver your thrown weapons
+        quiver_thrown_weapons = self.get_items(Weapon, identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver')
+        if len(quiver_thrown_weapons) > 0:
+            return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
+
+        # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
+        bows = self.get_items(Weapon, identity_selector=lambda i: i.ranged)
+        for bow in bows:
+            matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
+            if len(matching_ammo) > 0:
+                return RangedPreparednessProposal(wield_item=bow)
+
+    def get_powerful_ranged_attack(self, character):
+        pass
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
@@ -1201,21 +1260,6 @@ class PlayerInventory():
     def quivered(self):
         quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
         return quivered_item
-
-    def prepared_for_ranged(self):
-        if self.quivered is None:
-            return False
-
-        if self.quivered.identity.is_thrown:
-            return True
-
-        if self.quivered.identity.is_ammo:
-            if isinstance(self.wielded_weapon, BareHands):
-                return False
-            return self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type
-
-        return False
-
 
     def to_hit_modifiers(self, character, monster):
         weapon = self.wielded_weapon
