@@ -309,39 +309,26 @@ class Weapon(Item):
         # TK know about silver damage etc
         return weapon_damage
 
-    def instance_desirability_to_wield(self, character):
-        # What's the basic gist? What's with the magic 17?
-        # If you aren't really a weapon (you're darts or something), you have negative des
-        # If we're restricted in your skill, you have -1 des
-        # If we're basic in your skill, you have average damage + enhancement des
-        # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
-        # and your des is 17 + average damage + enhancement
+    def uses_relevant_skill(self, character):
+        return character.relevant_skills.loc[self.identity.skill]
 
-        if self.BUC == constants.BUC.cursed or (self.enhancement is not None and self.enhancement < 0):
-            return -10
-
-        if self.identity.is_ammunition:
-            return -10
-
-        if self.identity.slot == 'quiver':
-            return -10
-
-        if self.identity.is_ranged:
-            if character.prefer_ranged() and self.identity.ammo_type_used == character.inventory.quivered.identity.ammo_type:
-                #import pdb; pdb.set_trace()
-                return 27
-            return -10
-
-        if character.base_class == constants.BaseRole.Monk:
+    def melee_desirability(self, character, desperate=False):
+        if self.identity.is_ammunition or self.identity.is_ranged or self.identity.slot == 'quiver':
             return -1
+        relevant_skill = self.uses_relevant_skill(character)
 
-        associated_skill = self.identity.skill
-        if pd.isnull(associated_skill):
-            return -1
+        if not desperate:
+            if relevant_skill == False:
+                return -1
 
-        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[associated_skill]]
-        if max_rank > constants.SkillRank.basic.value:
-            max_rank = constants.SkillRank.skilled.value
+            if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
+                return -1
+
+        if desperate:
+            # restricted weapons not worth it even if desperate
+            skill_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[self.identity.skill]]
+            if pd.isna(constants.SkillRank(skill_rank)):
+                return -1
 
         enhancement = self.enhancement
         if enhancement is None:
@@ -350,8 +337,8 @@ class Weapon(Item):
         melee_damage = self.identity.avg_melee_damage(None)
         if isinstance(melee_damage, np.ndarray):
             melee_damage = melee_damage.max()
-        
-        return max_rank * 17 + (enhancement + melee_damage)
+
+        return enhancement + melee_damage
 
     def find_equivalents(self, inventory):
         if self.identity is None:
@@ -359,7 +346,7 @@ class Weapon(Item):
         return inventory.get_items(Weapon)
 
     def better_than_equivalent(self, y, character):
-        is_better = self.instance_desirability_to_wield(character) > y.instance_desirability_to_wield(character)
+        is_better = self.melee_desirability(character) > y.melee_desirability(character)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
             print(f"Found better weapon: {self.identity.name()}")
@@ -390,14 +377,11 @@ class BareHands(Weapon):
 
         return bare_hands_skill
 
-    def instance_desirability_to_wield(self, character):
-        bare_hands_skill = self.which_skill(character)
+    def uses_relevant_skill(self, character):
+        return character.relevant_skills.loc[self.which_skill(character)]
 
-        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[bare_hands_skill]]
-        if max_rank > constants.SkillRank.basic.value:
-            max_rank = constants.SkillRank.skilled.value
-
-        return max_rank * 17 + self.melee_damage(character, None)
+    def melee_desirability(self, character, desperate=None):
+        return self.melee_damage(character, None)
 
     def melee_damage(self, character, monster):
         bare_hands_skill = self.which_skill(character)
@@ -432,12 +416,15 @@ class Tool(Item):
         if self.BUC == constants.BUC.unknown and self.charges is not None:
             self.BUC = constants.BUC.uncursed
 
-    def melee_damage(self, character, monster_spoiler):
+    def uses_relevant_skill(self, character):
+        return False
+
+    def melee_damage(self, character, monster_spoiler=None):
         # TK know about pick-axe and unicorn horn
         return 1
 
-    def instance_desirability_to_wield(self, character):
-        return 0
+    def melee_desirability(self, character):
+        return self.melee_damage(character)
 
     def find_equivalents(self, inventory):
         if self.identity is None:
@@ -1010,8 +997,9 @@ class PlayerInventory():
 
     def proposed_weapon_changes(self, character):
         current_weapon = self.wielded_weapon
+        desperate = not current_weapon.uses_relevant_skill(character)
 
-        current_desirability = current_weapon.instance_desirability_to_wield(character)
+        current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
         max_desirability = current_desirability
@@ -1020,8 +1008,10 @@ class PlayerInventory():
         if len(extra_weapons) == 0:
             return None
 
+        #import pdb; pdb.set_trace()
+
         for weapon in extra_weapons:
-            desirability = weapon.instance_desirability_to_wield(character)
+            desirability = weapon.melee_desirability(character, desperate=desperate)
             if desirability > max_desirability:
                 # if two hands insist we don't have a shield
                 if isinstance(weapon.identity.slot, list) and isinstance(self.armaments.off_hand, Armor):
@@ -1030,7 +1020,7 @@ class PlayerInventory():
                 max_desirability = desirability
 
         if most_desirable != current_weapon:
-            #import pdb; pdb.set_trace()
+            import pdb; pdb.set_trace()
             return most_desirable
         else:
             return None

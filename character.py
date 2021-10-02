@@ -33,6 +33,7 @@ class Character():
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
     class_skills: pd.Series = None
+    relevant_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
@@ -45,6 +46,7 @@ class Character():
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
+        self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
 
     intrinsic_gain_messages = {
         "You speed up": constants.Intrinsics.speed,
