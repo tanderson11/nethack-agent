@@ -900,6 +900,9 @@ class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
                     #import pdb; pdb.set_trace()
                     return False
 
+                # don't attack gas spores next to gas spores
+                if np.count_nonzero(gd.MonsterGlyph.gas_spore_mask(adjacent_to_mon_glyphs)) > 1:
+                    return False
             trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
 
             if spoiler and spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
