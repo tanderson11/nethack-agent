@@ -540,6 +540,9 @@ class EquippedStatus():
                 self.status = 'quivered'
                 self.slot = 'quiver'
 
+class BadStringOnWhitelist(Exception):
+    pass
+
 class ItemParser():
     item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
     
@@ -611,6 +614,11 @@ class ItemParser():
     category_by_glyph_class[gd.FoodGlyph] = 'Comestibles'
     category_by_glyph_class[gd.CorpseGlyph] = 'Comestibles'
 
+    bad_string_whitelist = [
+        "ring of protection from shape changers",
+        "The Amazing Maurice and His Educated Rodents",
+    ]
+
     @staticmethod
     def decode_inventory_item(raw_item_repr):
         decoded = bytes(raw_item_repr).decode('ascii').rstrip('\x00')
@@ -677,7 +685,10 @@ class ItemParser():
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
-        match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
+        try:
+            match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
+        except BadStringOnWhitelist:
+            return None
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
         if match_components.instance_name is not None:
@@ -712,7 +723,10 @@ class ItemParser():
 
     @classmethod
     def make_item_with_string(cls, global_identity_map, item_str, category=None, inventory_letter=None):
-        match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
+        try:
+            match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
+        except BadStringOnWhitelist:
+            return None
         description = match_components.description
 
         if match_components.instance_name is not None:
@@ -838,6 +852,9 @@ class ItemParser():
 
         else:
             if environment.env.debug: import pdb; pdb.set_trace()
+            for substring in cls.bad_string_whitelist:
+                if substring in item_string:
+                    raise BadStringOnWhitelist()
             raise Exception(f"couldn't match item string {item_string}")
 
     item_on_square_pattern = re.compile("You see here (.+?)\.")
