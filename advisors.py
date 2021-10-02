@@ -688,67 +688,39 @@ class PrayForLesserMajorTroubleAdvisor(PrayerAdvisor):
 # ATTACK ADVISORS #
 ###################
 
-class DumbMeleeAttackAdvisor(Advisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        '''Returns True if this is a monster the advisor is willing to target. False otherwise.
-
-        Only called on a monster glyph as identified by the neighborhood (ex. InvisibleGlyph)'''
-        return not isinstance(monster, gd.MonsterGlyph) or not monster.always_peaceful
-
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
-        return 0
-
-    def get_monsters(self, rng, run_state, character, oracle):
-        it = np.nditer(run_state.neighborhood.is_monster, flags=['multi_index'])
-        monsters = []
-        monster_squares = []
-        for is_monster in it:
-            glyph = run_state.neighborhood.glyphs[it.multi_index]
-            if is_monster and self.satisfactory_monster(glyph, physics.Square(*it.multi_index), rng, run_state, character, oracle):
-                monsters.append(glyph)
-                monster_squares.append(physics.Square(*it.multi_index))
-
-        return monsters, monster_squares
-
+class Attack(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
 
-        if len(monsters) > 0:
-            target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
-            target_square = monster_squares[target_index]
-            attack_direction = run_state.neighborhood.action_grid[target_square]
-            return ActionAdvice(from_advisor=self, action=attack_direction)
-        return None
+        attack_direction = self.prioritize(targets, character)
 
-class MeleePriorityTargets(DumbMeleeAttackAdvisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
+        if attack_direction is None:
+            return None
+        return ActionAdvice(from_advisor=self, action=attack_direction)
 
-        if not isinstance(monster, gd.MonsterGlyph):
-            return False
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: True)
 
-        if character.melee_prioritize_monster_beyond_damage(monster.monster_spoiler):
-            #import pdb; pdb.set_trace()
-            return True
+    def prioritize(self, targets, character):
+        return targets.directions[0]
 
-        return False
+class MeleeHoldingMonster(Attack):
+    def prioritize(self, targets, character):
+        return targets.directions[0]
 
-class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
-    def advice(self, rng, run_state, character, oracle):
+    def targets(self, neighborhood, character):
         if character.held_by is None:
             return None
 
-        #import pdb; pdb.set_trace()
-        return super().advice(rng, run_state, character, oracle)
+        targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
+        return targets
+class MeleePriorityTargets(Attack):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
-
-        return monster == character.held_by.monster_glyph
-
-class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
+class RangedAttackAdvisor(Attack):
     def prepare_for_ranged(self, character):
         ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
         if ranged_plan is None or ranged_plan.attack_plan is not None:
@@ -769,8 +741,9 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
                 menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
                 ],
             )
-
+        #import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
+
     def make_throw_plan(self, item, direction):
         menu_plan = menuplan.MenuPlan("throw attack", self, [
             menuplan.CharacterMenuResponse("What do you want to throw?", chr(item.inventory_letter)),
@@ -784,19 +757,11 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
         ],)
         return menu_plan
 
-    def get_target(self, rng, run_state, character, oracle):
-        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
-
-        if len(monsters) == 0:
-            return None
-        target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
-        target_square = monster_squares[target_index]
-        attack_direction = run_state.neighborhood.action_grid[target_square]
-
-        return attack_direction
-
     def advice(self, rng, run_state, character, oracle):
-        attack_direction = self.get_target(rng, run_state, character, oracle)
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
+        attack_direction = self.prioritize(targets, character)
         if attack_direction is None:
             return None
         ranged_preparation = self.prepare_for_ranged(character)
@@ -817,22 +782,13 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
             assert False
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
-        return None
-
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range)
 
-        if not isinstance(monster, gd.MonsterGlyph):
-            return None
-
-        if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
-            return True
-        else:
-            return False
-
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
+    def prioritize(self, targets, character):
+        monsters = targets.monsters
         max_damage = 0
         target_index = None
         # prioritize by maximum passive damage
@@ -843,7 +799,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
                 target_index = i
                 max_damage = damage
 
-        return target_index
+        return targets.directions[target_index]
 
 class AdjustRangedPlanDummy(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -851,64 +807,52 @@ class AdjustRangedPlanDummy(Advisor):
             return None
 
         ranged_advisor = PassiveMonsterRangedAttackAdvisor()
-        target = ranged_advisor.get_target(rng, run_state, character, oracle)
-        if target is None:
+        targets = ranged_advisor.targets(run_state.neighborhood, character)
+        if targets is None:
             character.executing_ranged_plan = False
 
         return None
-class LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor(DumbMeleeAttackAdvisor):
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
+
+class LowerDPSAttack(Attack):
+    def prioritize(self, targets, character):
+        monsters = targets.monsters
         if len(monsters) == 1:
-            return 0
-        else:
-            target_index = None
-            best_reduction_rate = 0
-            for i, m in enumerate(monsters):
-                # prioritize invisible / swallow / whatever immediately as a patch
-                if not isinstance(m, gd.MonsterGlyph):
-                    target_index = i
-                    break
-                untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
-                kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
+            return targets.directions[0]
+        target_index = None
+        best_reduction_rate = 0
+        for i, m in enumerate(monsters):
+            # prioritize invisible / swallow / whatever immediately as a patch
+            if not isinstance(m, gd.MonsterGlyph):
+                target_index = i
+                break
+            untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
+            kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
 
-                dps_reduction_rate = untargeted_dps/kill_trajectory.time_to_kill
+            dps_reduction_rate = untargeted_dps/kill_trajectory.time_to_kill
 
-                if target_index is None or dps_reduction_rate > best_reduction_rate:
-                    target_index = i
-                    best_reduction_rate = dps_reduction_rate
+            if target_index is None or dps_reduction_rate > best_reduction_rate:
+                target_index = i
+                best_reduction_rate = dps_reduction_rate
 
-            return target_index
+        return targets.directions[target_index]
 
-class UnsafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
+class UnsafeMeleeAttackAdvisor(LowerDPSAttack):
     pass
 
-class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
+class SafeMeleeAttackAdvisor(LowerDPSAttack):
     unsafe_hp_loss_fraction = 0.5
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
 
-        if isinstance(monster, gd.MonsterGlyph):
+    def targets(self, neighborhood, character):
+        def target_p(monster):
+            if not isinstance(monster, gd.MonsterGlyph):
+                return True
             spoiler = monster.monster_spoiler
-
-            if monster.has_death_throes:
-                source_square = monster_square + run_state.neighborhood.player_location_in_extended - run_state.neighborhood.local_player_location
-                adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
-                adjacent_to_mon_glyphs = run_state.neighborhood.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
-
-                if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
-                    #import pdb; pdb.set_trace()
-                    return False
-
-                # don't attack gas spores next to gas spores
-                if np.count_nonzero(gd.MonsterGlyph.gas_spore_mask(adjacent_to_mon_glyphs)) > 1:
-                    return False
             trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
-
             if spoiler and spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
                 return False
+            return True
 
-        return True
+        return neighborhood.target_monsters(target_p)
 
 class MoveAdvisor(Advisor):
     def __init__(self, oracle_consultation=None, no_adjacent_monsters=False, square_threat_tolerance=None):

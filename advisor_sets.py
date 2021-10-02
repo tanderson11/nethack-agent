@@ -30,8 +30,9 @@ new_advisors = [
     TakeStaircaseAdvisor(),
     # COMBAT
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
+    #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
-        MeleeHoldingMonsterAdvisor(),
+        MeleeHoldingMonster(),
         MeleePriorityTargets(),
         ReduceThreatFromManyEnemiesWithMove(),
         SafeMeleeAttackAdvisor(),

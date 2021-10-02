@@ -20,6 +20,10 @@ from physics import Square
 from typing import NamedTuple, Tuple, List
 import inventory
 
+class Targets(NamedTuple):
+    monsters: list
+    directions: list
+
 @dataclass
 class CurrentSquare:
     dcoord: Tuple[int, int]
@@ -80,7 +84,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_visible_raw_glyphs = glyphs[self.vision]
         self.vision_glyphs = extended_visible_raw_glyphs
         extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        self.extended_visible_raw_glyphs = extended_visible_raw_glyphs
+        self.vision_glyph_objs = extended_visible_glyphs
         # index of player in the full vision
         player_location_in_extended = absolute_player_location - vision_start
         self.player_location_in_extended = player_location_in_extended
@@ -135,6 +139,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_possible_secret_mask = gd.CMapGlyph.is_possible_secret_check(extended_visible_raw_glyphs - gd.CMapGlyph.OFFSET)
         self.extended_has_item_stack = gd.stackable_mask(extended_visible_raw_glyphs)
 
+        self.extended_is_hostile_monster = self.extended_is_monster & ~self.extended_is_peaceful_monster
+
         # radius 1 box around player in vision glyphs
         neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
         self.neighborhood_view = neighborhood_view
@@ -165,7 +171,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.glyphs = extended_visible_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
-        self.is_monster = (self.extended_is_monster & ~self.extended_is_peaceful_monster)[neighborhood_view]
+        self.is_monster = (self.extended_is_hostile_monster)[neighborhood_view]
         self.n_adjacent_monsters = np.count_nonzero(self.is_monster)
 
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
@@ -208,6 +214,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### CORPSE STUFF ###
         ####################
         self.fresh_corpse_on_square_glyph = level_map.next_corpse(self.absolute_player_location)
+
+        self.make_monsters(character)
 
     def count_adjacent_searches(self, search_threshold):
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold
@@ -266,12 +274,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return self.Path(path_action, delta, threat)
 
     def path_to_nearest_monster(self):
-        monsters = self.extended_is_monster & (~self.extended_is_peaceful_monster)
+        monsters = self.extended_is_hostile_monster.copy()
         monsters[self.neighborhood_view] = False
         return self.path_to_targets(monsters, target_monsters=True)
 
     def path_to_nearest_weak_monster(self):
-        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_monster & (~self.extended_is_peaceful_monster)
+        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_hostile_monster
         weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
 
         return self.path_to_targets(weak_monsters, target_monsters=True)
@@ -320,11 +328,65 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def lootable_current_square(self):
         return self.level_map.lootable_squares_map[self.absolute_player_location]
 
-    def melee_monster_targets(self):
-        pass
+    def make_monsters(self, character):
+        # all the monsters in vision
+        self.monsters_idx = np.where(self.extended_is_hostile_monster)
+        self.monsters = self.vision_glyph_objs[self.extended_is_hostile_monster]
+        # just the adjacent monsters
+        self.adjacent_monsters_idx = np.where(self.is_monster)
+        self.adjacent_monsters = self.glyphs[self.is_monster]
+        
+        #import pdb; pdb.set_trace()
 
-    def ranged_monster_targets(self):
-        pass
+    def safe_detonation(self, monster, monster_square):
+        if not isinstance(monster, gd.MonsterGlyph):
+            return True
+        if not monster.has_death_throes:
+            return True
+
+        source_square = monster_square + self.player_location_in_extended - self.local_player_location
+        adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
+        adjacent_to_mon_glyphs = self.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
+
+        if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
+            return False
+        # don't attack gas spores next to gas spores
+        if np.count_nonzero(gd.MonsterGlyph.gas_spore_mask(adjacent_to_mon_glyphs)) > 1:
+            return False
+        
+        return True
+
+    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False):
+        if attack_range.type == 'melee':
+            satisfying_monsters = []
+            satisfying_directions = []
+            for i, monster in enumerate(self.adjacent_monsters):
+                monster_square = physics.Square(self.adjacent_monsters_idx[0][i], self.adjacent_monsters_idx[1][i])
+                if monster_selector(monster) and (not allow_anger or self.safe_detonation(monster, monster_square)):
+                    satisfying_monsters.append(monster)
+                    direction = self.action_grid[monster_square]
+                    satisfying_directions.append(direction)
+
+            if len(satisfying_directions) == 0: return None
+            #import pdb; pdb.set_trace()
+            return Targets(satisfying_monsters, satisfying_directions)
+        else:
+            satisfying_monsters = []
+            satisfying_directions = []
+            player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
+            player_mask[self.player_location_in_extended] = True
+            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True)
+            for i, monster in enumerate(self.monsters):
+                monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
+                if can_hit_mask[monster_square] and monster_selector(monster) and (not allow_anger or self.safe_detonation(monster, monster_square)):
+                    satisfying_monsters.append(monster)
+                    offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
+                    direction = physics.delta_to_action[offset]
+                    satisfying_directions.append(direction)
+
+            if len(satisfying_directions) == 0: return None
+            #import pdb; pdb.set_trace()
+            return Targets(satisfying_monsters, satisfying_directions)
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors):

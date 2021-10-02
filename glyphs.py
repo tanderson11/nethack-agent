@@ -472,16 +472,24 @@ class CMapGlyph(Glyph):
         return (offsets >= 12) & (offsets <= 16)
 
     @staticmethod
-    def open_door_mask(numerals):
-        return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
-
-    @staticmethod
     def is_wall_check(offsets):
         return (offsets < 12)
 
     @staticmethod
     def is_possible_secret_check(offsets):
         return (offsets < 3)
+
+    @staticmethod
+    def open_door_mask(numerals):
+        return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
+
+    @classmethod
+    def wall_mask(cls, numerals):
+        return (numerals >= nethack.GLYPH_CMAP_OFF) & (numerals < nethack.GLYPH_CMAP_OFF + 12)
+
+    @staticmethod
+    def closed_door_mask(numerals):
+        return (numerals >= 15 + nethack.GLYPH_CMAP_OFF) & (numerals < 17 + nethack.GLYPH_CMAP_OFF)
 
     def __init__(self, numeral):
         self.numeral = numeral
