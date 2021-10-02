@@ -52,11 +52,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             raise Exception("Bad view field")
 
     @staticmethod
-    def extended_position_to_absolute(extended_position, player_location_in_extended, absolute_player_location, blstats):
+    def extended_position_to_absolute(extended_position, player_location_in_extended, absolute_player_location):
         offset = extended_position - player_location_in_extended
         return absolute_player_location + offset
 
-    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight):
+    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight, blstats):
         ###################
         ### COPY FIELDS ###
         ###################
