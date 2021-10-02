@@ -1090,12 +1090,19 @@ class PlayerInventory():
                         proposed_items.append(most_desirable)
                         proposal_blockers.append(blockers)
                     else:
+                        stuck_flag = False
                         for b in blockers:
                             if isinstance(b, Weapon) or b.BUC == constants.BUC.cursed:
-                                pass
+                                stuck_flag = True
+                                break
                             else:
                                 proposed_items.append(most_desirable)
                                 proposal_blockers.append(blockers)
+
+                        if stuck_flag:
+                            proposed_items = []
+                            proposal_blockers = []
+                            continue
 
         return self.AttireProposal(proposed_items, proposal_blockers)
 
