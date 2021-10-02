@@ -748,8 +748,48 @@ class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
 
         return monster == character.held_by.monster_glyph
 
-class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
+class PrepareForOrdinaryRanged(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        if ranged_plan is None or ranged_plan.attack_plan is not None:
+            return None
+
+        if ranged_plan.quiver_item is not None:
+            action = nethack.actions.Command.QUIVER
+            menu_plan = menuplan.MenuPlan("quiver for ranged", self, [
+                menuplan.CharacterMenuResponse("What do you want to ready?", chr(ranged_plan.quiver_item.inventory_letter)),
+            ])
+        if ranged_plan.wield_item is not None:
+            action = nethack.actions.Command.WIELD
+            menu_plan = menuplan.MenuPlan("wield weaon", self, [
+                menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
+                ],
+            )
+
+        return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
+
+class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
+    def make_throw_plan(self, item, direction):
+        menu_plan = menuplan.MenuPlan("throw attack", self, [
+            menuplan.CharacterMenuResponse("What do you want to throw?", chr(item.inventory_letter)),
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
+    def make_fire_plan(self, direction):
+        menu_plan = menuplan.MenuPlan("fire ranged attack", self, [
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
+    def advice(self, rng, run_state, character, oracle):
+        ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        if ranged_plan is None:
+            return None
+        attack_plan = ranged_plan.attack_plan
+        if attack_plan is None:
+            return None
+
         monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
 
         if len(monsters) > 0:
@@ -757,21 +797,15 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
             target_square = monster_squares[target_index]
             attack_direction = run_state.neighborhood.action_grid[target_square]
 
-            fire = nethack.actions.Command.FIRE
+            if attack_plan.attack_action == nethack.actions.Command.THROW:
+                menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
+            elif attack_plan.attack_action == nethack.actions.Command.FIRE:
+                menu_plan = self.make_fire_plan(attack_direction)
+            else:
+                assert False
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
-            weapons = character.inventory.get_oclass(inv.Weapon)
-            for w in weapons:
-                if w and (w.equipped_status is None or w.equipped_status.status != 'wielded'):
-                    menu_plan = menuplan.MenuPlan(
-                        "ranged attack", self, [
-                            menuplan.DirectionMenuResponse("In what direction?", attack_direction),
-                            menuplan.MoreMenuResponse("You have no ammunition"),
-                            menuplan.MoreMenuResponse("You ready"),
-                            # note throw: means we didn't have anything quivered
-                            menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
-                        ],
-                    )
-                    return ActionAdvice(from_advisor=self, action=fire, new_menu_plan=menu_plan)
         return None
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):

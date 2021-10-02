@@ -322,7 +322,7 @@ class Weapon(Item):
         return character.relevant_skills.loc[self.identity.skill]
 
     def melee_desirability(self, character, desperate=False):
-        if self.identity.is_ammunition or self.identity.is_ranged or self.identity.slot == 'quiver':
+        if self.identity.is_ammo or self.identity.ranged or self.identity.slot == 'quiver':
             return -1
         relevant_skill = self.uses_relevant_skill(character)
 
@@ -362,7 +362,7 @@ class Weapon(Item):
         return is_better
 
     def desirable(self, character, consider_funds=True):
-        if self.enhancement is not None and (self.identity.is_ranged or self.identity.is_ammunition):
+        if self.enhancement is not None and (self.identity.ranged or self.identity.is_ammo):
             return True
 
         des = super().desirable(character, consider_funds=consider_funds)
@@ -989,7 +989,7 @@ class RangedAttackPlan(NamedTuple):
 class RangedPreparednessProposal(NamedTuple):
     quiver_item: Item = None
     wield_item: Item = None
-    attack_plan: RangedAttackPlan = RangedAttackPlan()
+    attack_plan: RangedAttackPlan = None
 
 class PlayerInventory():
     slot_cluster_mapping = {
