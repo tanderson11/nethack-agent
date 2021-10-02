@@ -927,8 +927,20 @@ class ToolIdentity(ObjectIdentity):
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
 
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+        self.thrown = False
+        self.is_ammo = True
+        self.ammo_type = "flint stone"
+
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
+
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+        self.thrown = False
+        self.is_ammo = True
+        self.ammo_type = "flint stone"
 
 class CoinIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
