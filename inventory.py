@@ -189,7 +189,10 @@ class Armor(Item):
         return same_slot
 
     def better_than_equivalent(self, y, character):
-        return self.instance_desirability_to_wear(character) > y.instance_desirability_to_wear(character)
+        better = self.instance_desirability_to_wear(character) > y.instance_desirability_to_wear(character)
+        if better and y.better_than_equivalent(self, character) and environment.env.debug:
+            import pdb; pdb.set_trace()
+        return better
 
     def desirable(self, character, consider_funds=True):
         return super().desirable(character, consider_funds=consider_funds)
@@ -1017,6 +1020,9 @@ class PlayerInventory():
         proposal_blockers: list = []
 
     def proposed_weapon_changes(self, character):
+        if character.executing_ranged_plan:
+            return None
+
         current_weapon = self.wielded_weapon
         desperate = not current_weapon.uses_relevant_skill(character)
 

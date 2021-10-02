@@ -320,6 +320,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def lootable_current_square(self):
         return self.level_map.lootable_squares_map[self.absolute_player_location]
 
+    def melee_monster_targets(self):
+        pass
+
+    def ranged_monster_targets(self):
+        pass
+
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors):
         self.walkable_mesh = walkable_mesh

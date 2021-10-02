@@ -18,7 +18,8 @@ new_advisors = [
         #EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
-    # WEAPON IMPROVEMENT
+    # FAST IMPROVEMENT
+    AdjustRangedPlanDummy(),
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
@@ -34,7 +35,6 @@ new_advisors = [
         MeleePriorityTargets(),
         ReduceThreatFromManyEnemiesWithMove(),
         SafeMeleeAttackAdvisor(),
-        PrepareForOrdinaryRanged(),
         PassiveMonsterRangedAttackAdvisor(),
         RandomMoveAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),

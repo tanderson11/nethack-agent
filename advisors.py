@@ -748,8 +748,8 @@ class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
 
         return monster == character.held_by.monster_glyph
 
-class PrepareForOrdinaryRanged(Advisor):
-    def advice(self, rng, run_state, character, oracle):
+class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
+    def prepare_for_ranged(self, character):
         ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
         if ranged_plan is None or ranged_plan.attack_plan is not None:
             return None
@@ -761,14 +761,13 @@ class PrepareForOrdinaryRanged(Advisor):
             ])
         if ranged_plan.wield_item is not None:
             action = nethack.actions.Command.WIELD
-            menu_plan = menuplan.MenuPlan("wield weaon", self, [
+            character.executing_ranged_plan = True
+            menu_plan = menuplan.MenuPlan("wield weapon for ranged", self, [
                 menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
                 ],
             )
 
         return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
-
-class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
     def make_throw_plan(self, item, direction):
         menu_plan = menuplan.MenuPlan("throw attack", self, [
             menuplan.CharacterMenuResponse("What do you want to throw?", chr(item.inventory_letter)),
@@ -782,7 +781,24 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
         ],)
         return menu_plan
 
+    def get_target(self, rng, run_state, character, oracle):
+        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
+
+        if len(monsters) == 0:
+            return None
+        target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
+        target_square = monster_squares[target_index]
+        attack_direction = run_state.neighborhood.action_grid[target_square]
+
+        return attack_direction
+
     def advice(self, rng, run_state, character, oracle):
+        attack_direction = self.get_target(rng, run_state, character, oracle)
+        if attack_direction is None:
+            return None
+        ranged_preparation = self.prepare_for_ranged(character)
+        if ranged_preparation is not None:
+            return ranged_preparation
         ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
         if ranged_plan is None:
             return None
@@ -790,21 +806,13 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
         if attack_plan is None:
             return None
 
-        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
-
-        if len(monsters) > 0:
-            target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
-            target_square = monster_squares[target_index]
-            attack_direction = run_state.neighborhood.action_grid[target_square]
-
-            if attack_plan.attack_action == nethack.actions.Command.THROW:
-                menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
-            elif attack_plan.attack_action == nethack.actions.Command.FIRE:
-                menu_plan = self.make_fire_plan(attack_direction)
-            else:
-                assert False
-            #import pdb; pdb.set_trace()
-            return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
+        if attack_plan.attack_action == nethack.actions.Command.THROW:
+            menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
+        elif attack_plan.attack_action == nethack.actions.Command.FIRE:
+            menu_plan = self.make_fire_plan(attack_direction)
+        else:
+            assert False
+        return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
         return None
 
@@ -834,6 +842,17 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
         return target_index
 
+class AdjustRangedPlanDummy(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.executing_ranged_plan:
+            return None
+
+        ranged_advisor = PassiveMonsterRangedAttackAdvisor()
+        target = ranged_advisor.get_target(rng, run_state, character, oracle)
+        if target is None:
+            character.executing_ranged_plan = False
+
+        return None
 class LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor(DumbMeleeAttackAdvisor):
     def prioritize_target(self, monsters, rng, run_state, character, oracle):
         if len(monsters) == 1:
@@ -1389,7 +1408,7 @@ class WieldBetterWeaponAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("wield weaon", self, [
             menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
             ], listening_item=best_weapon)
-
+        #import pdb; pdb.set_trace()
         print(f"Wielding better weapon: {character.inventory.wielded_weapon} -> {best_weapon}")
         return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 

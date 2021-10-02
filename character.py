@@ -41,6 +41,7 @@ class Character():
     held_by: HeldBy = None
     near_burdened: bool = False
     carrying_too_much_for_diagonal: bool = False
+    executing_ranged_plan: bool = False
     gold: int = 0
     hunger_state: int = 1
 
