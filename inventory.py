@@ -1020,7 +1020,7 @@ class PlayerInventory():
                 max_desirability = desirability
 
         if most_desirable != current_weapon:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             return most_desirable
         else:
             return None

@@ -1225,6 +1225,7 @@ class GlobalIdentityMap():
                 if data_idx in other_identity.idx:
                     if isinstance(other_identity.idx, pd.Index):
                         other_identity.idx = other_identity.idx.drop(data_idx)
+                        #import pdb; pdb.set_trace()
                         if len(other_identity.idx) == 0:
                             import pdb; pdb.set_trace()
 
