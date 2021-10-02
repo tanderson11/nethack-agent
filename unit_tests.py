@@ -1195,7 +1195,7 @@ class TestDrop(unittest.TestCase):
 
         for inputs, do_drop in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            numeral, item_class, item_str = inputs
+            numeral, item_class, item_str, _ = inputs
             string = np.array(string_to_tty_chars(item_str), dtype='uint8')
             oclass = item_class.glyph_class.class_number
             inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
@@ -1212,7 +1212,7 @@ class TestDrop(unittest.TestCase):
 
 class TestSpecialItemNames(unittest.TestCase):
     def test_no_charges(self):
-        numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
+        numeral, item_class, item_str, _ = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
 
         global_identity_map = gd.GlobalIdentityMap()
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')
