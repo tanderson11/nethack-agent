@@ -758,6 +758,9 @@ class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
             action = nethack.actions.Command.QUIVER
             menu_plan = menuplan.MenuPlan("quiver for ranged", self, [
                 menuplan.CharacterMenuResponse("What do you want to ready?", chr(ranged_plan.quiver_item.inventory_letter)),
+                menuplan.YesMenuResponse("Ready it instead?"),
+                menuplan.NoMenuResponse(re.compile(" Ready [0-9]+ of them\?")),
+                menuplan.YesMenuResponse("Ready all of them instead?"),
             ])
         if ranged_plan.wield_item is not None:
             action = nethack.actions.Command.WIELD
