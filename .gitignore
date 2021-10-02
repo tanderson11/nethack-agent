@@ -5,6 +5,9 @@ logs/
 *.pyc
 .idea
 
+# Jars
+*.jar
+
 # Sublime stuff
 *.sublime-*
 
