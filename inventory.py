@@ -1123,7 +1123,7 @@ class PlayerInventory():
             return RangedPreparednessProposal(attack_plan=plan)
 
         # quiver your thrown weapons
-        quiver_thrown_weapons = self.get_items(Weapon, identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver')
+        quiver_thrown_weapons = self.get_items(Weapon, instance_selector=lambda i: i != self.wielded_weapon, identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver')
         if len(quiver_thrown_weapons) > 0:
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 

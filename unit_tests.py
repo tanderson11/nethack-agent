@@ -1139,6 +1139,37 @@ class TestRangedAttack(unittest.TestCase):
         ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
+    def test_dont_throw_wielded(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Rogue,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1923, inv.Weapon, "a dagger (weapon in hand)", ord("a")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal, None)
+
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+
     def test_aklys(self):
         character = agents.custom_agent.Character(
             base_class=constants.BaseRole.Caveperson,
