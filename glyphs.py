@@ -926,6 +926,8 @@ class ToolIdentity(ObjectIdentity):
         super().__init__(idx, shuffle_class=shuffle_class)
 
         self.type = self.find_values('TYPE')
+        self.ranged = False
+        self.thrown = False
 
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
