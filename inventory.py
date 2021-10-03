@@ -325,6 +325,9 @@ class Weapon(Item):
         return character.relevant_skills.loc[self.identity.skill]
 
     def melee_desirability(self, character, desperate=False):
+        if self.quantity > 1:
+            return -1
+
         if self.identity.is_ammo or self.identity.ranged or self.identity.slot == 'quiver':
             return -1
         relevant_skill = self.uses_relevant_skill(character)
