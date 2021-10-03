@@ -836,6 +836,10 @@ class CustomAgent(BatchedAgent):
         if "while wearing a shield" in message.message:
             print(message.message)
 
+        if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
+            run_state.dmap.oracle_level = dcoord.level
+            print(message.message)
+
         ###################################################
         # We are done observing and ready to start acting #
         ###################################################

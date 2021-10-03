@@ -63,6 +63,7 @@ class DMap():
             Branches.Sokoban: DCoord(Branches.Sokoban, 1),
         }
         self.branch_connections = {}
+        self.oracle_level = None
 
     def update_target_dcoords(self, character):
         new_targets = {}
