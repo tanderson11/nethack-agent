@@ -297,6 +297,7 @@ class DLevelMap():
         )
 
         self.walls = gd.CMapGlyph.is_wall_check(offsets)
+        self.observed_walls = gd.CMapGlyph.is_observed_wall_check(offsets)
         self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
         self.safely_walkable = gd.CMapGlyph.is_safely_walkable_check(offsets)
         self.doors = gd.CMapGlyph.is_door_check(offsets)
@@ -617,12 +618,12 @@ class SpecialLevelDecoder():
 
 class CMapGlyphDecoder(SpecialLevelDecoder):
     CHARACTER_MAPPING = {
-        '.': 'room', # Probably needs configuration (lit, dark, etc.)
+        # '.': 'room', # Too much confusion about room / dark room
         '<': 'upstair', # Probably needs configuration (ladder)
         '>': 'dnstair', # Probably needs configuration (ladder)
         '{': 'fountain',
         '}': 'pool', # I don't think there's a separate moat glyph
-        '#': 'sink',
+        # '#': 'sink', # Not sure if corridors will be a thing
         '_': 'altar',
         'T': 'tree',
         'F': 'bars',
@@ -653,7 +654,7 @@ class IDAbleStackDecoder(SpecialLevelDecoder):
 class BoulderDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['0']
 
-KNOWN_WIKI_ENCODINGS = set([ord(' ')])
+KNOWN_WIKI_ENCODINGS = set([ord(' '), ord('.')])
 
 for cls in SpecialLevelDecoder.__subclasses__():
     if cls.CHARACTER_SET:
@@ -703,14 +704,13 @@ class SpecialLevelSearcher():
     def match_level(self, level_map: DLevelMap):
         possible_matches = self.lookup[level_map.dcoord.branch][level_map.dcoord.level]
         for possible_match in possible_matches:
-            if np.count_nonzero(level_map.walls & ~possible_match.potential_walls):
+            if np.count_nonzero(level_map.observed_walls & ~possible_match.potential_walls):
                 continue
 
-            known_cmap_mask = (possible_match.cmap_glyphs != 2359)
-            if np.count_nonzero((level_map.dungeon_feature_map != possible_match.cmap_glyphs)[known_cmap_mask]):
+            if np.count_nonzero((level_map.dungeon_feature_map != possible_match.cmap_glyphs) & (possible_match.cmap_glyphs != 2359)):
                 continue
 
-            if np.count_nonzero(level_map.walls & ~possible_match.potential_walls) > 8:
+            if np.count_nonzero(level_map.observed_walls & possible_match.potential_walls) > 8:
                 return possible_match
 
 class SpecialLevelLoader():
@@ -720,21 +720,31 @@ class SpecialLevelLoader():
             characters = f.readlines()
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
             properties = json.load(f)
-        return SpecialLevelMap(properties, SpecialLevelLoader.make_character_array(characters))
+        return SpecialLevelMap(
+            properties,
+            SpecialLevelLoader.make_character_array(characters, properties["geometry_horizontal"], properties["geometry_vertical"])
+        )
 
     @staticmethod
-    def make_character_array(characters):
+    def make_character_array(characters, geometry_horizontal, geometry_vertical):
+        if not (geometry_horizontal == "center" and geometry_vertical == "center"):
+            raise Exception("Don't know how to handle other geometries yet")
+
         # Space (i.e. ' ') means no observation
         retval = np.full(constants.GLYPHS_SHAPE, ord(' '), dtype=int)
 
-        offset_x = 0
-        offset_y = 0
+        map_height = len(characters)
+        map_length = max(map(lambda x: len(x.strip("\n")), characters))
 
+        initial_offset_x = (constants.GLYPHS_SHAPE[1] - map_length) // 2
+        offset_y = (constants.GLYPHS_SHAPE[0] - map_height) // 2 + 1
+
+        offset_x = initial_offset_x
         for line in characters:
             for character in line.strip("\n"):
                 retval[offset_y, offset_x] = ord(character)
                 offset_x += 1
-            offset_x = 0
+            offset_x = initial_offset_x
             offset_y += 1
 
         return retval

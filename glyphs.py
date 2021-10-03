@@ -470,6 +470,10 @@ class CMapGlyph(Glyph):
         return (offsets < 12)
 
     @staticmethod
+    def is_observed_wall_check(offsets):
+        return (offsets > 0) & (offsets < 12)
+
+    @staticmethod
     def is_possible_secret_check(offsets):
         return (offsets < 3)
 
