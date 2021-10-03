@@ -1153,7 +1153,7 @@ class PlayerInventory():
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 
         # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
-        bows = self.get_items(Weapon, identity_selector=lambda i: i.ranged and (i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed))
+        bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
         for bow in bows:
             matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
             if len(matching_ammo) > 0:
