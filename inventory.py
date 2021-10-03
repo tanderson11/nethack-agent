@@ -516,7 +516,7 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = item.identity.slot
 
-            elif "weapon in hand" in parenthetical_status:
+            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status:
                 self.status = 'wielded'
 
                 if parenthetical_status == "(weapon in hands)":
@@ -545,14 +545,6 @@ class BadStringOnWhitelist(Exception):
 
 class ItemParser():
     item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
-    
-    ############## TODO ##################
-    # These patterns are currently a bit #
-    # overloaded because they are doing  #
-    # things both with added words like  #
-    # `ring` and with pluralization.     #
-    ############## TODO ##################
-    # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
@@ -1158,7 +1150,7 @@ class PlayerInventory():
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 
         # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
-        bows = self.get_items(Weapon, identity_selector=lambda i: i.ranged)
+        bows = self.get_items(Weapon, identity_selector=lambda i: i.ranged and (i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed))
         for bow in bows:
             matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
             if len(matching_ammo) > 0:
