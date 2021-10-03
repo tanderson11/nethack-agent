@@ -216,6 +216,7 @@ normal_background_menu_plan_options = [
 
 wizard_background_menu_plan_options = [
     menuplan.YesMenuResponse("Die?"),
+    menuplan.YesMenuResponse("Dry up fountain?"),
     menuplan.NoMenuResponse("Force the gods to be pleased?"),
     menuplan.NoMenuResponse("Advance skills without practice?"),
     menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
@@ -859,8 +860,8 @@ class CustomAgent(BatchedAgent):
             )
             return advice
 
-        if message.has_more:
-            if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
+        if message.has_more or message.yn_question or message.getline:
+            raise Exception(f"We somehow missed a message {message.message}")
 
         if run_state.auto_pickup:
             advice = ActionAdvice(
