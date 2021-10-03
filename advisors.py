@@ -782,6 +782,41 @@ class RangedAttackAdvisor(Attack):
             assert False
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
+class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        advice = super().advice(rng, run_state, character, oracle)
+        if advice is not None:
+            pass
+            #import pdb; pdb.set_trace()
+        return advice
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        targets = neighborhood.target_monsters(lambda m: character.scared_by(m), attack_range=range)
+        if targets is not None:
+            print(f"Annoying monster at range: {targets.monsters[0]}")
+        return targets
+
+class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
+    unsafe_hp_loss_fraction = 0.5
+    def advice(self, rng, run_state, character, oracle):
+        advice = super().advice(rng, run_state, character, oracle)
+        if advice is not None:
+            print("Attacking highly threatening monster at range")
+            #import pdb; pdb.set_trace()
+        return advice
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        def target_p(monster):
+            if not isinstance(monster, gd.MonsterGlyph):
+                return False
+            spoiler = monster.monster_spoiler
+            damage_from_attacks, trajectory = spoiler.fight_outcome(character)
+            if damage_from_attacks + spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
+                #print(f"Highly threatening monster at range: {monster}")
+                return True
+            return False
+        return neighborhood.target_monsters(lambda m: target_p(m), attack_range=range)
+
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     def targets(self, neighborhood, character):
         range = physics.AttackRange('line', 4)

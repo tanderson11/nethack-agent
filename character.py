@@ -254,6 +254,16 @@ class Character():
 
         return False
 
+    def scared_by(self, monster):
+        if not isinstance(monster, gd.MonsterGlyph):
+            return False
+
+        spoiler = monster.monster_spoiler
+        if self.melee_prioritize_monster_beyond_damage(spoiler):
+            return True
+
+        return False
+
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
         2: 1,
