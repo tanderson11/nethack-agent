@@ -736,7 +736,7 @@ class RangedAttackAdvisor(Attack):
             ])
         if ranged_plan.wield_item is not None:
             action = nethack.actions.Command.WIELD
-            character.executing_ranged_plan = True
+            character.executing_ranged_plan = self
             menu_plan = menuplan.MenuPlan("wield weapon for ranged", self, [
                 menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
                 ],
@@ -841,7 +841,7 @@ class AdjustRangedPlanDummy(Advisor):
         if not character.executing_ranged_plan:
             return None
 
-        ranged_advisor = PassiveMonsterRangedAttackAdvisor()
+        ranged_advisor = character.executing_ranged_plan
         targets = ranged_advisor.targets(run_state.neighborhood, character)
         if targets is None:
             character.executing_ranged_plan = False
