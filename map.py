@@ -18,6 +18,7 @@ import constants
 import functools
 from utilities import ARS
 
+# TODO: I am not sure these ints are constant across nethack games
 class Branches(enum.IntEnum):
     DungeonsOfDoom = 0
     GnomishMines = 2
@@ -578,121 +579,162 @@ class ThreatMap(FloodMap):
         can_hit_mask = np.logical_or.reduce(masks)
         return can_hit_mask
 
-class SpecialLevelLoader():
-    CHARACTER_TO_GLYPH_NAME = [
-        # 'stone', # 0
-        # '|': 'vwall', # 1
-        # '-': 'hwall', # 2
-        'tlcorn', # 3
-        'trcorn', # 4
-        'blcorn', # 5
-        'brcorn', # 6
-        'crwall', # 7
-        'tuwall', # 8
-        'tdwall', # 9
-        'tlwall', # 10
-        'trwall', # 11
-        'ndoor', # 12
-        'vodoor', # 13
-        'hodoor', # 14
-        'vcdoor', # 15
-        'hcdoor', # 16
-        'bars', # 17
-        'tree', # 18
-        'room', # 19
-        'darkroom', # 20
-        'corr', # 21
-        'litcorr', # 22
-        'upstair', # 23
-        'dnstair', # 24
-        'upladder', # 25
-        'dnladder', # 26
-        'altar', # 27
-        'grave', # 28
-        'throne', # 29
-        'sink', # 30
-        'fountain', # 31
-        'pool', # 32
-        'ice', # 33
-        'lava', # 34
-        'vodbridge', # 35
-        'hodbridge', # 36
-        'vcdbridge', # 37
-        'hcdbridge', # 38
-        'air', # 39
-        'cloud', # 40
-        'water', # 41
-        'arrow_trap', # 42
-        'dart_trap', # 43
-        'falling_rock_trap', # 44
-        'squeaky_board', # 45
-        'bear_trap', # 46
-        'land_mine', # 47
-        'rolling_boulder_trap', # 48
-        'sleeping_gas_trap', # 49
-        'rust_trap', # 50
-        'fire_trap', # 51
-        'pit', # 52
-        'spiked_pit', # 53
-        'hole', # 54
-        'trap_door', # 55
-        'teleportation_trap', # 56
-        'level_teleporter', # 57
-        'magic_portal', # 58
-        'web', # 59
-        'statue_trap', # 60
-        'magic_trap', # 61
-        'anti_magic_trap', # 62
-        'polymorph_trap', # 63
-        'vibrating_square', # 64
-        'vbeam', # 65
-        'hbeam', # 66
-        'lslant', # 67
-        'rslant', # 68
-        'digbeam', # 69
-        'flashbeam', # 70
-        'boomleft', # 71
-        'boomright', # 72
-        'ss1', # 73
-        'ss2', # 74
-        'ss3', # 75
-        'ss4', # 76
-        'poisoncloud', # 77
-        'goodpos', # 78
-        'sw_tl', # 79
-        'sw_tc', # 80
-        'sw_tr', # 81
-        'sw_ml', # 82
-        'sw_mr', # 83
-        'sw_bl', # 84
-        'sw_bc', # 85
-        'sw_br', # 86
+class SpecialLevelDecoder():
+    CHARACTER_SET = None
+    CHARACTER_MAPPING = None
+
+    def __init__(self):
+        if self.CHARACTER_SET:
+            self.character_set = set(map(lambda x: ord(x), self.CHARACTER_SET))
+        else:
+            self.character_mapping = {}
+            for k, v in self.CHARACTER_MAPPING.items():
+                self.character_mapping[ord(k)] = gd.get_by_name(gd.CMapGlyph, v).numeral
+
+    def decode_to_bool(self, encoding):
+        retval = np.zeros(constants.GLYPHS_SHAPE, dtype=bool)
+        for x in range(constants.GLYPHS_SHAPE[0]):
+            for y in range(constants.GLYPHS_SHAPE[1]):
+                if encoding[x, y] in self.character_set:
+                    retval[x, y] = True
+        return retval
+
+    def decode_to_int(self, encoding):
+        retval = np.full(constants.GLYPHS_SHAPE, 2359, dtype=int)
+        for x in range(constants.GLYPHS_SHAPE[0]):
+            for y in range(constants.GLYPHS_SHAPE[1]):
+                val = self.character_mapping.get(encoding[x, y], None)
+                if val is not None:
+                    retval[x, y] = val
+        return retval
+
+    def decode(self, encoding):
+        if self.CHARACTER_SET:
+            return self.decode_to_bool(encoding)
+        else:
+            return self.decode_to_int(encoding)
+
+class CMapGlyphDecoder(SpecialLevelDecoder):
+    CHARACTER_MAPPING = {
+        '.': 'room', # Probably needs configuration (lit, dark, etc.)
+        '<': 'upstair', # Probably needs configuration (ladder)
+        '>': 'dnstair', # Probably needs configuration (ladder)
+        '{': 'fountain',
+        '}': 'pool', # I don't think there's a separate moat glyph
+        '#': 'sink',
+        '_': 'altar',
+        'T': 'tree',
+        'F': 'bars',
+        'I': 'ice',
+        'L': 'lava',
+    }
+
+class PotentialWallDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = [
+        '-',
+        '|',
+        'S', # secret door
+        'D', # maybe wall, maybe door
+        'H', # maybe wall, maybe open
     ]
-    CHARACTER_TO_GLYPH = {}
-    def __init__(self, level_name):
-        self.level_name = level_name
+
+class PotentialSecretDoorDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['S']
+
+# You should edit the map file to not include traps you're fine stepping on
+# e.g. various unavoidable squeaky boards
+class TrapsToAvoidDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['^']
+
+class IDAbleStackDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['*']
+
+class BoulderDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['0']
+
+KNOWN_WIKI_ENCODINGS = set([ord(' ')])
+
+for cls in SpecialLevelDecoder.__subclasses__():
+    if cls.CHARACTER_SET:
+        KNOWN_WIKI_ENCODINGS.update(map(ord, cls.CHARACTER_SET))
+    else:
+        KNOWN_WIKI_ENCODINGS.update(map(ord, cls.CHARACTER_MAPPING.keys()))
+
+class SpecialLevelMap():
+    cmap_glyph_decoder = CMapGlyphDecoder()
+    potential_wall_decoder = PotentialWallDecoder()
+    potential_secret_door_decoder = PotentialSecretDoorDecoder()
+    traps_to_avoid_decoder = TrapsToAvoidDecoder()
+
+    def __init__(self, config_data, nethack_wiki_encoding):
+        self.level_name = config_data['level_name']
+        self.level_variant = config_data['level_variant']
+        self.branch = Branches.__members__[config_data['branch']]
+        self.min_branch_level = config_data['min_branch_level']
+        self.max_branch_level = config_data['max_branch_level']
+        self.teleportable = config_data['properties']['teleportable']
+        self.diggable_floor = config_data['properties']['diggable_floor']
+
+        self.nethack_wiki_encoding = nethack_wiki_encoding
+        if self.nethack_wiki_encoding.shape != constants.GLYPHS_SHAPE:
+            raise Exception("Bad special level shape")
+
+        for row in nethack_wiki_encoding:
+            for char in row:
+                if char not in KNOWN_WIKI_ENCODINGS:
+                    raise Exception(f"Unknown character {chr(char)}")
+
+        # These are our map layers
+        self.cmap_glyphs = self.cmap_glyph_decoder.decode(nethack_wiki_encoding)
+        self.potential_walls = self.potential_wall_decoder.decode(nethack_wiki_encoding)
+        self.potential_secret_doors = self.potential_secret_door_decoder.decode(nethack_wiki_encoding)
+        self.traps_to_avoid = self.traps_to_avoid_decoder.decode(nethack_wiki_encoding)
+
+class SpecialLevelSearcher():
+    def __init__(self, all_special_levels: list[SpecialLevelMap]):
+        self.lookup = defaultdict(lambda: defaultdict(lambda: []))
+        self.level_found = {}
+        for level in all_special_levels:
+            self.level_found[level.level_name] = False
+            for depth in range(level.min_branch_level, level.max_branch_level + 1):
+                self.lookup[level.branch][depth].append(level)
+
+    def match_level(self, level_map: DLevelMap):
+        possible_matches = self.lookup[level_map.dcoord.branch][level_map.dcoord.level]
+        for possible_match in possible_matches:
+            if np.count_nonzero(level_map.walls & ~possible_match.potential_walls):
+                continue
+
+            known_cmap_mask = (possible_match.cmap_glyphs != 2359)
+            if np.count_nonzero((level_map.dungeon_feature_map != possible_match.cmap_glyphs)[known_cmap_mask]):
+                continue
+
+            if np.count_nonzero(level_map.walls & ~possible_match.potential_walls) > 8:
+                return possible_match
+
+class SpecialLevelLoader():
+    @staticmethod
+    def load(level_name):
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.txt"), 'r') as f:
             characters = f.readlines()
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
-            self.properties = json.load(f)
-
-        self.glyphs = self.characters_to_glyphs(characters)
+            properties = json.load(f)
+        return SpecialLevelMap(properties, SpecialLevelLoader.make_character_array(characters))
 
     @staticmethod
-    def characters_to_glyphs(characters):
-        glyphs = np.full(constants.GLYPHS_SHAPE, 2359)
+    def make_character_array(characters):
+        # Space (i.e. ' ') means no observation
+        retval = np.full(constants.GLYPHS_SHAPE, ord(' '), dtype=int)
 
         offset_x = 0
         offset_y = 0
 
         for line in characters:
-
-            for character in line:
-                glyph = SpecialLevelLoader.CHARACTER_TO_GLYPH.get(character, 2359)
-                glyphs[offset_x, offset_y] = glyph
+            for character in line.strip("\n"):
+                retval[offset_y, offset_x] = ord(character)
                 offset_x += 1
             offset_x = 0
             offset_y += 1
 
-        return glyphs
+        return retval
 

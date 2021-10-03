@@ -1,10 +1,14 @@
 {
     "branch": "Sokoban",
+    "level_name": "Sokoban 1",
+    "level_variant": "a",
+    "min_branch_level": 1,
+    "max_branch_level": 1,
     "offset": {
         "x": 0,
         "y": 0
     },
-    "level_properties": {
+    "properties": {
         "mappable": true,
         "teleportable": false,
         "diggable_walls": true,

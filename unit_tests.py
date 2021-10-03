@@ -1154,8 +1154,10 @@ class TestFloodMap(unittest.TestCase):
 
 class TestSpecialLevelLoader(unittest.TestCase):
     def test_sokoban_1a(self):
-        special_level = map.SpecialLevelLoader('sokoban_1a')
-        self.assertEqual(special_level.glyphs[0,0], 2359)
+        special_level = map.SpecialLevelLoader.load('sokoban_1a')
+        self.assertEqual(special_level.cmap_glyphs[0,0], 2359)
+        searcher = map.SpecialLevelSearcher([special_level])
+        self.assertEqual(len(searcher.lookup[map.Branches.Sokoban][1]), 1)
 
 if __name__ == '__main__':
     unittest.main()
