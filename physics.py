@@ -13,8 +13,13 @@ class Square(NamedTuple):
     def __sub__(self, x):
         return self.__class__(self[0]-x[0], self[1]-x[1])
 
+
     #def __eq__(self, x):
     #    return (self[0] == x[0]) and (self[1] == x[1])
+
+class AttackRange(NamedTuple):
+    type: str = 'melee'
+    range: int = 1
 
 action_grid = np.array([
     nethack.actions.CompassDirection.NW,

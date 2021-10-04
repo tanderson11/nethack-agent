@@ -96,12 +96,23 @@ class Oracle():
         )
 
     @functools.cached_property
+    def minor_unicorn_condition(self):
+        return (
+            self.nuisance_condition or
+            self.blind
+        )
+
+    @functools.cached_property
     def nuisance_condition(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_HALLU) or
             self.blstats.check_condition(nethack.BL_MASK_STUN) or
             self.blstats.check_condition(nethack.BL_MASK_CONF)
         )
+
+    @functools.cached_property
+    def blind(self):
+        return self.blstats.check_condition(nethack.BL_MASK_BLIND)
 
     @functools.cached_property
     def am_threatened(self):
@@ -366,6 +377,22 @@ class ApplyUnicornHornAdvisor(Advisor):
             ], listening_item=unicorn_horn)
             return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
 
+class GainSpeedFromWand(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.has_intrinsic(constants.Intrinsics.speed):
+            return None
+
+        zap = nethack.actions.Command.ZAP
+        wand_of_speed_monster = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'speed monster')
+        if wand_of_speed_monster is not None and (wand_of_speed_monster.charges is None or wand_of_speed_monster.charges > 0):
+            menu_plan = menuplan.MenuPlan("zap speed monster wand", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_speed_monster.inventory_letter)),
+                menuplan.CharacterMenuResponse("In what direction?", '.'),
+            ], listening_item=wand_of_speed_monster)
+
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
 class ZapDiggingDownAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is not None:
@@ -411,10 +438,59 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
+class ReadRemoveCurse(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        remove_curse = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.BUC != constants.BUC.cursed, identity_selector=lambda i: i.name() == 'remove curse')
+        if remove_curse is None:
+            return None
+
+        armaments = character.inventory.armaments
+        have_cursed = False
+        for item in armaments:
+            if item is not None and item.BUC == constants.BUC.cursed:
+                have_cursed = True
+                break
+
+        if not have_cursed:
+            return None
+
+        letter = remove_curse.inventory_letter
+        menu_plan = menuplan.MenuPlan("read remove curse scroll", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+        ])
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=read, new_menu_plan=menu_plan)
+
+class IdentifyUnidentifiedScrolls(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify", instance_selector=lambda i: not i.shop_owned)
+
+        if identify_scroll is None:
+            return None
+
+        unidentified_scrolls = character.inventory.get_item(
+            inv.Scroll,
+            identity_selector=lambda i: i.name() is None
+        )
+
+        if unidentified_scrolls is None:
+            return None
+
+        print("Trying to identify")
+
+        menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
+            menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
+
+        return ActionAdvice(self, read, menu_plan)
+
 class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
-        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify")
+        identify_scroll = character.inventory.get_item(inv.Scroll, name="identify", instance_selector=lambda i: not i.shop_owned)
 
         if identify_scroll is None:
             return None
@@ -428,7 +504,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
             return None
 
         print("Trying to identify")
-        
+
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
@@ -436,35 +512,49 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
 
         return ActionAdvice(self, read, menu_plan)
 
-class ReadUnidentifiedScrollsAdvisor(Advisor):
+class AnyScrollAdvisor(Advisor):
+    def make_menu_plan(self, run_state, character, scroll):
+        interactive_menus = [
+            menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+        ]
+
+        menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
+                menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
+                menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
+                menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
+                menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
+                # most remote square for placements
+                menuplan.ConnectedSequenceMenuResponse("(For instructions type a '?')", "Z."),
+                menuplan.ConnectedSequenceMenuResponse("What class of monsters do you wish to genocide?", "a\r"),
+                menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
+                menuplan.MoreMenuResponse("This is a scroll of"),
+                menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
+                menuplan.MoreMenuResponse("You have found a scroll of"),
+                menuplan.EscapeMenuResponse("What do you want to charge?"),
+                menuplan.NoMenuResponse("Do you wish to teleport?"),
+            ], interactive_menu=interactive_menus, listening_item=scroll
+        )
+
+        return menu_plan
+
+class ReadSafeUnidentifiedScrolls(AnyScrollAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        safe_scroll = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.safe_to_read(character), identity_selector=lambda i:not i.is_identified() and not i.listened_actions.get(read, False))
+
+        if safe_scroll is not None:
+            menu_plan = self.make_menu_plan(run_state, character, safe_scroll)
+            #import pdb; pdb.set_trace()
+            return ActionAdvice(self, read, menu_plan)
+
+class ReadUnidentifiedScrollsAdvisor(AnyScrollAdvisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
         for scroll in scrolls:
             if scroll and scroll.identity and not scroll.identity.is_identified() and scroll.BUC != constants.BUC.cursed:
-                letter = scroll.inventory_letter
-
-                interactive_menus = [
-                    menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
-                ]
-
-                menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
-                    menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
-                    menuplan.EscapeMenuResponse("Where do you want to center the stinking cloud"),
-                    menuplan.MoreMenuResponse(re.compile("Where do you want to center the explosion\?$")),
-                    # most remote square for placements
-                    menuplan.CharacterMenuResponse("(For instructions type a '?')", "Z", follow_with=ord('.')),
-                    menuplan.CharacterMenuResponse("What class of monsters do you wish to genocide?", "a", follow_with=ord('\r')),
-                    menuplan.MoreMenuResponse("As you read the scroll, it disappears.", always_necessary=False),
-                    menuplan.MoreMenuResponse("This is a scroll of"),
-                    menuplan.MoreMenuResponse(re.compile("This is a (.+) scroll")),
-                    menuplan.MoreMenuResponse("You have found a scroll of"),
-                    menuplan.EscapeMenuResponse("What do you want to charge?"),
-                    menuplan.NoMenuResponse("Do you wish to teleport?"),
-                ], interactive_menu=interactive_menus)
-
+                menu_plan = self.make_menu_plan(run_state, character, scroll)
                 return ActionAdvice(self, read, menu_plan)
 
 class EnchantArmorAdvisor(Advisor):
@@ -587,6 +677,8 @@ class InventoryEatAdvisor(Advisor):
 
 class CombatEatAdvisor(InventoryEatAdvisor):
     def check_comestible(self, comestible, rng, run_state, character, oracle):
+        if not super().check_comestible(comestible, rng, run_state, character, oracle):
+            return False
         if comestible.identity: # if statement = bandaid for lack of corpse identities
             return comestible.identity and comestible.identity.name() != 'tin'
         else:
@@ -620,93 +712,156 @@ class PrayForLesserMajorTroubleAdvisor(PrayerAdvisor):
 # ATTACK ADVISORS #
 ###################
 
-class DumbMeleeAttackAdvisor(Advisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        '''Returns True if this is a monster the advisor is willing to target. False otherwise.
-
-        Only called on a monster glyph as identified by the neighborhood (ex. InvisibleGlyph)'''
-        return not isinstance(monster, gd.MonsterGlyph) or not monster.always_peaceful
-
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
-        return 0
-
-    def get_monsters(self, rng, run_state, character, oracle):
-        it = np.nditer(run_state.neighborhood.is_monster, flags=['multi_index'])
-        monsters = []
-        monster_squares = []
-        for is_monster in it:
-            glyph = run_state.neighborhood.glyphs[it.multi_index]
-            if is_monster and self.satisfactory_monster(glyph, physics.Square(*it.multi_index), rng, run_state, character, oracle):
-                monsters.append(glyph)
-                monster_squares.append(physics.Square(*it.multi_index))
-
-        return monsters, monster_squares
-
+class Attack(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
 
-        if len(monsters) > 0:
-            target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
-            target_square = monster_squares[target_index]
-            attack_direction = run_state.neighborhood.action_grid[target_square]
-            return ActionAdvice(from_advisor=self, action=attack_direction)
-        return None
+        attack_direction = self.prioritize(targets, character)
 
-class MeleeHoldingMonsterAdvisor(DumbMeleeAttackAdvisor):
-    def advice(self, rng, run_state, character, oracle):
+        if attack_direction is None:
+            return None
+        return ActionAdvice(from_advisor=self, action=attack_direction)
+
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: True)
+
+    def prioritize(self, targets, character):
+        return targets.directions[0]
+
+class MeleeHoldingMonster(Attack):
+    def prioritize(self, targets, character):
+        return targets.directions[0]
+
+    def targets(self, neighborhood, character):
         if character.held_by is None:
             return None
 
-        #import pdb; pdb.set_trace()
-        return super().advice(rng, run_state, character, oracle)
+        targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
+        return targets
+class MeleePriorityTargets(Attack):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
-
-        return monster == character.held_by.monster_glyph
-
-class RangedAttackAdvisor(DumbMeleeAttackAdvisor):
-    def advice(self, rng, run_state, character, oracle):
-        monsters, monster_squares = self.get_monsters(rng, run_state, character, oracle)
-
-        if len(monsters) > 0:
-            target_index = self.prioritize_target(monsters, rng, run_state, character, oracle)
-            target_square = monster_squares[target_index]
-            attack_direction = run_state.neighborhood.action_grid[target_square]
-
-            fire = nethack.actions.Command.FIRE
-
-            weapons = character.inventory.get_oclass(inv.Weapon)
-            for w in weapons:
-                if w and (w.equipped_status is None or w.equipped_status.status != 'wielded'):
-                    menu_plan = menuplan.MenuPlan(
-                        "ranged attack", self, [
-                            menuplan.DirectionMenuResponse("In what direction?", attack_direction),
-                            menuplan.MoreMenuResponse("You have no ammunition"),
-                            menuplan.MoreMenuResponse("You ready"),
-                            # note throw: means we didn't have anything quivered
-                            menuplan.CharacterMenuResponse("What do you want to throw?", chr(w.inventory_letter)),
-                        ],
-                    )
-                    return ActionAdvice(from_advisor=self, action=fire, new_menu_plan=menu_plan)
-        return None
-
-class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
-
-        if isinstance(monster, gd.InvisibleGlyph):
-            #import pdb; pdb.set_trace()
+class RangedAttackAdvisor(Attack):
+    attack_strength = 'ordinary'
+    def prepare_for_ranged(self, character):
+        ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        if ranged_plan is None or ranged_plan.attack_plan is not None:
             return None
 
-        if monster.monster_spoiler.passive_attack_bundle.num_attacks > 0:
-            return True
-        else:
-            return False
+        if ranged_plan.quiver_item is not None:
+            action = nethack.actions.Command.QUIVER
+            menu_plan = menuplan.MenuPlan("quiver for ranged", self, [
+                menuplan.CharacterMenuResponse("What do you want to ready?", chr(ranged_plan.quiver_item.inventory_letter)),
+                menuplan.YesMenuResponse("Ready it instead?"),
+                menuplan.NoMenuResponse(re.compile(" Ready [0-9]+ of them\?")),
+                menuplan.YesMenuResponse("Ready all of them instead?"),
+            ])
+        if ranged_plan.wield_item is not None:
+            action = nethack.actions.Command.WIELD
+            character.executing_ranged_plan = self
+            menu_plan = menuplan.MenuPlan("wield weapon for ranged", self, [
+                menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
+                ],
+            )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
 
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
+    def make_throw_plan(self, item, direction):
+        menu_plan = menuplan.MenuPlan("throw attack", self, [
+            menuplan.CharacterMenuResponse("What do you want to throw?", chr(item.inventory_letter)),
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
+    def make_fire_plan(self, direction):
+        menu_plan = menuplan.MenuPlan("fire ranged attack", self, [
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
+    def make_zap_plan(self, item, direction):
+        menu_plan = menuplan.MenuPlan("zap ranged attack wand", self, [
+            menuplan.CharacterMenuResponse("What do you want to zap?", chr(item.inventory_letter)),
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
+    def advice(self, rng, run_state, character, oracle):
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
+        attack_direction = self.prioritize(targets, character)
+        if attack_direction is None:
+            return None
+        ranged_preparation = self.prepare_for_ranged(character)
+        if ranged_preparation is not None:
+            return ranged_preparation
+        if self.attack_strength == 'ordinary':
+            ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        elif self.attack_strength == 'powerful':
+            ranged_plan = character.inventory.get_powerful_ranged_attack(character)
+        if ranged_plan is None:
+            return None
+        attack_plan = ranged_plan.attack_plan
+        if attack_plan is None:
+            return None
+
+        if attack_plan.attack_action == nethack.actions.Command.THROW:
+            menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
+        elif attack_plan.attack_action == nethack.actions.Command.FIRE:
+            menu_plan = self.make_fire_plan(attack_direction)
+        elif attack_plan.attack_action == nethack.actions.Command.ZAP:
+            menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+        else:
+            assert False
+        return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
+
+class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
+    attack_strength = 'powerful'
+    def advice(self, rng, run_state, character, oracle):
+        advice = super().advice(rng, run_state, character, oracle)
+        if advice is not None:
+            pass
+            #import pdb; pdb.set_trace()
+        return advice
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        targets = neighborhood.target_monsters(lambda m: character.scared_by(m), attack_range=range)
+        if targets is not None:
+            print(f"Annoying monster at range: {targets.monsters[0]}")
+        return targets
+
+class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
+    unsafe_hp_loss_fraction = 0.5
+    def advice(self, rng, run_state, character, oracle):
+        advice = super().advice(rng, run_state, character, oracle)
+        if advice is not None:
+            print("Attacking highly threatening monster at range")
+            #import pdb; pdb.set_trace()
+        return advice
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        def target_p(monster):
+            if not isinstance(monster, gd.MonsterGlyph):
+                return False
+            spoiler = monster.monster_spoiler
+            damage_from_attacks, trajectory = spoiler.fight_outcome(character)
+            if damage_from_attacks + spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
+                #print(f"Highly threatening monster at range: {monster}")
+                return True
+            return False
+        return neighborhood.target_monsters(lambda m: target_p(m), attack_range=range)
+
+class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range)
+
+    def prioritize(self, targets, character):
+        monsters = targets.monsters
         max_damage = 0
         target_index = None
         # prioritize by maximum passive damage
@@ -717,58 +872,60 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
                 target_index = i
                 max_damage = damage
 
-        return target_index
+        return targets.directions[target_index]
 
-class LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor(DumbMeleeAttackAdvisor):
-    def prioritize_target(self, monsters, rng, run_state, character, oracle):
+class AdjustRangedPlanDummy(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.executing_ranged_plan:
+            return None
+
+        ranged_advisor = character.executing_ranged_plan
+        targets = ranged_advisor.targets(run_state.neighborhood, character)
+        if targets is None:
+            character.executing_ranged_plan = False
+
+        return None
+
+class LowerDPSAttack(Attack):
+    def prioritize(self, targets, character):
+        monsters = targets.monsters
         if len(monsters) == 1:
-            return 0
-        else:
-            target_index = None
-            best_reduction_rate = 0
-            for i, m in enumerate(monsters):
-                # prioritize invisible / swallow / whatever immediately as a patch
-                if not isinstance(m, gd.MonsterGlyph):
-                    target_index = i
-                    break
-                untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
-                kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
+            return targets.directions[0]
+        target_index = None
+        best_reduction_rate = 0
+        for i, m in enumerate(monsters):
+            # prioritize invisible / swallow / whatever immediately as a patch
+            if not isinstance(m, gd.MonsterGlyph):
+                target_index = i
+                break
+            untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
+            kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
 
-                dps_reduction_rate = untargeted_dps/kill_trajectory.time_to_kill
+            dps_reduction_rate = untargeted_dps/kill_trajectory.time_to_kill
 
-                if target_index is None or dps_reduction_rate > best_reduction_rate:
-                    target_index = i
-                    best_reduction_rate = dps_reduction_rate
+            if target_index is None or dps_reduction_rate > best_reduction_rate:
+                target_index = i
+                best_reduction_rate = dps_reduction_rate
 
-            return target_index
+        return targets.directions[target_index]
 
-class UnsafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
+class UnsafeMeleeAttackAdvisor(LowerDPSAttack):
     pass
 
-class SafeMeleeAttackAdvisor(LowerDPSAsQuicklyAsPossibleMeleeAttackAdvisor):
+class SafeMeleeAttackAdvisor(LowerDPSAttack):
     unsafe_hp_loss_fraction = 0.5
-    def satisfactory_monster(self, monster, monster_square, rng, run_state, character, oracle):
-        if not super().satisfactory_monster(monster, monster_square, rng, run_state, character, oracle):
-            return False
 
-        if isinstance(monster, gd.MonsterGlyph):
+    def targets(self, neighborhood, character):
+        def target_p(monster):
+            if not isinstance(monster, gd.MonsterGlyph):
+                return True
             spoiler = monster.monster_spoiler
-
-            if monster.has_death_throes:
-                source_square = monster_square + run_state.neighborhood.player_location_in_extended - run_state.neighborhood.local_player_location
-                adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
-                adjacent_to_mon_glyphs = run_state.neighborhood.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
-
-                if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
-                    #import pdb; pdb.set_trace()
-                    return False
-
             trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
-
             if spoiler and spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
                 return False
+            return True
 
-        return True
+        return neighborhood.target_monsters(target_p)
 
 class MoveAdvisor(Advisor):
     def __init__(self, oracle_consultation=None, no_adjacent_monsters=False, square_threat_tolerance=None):
@@ -817,6 +974,31 @@ class MostNovelMoveAdvisor(MoveAdvisor):
 
             return rng.choice(most_novel)
 
+class ReduceThreatFromManyEnemiesWithMove(MoveAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.adjacent_monsters > 1:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+    def get_move(self, move_mask, rng, run_state, character, oracle):
+        possible_actions = run_state.neighborhood.action_grid[move_mask]
+
+        if not possible_actions.any():
+            return None
+
+        threat = run_state.neighborhood.threat[move_mask]
+        current_threat = run_state.neighborhood.threat_on_player
+        cost = threat - current_threat
+
+        if (cost < 0).any():
+            idx = np.argmin(cost)
+        else:
+            return None
+
+        desired_action = possible_actions[idx]
+        #import pdb; pdb.set_trace()
+        return desired_action
+
 class UnvisitedSquareMoveAdvisor(MoveAdvisor):
     def get_move(self, move_mask, rng, run_state, character, oracle):
         visits = run_state.neighborhood.visits[move_mask]
@@ -848,13 +1030,7 @@ class PathAdvisor(Advisor):
             return ActionAdvice(from_advisor=self, action=path.path_action)
 
 class ExcaliburAdvisor(Advisor):
-    @staticmethod
-    def hankering_for_excalibur(character):
-        if character.base_alignment == 'lawful' and character.experience_level >= 5:
-            current_weapon = character.inventory.wielded_weapon
-            if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
-                return True
-        return False
+    pass
 
 class TravelToAltarAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -897,7 +1073,7 @@ class DropUnknownOnAltarAdvisor(Advisor):
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not (self.hankering_for_excalibur(character) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+        if not (character.hankering_for_excalibur() and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
             return None
         dip = nethack.actions.Command.DIP
         long_sword = character.inventory.wielded_weapon
@@ -912,7 +1088,7 @@ class DipForExcaliburAdvisor(ExcaliburAdvisor):
 
 class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not self.hankering_for_excalibur(character):
+        if not character.hankering_for_excalibur():
             return None
 
         travel = nethack.actions.Command.TRAVEL
@@ -1084,11 +1260,11 @@ class DropToPriceIDAdvisor(Advisor):
 
         unidentified_items = character.inventory.all_unidentified_items()
         unidentified_items = [i for i in unidentified_items if not i.identity.listened_price_id_methods.get('sell', False)]
+        unidentified_items = [i for i in unidentified_items if i.equipped_status is None or i.equipped_status.status != 'worn']
         if len(unidentified_items) == 0:
             return None
 
         unidentified_letters = [i.inventory_letter for i in unidentified_items]
-        #import pdb; pdb.set_trace()
         menu_plan = menuplan.MenuPlan(
             "drop all objects to price id",
             self,
@@ -1096,7 +1272,8 @@ class DropToPriceIDAdvisor(Advisor):
                 menuplan.NoMenuResponse("Sell it?"),
                 menuplan.NoMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
-                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1108,6 +1285,7 @@ class DropToPriceIDAdvisor(Advisor):
 class DropUndesirableAdvisor(Advisor):
     def drop_undesirable(self, run_state, character):
         undesirable_items = character.inventory.all_undesirable_items(character)
+        undesirable_items = [item for item in undesirable_items if item.equipped_status is None or item.equipped_status.status != 'worn']
         if len(undesirable_items) == 0:
             return None
 
@@ -1120,7 +1298,8 @@ class DropUndesirableAdvisor(Advisor):
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
-                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1137,15 +1316,15 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
         if np.count_nonzero(doors) > 0:
             # don't drop if on the first square of the shop next to the door
             return None
+
         return self.drop_undesirable(run_state, character)
 
-class DropUndesirableNearBurdenedAdvisor(DropUndesirableAdvisor):
+class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.near_burdened:
+        if not character.want_less_weight():
             return None
 
-        character.near_burdened = False
-
+        #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
@@ -1190,7 +1369,8 @@ class DropShopOwnedAdvisor(Advisor):
                 menuplan.YesMenuResponse("Sell it?"),
                 menuplan.YesMenuResponse("Sell them?"),
                 menuplan.MoreMenuResponse("You drop", always_necessary=False),
-                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for")),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
@@ -1251,7 +1431,8 @@ class WieldBetterWeaponAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("wield weaon", self, [
             menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
             ], listening_item=best_weapon)
-
+        #import pdb; pdb.set_trace()
+        print(f"Wielding better weapon: {character.inventory.wielded_weapon} -> {best_weapon}")
         return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 
 class WearUnblockedArmorAdvisor(Advisor):

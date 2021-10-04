@@ -33,17 +33,41 @@ class Character():
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
     class_skills: pd.Series = None
+    relevant_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
     can_enhance: bool = False
     held_by: HeldBy = None
     near_burdened: bool = False
+    carrying_too_much_for_diagonal: bool = False
+    executing_ranged_plan: bool = False
     gold: int = 0
     hunger_state: int = 1
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
+        self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
+
+    intrinsic_gain_messages = {
+        "You speed up": constants.Intrinsics.speed,
+        "You feel healthy": constants.Intrinsics.poison_resistance,
+        "You feel especially healthy": constants.Intrinsics.poison_resistance,
+        "You feel a strange mental acuity": constants.Intrinsics.telepathy,
+        "You feel wide awake": constants.Intrinsics.sleep_resistance,
+        "You feel full of hot air": constants.Intrinsics.fire_resistance,
+    }
+
+    def listen_for_intrinsics(self, message):
+        for k,v in self.intrinsic_gain_messages.items():
+            if k in message:
+                if self.has_intrinsic(v) and environment.env.debug:
+                    import pdb; pdb.set_trace()
+
+                self.add_noninnate_intrinsic(v)
+
+    def add_noninnate_intrinsic(self, intrinsic):
+        self.noninnate_intrinsics |= intrinsic
 
     def set_innate_intrinsics(self):
         new_intrinsics = constants.Intrinsics.NONE
@@ -56,6 +80,18 @@ class Character():
 
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
+
+    def hankering_for_excalibur(self):
+        if not (self.base_alignment == 'lawful' and self.experience_level >= 5):
+            return False
+
+        #if not self.has_intrinsic(constants.Intrinsics.poison_resistance):
+        #    return False
+
+        current_weapon = self.inventory.wielded_weapon
+        if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
+            return True
+        return False
 
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
@@ -89,6 +125,16 @@ class Character():
         old_hunger_state = self.hunger_state
         if old_hunger_state != blstats.get('hunger_state'):
             self.hunger_state = blstats.get('hunger_state')
+
+    def want_less_weight(self):
+        if self.near_burdened or self.carrying_too_much_for_diagonal:
+            return True
+
+        return False
+
+    def clear_weight_knowledge(self):
+        self.near_burdened = False
+        self.carrying_too_much_for_diagonal = False
 
     def update_from_message(self, message_text, time):
         if "You feel feverish." in message_text:
@@ -171,8 +217,52 @@ class Character():
             return False
         return True
 
+    def prefer_ranged(self):
+        if self.base_class == constants.BaseRole.Tourist:
+            if not isinstance(self.inventory.wielded_weapon, inv.BareHands):
+                return False
+            quivered = self.inventory.quivered
+            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'dart'
+        if self.base_class == constants.BaseRole.Ranger:
+            quivered = self.inventory.quivered
+            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'arrow'
+
+        return False
+
     def ready_for_mines(self):
         return self.experience_level > 7
+
+    def melee_prioritize_monster_beyond_damage(self, monster_spoiler):
+        melee_types = monster_spoiler.melee_attack_bundle.damage_types
+        always_prioritize = (
+            melee_types.steal or
+            melee_types.seduce or 
+            melee_types.stone or
+            melee_types.spell or
+            (melee_types.sleep and not self.has_intrinsic(constants.Intrinsics.sleep_resistance))
+        )
+
+        if always_prioritize:
+            return True
+
+        prioritize_early = (
+            melee_types.lycanthropy
+        )
+
+        if prioritize_early and self.experience_level < 10:
+            return True
+
+        return False
+
+    def scared_by(self, monster):
+        if not isinstance(monster, gd.MonsterGlyph):
+            return False
+
+        spoiler = monster.monster_spoiler
+        if self.melee_prioritize_monster_beyond_damage(spoiler):
+            return True
+
+        return False
 
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
@@ -232,7 +322,13 @@ class Character():
         else:
             base_prices = [base1, base4]
 
-        return set(base_prices)
+        base_prices = set(base_prices)
+
+        if isinstance(item, inv.Armor):
+            # enhancement affects base price of armor
+            for p in base_prices:
+                base_prices = base_prices.union(set([p - 10*x for x in range(0,6)]))
+        return base_prices
 
     def find_base_price_from_listed(self, item, price):
         cha_mult = self.charisma_price_multiplier(self.attributes.charisma)
@@ -245,7 +341,15 @@ class Character():
         base_prices = [np.ceil(base1), np.floor(base1), np.ceil(base2), np.floor(base2)]
         if base2 <= 5:
             base_prices.append(0)
-        return set(base_prices)
+
+        base_prices = set(base_prices)
+
+        if isinstance(item, inv.Armor):
+            # enhancement affects base price of armor
+            for p in base_prices:
+                base_prices = base_prices.union(set([p - 10*x for x in range(0,6)]))
+
+        return base_prices
 
     def body_armor_penalty(self):
         if self.base_class == constants.BaseRole.Monk:

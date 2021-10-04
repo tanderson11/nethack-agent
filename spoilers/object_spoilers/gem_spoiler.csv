@@ -1,37 +1,37 @@
-NAME,GLYPH,APPEARANCE,SHUFFLED,NLE_NAME,COST,WEIGHT,PROB,ENGR,COLORS
-agate,2337,orange,FALSE,agate,200,1,1*,soft,orange
-amber,2327,yellowish brown,FALSE,amber,1000,1,1*,soft,yellowish brown
-amethyst,2333,violet,FALSE,amethyst,600,1,1*,soft,violet
-aquamarine,2326,green,FALSE,aquamarine,1500,1,1*,hard,"green, blue"
-black opal,2322,black,FALSE,black opal,2500,1,13*,hard,black
-chrysoberyl,2331,yellow,FALSE,chrysoberyl,700,1,1*,soft,yellow
-citrine,2325,yellow,FALSE,citrine,1500,1,4*,soft,yellow
-diamond,2318,white,FALSE,diamond,4000,1,25*,hard,white
-dilithium crystal,2317,white,FALSE,dilithium crystal,"4,500.00",1,28*,soft,white
-emerald,2323,green,FALSE,emerald,2500,1,10*,hard,green
-flintstone,2351,gray,FALSE,flint,1,10,10,soft,gray stone
-fluorite,2335,violet,FALSE,fluorite,400,1,1*,soft,"green, blue, white, violet"
-garnet,2332,red,FALSE,garnet,700,1,1*,soft,red
-jacinth,2320,orange,FALSE,jacinth,3250,1,19*,hard,orange
-jade,2338,green,FALSE,jade,300,1,1*,soft,green
-jasper,2334,red,FALSE,jasper,500,1,1*,soft,red
-jet,2329,black,FALSE,jet,850,1,1*,soft,black
-loadstone,2349,gray,FALSE,loadstone,1,500,10,soft,gray stone
-luckstone,2348,gray,FALSE,luckstone,60,10,10,soft,gray stone
-obsidian,2336,black,FALSE,obsidian,200,1,1*,soft,black
-opal,2330,white,FALSE,opal,800,1,1*,soft,white
-rock,2352,rock,FALSE,rock,0,10,100,soft,rock
-ruby,2319,red,FALSE,ruby,3500,1,22*,hard,red
-sapphire,2321,blue,FALSE,sapphire,3000,1,16*,hard,blue
-topaz,2328,yellowish brown,FALSE,topaz,900,1,1*,hard,yellowish brown
-touchstone,2350,gray,FALSE,touchstone,45,10,8,soft,gray stone
-turquoise,2324,green,FALSE,turquoise,2000,1,7*,soft,"green, blue"
-worthless piece of black glass,2345,black,FALSE,worthless piece of black glass,0,1,76,soft,black
-worthless piece of blue glass,2340,blue,FALSE,worthless piece of blue glass,0,1,77,soft,blue
-worthless piece of green glass,2346,green,FALSE,worthless piece of green glass,0,1,77,soft,green
-worthless piece of orange glass,2343,orange,FALSE,worthless piece of orange glass,0,1,76,soft,orange
-worthless piece of red glass,2341,red,FALSE,worthless piece of red glass,0,1,77,soft,red
-worthless piece of violet glass,2347,violet,FALSE,worthless piece of violet glass,0,1,77,soft,violet
-worthless piece of white glass,2339,white,FALSE,worthless piece of white glass,0,1,77,soft,white
-worthless piece of yellow glass,2344,yellow,FALSE,worthless piece of yellow glass,0,1,77,soft,yellow
-worthless piece of yellowish brown glass,2342,yellowish brown,FALSE,worthless piece of yellowish brown glass,0,1,77,soft,yellowish brown
+NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,NLE_NAME,COST,WEIGHT,PROB,ENGR,COLORS
+agate,desire all,2337,orange,FALSE,agate,200,1,1*,soft,orange
+amber,desire all,2327,yellowish brown,FALSE,amber,1000,1,1*,soft,yellowish brown
+amethyst,desire all,2333,violet,FALSE,amethyst,600,1,1*,soft,violet
+aquamarine,desire all,2326,green,FALSE,aquamarine,1500,1,1*,hard,"green, blue"
+black opal,desire all,2322,black,FALSE,black opal,2500,1,13*,hard,black
+chrysoberyl,desire all,2331,yellow,FALSE,chrysoberyl,700,1,1*,soft,yellow
+citrine,desire all,2325,yellow,FALSE,citrine,1500,1,4*,soft,yellow
+diamond,desire all,2318,white,FALSE,diamond,4000,1,25*,hard,white
+dilithium crystal,desire all,2317,white,FALSE,dilithium crystal,"4,500.00",1,28*,soft,white
+emerald,desire all,2323,green,FALSE,emerald,2500,1,10*,hard,green
+flint stone,desire all,2351,gray,FALSE,flint,1,10,10,soft,gray stone
+fluorite,desire all,2335,violet,FALSE,fluorite,400,1,1*,soft,"green, blue, white, violet"
+garnet,desire all,2332,red,FALSE,garnet,700,1,1*,soft,red
+jacinth,desire all,2320,orange,FALSE,jacinth,3250,1,19*,hard,orange
+jade,desire all,2338,green,FALSE,jade,300,1,1*,soft,green
+jasper,desire all,2334,red,FALSE,jasper,500,1,1*,soft,red
+jet,desire all,2329,black,FALSE,jet,850,1,1*,soft,black
+loadstone,none,2349,gray,FALSE,loadstone,1,500,10,soft,gray stone
+luckstone,desire one,2348,gray,FALSE,luckstone,60,10,10,soft,gray stone
+obsidian,desire all,2336,black,FALSE,obsidian,200,1,1*,soft,black
+opal,desire all,2330,white,FALSE,opal,800,1,1*,soft,white
+rock,desire all,2352,rock,FALSE,rock,0,10,100,soft,rock
+ruby,desire all,2319,red,FALSE,ruby,3500,1,22*,hard,red
+sapphire,desire all,2321,blue,FALSE,sapphire,3000,1,16*,hard,blue
+topaz,desire all,2328,yellowish brown,FALSE,topaz,900,1,1*,hard,yellowish brown
+touchstone,desire all,2350,gray,FALSE,touchstone,45,10,8,soft,gray stone
+turquoise,desire all,2324,green,FALSE,turquoise,2000,1,7*,soft,"green, blue"
+worthless piece of black glass,none,2345,black,FALSE,worthless piece of black glass,0,1,76,soft,black
+worthless piece of blue glass,none,2340,blue,FALSE,worthless piece of blue glass,0,1,77,soft,blue
+worthless piece of green glass,none,2346,green,FALSE,worthless piece of green glass,0,1,77,soft,green
+worthless piece of orange glass,none,2343,orange,FALSE,worthless piece of orange glass,0,1,76,soft,orange
+worthless piece of red glass,none,2341,red,FALSE,worthless piece of red glass,0,1,77,soft,red
+worthless piece of violet glass,none,2347,violet,FALSE,worthless piece of violet glass,0,1,77,soft,violet
+worthless piece of white glass,none,2339,white,FALSE,worthless piece of white glass,0,1,77,soft,white
+worthless piece of yellow glass,none,2344,yellow,FALSE,worthless piece of yellow glass,0,1,77,soft,yellow
+worthless piece of yellowish brown glass,none,2342,yellowish brown,FALSE,worthless piece of yellowish brown glass,0,1,77,soft,yellowish brown

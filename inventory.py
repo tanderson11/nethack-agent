@@ -8,12 +8,13 @@ import environment
 import numpy as np
 import constants
 import pandas as pd
+import nle.nethack as nethack
 
 from utilities import ARS
 
 class Item():
     try_to_price_id = True
-    price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids\)")
+    price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids?\)")
     class NameAction(NamedTuple):
         letter: str
         name: str
@@ -37,6 +38,7 @@ class Item():
                 price_match = re.search(self.price_pattern, self.parenthetical_status)
                 if price_match is not None:
                     self.price = int(price_match[2])
+                    self.unit_price = self.price / self.quantity
                 else:
                     if environment.env.debug: import pdb; pdb.set_trace()
                     pass
@@ -49,6 +51,10 @@ class Item():
         self.inventory_letter = inventory_letter
 
         self._seen_as = seen_as
+        self._full_str = instance_attributes.full_str
+
+    def __repr__(self):
+        return self._full_str
 
     def price_id_from_sell(self, character, sell_price):
         if self.identity is None:
@@ -72,7 +78,7 @@ class Item():
             return None
         #import pdb; pdb.set_trace()
         #old_idx_len = len(self.identity.idx)
-        base_prices = character.find_base_price_from_listed(self, self.price)
+        base_prices = character.find_base_price_from_listed(self, self.unit_price)
         self.identity.restrict_by_base_prices(base_prices)
         #new_idx_len = len(self.identity.idx)
 
@@ -83,19 +89,61 @@ class Item():
         if name is not None:
             return self.NameAction(self.inventory_letter, name)
 
-    def desirable(self, character):
-        if self.identity is None: # stupid: for lichens and so on
-            return True
-
+    def can_afford(self, character):
         can_afford = True
         if self.shop_owned:
             if self.price is not None:
-                can_afford = character.gold >= self.price
+                can_afford = character.gold >= (self.price + character.inventory.get_current_balance())
             else:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
 
-        return can_afford and self.identity.desirable_identity(character)
+        return can_afford
+
+    def find_equivalents(self, inventory):
+        if self.__class__ == Item:
+            import pdb; pdb.set_trace()
+        same_items = inventory.get_items(self.__class__, name=self.identity.name())
+        return same_items
+
+    def better_than_equivalent(self, y, character):
+        # in general, don't drop Y to pick up X if they have the same identity
+        return False
+
+    def less_cursed_than(self, y):
+        return y.BUC == constants.BUC.cursed and self.BUC != constants.BUC.cursed
+
+    def desirable(self, character, consider_funds=True):
+        if self.identity is None:
+            return False
+
+        identity_desirability = self.identity.desirable_identity(character)
+        if identity_desirability == constants.IdentityDesirability.desire_none:
+            return False
+
+        if consider_funds is True and not self.can_afford(character):
+            return False
+
+        if identity_desirability == constants.IdentityDesirability.desire_all:
+            return True
+
+        if identity_desirability == constants.IdentityDesirability.desire_all_uncursed:
+            return self.BUC != constants.BUC.cursed
+
+        if identity_desirability == constants.IdentityDesirability.desire_one:
+            assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
+            same_items = self.find_equivalents(character.inventory)
+            equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_equivalent(i, character)]
+
+            if len(equal_or_better_versions) > 0:
+                return False
+
+            return True
+
+        # now we are in the logic where we want exactly 1 (or exactly 7) of this item
+        # these have to get handled differently in different object classes
+
+        #return self.can_afford(character) and desirable_identity
 
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph
@@ -127,33 +175,27 @@ class Armor(Item):
             raw_value = self.identity.converted_wear_value().max()
         # cursed or might be cursed
         else:
-            buc_adjustment = -2 if self.BUC == constants.BUC.cursed else -0.5
+            buc_adjustment = -0.5
             # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
             raw_value = self.identity.converted_wear_value().min()
 
-        desirability = raw_value + best_case_enhancement + body_armor_penalty
+        desirability = raw_value + best_case_enhancement + body_armor_penalty + buc_adjustment
         return desirability
 
-    def desirable(self, character):
-        if self.shop_owned:
-            return False
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        same_slot = inventory.get_items(Armor, identity_selector=lambda i: i.slot == self.identity.slot)
+        return same_slot
 
-        if self.identity.potentially_magic():
-            return True
+    def better_than_equivalent(self, y, character):
+        better = self.instance_desirability_to_wear(character) > y.instance_desirability_to_wear(character)
+        if better and y.better_than_equivalent(self, character) and environment.env.debug:
+            import pdb; pdb.set_trace()
+        return better
 
-        instance_desirability = self.instance_desirability_to_wear(character)
-        slot = self.identity.slot
-        armaments = character.inventory.armaments
-        current = armaments[armaments._fields.index(slot)]
-
-        if self == current and instance_desirability >= 0:
-            return True
-
-        current_desirability = 0
-        if current is not None and isinstance(current, Armor):
-            current_desirability = current.instance_desirability_to_wear(character)
-
-        return instance_desirability >= 0 and (instance_desirability > current_desirability)
+    def desirable(self, character, consider_funds=True):
+        return super().desirable(character, consider_funds=consider_funds)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -177,7 +219,7 @@ class Wand(Item):
             self.BUC = constants.BUC.uncursed
 
     def desirable(self, character):
-        desirable_identity = super().desirable(character)
+        des = super().desirable(character)
 
         # keep even a 0 charge wand of wishing
         if self.identity.name() == 'wishing':
@@ -190,10 +232,14 @@ class Wand(Item):
         if self.charges == 0:
             return False
 
-        return desirable_identity
+        return des
 
 class Food(Item):
     glyph_class = gd.FoodGlyph
+
+    def better_than_equivalent(self, y, character):
+        # prefer a not-cursed lizard corpse to a cursed lizard corpse
+        return self.less_cursed_than(y)
 
 class Coin(Item):
     glyph_class = gd.CoinGlyph
@@ -204,6 +250,18 @@ class Coin(Item):
 
 class Scroll(Item):
     glyph_class = gd.ScrollGlyph
+
+    def safe_to_read(self, character):
+        if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
+            return False
+
+        if self.identity.could_be(self.identity.bad_scrolls_any_buc):
+            return False
+
+        if self.BUC != constants.BUC.blessed and self.identity.could_be(self.identity.bad_scrolls_worse_than_blessed):
+            return False
+
+        return True
 
 class Potion(Item):
     glyph_class = gd.PotionGlyph
@@ -256,33 +314,36 @@ class Weapon(Item):
         #import pdb; pdb.set_trace()
         weapon_damage += 0 or enhancement
 
+        if self.identity.is_artifact:
+            weapon_damage *= self.identity.artifact_damage.damage_mult
+            weapon_damage += self.identity.artifact_damage.damage_mod
+
         # TK know about silver damage etc
         return weapon_damage
 
-    def instance_desirability_to_wield(self, character):
-        # What's the basic gist? What's with the magic 17?
-        # If you aren't really a weapon (you're darts or something), you have negative des
-        # If we're restricted in your skill, you have -1 des
-        # If we're basic in your skill, you have average damage + enhancement des
-        # If we're skilled or better in your skill, you're better than ANY basic (17 is max des of basic)
-        # and your des is 17 + average damage + enhancement
+    def uses_relevant_skill(self, character):
+        return character.relevant_skills.loc[self.identity.skill]
 
-        if self.BUC == constants.BUC.cursed or (self.enhancement is not None and self.enhancement < 0):
-            return -10
-
-        if self.identity.is_ammunition or self.identity.is_ranged:
-            return -10
-
-        if character.base_class == constants.BaseRole.Monk:
+    def melee_desirability(self, character, desperate=False):
+        if self.quantity > 1:
             return -1
 
-        associated_skill = self.identity.skill
-        if pd.isnull(associated_skill):
+        if self.identity.is_ammo or self.identity.ranged or self.identity.slot == 'quiver':
             return -1
+        relevant_skill = self.uses_relevant_skill(character)
 
-        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[associated_skill]]
-        if max_rank > constants.SkillRank.basic.value:
-            max_rank = constants.SkillRank.skilled.value
+        if not desperate:
+            if relevant_skill == False:
+                return -1
+
+            if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
+                return -1
+
+        if desperate:
+            # restricted weapons not worth it even if desperate
+            skill_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[self.identity.skill]]
+            if pd.isna(constants.SkillRank(skill_rank)):
+                return -1
 
         enhancement = self.enhancement
         if enhancement is None:
@@ -291,22 +352,27 @@ class Weapon(Item):
         melee_damage = self.identity.avg_melee_damage(None)
         if isinstance(melee_damage, np.ndarray):
             melee_damage = melee_damage.max()
-        
-        return max_rank * 17 + (enhancement + melee_damage)
 
-    def desirable(self, character):
-        if self.shop_owned:
-            return False
+        return enhancement + melee_damage
 
-        if self == character.inventory.wielded_weapon:
-            return True
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        return inventory.get_items(Weapon)
 
-        if (self.BUC is not None or self.enhancement is not None) and self.BUC != constants.BUC.cursed and (self.identity.is_ranged or self.identity.is_ammunition):
-            return True
-
-        is_better = self.instance_desirability_to_wield(character) > character.inventory.wielded_weapon.instance_desirability_to_wield(character)
-        if is_better: print(f"Found better weapon: {self.identity.name()}")
+    def better_than_equivalent(self, y, character):
+        is_better = self.melee_desirability(character) > y.melee_desirability(character)
+        if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
+            #import pdb; pdb.set_trace()
+            print(f"Found better weapon: {self.identity.name()}")
         return is_better
+
+    def desirable(self, character, consider_funds=True):
+        if self.enhancement is not None and (self.identity.ranged or self.identity.is_ammo):
+            return True
+
+        des = super().desirable(character, consider_funds=consider_funds)
+        return des
 
 class BareHands(Weapon):
     def __init__(self):
@@ -314,6 +380,9 @@ class BareHands(Weapon):
         self.inventory_letter = '-'
         self.BUC = constants.BUC.uncursed
         self.identity = None
+
+    def __repr__(self):
+        return "bare hands dummy weapon"
 
     def which_skill(self, character):
         bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
@@ -326,14 +395,11 @@ class BareHands(Weapon):
 
         return bare_hands_skill
 
-    def instance_desirability_to_wield(self, character):
-        bare_hands_skill = self.which_skill(character)
+    def uses_relevant_skill(self, character):
+        return character.relevant_skills.loc[self.which_skill(character)]
 
-        max_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[bare_hands_skill]]
-        if max_rank > constants.SkillRank.basic.value:
-            max_rank = constants.SkillRank.skilled.value
-
-        return max_rank * 17 + self.melee_damage(character, None)
+    def melee_desirability(self, character, desperate=None):
+        return self.melee_damage(character, None)
 
     def melee_damage(self, character, monster):
         bare_hands_skill = self.which_skill(character)
@@ -349,13 +415,71 @@ class Spellbook(Item):
 
 class Tool(Item):
     glyph_class = gd.ToolGlyph
+    charge_pattern = re.compile("\(([0-9]+):([0-9]+)\)")
+    def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
+        super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
+        self.charges = None
 
-    def melee_damage(self, character, monster_spoiler):
+        if self.instance_name == "NO_CHARGE":
+            self.charges = 0
+
+        p_status = instance_attributes.parenthetical_status_str
+        if p_status is not None:
+            charge_match = re.match(self.charge_pattern, p_status)
+
+            if charge_match:
+                self.recharges = int(charge_match[1])
+                self.charges = int(charge_match[2])
+
+        if self.BUC == constants.BUC.unknown and self.charges is not None:
+            self.BUC = constants.BUC.uncursed
+
+    def uses_relevant_skill(self, character):
+        return False
+
+    def melee_damage(self, character, monster_spoiler=None):
         # TK know about pick-axe and unicorn horn
         return 1
 
-    def instance_desirability_to_wield(self, character):
-        return 0
+    def melee_desirability(self, character, desperate=None):
+        return self.melee_damage(character)
+
+    def find_equivalents(self, inventory):
+        if self.identity is None:
+            return []
+        if self.identity.name() == 'unicorn horn' or self.identity.name() == 'pick-axe':
+            return super().find_equivalents(inventory)
+
+        same_type = inventory.get_items(Tool, identity_selector=lambda i: i.type == self.identity.type)
+        return same_type
+
+    def better_than_equivalent(self, y, character):
+        if self.identity is None:
+            return False
+
+        if self.identity.name() == 'unicorn horn' or self.identity.name() == 'pick-axe':
+            return self.less_cursed_than(y)
+
+        if self.identity.type == 'container':
+            # TK decide which bag to keep (need to know about which has your items in it)
+            if self.identity.name() == 'bag of holding':
+                return True
+            return False
+
+        return self.identity.weight() < y.identity.weight()
+
+    def desirable(self, character, consider_funds=True):
+        identity_desirability = self.identity.desirable_identity(character)
+
+        if identity_desirability == constants.IdentityDesirability.desire_seven:
+            candles = character.inventory.get_items(Tool, identity_selector=lambda i: i.type == 'candles')
+            seven_stacks = [c for c in candles if c.quantity >= 7]
+
+            if len(seven_stacks) == 0:
+                return True
+            return self == seven_stacks[0]
+
+        return super().desirable(character, consider_funds=consider_funds)
 
 class Gem(Item):
     try_to_price_id = False
@@ -395,7 +519,7 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = item.identity.slot
 
-            elif "weapon in hand" in parenthetical_status:
+            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status:
                 self.status = 'wielded'
 
                 if parenthetical_status == "(weapon in hands)":
@@ -415,20 +539,15 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = 'left_ring'
 
-            elif "in quiver" in parenthetical_status:
+            elif "in quiver" in parenthetical_status or "at the ready" in parenthetical_status:
                 self.status = 'quivered'
                 self.slot = 'quiver'
 
+class BadStringOnWhitelist(Exception):
+    pass
+
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
-    
-    ############## TODO ##################
-    # These patterns are currently a bit #
-    # overloaded because they are doing  #
-    # things both with added words like  #
-    # `ring` and with pluralization.     #
-    ############## TODO ##################
-    # \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/ \/
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
@@ -464,6 +583,7 @@ class ItemParser():
         gd.ToolGlyph: Tool,
         gd.WandGlyph: Wand,
         gd.WeaponGlyph: Weapon,
+        gd.CorpseGlyph: Food,
     }
 
     glyph_class_by_category = {
@@ -488,6 +608,11 @@ class ItemParser():
     category_by_glyph_class = {v:k for k,v in glyph_class_by_category.items() if isinstance(v, type)}
     category_by_glyph_class[gd.FoodGlyph] = 'Comestibles'
     category_by_glyph_class[gd.CorpseGlyph] = 'Comestibles'
+
+    bad_string_whitelist = [
+        "ring of protection from shape changers",
+        "The Amazing Maurice and His Educated Rodents",
+    ]
 
     @staticmethod
     def decode_inventory_item(raw_item_repr):
@@ -555,7 +680,10 @@ class ItemParser():
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
-        match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
+        try:
+            match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
+        except BadStringOnWhitelist:
+            return None
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
         if match_components.instance_name is not None:
@@ -590,7 +718,10 @@ class ItemParser():
 
     @classmethod
     def make_item_with_string(cls, global_identity_map, item_str, category=None, inventory_letter=None):
-        match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
+        try:
+            match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
+        except BadStringOnWhitelist:
+            return None
         description = match_components.description
 
         if match_components.instance_name is not None:
@@ -679,6 +810,7 @@ class ItemParser():
         parenthetical_status_str: str
         BUC: str
         condition: str
+        container_str: str
         instance_name: str
         full_str: str
 
@@ -705,13 +837,19 @@ class ItemParser():
 
             description = match[8]
 
-            instance_name = match[10]
-            
-            equipped_status = match[11]
+            container_str = match[10]
 
-            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, instance_name, match[0])
+            instance_name = match[11]
+            
+            equipped_status = match[12]
+
+            return cls.MatchComponents(description, quantity, enhancement, equipped_status, BUC, condition, container_str, instance_name, match[0])
 
         else:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            for substring in cls.bad_string_whitelist:
+                if substring in item_string:
+                    raise BadStringOnWhitelist()
             raise Exception(f"couldn't match item string {item_string}")
 
     item_on_square_pattern = re.compile("You see here (.+?)\.")
@@ -731,17 +869,21 @@ class ItemParser():
 
     item_sell_pattern = re.compile("offers ([0-9]+) gold pieces for (.+?)\.")
     @classmethod
-    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped=None):
+    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped):
         item_match = re.search(cls.item_sell_pattern, message)
         if item_match:
             price = int(item_match[1])
-            item_string = item_match[2]
+            #item_string = item_match[2]
 
-            item = cls.make_item_with_string(global_identity_map, item_string)
-            if item is None:
+            #item = cls.make_item_with_string(global_identity_map, item_string)
+            #if item is None:
+            #    if environment.env.debug: import pdb; pdb.set_trace()
+            #    return None
+            if last_dropped is None:
                 if environment.env.debug: import pdb; pdb.set_trace()
-                return None
-            item.price_id_from_sell(character, price)
+                return
+
+            last_dropped.price_id_from_sell(character, price / last_dropped.quantity)
             #import pdb; pdb.set_trace()
 
         if "uninterested" in message and last_dropped is not None and last_dropped.identity is not None:
@@ -752,6 +894,9 @@ class ItemParser():
     def listen_for_dropped_item(cls, global_identity_map, character, message):
         item_match = re.search(cls.item_drop_pattern, message)
         if item_match:
+            if "your gloves and weapon!" in message:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                return None
             item_string = item_match[1]
 
             item = cls.make_item_with_string(global_identity_map, item_string)
@@ -855,6 +1000,15 @@ class ArmamentSlots(NamedTuple):
 
         return blockers
 
+class RangedAttackPlan(NamedTuple):
+    attack_action: int = None
+    attack_item: Item = None
+
+class RangedPreparednessProposal(NamedTuple):
+    quiver_item: Item = None
+    wield_item: Item = None
+    attack_plan: RangedAttackPlan = None
+
 class PlayerInventory():
     slot_cluster_mapping = {
         'armaments': ArmamentSlots,
@@ -881,9 +1035,13 @@ class PlayerInventory():
         proposal_blockers: list = []
 
     def proposed_weapon_changes(self, character):
-        current_weapon = self.wielded_weapon
+        if character.executing_ranged_plan:
+            return None
 
-        current_desirability = current_weapon.instance_desirability_to_wield(character)
+        current_weapon = self.wielded_weapon
+        desperate = not current_weapon.uses_relevant_skill(character)
+
+        current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
         max_desirability = current_desirability
@@ -892,10 +1050,14 @@ class PlayerInventory():
         if len(extra_weapons) == 0:
             return None
 
+        #import pdb; pdb.set_trace()
 
         for weapon in extra_weapons:
-            desirability = weapon.instance_desirability_to_wield(character)
+            desirability = weapon.melee_desirability(character, desperate=desperate)
             if desirability > max_desirability:
+                # if two hands insist we don't have a shield
+                if isinstance(weapon.identity.slot, list) and isinstance(self.armaments.off_hand, Armor):
+                    continue
                 most_desirable = weapon
                 max_desirability = desirability
 
@@ -924,39 +1086,83 @@ class PlayerInventory():
         proposal_blockers = []
         for slot_name, current_occupant in zip(self.armaments._fields, self.armaments):
             unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
+            if len(unequipped_in_slot) == 0:
+                continue
 
-            if len(unequipped_in_slot) > 0:
-                most_desirable = None
-                max_desirability = None
-                for item in unequipped_in_slot:
-                    if isinstance(item, Armor):
-                        desirability = item.instance_desirability_to_wear(character)
-                    else:
-                        desirability = 0
-                    if max_desirability is None or desirability > max_desirability:
-                        max_desirability = desirability
-                        most_desirable = item
+            if isinstance(current_occupant, Armor) and current_occupant.BUC == constants.BUC.cursed:
+                continue
 
-                if current_occupant is not None and isinstance(current_occupant, Armor):
-                    current_desirability = current_occupant.instance_desirability_to_wear(character)
+            most_desirable = None
+            max_desirability = None
+            for item in unequipped_in_slot:
+                if isinstance(item, Armor):
+                    desirability = item.instance_desirability_to_wear(character)
                 else:
-                    current_desirability = 0
+                    desirability = 0
+                if max_desirability is None or desirability > max_desirability:
+                    max_desirability = desirability
+                    most_desirable = item
 
-                if max_desirability > current_desirability:
-                    blockers = self.armaments.get_blockers(slot_name)
+            if current_occupant is not None and isinstance(current_occupant, Armor):
+                current_desirability = current_occupant.instance_desirability_to_wear(character)
+            else:
+                current_desirability = 0
 
-                    if len(blockers) == 0:
+            if max_desirability > current_desirability:
+                blockers = self.armaments.get_blockers(slot_name)
+
+                if len(blockers) == 0:
+                    proposed_items.append(most_desirable)
+                    proposal_blockers.append(blockers)
+                else:
+                    for b in blockers:
                         proposed_items.append(most_desirable)
                         proposal_blockers.append(blockers)
-                    else:
-                        for b in blockers:
-                            if isinstance(b, Weapon) or b.BUC == constants.BUC.cursed:
-                                pass
-                            else:
-                                proposed_items.append(most_desirable)
-                                proposal_blockers.append(blockers)
 
         return self.AttireProposal(proposed_items, proposal_blockers)
+
+    def get_ordinary_ranged_attack(self, character):
+        # shoot from your bow
+        if not isinstance(self.wielded_weapon, BareHands): 
+            if self.wielded_weapon.identity.ranged:
+                if self.quivered is not None and self.quivered.identity.is_ammo and self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type:
+                    plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
+                    return RangedPreparednessProposal(attack_plan=plan)
+
+                # quiver your arrows
+                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
+                if len(matching_ammo) > 0:
+                    return RangedPreparednessProposal(quiver_item=matching_ammo[0])
+
+            # throw your aklys or Mjollnir
+            if self.wielded_weapon.identity.thrown and self.wielded_weapon.identity.thrown_from == 'hand':
+                plan = RangedAttackPlan(attack_action=nethack.actions.Command.THROW, attack_item=self.wielded_weapon)
+                return RangedPreparednessProposal(attack_plan=plan)
+
+        # fire your quivered thrown weapon
+        if self.quivered is not None and self.quivered.identity.thrown:
+            plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
+            return RangedPreparednessProposal(attack_plan=plan)
+
+        # quiver your thrown weapons
+        quiver_thrown_weapons = self.get_items(Weapon, instance_selector=lambda i: i != self.wielded_weapon, identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver')
+        if len(quiver_thrown_weapons) > 0:
+            return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
+
+        # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
+        bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
+        for bow in bows:
+            matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
+            if len(matching_ammo) > 0:
+                return RangedPreparednessProposal(wield_item=bow)
+
+    def get_powerful_ranged_attack(self, character):
+        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack())
+
+        if len(attack_wands) > 0:
+            plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])
+            return RangedPreparednessProposal(attack_plan=plan)
+        return self.get_ordinary_ranged_attack(character)
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
@@ -966,7 +1172,11 @@ class PlayerInventory():
         if oclass is None:
             items = self.all_items()
         else:
-            items = self.get_oclass(oclass)
+            if isinstance(oclass, list):
+                classes = [self.get_oclass(kls) for kls in oclass]
+                items = [item for kls in classes for item in kls]
+            else:
+                items = self.get_oclass(oclass)
         matches = []
 
         for item in items:
@@ -989,7 +1199,11 @@ class PlayerInventory():
     def all_undesirable_items(self, character):
         all_items = self.all_items()
         #import pdb; pdb.set_trace()
-        return [item for item in all_items if item is not None and not item.desirable(character)]
+        undesirable_items = [item for item in all_items if item is not None and not item.desirable(character)]
+
+        # BAND AID FOR WEAPON DROPPING
+        undesirable_items = [i for i in undesirable_items if i != self.wielded_weapon]
+        return undesirable_items
 
     def all_unidentified_items(self):
         all_items = self.all_items()
@@ -1015,6 +1229,7 @@ class PlayerInventory():
         except KeyError:
             class_contents = []
             oclass_idx = np.where(self.inv_oclasses == object_class_num)[0]
+
             for i in range(len(self.inv_strs[oclass_idx])):
                 letter, raw_string = self.inv_letters[oclass_idx][i], self.inv_strs[oclass_idx][i]
                 if self.inv_glyphs is not None:
@@ -1046,6 +1261,15 @@ class PlayerInventory():
             self.slot_groups_by_name[group_name] = slots
             return slots
 
+    def get_current_balance(self):
+        all = self.all_items()
+        unpaid = [i.price for i in all if (i.shop_owned and i.price is not None)]
+
+        balance = sum(unpaid)
+        if balance > 0 and environment.env.debug:
+            import pdb; pdb.set_trace()
+        return balance
+
     @functools.cached_property
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
@@ -1058,6 +1282,11 @@ class PlayerInventory():
             return hand_occupant
         else:
             if environment.env.debug: pdb.set_trace()
+
+    @functools.cached_property
+    def quivered(self):
+        quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
+        return quivered_item
 
     def to_hit_modifiers(self, character, monster):
         weapon = self.wielded_weapon

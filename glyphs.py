@@ -114,7 +114,7 @@ class MonsterAlikeGlyph(Glyph):
             return False
 
         # For these remaining checks, maybe skip them if I'm hungry enough
-        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race):
+        if character.can_cannibalize() and (self.corpse_spoiler.race_for_cannibalism == character.base_race.value):
             return False
         if character.can_cannibalize() and self.corpse_spoiler.aggravate:
             return False
@@ -164,6 +164,12 @@ class MonsterGlyph(MonsterAlikeGlyph):
         self.always_peaceful = False
         if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
             self.always_peaceful = True
+
+    def shopkeeper_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 267)
+
+    def gas_spore_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 27)
 
     def always_peaceful_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
@@ -473,6 +479,18 @@ class CMapGlyph(Glyph):
     def is_possible_secret_check(offsets):
         return (offsets < 3)
 
+    @staticmethod
+    def open_door_mask(numerals):
+        return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
+
+    @classmethod
+    def wall_mask(cls, numerals):
+        return (numerals >= nethack.GLYPH_CMAP_OFF) & (numerals < nethack.GLYPH_CMAP_OFF + 12)
+
+    @staticmethod
+    def closed_door_mask(numerals):
+        return (numerals >= 15 + nethack.GLYPH_CMAP_OFF) & (numerals < 17 + nethack.GLYPH_CMAP_OFF)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.OFFSET
@@ -744,14 +762,17 @@ class ObjectIdentity():
     def stacked_name_to_singular(cls, stacked_name):
         return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
-    def __init__(self, idx):
-        self.idx = idx
+    def __init__(self, idx, shuffle_class=None):
+        self.idx = idx.copy()
         self.listened_actions = {}
         self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
         self.is_artifact = False
+
+        self.shuffle_class_idx = shuffle_class
+        self.is_shuffled = shuffle_class is not None
 
     @classmethod
     def identity_from_name(cls, name):
@@ -764,11 +785,26 @@ class ObjectIdentity():
     def give_name(self, name):
         matches_name = self.data.loc[self.idx].NAME == name
         self.idx = matches_name.index[matches_name]
+        if len(self.idx) == 0:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            print("FAILED DEDUCTION: giving name and overriding inferences")
+            hard_name_match = (self.data.NAME == name)
+            self.idx = hard_name_match.index[hard_name_match]
 
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
     def is_identified(self):
         return len(self.idx) == 1
+
+    def could_be(self, names):
+        if not isinstance(names, list):
+            names = [names]
+
+        for name in names:
+            if name in self.find_values('NAME', dropna=True):
+                return True
+
+        return False
 
     def process_message(self, message_obj, action):
         pass
@@ -776,16 +812,24 @@ class ObjectIdentity():
     def apply_filter(self, idx):
         self.idx = idx
 
-    def find_values(self, column):
+    def find_values(self, column, dropna=False, false_if_na=False):
         value = self.unique_values.get(column, None)
         if value is not None:
             return value
 
-        unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
+        if dropna:
+            unique = np.unique(self.data.loc[self.idx][column].dropna()) # the filtered dataframe values
+        else:
+            unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
         if len(unique) == 1:
+            if false_if_na and pd.isna(unique[0]):
+                unique[0] = False
             self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
         return unique
+
+    def weight(self):
+        return self.find_values('WEIGHT').max()
 
     def name(self):
         if self.is_identified():
@@ -808,8 +852,12 @@ class ObjectIdentity():
         else:
             return None
 
+    desirability_if_unidentified = constants.IdentityDesirability.desire_none
     def desirable_identity(self, character):
-        return False
+        if self.is_identified():
+            return constants.IdentityDesirability(self.find_values('IDENTITY_DESIRABILITY'))
+
+        return self.desirability_if_unidentified
 
     def restrict_by_base_prices(self, base_prices, method='buy'):
         self.listened_price_id_methods[method] = True
@@ -827,45 +875,43 @@ class ObjectIdentity():
 
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+        self.listened_actions = {}
 
-    def desirable_identity(self, character):
-        return True
+    bad_scrolls_any_buc = ['destroy armor', 'amensia']
+    bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
+
+    def process_message(self, message_obj, action):
+        #import pdb; pdb.set_trace()
+        self.listened_actions[action] = True
+        if action == nethack.actions.Command.READ:
+
+            message_matches = ~self.data.loc[self.idx].READ_MESSAGE.isna() & self.data.loc[self.idx].READ_MESSAGE.apply(lambda v: pd.isnull(v) or v in message_obj.message)
+            if message_matches.any():
+                self.apply_filter(message_matches.index[message_matches])
 
 class SpellbookIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
 
 class RingIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-
-    def desirable_identity(self, character):
-        return True
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
 class AmuletIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
-
-    def desirable_identity(self, character):
-        return True
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
-
-    def desirable_identity(self, character):
-        if self.name() is not None and 'healing' in self.name():
-            return True
-
-        if self.name() == 'gain level':
-            return True
-
-        if self.name() == 'fruit juice':
-            return True
-
-        return False
+    desirability_if_unidentified = constants.IdentityDesirability.desire_none
 
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         try:
             self.nutrition = int(self.find_values('NUTRITION'))
         except Exception:
@@ -881,50 +927,36 @@ class FoodIdentity(ObjectIdentity):
 
         return True
 
-    def desirable_identity(self, character):
-        if "glob" in self.name() or self.name() == "egg":
-            return False
-
-        return True
-
 class ToolIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
 
-    def desirable_identity(self, character):
-        if self.name() == 'unicorn horn':
-            return True
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
 
-        if self.name() in ['lock pick', 'key', 'credit card']:
-            return True
-
-        if self.name() in ['sack', 'bag of holding', 'oilskin sack']:
-            return True
-
-        if self.name() == 'magic marker':
-            return True
-
-        if self.name() == 'magic lamp':
-            return True
-
-        return False
+        self.type = self.find_values('TYPE')
+        self.ranged = False
+        self.thrown = False
 
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
 
-    def desirable_identity(self, character):
-        if self.name() == 'luckstone':
-            return True
-
-        return False
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+        self.thrown = False
+        self.is_ammo = True
+        self.ammo_type = "flint stone"
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+        self.thrown = False
+        self.is_ammo = True
+        self.ammo_type = "flint stone"
+
 class CoinIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
-
-    def desirable_identity(self, character):
-        return True
 
 class BallIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[BallGlyph]
@@ -934,6 +966,20 @@ class ChainIdentity(ObjectIdentity):
 
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
+
+        #self.direction = self.find_values('DIRECTION', dropna=True)
+
+    def is_attack(self):
+        is_attack = self.find_values('ATTACK')
+        if isinstance(is_attack, np.ndarray):
+            return is_attack.any()
+        else:
+            return is_attack
+
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
 
@@ -951,14 +997,12 @@ class WandIdentity(ObjectIdentity):
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
-    def desirable_identity(self, character):
-        return True
-
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
+    desirability_if_unidentified = constants.IdentityDesirability.desire_all
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
 
         try:
             self.slot = self.find_values('SLOT')
@@ -989,26 +1033,31 @@ class ArmorIdentity(ObjectIdentity):
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')
 
-    def desirable_identity(self, character):
-        return True
-
 class WeaponIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
 
-    def __init__(self, idx):
-        super().__init__(idx)
+    def __init__(self, idx, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
 
-        self.is_ammunition = self.find_values('AMMUNITION')
-        self.is_ranged = self.find_values('RANGED')
-        self.skill = self.find_values('SKILL')
         self.slot = self.find_values('SLOT')
+        self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
+        self.thrown = self.find_values('THROWN', false_if_na=True)
+        self.thrown_from = self.find_values('THROWN_FROM')
+
+        self.ammo_type = None
+        if self.is_ammo:
+            self.ammo_type = self.find_values('AMMO_TYPE')
+        self.ammo_type_used = self.find_values('USES_AMMO')
+
+        self.ranged = self.find_values('RANGED', false_if_na=True)
+        self.skill = self.find_values('SKILL')
 
         second_slot = self.find_values('SECOND_SLOT')
         if isinstance(second_slot, np.ndarray):
             has_second_slot = pd.isnull(second_slot).any()
             second_slot = set(second_slot).pop()
         else:
-            has_second_slot = pd.isnull(second_slot)
+            has_second_slot = not pd.isnull(second_slot)
 
 
         if has_second_slot:
@@ -1020,38 +1069,50 @@ class WeaponIdentity(ObjectIdentity):
 
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+
+    class ArtifactWeaponDamage(NamedTuple):
+        damage_mod: int = 0
+        damage_mult: int = 1
+
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
+
+        bonus = artifact_row['DAMAGE BONUS']
+        if pd.isna(bonus): bonus = 0
+        mult  = artifact_row['DAMAGE MULT']
+        if pd.isna(mult): mult = 1
+
+        self.artifact_damage = self.ArtifactWeaponDamage(bonus, mult)
 
         # keep idx pointed at the base item and override any methods with artifact specific stuff
 
 class ArtifactArmorIdentity(ArmorIdentity):
     associated_glyph_class = ArmorGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactAmuletIdentity(AmuletIdentity):
     associated_glyph_class = AmuletGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactGemIdentity(GemIdentity):
     associated_glyph_class = GemGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
 class ArtifactToolIdentity(ToolIdentity):
     associated_glyph_class = ToolGlyph
-    def __init__(self, idx, artifact_name):
-        super().__init__(idx)
+    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+        super().__init__(idx, shuffle_class=shuffle_class)
         self.artifact_name = artifact_name
         self.is_artifact = True
 
@@ -1114,7 +1175,7 @@ class GlobalIdentityMap():
             #base_idx = self.identity_by_name[(glyph_class, row["BASE ITEM"])].idx
             artifact_name = row["ARTIFACT NAME"]
 
-            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name)
+            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name, row)
             self.artifact_identity_by_name[artifact_name] = artifact_identity
             self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
             self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity
@@ -1164,12 +1225,14 @@ class GlobalIdentityMap():
                 # if it's not shuffled, the numeral accurately picks out the object information
                 # from the spreadsheet
                 idx = [numeral]
+                shuffle_class_idx = None
             else:
                 # if it is shuffled, it could be any object in the shuffled class
                 same_shuffle_class = data['SHUFFLE_CLASS'] == spoiler_row['SHUFFLE_CLASS']
                 idx = same_shuffle_class.index[same_shuffle_class]
+                shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
 
-            identity = identity_class(idx)
+            identity = identity_class(idx, shuffle_class=shuffle_class_idx)
 
         self.identity_by_numeral[numeral] = identity
 
@@ -1193,6 +1256,24 @@ class GlobalIdentityMap():
     def associate_identity_and_name(self, identity, name):
         self.identity_by_name[name] = identity
         identity.give_name(name)
+
+        if identity.is_shuffled:
+            if len(identity.idx) == 0:
+                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
+                return None
+            data_idx = identity.idx[0]
+            # go through the shuffled class and remove that entry from the idx
+            for shuffled_item_idx in identity.shuffle_class_idx:
+                other_identity = self.identity_by_numeral[shuffled_item_idx]
+                if other_identity == identity:
+                    continue
+                if data_idx in other_identity.idx:
+                    if isinstance(other_identity.idx, pd.Index):
+                        other_identity.idx = other_identity.idx.drop(data_idx)
+                        #import pdb; pdb.set_trace()
+                        if len(other_identity.idx) == 0:
+                            import pdb; pdb.set_trace()
 
 #####################
 # UTILITY FUNCTIONS #
@@ -1226,6 +1307,9 @@ def get_by_name(klass, name):
     if not isinstance(glyph, klass):
         raise Exception(f"bad glyph name: {name}")
     return glyph
+
+def stackable_mask(numerals):
+    return ObjectGlyph.class_mask(numerals) | CorpseGlyph.class_mask(numerals) | StatueGlyph.class_mask(numerals)
 
 def stackable_glyph(glyph):
     if isinstance(glyph, ObjectGlyph): return True

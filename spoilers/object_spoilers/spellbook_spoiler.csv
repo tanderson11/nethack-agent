@@ -1,44 +1,44 @@
-NAME,GLYPH,APPEARNCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,COST,WEIGHT,PROB,LVL,READ,INK_COST,BONUS,APPEARANCE,SCHOOL
-blank paper,2286,plain,FALSE,,blank paper,0.00,50,18,0,0,0,,plain,
-Book of the Dead,2288,papyrus,FALSE,,Book of the Dead,10000,20,0,7,0,0,,papyrus,
-cancellation,2282,shining,TRUE,spellbook,cancellation,700,50,15,7,64,70,,,matter
-cause fear,2264,light blue,TRUE,spellbook,cause fear,300,50,25,3,6,30,,,enchantment
-charm monster,2267,magenta,TRUE,spellbook,charm monster,300,50,20,3,6,30,Tou,,enchantment
-clairvoyance,2265,dark blue,TRUE,spellbook,clairvoyance,300,50,15,3,6,30,Sam,,divination
-cone of cold,2249,dog eared,TRUE,spellbook,cone of cold,400,50,10,4,21,40,Val,,attack
-confuse monster,2257,orange,TRUE,spellbook,confuse monster,200,50,30,2,2,20,,,enchantment
-create familiar,2281,glittering,TRUE,spellbook,create familiar,600,50,10,6,42,60,,,clerical
-create monster,2262,turquoise,TRUE,spellbook,create monster,200,50,35,2,3,20,,,clerical
-cure blindness,2258,yellow,TRUE,spellbook,cure blindness,200,50,25,2,2,20,+,,healing
-cure sickness,2266,indigo,TRUE,spellbook,cure sickness,300,50,32,3,6,30,Hea+,,healing
-detect food,2263,cyan,TRUE,spellbook,detect food,200,50,30,2,3,20,,,divination
-detect monsters,2253,leathery,TRUE,spellbook,detect monsters,100,50,43,1,1,10,,,divination
-detect treasure,2274,gray,TRUE,spellbook,detect treasure,400,50,20,4,15,40,Rog,,divination
-detect unseen,2269,violet,TRUE,spellbook,detect unseen,300,50,20,3,8,30,,,divination
-dig,2246,parchment,TRUE,spellbook,dig,500,50,20,5,30,50,Cav,,matter
-drain life,2259,velvet,TRUE,spellbook,drain life,200,50,10,2,2,20,,,attack
-extra healing,2271,plaid,TRUE,spellbook,extra healing,300,50,27,3,10,30,+,,healing
-finger of death,2251,stained,TRUE,spellbook,finger of death,700,50,5,7,80,70,,,attack
-fireball,2248,ragged,TRUE,spellbook,fireball,400,50,20,4,12,40,,,attack
-force bolt,2256,red,TRUE,spellbook,force bolt,100,50,35,1,2,10,,,attack
-haste self,2268,purple,TRUE,spellbook,haste self,300,50,33,3,8,30,Bar,,escape
-healing,2254,white,TRUE,spellbook,healing,100,50,40,1,2,10,+,,healing
-identify,2277,bronze,TRUE,spellbook,identify,300,50,20,3,12,30,,,divination
-invisibility,2273,dark brown,TRUE,spellbook,invisibility,400,50,25,4,15,40,Ran,,escape
-jumping,2284,thin,TRUE,spellbook,jumping,100,50,20,1,3,10,,,escape
-knock,2255,pink,TRUE,spellbook,knock,100,50,35,1,1,10,,,matter
-levitation,2270,tan,TRUE,spellbook,levitation,400,50,20,4,12,40,,,escape
-light,2252,cloth,TRUE,spellbook,light,100,50,45,1,1,10,,,divination
-magic mapping,2276,dusty,TRUE,spellbook,magic mapping,500,50,18,5,35,50,Arc,,divination
-magic missile,2247,vellum,TRUE,spellbook,magic missile,200,50,45,2,2,20,Wiz,,attack
-novel,2287,paperback,FALSE,,novel,,,,,,,,,
-polymorph,2279,silver,TRUE,spellbook,polymorph,600,50,10,6,48,60,,,matter
-protection,2283,dull,TRUE,spellbook,protection,100,50,18,1,3,10,,,clerical
-remove curse,2275,wrinkled,TRUE,spellbook,remove curse,300,50,25,3,10,30,Pri+,,clerical
-restore ability,2272,light brown,TRUE,spellbook,restore ability,400,50,25,4,15,40,Mon+,,healing
-sleep,2250,mottled,TRUE,spellbook,sleep,100,50,50,1,1,10,,,enchantment
-slow monster,2260,light green,TRUE,spellbook,slow monster,200,50,30,2,2,20,,,enchantment
-stone to flesh,2285,thick,TRUE,spellbook,stone to flesh,300,50,15,3,2,30,,,healing
-teleport away,2280,gold,TRUE,spellbook,teleport away,600,50,15,6,36,60,,,escape
-turn undead,2278,copper,TRUE,spellbook,turn undead,600,50,16,6,48,60,Kni,,clerical
-wizard lock,2261,dark green,TRUE,spellbook,wizard lock,200,50,30,2,3,20,,,matter
+NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARNCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,COST,WEIGHT,PROB,LVL,READ,INK_COST,BONUS,APPEARANCE,SCHOOL
+blank paper,none,2286,plain,FALSE,,blank paper,0.00,50,18,0,0,0,,plain,
+Book of the Dead,desire all,2288,papyrus,FALSE,,Book of the Dead,10000,20,0,7,0,0,,papyrus,
+cancellation,none,2282,shining,TRUE,spellbook,cancellation,700,50,15,7,64,70,,,matter
+cause fear,none,2264,light blue,TRUE,spellbook,cause fear,300,50,25,3,6,30,,,enchantment
+charm monster,none,2267,magenta,TRUE,spellbook,charm monster,300,50,20,3,6,30,Tou,,enchantment
+clairvoyance,none,2265,dark blue,TRUE,spellbook,clairvoyance,300,50,15,3,6,30,Sam,,divination
+cone of cold,none,2249,dog eared,TRUE,spellbook,cone of cold,400,50,10,4,21,40,Val,,attack
+confuse monster,none,2257,orange,TRUE,spellbook,confuse monster,200,50,30,2,2,20,,,enchantment
+create familiar,none,2281,glittering,TRUE,spellbook,create familiar,600,50,10,6,42,60,,,clerical
+create monster,none,2262,turquoise,TRUE,spellbook,create monster,200,50,35,2,3,20,,,clerical
+cure blindness,none,2258,yellow,TRUE,spellbook,cure blindness,200,50,25,2,2,20,+,,healing
+cure sickness,none,2266,indigo,TRUE,spellbook,cure sickness,300,50,32,3,6,30,Hea+,,healing
+detect food,none,2263,cyan,TRUE,spellbook,detect food,200,50,30,2,3,20,,,divination
+detect monsters,none,2253,leathery,TRUE,spellbook,detect monsters,100,50,43,1,1,10,,,divination
+detect treasure,none,2274,gray,TRUE,spellbook,detect treasure,400,50,20,4,15,40,Rog,,divination
+detect unseen,none,2269,violet,TRUE,spellbook,detect unseen,300,50,20,3,8,30,,,divination
+dig,none,2246,parchment,TRUE,spellbook,dig,500,50,20,5,30,50,Cav,,matter
+drain life,none,2259,velvet,TRUE,spellbook,drain life,200,50,10,2,2,20,,,attack
+extra healing,none,2271,plaid,TRUE,spellbook,extra healing,300,50,27,3,10,30,+,,healing
+finger of death,none,2251,stained,TRUE,spellbook,finger of death,700,50,5,7,80,70,,,attack
+fireball,none,2248,ragged,TRUE,spellbook,fireball,400,50,20,4,12,40,,,attack
+force bolt,none,2256,red,TRUE,spellbook,force bolt,100,50,35,1,2,10,,,attack
+haste self,none,2268,purple,TRUE,spellbook,haste self,300,50,33,3,8,30,Bar,,escape
+healing,none,2254,white,TRUE,spellbook,healing,100,50,40,1,2,10,+,,healing
+identify,none,2277,bronze,TRUE,spellbook,identify,300,50,20,3,12,30,,,divination
+invisibility,none,2273,dark brown,TRUE,spellbook,invisibility,400,50,25,4,15,40,Ran,,escape
+jumping,none,2284,thin,TRUE,spellbook,jumping,100,50,20,1,3,10,,,escape
+knock,none,2255,pink,TRUE,spellbook,knock,100,50,35,1,1,10,,,matter
+levitation,none,2270,tan,TRUE,spellbook,levitation,400,50,20,4,12,40,,,escape
+light,none,2252,cloth,TRUE,spellbook,light,100,50,45,1,1,10,,,divination
+magic mapping,none,2276,dusty,TRUE,spellbook,magic mapping,500,50,18,5,35,50,Arc,,divination
+magic missile,none,2247,vellum,TRUE,spellbook,magic missile,200,50,45,2,2,20,Wiz,,attack
+novel,none,2287,paperback,FALSE,,novel,,,,,,,,,
+polymorph,none,2279,silver,TRUE,spellbook,polymorph,600,50,10,6,48,60,,,matter
+protection,none,2283,dull,TRUE,spellbook,protection,100,50,18,1,3,10,,,clerical
+remove curse,none,2275,wrinkled,TRUE,spellbook,remove curse,300,50,25,3,10,30,Pri+,,clerical
+restore ability,none,2272,light brown,TRUE,spellbook,restore ability,400,50,25,4,15,40,Mon+,,healing
+sleep,none,2250,mottled,TRUE,spellbook,sleep,100,50,50,1,1,10,,,enchantment
+slow monster,none,2260,light green,TRUE,spellbook,slow monster,200,50,30,2,2,20,,,enchantment
+stone to flesh,none,2285,thick,TRUE,spellbook,stone to flesh,300,50,15,3,2,30,,,healing
+teleport away,none,2280,gold,TRUE,spellbook,teleport away,600,50,15,6,36,60,,,escape
+turn undead,none,2278,copper,TRUE,spellbook,turn undead,600,50,16,6,48,60,Kni,,clerical
+wizard lock,none,2261,dark green,TRUE,spellbook,wizard lock,200,50,30,2,3,20,,,matter
