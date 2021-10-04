@@ -340,6 +340,25 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         
         #import pdb; pdb.set_trace()
 
+    def at_dead_end(self):
+        # Consider the 8-location square surrounding the player
+        # We define a dead end as a situation where a single edge holds all
+        # the walkable locations
+        walkable_count = np.count_nonzero(self.walkable)
+        if walkable_count > 3:
+            return False
+        elif walkable_count > 1:
+            edge_counts = [
+                np.count_nonzero(self.walkable[0,:]),
+                np.count_nonzero(self.walkable[-1,:]),
+                np.count_nonzero(self.walkable[:,0]),
+                np.count_nonzero(self.walkable[:,-1]),
+            ]
+            if not walkable_count in edge_counts: # i.e. if no edge holds all of them
+                return False
+
+        return True
+
     def safe_detonation(self, monster, monster_square):
         if not isinstance(monster, gd.MonsterGlyph):
             return True

@@ -99,7 +99,8 @@ new_advisors = [
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
     # EXPLORE
-    SearchWithStethoscope(),
+    SearchWithStethoscope(oracle_consultation=lambda o:o.have_free_stethoscope_action),
+    SearchDeadEndsWithStethoscope(),
     SearchDeadEndAdvisor(oracle_consultation=lambda o: not o.have_stethoscope),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={

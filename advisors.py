@@ -119,6 +119,10 @@ class Oracle():
         return self.character.inventory.have_stethoscope()
 
     @functools.cached_property
+    def have_free_stethoscope_action(self):
+        return not self.run_state.used_free_stethoscope_move
+
+    @functools.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0.
 
@@ -349,23 +353,38 @@ class SearchForSecretDoorAdvisor(Advisor):
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
+class SearchDeadEndsWithStethoscope(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        stethoscope = character.inventory.get_item(inv.Tool, name='stethoscope')
+        if stethoscope is None:
+            return None
+
+        if not run_state.neighborhood.at_dead_end():
+            return None
+
+        low_search_count = run_state.neighborhood.zoom_glyph_alike(
+            run_state.neighborhood.level_map.searches_count_map,
+            neighborhood.ViewField.Local
+        ) < 1000
+
+        searchable = low_search_count & run_state.neighborhood.local_possible_secret_mask
+        searchable[run_state.neighborhood.local_player_location] = False
+        to_search = np.where(searchable)
+        if len(to_search[0]) == 0:
+            return None
+        direction = run_state.neighborhood.action_grid[(to_search[0][0], to_search[1][0])]
+        menu_plan = menuplan.MenuPlan("search with stethoscope", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(stethoscope.inventory_letter)),
+                menuplan.DirectionMenuResponse("In what direction?", direction),
+            ], listening_item=stethoscope
+        )
+        apply = nethack.actions.Command.APPLY
+        return StethoscopeAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan, direction=direction)
+
 class SearchDeadEndAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        # Consider the 8-location square surrounding the player
-        # We define a dead end as a situation where a single edge holds all
-        # the walkable locations
-        walkable_count = np.count_nonzero(run_state.neighborhood.walkable)
-        if walkable_count > 3:
+        if not run_state.neighborhood.at_dead_end():
             return None
-        elif walkable_count > 1:
-            edge_counts = [
-                np.count_nonzero(run_state.neighborhood.walkable[0,:]),
-                np.count_nonzero(run_state.neighborhood.walkable[-1,:]),
-                np.count_nonzero(run_state.neighborhood.walkable[:,0]),
-                np.count_nonzero(run_state.neighborhood.walkable[:,-1]),
-            ]
-            if not walkable_count in edge_counts: # i.e. if no edge holds all of them
-                return None
         lowest_search_count = run_state.neighborhood.zoom_glyph_alike(
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
