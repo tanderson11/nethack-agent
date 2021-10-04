@@ -438,6 +438,30 @@ class ReadTeleportAdvisor(Advisor):
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
 
+class ReadRemoveCurse(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        read = nethack.actions.Command.READ
+        remove_curse = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.BUC != constants.BUC.cursed, identity_selector=lambda i: i.name() == 'remove curse')
+        if remove_curse is None:
+            return None
+
+        armaments = character.inventory.armaments
+        have_cursed = False
+        for item in armaments:
+            if item is not None and item.BUC == constants.BUC.cursed:
+                have_cursed = True
+                break
+
+        if not have_cursed:
+            return None
+
+        letter = remove_curse.inventory_letter
+        menu_plan = menuplan.MenuPlan("read remove curse scroll", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+        ])
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=read, new_menu_plan=menu_plan)
+
 class IdentifyUnidentifiedScrolls(Advisor):
     def advice(self, rng, run_state, character, oracle):
         read = nethack.actions.Command.READ
