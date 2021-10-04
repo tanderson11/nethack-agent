@@ -1328,6 +1328,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
+            menuplan.MoreMenuResponse("Wizard the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written"),
             menuplan.MoreMenuResponse("usage fee"),
