@@ -894,6 +894,9 @@ class ItemParser():
     def listen_for_dropped_item(cls, global_identity_map, character, message):
         item_match = re.search(cls.item_drop_pattern, message)
         if item_match:
+            if "your gloves and weapon!" in message:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                return None
             item_string = item_match[1]
 
             item = cls.make_item_with_string(global_identity_map, item_string)
