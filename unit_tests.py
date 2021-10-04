@@ -1067,6 +1067,52 @@ def make_inventory(global_identity_map, inventory_inputs):
     inventory = inv.PlayerInventory(global_identity_map, np.array(letters), np.array(oclasses), np.array(strings), inv_glyphs=np.array(numerals))
     return inventory
 
+class TestArmorWearing(unittest.TestCase):
+    def test_good_armor_vs_bad(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2020, inv.Armor, "an uncursed +0 leather jacket (being worn)", ord("a")),
+            ItemTestInputs(2012, inv.Armor, "an elven mithril-coat", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
+    def test_unrelated_blocker(self):
+        # with unaffiliated cursed blocker
+
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2020, inv.Armor, "an uncursed +0 leather jacket (being worn)", ord("a")),
+            ItemTestInputs(2012, inv.Armor, "an elven mithril-coat", ord("b")),
+            ItemTestInputs(1978, inv.Armor, "an iron skull cap", ord("c")),
+            ItemTestInputs(1978, inv.Armor, "a cursed -1 iron skull cap (being worn)", ord("d")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        #import pdb; pdb.set_trace()
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
 class TestRangedAttack(unittest.TestCase):
     def test_samurai_yumi(self):
         character = agents.custom_agent.Character(

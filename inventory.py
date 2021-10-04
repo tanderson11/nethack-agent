@@ -1086,44 +1086,38 @@ class PlayerInventory():
         proposal_blockers = []
         for slot_name, current_occupant in zip(self.armaments._fields, self.armaments):
             unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
+            if len(unequipped_in_slot) == 0:
+                continue
 
-            if len(unequipped_in_slot) > 0:
-                most_desirable = None
-                max_desirability = None
-                for item in unequipped_in_slot:
-                    if isinstance(item, Armor):
-                        desirability = item.instance_desirability_to_wear(character)
-                    else:
-                        desirability = 0
-                    if max_desirability is None or desirability > max_desirability:
-                        max_desirability = desirability
-                        most_desirable = item
+            if isinstance(current_occupant, Armor) and current_occupant.BUC == constants.BUC.cursed:
+                continue
 
-                if current_occupant is not None and isinstance(current_occupant, Armor):
-                    current_desirability = current_occupant.instance_desirability_to_wear(character)
+            most_desirable = None
+            max_desirability = None
+            for item in unequipped_in_slot:
+                if isinstance(item, Armor):
+                    desirability = item.instance_desirability_to_wear(character)
                 else:
-                    current_desirability = 0
+                    desirability = 0
+                if max_desirability is None or desirability > max_desirability:
+                    max_desirability = desirability
+                    most_desirable = item
 
-                if max_desirability > current_desirability:
-                    blockers = self.armaments.get_blockers(slot_name)
+            if current_occupant is not None and isinstance(current_occupant, Armor):
+                current_desirability = current_occupant.instance_desirability_to_wear(character)
+            else:
+                current_desirability = 0
 
-                    if len(blockers) == 0:
+            if max_desirability > current_desirability:
+                blockers = self.armaments.get_blockers(slot_name)
+
+                if len(blockers) == 0:
+                    proposed_items.append(most_desirable)
+                    proposal_blockers.append(blockers)
+                else:
+                    for b in blockers:
                         proposed_items.append(most_desirable)
                         proposal_blockers.append(blockers)
-                    else:
-                        stuck_flag = False
-                        for b in blockers:
-                            if isinstance(b, Weapon) or b.BUC == constants.BUC.cursed:
-                                stuck_flag = True
-                                break
-                            else:
-                                proposed_items.append(most_desirable)
-                                proposal_blockers.append(blockers)
-
-                        if stuck_flag:
-                            proposed_items = []
-                            proposal_blockers = []
-                            continue
 
         return self.AttireProposal(proposed_items, proposal_blockers)
 
@@ -1168,8 +1162,6 @@ class PlayerInventory():
         if len(attack_wands) > 0:
             plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])
             return RangedPreparednessProposal(attack_plan=plan)
-            import pdb; pdb.set_trace()
-            ARS.rs.debugger_on=True
         return self.get_ordinary_ranged_attack(character)
 
     def have_item_oclass(self, object_class):
