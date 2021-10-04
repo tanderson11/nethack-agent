@@ -377,9 +377,9 @@ class Weapon(Item):
 class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
-        self.inventory_letter = '-'
+        self.inventory_letter = ord('-')
         self.BUC = constants.BUC.uncursed
-        self.identity = None
+        self.identity = gd.BareHandsIdentity()
 
     def __repr__(self):
         return "bare hands dummy weapon"
@@ -442,7 +442,9 @@ class Tool(Item):
         return 1
 
     def melee_desirability(self, character, desperate=None):
-        return self.melee_damage(character)
+        if self.identity.type == 'weapon':
+            return self.melee_damage(character)
+        return -1
 
     def find_equivalents(self, inventory):
         if self.identity is None:
@@ -1040,13 +1042,14 @@ class PlayerInventory():
 
         current_weapon = self.wielded_weapon
         desperate = not current_weapon.uses_relevant_skill(character)
-
         current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
         max_desirability = current_desirability
+        #import pdb; pdb.set_trace()
 
         extra_weapons = self.get_items(Weapon, instance_selector=lambda i: i.equipped_status is None or i.equipped_status.status != 'wielded')
+        extra_weapons.append(BareHands())
         if len(extra_weapons) == 0:
             return None
 

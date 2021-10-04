@@ -1067,6 +1067,13 @@ class WeaponIdentity(ObjectIdentity):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
+class BareHandsIdentity(WeaponIdentity):
+    def __init__(self):
+        self.slot = 'hand'
+        self.ranged = False
+        self.is_ammo = False
+        self.thrown = False
+
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
 
