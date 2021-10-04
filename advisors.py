@@ -721,6 +721,7 @@ class MeleePriorityTargets(Attack):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
 class RangedAttackAdvisor(Attack):
+    attack_strength = 'ordinary'
     def prepare_for_ranged(self, character):
         ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
         if ranged_plan is None or ranged_plan.attack_plan is not None:
@@ -757,6 +758,13 @@ class RangedAttackAdvisor(Attack):
         ],)
         return menu_plan
 
+    def make_zap_plan(self, item, direction):
+        menu_plan = menuplan.MenuPlan("zap ranged attack wand", self, [
+            menuplan.CharacterMenuResponse("What do you want to zap?", chr(item.inventory_letter)),
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ],)
+        return menu_plan
+
     def advice(self, rng, run_state, character, oracle):
         targets = self.targets(run_state.neighborhood, character)
         if targets is None:
@@ -767,7 +775,10 @@ class RangedAttackAdvisor(Attack):
         ranged_preparation = self.prepare_for_ranged(character)
         if ranged_preparation is not None:
             return ranged_preparation
-        ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        if self.attack_strength == 'ordinary':
+            ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+        elif self.attack_strength == 'powerful':
+            ranged_plan = character.inventory.get_powerful_ranged_attack(character)
         if ranged_plan is None:
             return None
         attack_plan = ranged_plan.attack_plan
@@ -778,11 +789,14 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.FIRE:
             menu_plan = self.make_fire_plan(attack_direction)
+        elif attack_plan.attack_action == nethack.actions.Command.ZAP:
+            menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
         else:
             assert False
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
 class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
+    attack_strength = 'powerful'
     def advice(self, rng, run_state, character, oracle):
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:

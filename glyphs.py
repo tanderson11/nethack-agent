@@ -971,8 +971,14 @@ class WandIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
-        self.direction = self.find_values('DIRECTION', dropna=True)
-        self.is_attack = self.find_values('ATTACK')
+        #self.direction = self.find_values('DIRECTION', dropna=True)
+
+    def is_attack(self):
+        is_attack = self.find_values('ATTACK')
+        if isinstance(is_attack, np.ndarray):
+            return is_attack.any()
+        else:
+            return is_attack
 
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True

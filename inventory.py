@@ -1163,7 +1163,14 @@ class PlayerInventory():
                 return RangedPreparednessProposal(wield_item=bow)
 
     def get_powerful_ranged_attack(self, character):
-        pass
+        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack())
+
+        if len(attack_wands) > 0:
+            plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])
+            return RangedPreparednessProposal(attack_plan=plan)
+            import pdb; pdb.set_trace()
+            ARS.rs.debugger_on=True
+        return self.get_ordinary_ranged_attack(character)
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number

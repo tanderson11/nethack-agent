@@ -786,7 +786,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
+            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
                 if run_state.character.held_by is not None:
                     run_state.character.held_by = None
 
