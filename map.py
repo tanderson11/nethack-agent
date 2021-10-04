@@ -64,6 +64,7 @@ class DMap():
         }
         self.branch_connections = {}
         self.oracle_level = None
+        self.special_level_searcher = SpecialLevelSearcher(ALL_SPECIAL_LEVELS)
 
     def update_target_dcoords(self, character):
         new_targets = {}
@@ -111,7 +112,7 @@ class DMap():
         self.branch_connections[(end_dcoord, start_dcoord)] = True
 
     def make_level_map(self, dcoord, glyphs, initial_player_location):
-        lmap = DLevelMap(dcoord)
+        lmap = DLevelMap(self.special_level_searcher, dcoord)
         self.dlevels[dcoord] = lmap
 
         # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
@@ -202,8 +203,10 @@ class DLevelMap():
         dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
         return dungeon_features
 
-    def __init__(self, dcoord):
+    def __init__(self, special_level_searcher, dcoord):
         self.dcoord = dcoord
+        self.special_level_searcher = special_level_searcher
+        self.special_level = None
 
         self.downstairs_count = 0
         self.upstairs_count = 0
@@ -335,6 +338,9 @@ class DLevelMap():
         )
 
         self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
+
+        if self.special_level is None:
+            self.special_level = self.special_level_searcher.match_level(self)
 
     def expand_mask_along_room_floor(self, mask):
         while True:
@@ -737,7 +743,23 @@ class SpecialLevelLoader():
         map_length = max(map(lambda x: len(x.strip("\n")), characters))
 
         initial_offset_x = (constants.GLYPHS_SHAPE[1] - map_length) // 2
-        offset_y = (constants.GLYPHS_SHAPE[0] - map_height) // 2 + 1
+
+        # I do not understand how the vertical offseting is done
+        # In Sokoban a room N squares high is padded Y1 above and Y2 below, where:
+        # 11, 5, 5 makes sense
+        # 14, 4, 2 makes sense
+        # 13, 5, 3 wtf who ordered this?
+        # 18, 3, 0 wtf
+        # 12 -- haven't seen this one yet
+
+        hardcoded_y_offsets = {
+            11: 5,
+            14: 4,
+            13: 5,
+            18: 3,
+        }
+
+        offset_y = hardcoded_y_offsets[map_height]
 
         offset_x = initial_offset_x
         for line in characters:
@@ -749,3 +771,7 @@ class SpecialLevelLoader():
 
         return retval
 
+ALL_SPECIAL_LEVELS = [
+    SpecialLevelLoader.load('sokoban_1a'),
+    SpecialLevelLoader.load('sokoban_1b'),
+]
