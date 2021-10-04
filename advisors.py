@@ -353,6 +353,24 @@ class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
 
         return None
 
+class DrinkGainAbility(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        quaff = nethack.actions.Command.QUAFF
+        gain_ability_potion = character.inventory.get_item(inv.Potion, name="gain ability", instance_selector=lambda i: i.BUC != constants.BUC.cursed)
+        if gain_ability_potion is None:
+            return None
+        menu_plan = self.make_menu_plan(gain_ability_potion.inventory_letter)
+        return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+class DrinkGainLevel(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        quaff = nethack.actions.Command.QUAFF
+        gain_level = character.inventory.get_item(inv.Potion, name="gain level", instance_selector=lambda i: i.BUC != constants.BUC.cursed)
+        if gain_level is None:
+            return None
+        menu_plan = self.make_menu_plan(gain_level.inventory_letter)
+        return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
 class DrinkHealingPotionAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
