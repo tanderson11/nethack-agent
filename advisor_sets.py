@@ -37,7 +37,7 @@ new_advisors = [
         ReduceThreatFromManyEnemiesWithMove(),
         SafeMeleeAttackAdvisor(),
         PassiveMonsterRangedAttackAdvisor(),
-        RandomMoveAdvisor(),
+        #RandomMoveAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
         ]),
     #RangedAttackNuisanceMonsters(),
