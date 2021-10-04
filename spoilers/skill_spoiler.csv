@@ -1,40 +1,40 @@
-SKILL,Archeologist,Barbarian,Caveperson,Healer,Knight,Monk,Priest,Rogue,Ranger,Samurai,Tourist,Valkyrie,Wizard
-dagger,b,b,b,S,b,-,-,E,E,b,E,E,E
-knife,b,-,S,E,b,-,-,E,S,S,S,-,S
-axe,-,E,S,-,S,-,-,-,S,-,b,E,S
-pick-axe,E,S,b,-,b,-,-,-,b,-,b,S,-
-short sword,b,E,-,S,S,-,-,E,b,E,E,S,b
-broadsword,-,S,-,-,S,-,-,S,-,S,b,S,-
-long sword,-,S,-,-,E,-,-,S,-,E,b,E,-
-two-handed sword,-,E,-,-,S,-,-,b,-,E,b,E,-
-scimitar,S,S,-,b,b,-,-,S,-,b,S,b,-
-saber,E,b,-,b,S,-,-,S,-,b,S,b,-
-club,S,S,E,S,b,-,E,S,-,-,-,-,S
-mace,-,S,E,b,S,-,E,S,-,-,b,-,b
-morning star,-,S,b,-,S,-,E,b,b,-,b,-,-
-flail,-,b,S,-,b,-,E,b,S,S,b,-,-
-hammer,-,E,S,-,b,-,E,b,b,-,b,E,-
-quarterstaff,S,b,E,E,-,b,E,-,b,b,b,b,E
-polearm,-,-,S,b,S,-,S,b,S,S,b,S,S
-spear,-,S,E,b,S,b,S,b,E,S,b,S,b
-trident,-,S,S,b,b,-,S,-,b,-,b,b,b
-lance,-,-,-,-,E,-,b,-,-,S,b,S,-
-bow,-,b,S,-,b,-,b,-,E,E,b,-,-
-sling,S,-,E,S,-,-,b,-,E,-,b,b,S
-crossbow,-,-,-,-,S,b,b,E,E,-,b,-,-
-dart,b,-,-,E,-,-,b,E,E,-,E,-,E
-shuriken,-,-,-,S,-,b,b,S,S,E,b,-,b
-boomerang,E,-,E,-,-,-,b,-,E,-,b,-,-
-whip,E,-,-,-,-,-,-,-,b,-,b,-,-
-unicorn horn,S,-,b,E,-,-,S,-,-,-,S,-,-
-bare hands,E,M,M,b,E,-,b,E,b,-,S,E,b
-two weapon combat,b,b,-,-,S,-,-,E,-,E,S,S,-
-riding,b,b,-,-,E,-,-,b,b,S,b,S,b
-martial arts,-,-,-,-,-,GM,-,-,-,M,-,-,-
-attack,b,b,b,-,S,b,-,-,-,b,-,b,E
-healing,b,-,-,E,S,E,E,-,b,-,-,-,S
-divination,E,-,-,-,-,b,E,S,E,b,b,-,E
-enchantment,-,-,-,-,-,b,-,-,-,-,b,-,S
-clerical,-,-,-,-,S,S,E,-,-,S,-,-,S
-escape,-,b,-,-,-,S,-,S,b,-,S,b,E
-matter,b,-,S,-,-,b,-,S,-,-,-,-,E
+SKILL,Archeologist,Archeologist-relevant,Barbarian,Barbarian-relevant,Caveperson,Caveperson-relevant,Healer,Healer-relevant,Knight,Knight-relevant,Monk,Monk-relevant,Priest,Priest-relevant,Rogue,Rogue-relevant,Ranger,Ranger-relevant,Samurai,Samurai-relevant,Tourist,Tourist-relevant,Valkyrie,Valkyrie-relevant,Wizard,Wizard-relevant
+dagger,b,TRUE,b,TRUE,b,TRUE,S,TRUE,b,TRUE,-,FALSE,-,FALSE,E,TRUE,E,TRUE,b,FALSE,E,TRUE,E,TRUE,E,FALSE
+knife,b,FALSE,-,FALSE,S,FALSE,E,TRUE,b,FALSE,-,FALSE,-,FALSE,E,FALSE,S,FALSE,S,FALSE,S,FALSE,-,FALSE,S,FALSE
+axe,-,FALSE,E,TRUE,S,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,E,FALSE,S,FALSE
+pick-axe,E,TRUE,S,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,S,FALSE,-,FALSE
+short sword,b,FALSE,E,FALSE,-,FALSE,S,TRUE,S,FALSE,-,FALSE,-,FALSE,E,TRUE,b,FALSE,E,FALSE,E,FALSE,S,FALSE,b,FALSE
+broadsword,-,FALSE,S,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE
+long sword,-,FALSE,S,TRUE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,E,TRUE,b,FALSE,E,TRUE,-,FALSE
+two-handed sword,-,FALSE,E,TRUE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,TRUE,b,FALSE,E,FALSE,-,FALSE
+scimitar,S,FALSE,S,FALSE,-,FALSE,b,FALSE,b,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,S,FALSE,b,FALSE,-,FALSE
+saber,E,TRUE,b,TRUE,-,FALSE,b,FALSE,S,TRUE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,S,TRUE,b,FALSE,-,FALSE
+club,S,FALSE,S,FALSE,E,TRUE,S,TRUE,b,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE
+mace,-,FALSE,S,FALSE,E,TRUE,b,FALSE,S,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE
+morning star,-,FALSE,S,FALSE,b,FALSE,-,FALSE,S,FALSE,-,FALSE,E,FALSE,b,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+flail,-,FALSE,b,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,b,FALSE,S,FALSE,S,FALSE,b,FALSE,-,FALSE,-,FALSE
+hammer,-,FALSE,E,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,b,FALSE,b,FALSE,-,FALSE,b,FALSE,E,FALSE,-,FALSE
+quarterstaff,S,FALSE,b,FALSE,E,FALSE,E,TRUE,-,FALSE,b,FALSE,E,FALSE,-,FALSE,b,FALSE,b,FALSE,b,FALSE,b,FALSE,E,FALSE
+polearm,-,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE,S,TRUE,b,FALSE,S,FALSE,S,FALSE,b,FALSE,S,FALSE,S,FALSE
+spear,-,FALSE,S,FALSE,E,TRUE,b,FALSE,S,FALSE,b,FALSE,S,FALSE,b,FALSE,E,TRUE,S,FALSE,b,FALSE,S,FALSE,b,FALSE
+trident,-,FALSE,S,FALSE,S,FALSE,b,FALSE,b,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,b,FALSE,b,FALSE
+lance,-,FALSE,-,FALSE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,b,FALSE,-,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE
+bow,-,FALSE,b,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,E,TRUE,E,TRUE,b,FALSE,-,FALSE,-,FALSE
+sling,S,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,-,FALSE,b,FALSE,b,FALSE,S,FALSE
+crossbow,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,b,FALSE,b,FALSE,E,FALSE,E,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+dart,b,FALSE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,-,FALSE,b,TRUE,E,TRUE,E,TRUE,-,FALSE,E,TRUE,-,FALSE,E,FALSE
+shuriken,-,FALSE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,b,FALSE,b,TRUE,S,TRUE,S,TRUE,E,TRUE,b,FALSE,-,FALSE,b,FALSE
+boomerang,E,FALSE,-,FALSE,E,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+whip,E,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+unicorn horn,S,FALSE,-,FALSE,b,FALSE,E,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE
+bare hands,E,FALSE,M,TRUE,M,FALSE,b,FALSE,E,FALSE,-,FALSE,b,FALSE,E,FALSE,b,FALSE,-,FALSE,S,FALSE,E,FALSE,b,FALSE
+two weapon combat,b,TRUE,b,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,E,TRUE,S,TRUE,S,TRUE,-,FALSE
+riding,b,FALSE,b,FALSE,-,FALSE,-,FALSE,E,FALSE,-,FALSE,-,FALSE,b,FALSE,b,FALSE,S,FALSE,b,FALSE,S,FALSE,b,FALSE
+martial arts,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,GM,TRUE,-,FALSE,-,FALSE,-,FALSE,M,TRUE,-,FALSE,-,FALSE,-,FALSE
+attack,b,TRUE,b,TRUE,b,TRUE,-,FALSE,S,TRUE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,b,TRUE,E,FALSE
+healing,b,TRUE,-,FALSE,-,FALSE,E,TRUE,S,TRUE,E,TRUE,E,TRUE,-,FALSE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,S,FALSE
+divination,E,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,E,TRUE,S,TRUE,E,TRUE,b,TRUE,b,TRUE,-,FALSE,E,FALSE
+enchantment,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,S,FALSE
+clerical,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,TRUE,S,TRUE,E,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,S,FALSE
+escape,-,FALSE,b,FALSE,-,FALSE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,S,TRUE,b,TRUE,-,FALSE,S,TRUE,b,TRUE,E,FALSE
+matter,b,TRUE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,E,FALSE

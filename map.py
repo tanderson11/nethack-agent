@@ -537,7 +537,7 @@ class ThreatMap(FloodMap):
 
                         ### RANGED ###
                         if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
-                            can_hit_mask = self.__class__.calculate_ranged_can_hit_mask(can_occupy_mask, self.glyph_grid)
+                            can_hit_mask = self.calculate_ranged_can_hit_mask(can_occupy_mask, self.raw_glyph_grid)
                             ranged_n_threat[can_hit_mask] += 1
                             if is_invis:
                                 ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
@@ -552,19 +552,26 @@ class ThreatMap(FloodMap):
         self.ranged_damage_threat = ranged_damage_threat
 
     @classmethod
-    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid):
+    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid, attack_range=None, **kwargs):
+        # TODO make gaze attacks hit everywhere
         it = np.nditer(can_occupy_mask, flags=['multi_index'])
         masks = []
         for b in it: 
             if b:
-                can_hit_from_loc = cls.raytrace_threat(it.multi_index, glyph_grid)
+                can_hit_from_loc = cls.raytrace_from(physics.Square(*it.multi_index), glyph_grid, **kwargs)
                 masks.append(can_hit_from_loc)
         return np.logical_or.reduce(masks)
 
     @staticmethod
-    def raytrace_threat(source, glyph_grid):
+    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False):
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
+
+        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid)
+        if reject_peaceful:
+            blocking_geometry |= (gd.PetGlyph.class_mask(glyph_grid) | gd.MonsterGlyph.always_peaceful_mask(glyph_grid))
+        if stop_on_monsters:
+            blocking_geometry |= gd.MonsterGlyph.class_mask(glyph_grid)
 
         ray_offsets = physics.action_deltas
 
@@ -573,18 +580,23 @@ class ThreatMap(FloodMap):
             ray_mask = np.full_like(glyph_grid, False, dtype='bool')
 
             current = source
-            current = (current[0]+2*offset[0], current[1]+2*offset[1]) # initial bump so that ranged attacks don't threaten adjacent squares
+            current = current + physics.Square(*offset) # initial bump so that ranged attacks don't threaten adjacent squares
             while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
-                glyph = glyph_grid[current]
-                if isinstance(glyph, gd.CMapGlyph) and glyph.is_wall: # is this the full extent of what blocks projectiles/rays?
+                blocked = blocking_geometry[current]
+                ray_mask[current] = True # moved before blocking since technically you can hit things in walls with ranged attacks
+                if blocked: # is this the full extent of what blocks projectiles/rays?
                     break # should we do anything with bouncing rays
-                ray_mask[current] = True
+
 
                 current = (current[0]+offset[0], current[1]+offset[1])
 
             masks.append(ray_mask)
 
         can_hit_mask = np.logical_or.reduce(masks)
+
+        if not include_adjacent:
+            adjacent_rows, adjacent_cols = utilities.centered_slices_bounded_on_array(source, (1,1), can_hit_mask)
+            can_hit_mask[adjacent_rows, adjacent_cols] = False
         return can_hit_mask
 
 class SpecialLevelDecoder():

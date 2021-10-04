@@ -10,6 +10,14 @@ class SpecialRoomTypes(enum.Enum):
     shop = 1
     vault_closet = 2
 
+class IdentityDesirability(enum.Enum):
+    desire_all = "desire all"
+    desire_all_uncursed = "desire all uncursed"
+    desire_one = "desire one"
+    desire_seven = "desire seven"
+    desire_as_raw_material = "desire as raw"
+    desire_none = "none"
+
 class BaseRole(enum.Enum):
     Archeologist = 'Archeologist'
     Barbarian = 'Barbarian'
@@ -51,6 +59,22 @@ skill_abbrev_to_rank = {
 
 CLASS_SKILLS = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "skill_spoiler.csv"))
 CLASS_SKILLS = CLASS_SKILLS.set_index("SKILL")
+
+best_skills_by_class = {
+    BaseRole.Archeologist: 'pick-axe',
+    BaseRole.Barbarian: 'axe',
+    BaseRole.Caveperson: 'spear',
+    BaseRole.Healer: 'quarterstaff',
+    BaseRole.Knight: 'long sword',
+    BaseRole.Monk: 'martial arts',
+    BaseRole.Priest: 'mace',
+    BaseRole.Ranger: 'spear',
+    BaseRole.Rogue: 'long sword',
+    BaseRole.Samurai: 'long sword',
+    BaseRole.Tourist: 'saber',
+    BaseRole.Valkyrie: 'long sword',
+    BaseRole.Wizard: 'dagger',
+}
 
 class Attributes(NamedTuple):
     strength: int

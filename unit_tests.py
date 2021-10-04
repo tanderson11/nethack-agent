@@ -31,6 +31,7 @@ class TestItemRegex(unittest.TestCase):
         "a scroll labeled NR 9": "NR 9",
         "2 food rations": "food ration",
         "30 +2 darts": "dart",
+        "an uncursed sack containing 1 item": "sack",
         #"a blessed tin of yellow mold": "tin", # currently broken, waiting on a better pattern
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",
         "a corroded +1 long sword (weapon in hand)": "long sword",
@@ -174,6 +175,19 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
         ItemTestInputs(2311, "a long wand"): ItemTestValues(inv.Wand, None),
     }
+
+    test_elimination_values = {
+        ItemTestInputs(2031, "a blessed +2 cloak of magic resistance"): ItemTestValues(inv.Armor, "cloak of magic resistance"),
+        ItemTestInputs(2032, "a blessed +2 cloak of protection"): ItemTestValues(inv.Armor, "cloak of protection"),
+        ItemTestInputs(2033, "a blessed +2 cloak of invisibility"): ItemTestValues(inv.Armor, "cloak of invisibility"),
+        ItemTestInputs(2034, "a blessed +2 ornamental cope"): ItemTestValues(inv.Armor, "cloak of displacement"),
+    }
+
+    def test_elimination(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        for inputs, values in self.test_elimination_values.items():
+            item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
+            self.assertEqual(item.identity.name(), values.name_in_inventory)
 
     def test_recognition_with_numeral(self):
         #return
@@ -618,6 +632,7 @@ class TestNeighborhood(unittest.TestCase):
             dmap.make_level_map(map.DCoord(0,1), glyphs, (0,0)),
             None,
             None,
+            False,
         )
 
     def test_attributes(self):
@@ -773,16 +788,15 @@ class TestArtifacts(unittest.TestCase):
             self.assertEqual(artifact_name, result.item.identity.artifact_name)
             self.assertEqual(name, result.item.identity.name())
 
-
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
 
     test_values = {
         "d - an uncursed dagger": "d",
         "a - a cursed dagger": None,
-        "a - a blessed +5 club": None,
+        "a - a blessed +5 club": "a",
         "a - a scimitar": "a",
-        "a - a blessed -2 scimitar": None,
+        "a - a blessed -2 scimitar": "a",
         "a - a blessed +5 scimitar": "a",
         "a - a runed broadsword": None
     }
@@ -798,7 +812,7 @@ class TestWeaponPickup(unittest.TestCase):
         )
         character.set_class_skills()
 
-        inventory = inv.PlayerInventory([], [], [], [])
+        inventory = inv.PlayerInventory(np.array([]), np.array([]), np.array([]), np.array([]))
         inventory.wielded_weapon = inv.BareHands()
         run_state.character = character
         run_state.character.inventory = inventory
@@ -822,23 +836,24 @@ class InteractiveMenu(unittest.TestCase):
 Coins
 $ - 1600 gold pieces >> desirable
 Armor
-a - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
-b - a pair of leather gloves (for sale, 30 zorkmids)
-c - a pair of buckled boots >> armor|desirable
+a - a +0 plumed helmet >> armor|desirable
+b - a +0 plumed helmet (being worn) (unpaid, 13 zorkmids)
+c - a pair of leather gloves (for sale, 30 zorkmids)
+d - a pair of buckled boots >> armor|desirable
 Weapons
-d - an uncursed dagger >> extra weapons|desirable
+e - an uncursed dagger >> extra weapons|desirable
 Comestibles
-e - a food ration >> comestibles|desirable
-f - a lichen corpse >> desirable
+f - a food ration >> comestibles|desirable
+g - a lichen corpse >> desirable
 Scrolls
-g - a scroll labeled VE FORBRYDERNE >> desirable
-h - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
+h - a scroll labeled VE FORBRYDERNE >> desirable
+i - 2 uncursed scrolls of teleportation >> teleport scrolls|desirable
 Potions
-i - a smoky potion
-j - a blessed potion of full healing >> healing potions|desirable
+j - a smoky potion
+k - a blessed potion of full healing >> healing potions|desirable
 Wands
-k - an iron wand >> desirable
-l - a wand of teleportation (0:6) >> teleport wands|desirable
+l - an iron wand >> desirable
+m - a wand of teleportation (0:6) >> teleport wands|desirable
 
 (end)
 """
@@ -854,6 +869,8 @@ l - a wand of teleportation (0:6) >> teleport wands|desirable
         text = string_to_tty_chars(string)
 
         for selector_name in menuplan.InteractivePickupMenu.selectors.keys():
+            if selector_name != 'desirable':
+                continue
             # enforce that every selector has a test written for it
             print(selector_name)
             self.assertTrue(selector_name in expected.keys())
@@ -864,11 +881,12 @@ l - a wand of teleportation (0:6) >> teleport wands|desirable
             print(result)
 
             # need to collate multiple results TK
-            acutally_selected_letters = set([result.character])
-            print(acutally_selected_letters)
+            actually_selected_letters = set([result.character])
+            print(actually_selected_letters)
 
             # check that selector correctly pulls the letters
-            self.assertEqual(acutally_selected_letters, expected[selector_name], acutally_selected_letters)
+            self.assertEqual(actually_selected_letters, expected[selector_name], actually_selected_letters)
+
 
     def test_pickup_desirable(self):
         character = agents.custom_agent.Character(
@@ -884,7 +902,7 @@ l - a wand of teleportation (0:6) >> teleport wands|desirable
         global_identity_map = gd.GlobalIdentityMap()
         run_state.global_identity_map = global_identity_map
 
-        character.inventory = inv.PlayerInventory([], [], [], [])
+        character.inventory = inv.PlayerInventory(np.array([]), np.array([]), np.array([]), np.array([]))
         character.inventory.armaments = inv.ArmamentSlots()
         character.inventory.wielded_weapon = inv.BareHands()
 
@@ -1023,6 +1041,226 @@ class ItemTestInputs(NamedTuple):
     numeral: int
     item_class: type
     item_str: str
+    inventory_letter: int = None
+
+class TestWeaponWield(unittest.TestCase):
+    pass
+
+def make_inventory(global_identity_map, inventory_inputs):
+    numerals = []
+    strings = []
+    oclasses = []
+    letters = []
+    for item_inputs in inventory_inputs:
+        numeral, item_class, item_str, inventory_letter = item_inputs
+        zeroed_string = np.zeros((128), dtype='uint8')
+        string = np.array(string_to_tty_chars(item_str)[0], dtype='uint8')
+        zeroed_string[0:len(string)] = string
+        oclass = item_class.glyph_class.class_number
+
+        numerals.append(numeral)
+        strings.append(zeroed_string)
+        oclasses.append(oclass)
+        letters.append(inventory_letter)
+    
+    #print(np.array(strings))
+    inventory = inv.PlayerInventory(global_identity_map, np.array(letters), np.array(oclasses), np.array(strings), inv_glyphs=np.array(numerals))
+    return inventory
+
+class TestArmorWearing(unittest.TestCase):
+    def test_good_armor_vs_bad(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2020, inv.Armor, "an uncursed +0 leather jacket (being worn)", ord("a")),
+            ItemTestInputs(2012, inv.Armor, "an elven mithril-coat", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
+    def test_unrelated_blocker(self):
+        # with unaffiliated cursed blocker
+
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2020, inv.Armor, "an uncursed +0 leather jacket (being worn)", ord("a")),
+            ItemTestInputs(2012, inv.Armor, "an elven mithril-coat", ord("b")),
+            ItemTestInputs(1978, inv.Armor, "an iron skull cap", ord("c")),
+            ItemTestInputs(1978, inv.Armor, "a cursed -1 iron skull cap (being worn)", ord("d")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        #import pdb; pdb.set_trace()
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
+class TestRangedAttack(unittest.TestCase):
+    def test_samurai_yumi(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Samurai,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "a")
+
+        inventory = [
+            #ItemTestInputs(1913, "38 +2 darts (at the ready)"),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi (weapon in hand)", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "b")
+
+        inventory = [
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi (weapon in hand)", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya (in quiver)", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+    def test_throw(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Rogue,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+        
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "c")
+
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+    def test_many(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Ranger,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+
+        global_identity_map = gd.GlobalIdentityMap()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1923, inv.Weapon, "a +1 dagger (weapon in hand)", ord("a")),
+            ItemTestInputs(1972, inv.Weapon, "a +1 elven bow (alternate weapon; not wielded)", ord("b")),
+            ItemTestInputs(1908, inv.Weapon, "26 +2 elven arrows (in quiver)", ord("c")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "b")
+
+    def test_dont_throw_wielded(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Rogue,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='chaotic'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1923, inv.Weapon, "a dagger (weapon in hand)", ord("a")),
+        ]
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal, None)
+
+        inventory = [
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
+
+
+    def test_aklys(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Caveperson,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+        global_identity_map = gd.GlobalIdentityMap()
+
+        inventory = [
+            ItemTestInputs(1968, inv.Weapon, "a blessed +5 aklys (tethered weapon in hand)", ord("d")),
+            ItemTestInputs(1913, inv.Weapon, "38 +2 darts (at the ready)", ord("c")),
+            ItemTestInputs(1974, inv.Weapon, "a +0 yumi", ord("a")),
+            ItemTestInputs(1911, inv.Weapon, "38 +0 ya", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        #import pdb; pdb.set_trace()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.THROW)
 
 class TestDrop(unittest.TestCase):
 
@@ -1057,7 +1295,7 @@ class TestDrop(unittest.TestCase):
 
         for inputs, do_drop in self.test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            numeral, item_class, item_str = inputs
+            numeral, item_class, item_str, _ = inputs
             string = np.array(string_to_tty_chars(item_str), dtype='uint8')
             oclass = item_class.glyph_class.class_number
             inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
@@ -1074,7 +1312,7 @@ class TestDrop(unittest.TestCase):
 
 class TestSpecialItemNames(unittest.TestCase):
     def test_no_charges(self):
-        numeral, item_class, item_str = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
+        numeral, item_class, item_str, _ = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
 
         global_identity_map = gd.GlobalIdentityMap()
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')

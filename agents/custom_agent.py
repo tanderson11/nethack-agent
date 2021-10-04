@@ -153,6 +153,9 @@ class Message():
             self.boulder_in_vain_message = "boulder, but in vain." in message.message
             self.boulder_blocked_message = "Perhaps that's why you cannot move it." in message.message
             self.carrying_too_much_message = "You are carrying too much to get through." in message.message
+            self.solid_stone = "It's solid stone" in message.message
+
+            if self.solid_stone and environment.env.debug: import pdb; pdb.set_trace()
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
@@ -301,26 +304,23 @@ class RunState():
             for line in self.search_log:
                 writer.writerow(list(line[0]) + [line[1]])
 
-        self.update_counter_json("message_counter.json", self.message_log)
-        self.update_counter_json("advisor_counter.json", [advice.from_advisor.__class__.__name__ for advice in self.advice_log if isinstance(advice, ActionAdvice)])
+        self.extend_json("message_counter.json", Counter(self.message_log))
+        #import pdb; pdb.set_trace()
+        message_score_df = pd.DataFrame(self.message_log, columns=['message'], index=pd.Series(self.score_against_message_log, name='score'))
+        self.extend_json("final_inventory.json", [str(i) for i in self.character.inventory.all_items()])
+        self.extend_json("advisor_counter.json", Counter([advice.from_advisor.__class__.__name__ for advice in self.advice_log if isinstance(advice, ActionAdvice)]))
 
-    def update_counter_json(self, filename, counter_list):
+    def extend_json(self, filename, obj):
         import json
         try:
-            with open(os.path.join(self.log_root, filename), 'r') as counter_file:
-                state = json.load(counter_file)
-                #import pdb; pdb.set_trace()
+            with open(os.path.join(self.log_root, filename), 'r') as file:
+                state = json.load(file)
                 new_key = max([int(key) for key in state.keys()]) + 1
-                #import pdb; pdb.set_trace()
         except FileNotFoundError:
             state = {}
             new_key = 0
 
-        state[new_key] = Counter(counter_list)
-        #counter = Counter(state)
-        #additional_counter = Counter(counter_list)
-        #counter.update(additional_counter)
-
+        state[new_key] = obj
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(state, counter_file)
 
@@ -338,6 +338,7 @@ class RunState():
 
         self.active_menu_plan = BackgroundMenuPlan
         self.message_log = []
+        self.score_against_message_log = []
         self.action_log = []
         self.advice_log = []
         self.search_log = []
@@ -376,6 +377,7 @@ class RunState():
         self.glyphs = None
 
         self.debugger_on = False
+        self.debug_tripwire = False
 
         self.replay_log_path = None
         self.replay_log = []
@@ -396,7 +398,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'rKJESw=='
+        #seed = b'UaONlQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -530,9 +532,14 @@ class RunState():
 
     def handle_message(self, message):
         self.message_log.append(message.message)
+        self.score_against_message_log.append(self.reward)
+
+        if self.character is not None:
+            self.character.listen_for_intrinsics(message.message)
 
         item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
-        self.current_square.item_on_square = item_on_square
+        if item_on_square is not None:
+            self.current_square.item_on_square = item_on_square
 
         if item_on_square is not None:
             if self.neighborhood is not None and self.neighborhood.level_map is not None:
@@ -548,9 +555,20 @@ class RunState():
             self.last_dropped_item = dropped
         inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
 
-        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message:
+        if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
+            if message.feedback.carrying_too_much_message:
+                self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
                 self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
+
+                if message.feedback.solid_stone:
+                    if environment.env.debug:
+                        import pdb; pdb.set_trace()
+                    #target_location = physics.Square(*physics.action_to_delta[self.last_non_menu_action]) + self.neighborhood.absolute_player_location
+                    # can't add stone: we'll assume it's fog and trample it.
+                    # hacky solution: add a wall
+                    # no, this also gets trampled
+                    #self.neighborhood.level_map.add_feature(target_location, gd.GLYPH_NAME_LOOKUP['vwall'])
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -713,6 +731,11 @@ class CustomAgent(BatchedAgent):
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if run_state.character:
+            if run_state.last_non_menu_action == nethack.actions.Command.DROP or run_state.last_non_menu_action == nethack.actions.Command.DROPTYPE:
+                run_state.character.clear_weight_knowledge()
+
         if message.dungeon_feature_here:
             level_map.add_feature(player_location, message.dungeon_feature_here)
 
@@ -745,7 +768,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.READ]:
+            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
                 if run_state.character.held_by is not None:
                     run_state.character.held_by = None
 
@@ -828,6 +851,14 @@ class CustomAgent(BatchedAgent):
         if "You bought" in message.message:
             print(message.message)
 
+        if "cannibal" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
+        if "Yak" in message.message:
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
@@ -837,8 +868,11 @@ class CustomAgent(BatchedAgent):
         if "while wearing a shield" in message.message:
             print(message.message)
 
-        if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
+            if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
             run_state.dmap.oracle_level = dcoord.level
+            print(message.message)
+ 
+        if " stole " in message.message:
             print(message.message)
 
         ###################################################
@@ -920,6 +954,7 @@ class CustomAgent(BatchedAgent):
             level_map,
             run_state.character,
             run_state.latest_monster_flight,
+            blstats.am_hallu(),
         )
         if not (run_state.last_non_menu_action_failed_advancement or run_state.last_non_menu_action == nethack.actions.Command.SEARCH):
             run_state.check_gamestate_advancement(neighborhood)
