@@ -99,12 +99,13 @@ new_advisors = [
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
     # EXPLORE
-    SearchDeadEndAdvisor(),
+    SearchWithStethoscope(),
+    SearchDeadEndAdvisor(oracle_consultation=lambda o: not o.have_stethoscope),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 1,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 4,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving and not o.have_stethoscope): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         TravelToAltarAdvisor(): 2,

@@ -1171,6 +1171,10 @@ class PlayerInventory():
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
+    def have_stethoscope(self):
+        stethoscope = self.get_item(Tool, name='stethoscope')
+        return not stethoscope is None
+
     def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         if oclass is None:
             items = self.all_items()

@@ -480,6 +480,10 @@ class CMapGlyph(Glyph):
         return (offsets < 3)
 
     @staticmethod
+    def possible_secret_mask(numerals):
+        return (numerals >= nethack.GLYPH_CMAP_OFF) & (numerals < 3 + nethack.GLYPH_CMAP_OFF)
+
+    @staticmethod
     def open_door_mask(numerals):
         return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
 
