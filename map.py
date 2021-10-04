@@ -282,11 +282,6 @@ class DLevelMap():
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
-        self.fountain_map = (glyphs == gd.CMapGlyph.OFFSET + 31)
-
-        # Solid stone and fog of war both show up here
-        self.fog_of_war = (glyphs == gd.CMapGlyph.OFFSET)
-        adjacent_to_fog = FloodMap.flood_one_level_from_mask(self.fog_of_war)
 
         # Basic terrain types
 
@@ -301,6 +296,11 @@ class DLevelMap():
         self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
         self.safely_walkable = gd.CMapGlyph.is_safely_walkable_check(offsets)
         self.doors = gd.CMapGlyph.is_door_check(offsets)
+        self.fountain_map = (offsets == 31)
+
+        # Solid stone and fog of war both show up here
+        self.fog_of_war = (offsets == 0)
+        adjacent_to_fog = FloodMap.flood_one_level_from_mask(self.fog_of_war)
 
         if np.count_nonzero(gd.CMapGlyph.is_poorly_understood_check(offsets)):
             if environment.env.debug: import pdb; pdb.set_trace()

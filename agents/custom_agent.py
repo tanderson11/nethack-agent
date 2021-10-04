@@ -659,7 +659,6 @@ class CustomAgent(BatchedAgent):
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
-            level_map.update(player_location, observation['glyphs'])
         except KeyError:
             level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
 
@@ -795,6 +794,8 @@ class CustomAgent(BatchedAgent):
                 print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
             elif environment.env.debug:
                 import pdb; pdb.set_trace()
+
+        level_map.update(player_location, observation['glyphs'])
 
 
         if "Something is written here in the dust" in message.message:
