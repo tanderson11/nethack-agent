@@ -386,6 +386,7 @@ class BareHands(Weapon):
         self.inventory_letter = ord('-')
         self.BUC = constants.BUC.uncursed
         self.identity = gd.BareHandsIdentity()
+        self.quantity = 1
 
     def __repr__(self):
         return "bare hands dummy weapon"
