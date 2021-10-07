@@ -1043,6 +1043,8 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
+        self.stackable = not pd.isna(self.find_values('STACKED_NAME'))
+
         self.slot = self.find_values('SLOT')
         self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
         self.thrown = self.find_values('THROWN', false_if_na=True)
@@ -1063,7 +1065,6 @@ class WeaponIdentity(ObjectIdentity):
         else:
             has_second_slot = not pd.isnull(second_slot)
 
-
         if has_second_slot:
             self.slot = [self.slot, second_slot]
 
@@ -1077,12 +1078,17 @@ class WeaponIdentity(ObjectIdentity):
                 #import pdb; pdb.set_trace()
                 return "BUC_CURSED"
 
+        if action == nethack.actions.Command.WIELD and self.stackable:
+            #import pdb; pdb.set_trace()
+            return "WIELD_NO_STACK"
+
 class BareHandsIdentity(WeaponIdentity):
     def __init__(self):
         self.slot = 'hand'
         self.ranged = False
         self.is_ammo = False
         self.thrown = False
+        self.stackable = False
 
     def name(self):
         return "bare hands"

@@ -335,12 +335,15 @@ class Weapon(Item):
             return -1
         relevant_skill = self.uses_relevant_skill(character)
 
+        if self.BUC == constants.BUC.cursed:
+            return -1
+
         if not desperate:
             if relevant_skill == False:
                 return -1
 
-            if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
-                return -1
+            #if self.BUC == constants.BUC.uncursed:
+            #    return -1
 
         if desperate:
             # restricted weapons not worth it even if desperate
@@ -1044,7 +1047,8 @@ class PlayerInventory():
             return None
 
         current_weapon = self.wielded_weapon
-        desperate = not current_weapon.uses_relevant_skill(character)
+        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: i.uses_relevant_skill(character))
+        desperate = not current_weapon.uses_relevant_skill(character) and len(relevant_weapons) == 0
         current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
@@ -1068,6 +1072,9 @@ class PlayerInventory():
                 max_desirability = desirability
 
         if most_desirable != current_weapon:
+            if isinstance(most_desirable, BareHands):
+                #import pdb; pdb.set_trace()
+                pass
             #import pdb; pdb.set_trace()
             return most_desirable
         else:
