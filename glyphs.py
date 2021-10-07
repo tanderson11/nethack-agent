@@ -1043,7 +1043,7 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
-        self.stackable = not pd.isna(self.find_values('STACKED_NAME'))
+        self.stackable = self.is_identified() and not pd.isna(self.find_values('STACKED_NAME'))
 
         self.slot = self.find_values('SLOT')
         self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
