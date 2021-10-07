@@ -980,7 +980,7 @@ class WandIdentity(ObjectIdentity):
     def is_attack(self):
         is_attack = self.find_values('ATTACK')
         if isinstance(is_attack, np.ndarray):
-            return is_attack.any()
+            return is_attack.all()
         else:
             return is_attack
 
