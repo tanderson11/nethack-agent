@@ -327,7 +327,7 @@ class Weapon(Item):
     def uses_relevant_skill(self, character):
         return character.relevant_skills.loc[self.identity.skill]
 
-    def melee_desirability(self, character, desperate=False):
+    def melee_desirability(self, character, desperate=False, optimistic_to_unknown=False):
         if self.quantity > 1:
             return -1
 
@@ -336,6 +336,10 @@ class Weapon(Item):
         relevant_skill = self.uses_relevant_skill(character)
 
         if self.BUC == constants.BUC.cursed:
+            return -1
+
+        # don't wield unknown BUC or desperate (but once you've wielded it, damage has been done, so don't oscillate)
+        if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
             return -1
 
         if not desperate:
@@ -367,7 +371,7 @@ class Weapon(Item):
         return inventory.get_items(Weapon)
 
     def better_than_equivalent(self, y, character):
-        is_better = self.melee_desirability(character) > y.melee_desirability(character)
+        is_better = self.melee_desirability(character, optimistic_to_unknown=True) > y.melee_desirability(character, optimistic_to_unknown=True)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
             print(f"Found better weapon: {self.identity.name()}")
