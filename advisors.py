@@ -1511,11 +1511,13 @@ class WieldBetterWeaponAdvisor(Advisor):
         if best_weapon is None:
             return None
 
+        assert best_weapon.quantity == 1, "shouldn't be in the business of wielding stacks"
         menu_plan = menuplan.MenuPlan("wield weaon", self, [
             menuplan.CharacterMenuResponse("What do you want to wield?", chr(best_weapon.inventory_letter)),
             ], listening_item=best_weapon)
         #import pdb; pdb.set_trace()
         print(f"Wielding better weapon: {character.inventory.wielded_weapon} -> {best_weapon}")
+        #import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 
 class WearUnblockedArmorAdvisor(Advisor):
@@ -1628,7 +1630,7 @@ class NameItemAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("name item", self, [
                     menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),
                     menuplan.CharacterMenuResponse("What do you want to name? [", chr(name_action.letter)),
-                    menuplan.PhraseMenuResponse("What do you want to name this", name_action.name)
+                    menuplan.PhraseMenuResponse("What do you want to name th", name_action.name)
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
