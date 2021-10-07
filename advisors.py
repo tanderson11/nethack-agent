@@ -856,13 +856,13 @@ class RangedAttackAdvisor(Attack):
         menu_plan = menuplan.MenuPlan("throw attack", self, [
             menuplan.CharacterMenuResponse("What do you want to throw?", chr(item.inventory_letter)),
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ],)
+        ], listening_item=item)
         return menu_plan
 
-    def make_fire_plan(self, direction):
+    def make_fire_plan(self, quivered, direction):
         menu_plan = menuplan.MenuPlan("fire ranged attack", self, [
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ],)
+        ], listening_item=quivered)
         return menu_plan
 
     def make_zap_plan(self, item, direction):
@@ -895,7 +895,7 @@ class RangedAttackAdvisor(Attack):
         if attack_plan.attack_action == nethack.actions.Command.THROW:
             menu_plan = self.make_throw_plan(attack_plan.attack_item, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.FIRE:
-            menu_plan = self.make_fire_plan(attack_direction)
+            menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
         else:
@@ -1615,6 +1615,15 @@ class NameItemAdvisor(Advisor):
         run_state.queued_name_action = None
         if name_action is None:
             return None
+
+        #import pdb; pdb.set_trace()
+        character.inventory.all_items()
+        # sometimes the item has left our inventory when we wish to name it. handle that
+        try:
+            character.inventory.items_by_letter[name_action.letter]
+        except KeyError:
+            return None
+
 
         menu_plan = menuplan.MenuPlan("name item", self, [
                     menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),

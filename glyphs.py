@@ -1071,6 +1071,12 @@ class WeaponIdentity(ObjectIdentity):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
+    def process_message(self, message_obj, action):
+        if action == nethack.actions.Command.THROW or nethack.actions.Command.FIRE:
+            if "slips as you throw it" in message_obj.message or "misfires" in message_obj.message:
+                #import pdb; pdb.set_trace()
+                return "BUC_CURSED"
+
 class BareHandsIdentity(WeaponIdentity):
     def __init__(self):
         self.slot = 'hand'

@@ -308,6 +308,9 @@ class Weapon(Item):
         if self.BUC == constants.BUC.unknown and self.enhancement is not None:
             self.BUC = constants.BUC.uncursed
 
+        if self.instance_name == "BUC_CURSED":
+            self.BUC = constants.BUC.cursed
+
     def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
         enhancement = self.enhancement if self.enhancement is not None else 0
