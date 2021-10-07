@@ -203,6 +203,7 @@ class Wand(Item):
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
         self.charges = None
+        self.recharges = None
 
         if self.instance_name == "NO_CHARGE":
             self.charges = 0
@@ -374,7 +375,8 @@ class Weapon(Item):
         is_better = self.melee_desirability(character, optimistic_to_unknown=True) > y.melee_desirability(character, optimistic_to_unknown=True)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
-            print(f"Found better weapon: {self.identity.name()}")
+            #print(f"Found better weapon: {self.identity.name()}")
+            pass
         return is_better
 
     def desirable(self, character, consider_funds=True):
@@ -1191,7 +1193,7 @@ class PlayerInventory():
         stethoscope = self.get_item(Tool, name='stethoscope')
         return not stethoscope is None
 
-    def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+    def get_items(self, oclass=None, sort_key=None, ascending=False, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         if oclass is None:
             items = self.all_items()
         else:
@@ -1205,6 +1207,10 @@ class PlayerInventory():
         for item in items:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
                 matches.append(item)
+
+        if sort_key is not None:
+            reverse = not ascending
+            return sorted(matches, key=sort_key, reverse=reverse)
 
         return matches
 

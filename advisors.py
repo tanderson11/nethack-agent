@@ -1642,7 +1642,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
             menuplan.MoreMenuResponse("You may wish for an object"),
-            menuplan.PhraseMenuResponse("For what do you wish?", "+2 blessed silver dragon scale mail"),
+            menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
             menuplan.MoreMenuResponse("silver dragon scale mail"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),

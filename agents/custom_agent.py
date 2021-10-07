@@ -217,7 +217,6 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
-    menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
 ]
 
 wizard_background_menu_plan_options = [
@@ -230,11 +229,6 @@ wizard_background_menu_plan_options = [
 ]
 
 background_advisor = advs.BackgroundActionsAdvisor()
-BackgroundMenuPlan = menuplan.MenuPlan(
-    "background",
-    background_advisor,
-    normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
-)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -338,7 +332,13 @@ class RunState():
         self.reward = 0
         self.time = None
 
-        self.active_menu_plan = BackgroundMenuPlan
+        background_menu_plan = menuplan.MenuPlan(
+            "background",
+            background_advisor,
+            normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
+        )
+        self.background_menu_plan = background_menu_plan
+        self.active_menu_plan = background_menu_plan
         self.message_log = []
         self.score_against_message_log = []
         self.action_log = []
@@ -458,6 +458,7 @@ class RunState():
         )
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
+        self.background_menu_plan.add_responses([menuplan.WishMenuResponse("For what do you wish?", self.character),])
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
@@ -512,12 +513,12 @@ class RunState():
 
         if retval is None and self.active_menu_plan.fallback:
             retval = self.active_menu_plan.fallback
-            self.active_menu_plan = BackgroundMenuPlan
+            self.active_menu_plan = self.background_menu_plan
             return retval
 
-        if self.active_menu_plan != BackgroundMenuPlan:
+        if self.active_menu_plan != self.background_menu_plan:
             if retval is None:
-                self.active_menu_plan = BackgroundMenuPlan
+                self.active_menu_plan = self.background_menu_plan
                 retval = self.active_menu_plan.interact(message)
 
         if retval is None and (message.yn_question or message.getline):

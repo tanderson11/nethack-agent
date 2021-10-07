@@ -9,6 +9,7 @@ import glyphs as gd
 import utilities
 import inventory as inv
 import physics
+import wish
 
 import nle.nethack as nethack
 
@@ -164,6 +165,26 @@ class PhraseMenuResponse(MenuResponse):
         except StopIteration:
             return ord('\r')
 
+class WishMenuResponse(MenuResponse):
+    def __init__(self, match_str, character, wand=None):
+        super().__init__(match_str)
+        self.character = character
+        self.wand = wand
+        self.phrase = None
+    
+    def value(self, message_obj, expect_getline=True):
+        if expect_getline and not message_obj.getline and environment.env.debug:
+            pdb.set_trace()
+        import pdb; pdb.set_trace()
+        if self.phrase is None:
+            self.phrase = (c for c in wish.get_wish(self.character, wand=self.wand))
+        try:
+            next_chr = next(self.phrase)
+            return ord(next_chr)
+        except StopIteration:
+            self.phrase = None
+            return ord('\r')
+
 class ExtendedCommandResponse(PhraseMenuResponse):
         def __init__(self, phrase):
             super().__init__("#", phrase)
@@ -240,8 +261,8 @@ class MenuPlan():
 
         return None
 
-    def add_responses(self, menu_plan):
-        self.menu_responses = self.menu_responses + menu_plan.menu_responses
+    def add_responses(self, responses):
+        self.menu_responses = self.menu_responses + responses
 
     def __repr__(self):
         return self.name
