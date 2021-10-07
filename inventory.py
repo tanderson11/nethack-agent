@@ -1047,7 +1047,8 @@ class PlayerInventory():
             return None
 
         current_weapon = self.wielded_weapon
-        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: i.uses_relevant_skill(character))
+        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: not i.identity.is_ammo and i.uses_relevant_skill(character))
+
         desperate = not current_weapon.uses_relevant_skill(character) and len(relevant_weapons) == 0
         current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
