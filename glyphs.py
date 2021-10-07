@@ -1080,7 +1080,7 @@ class WeaponIdentity(ObjectIdentity):
 
         if action == nethack.actions.Command.WIELD and self.stackable:
             #import pdb; pdb.set_trace()
-            return "WIELD_NO_STACK"
+            return "NO_STACK"
 
 class BareHandsIdentity(WeaponIdentity):
     def __init__(self):
