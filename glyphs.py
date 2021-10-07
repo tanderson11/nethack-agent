@@ -1078,6 +1078,12 @@ class BareHandsIdentity(WeaponIdentity):
         self.is_ammo = False
         self.thrown = False
 
+    def name(self):
+        return "bare hands"
+
+    def is_identified(self):
+        return True
+
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
 

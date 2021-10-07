@@ -40,7 +40,7 @@ new_advisors = [
         #RandomMoveAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
         ]),
-    #RangedAttackNuisanceMonsters(),
+    RangedAttackNuisanceMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
