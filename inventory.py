@@ -1241,7 +1241,7 @@ class PlayerInventory():
 
         #if None in all:
         #    import pdb; pdb.set_trace()
-        return all
+        return [i for i in all if i is not None]
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number

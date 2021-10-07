@@ -214,6 +214,9 @@ normal_background_menu_plan_options = [
     menuplan.NoMenuResponse("Would you wear it for me?"),
     menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
     menuplan.EscapeMenuResponse("trouble lifting"),
+    menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
+    menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
+    menuplan.MoreMenuResponse("You may wish for an object."),
     menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
 ]
 
