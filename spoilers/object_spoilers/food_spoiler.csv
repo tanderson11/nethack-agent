@@ -1,36 +1,36 @@
-NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,GLYPH,APPEARANCE,SHUFFLED,PERISHABLE,COST,WEIGHT,PROB,NUTRITION,NUTR/WGT,TIME
-tripe ration,none,tripe rations,,2145,,FALSE,,15,10,140,200,20,2
-corpse,none,corpses,,2146,,FALSE,,,,,,,
-egg,none,eggs,,2147,,FALSE,TRUE,9,1,85,80,80,1
-meatball,desire all,meatballs,,2148,,FALSE,,5.00,1,0,5,5,1
-meat stick,desire all,meat sticks,,2149,,FALSE,,5,1,0,5,5,1
-huge chunk of meat,desire all,huge chunks of meat,,2150,,FALSE,,105,400,0,2000,5,20
-meat ring,desire all,meat rings,,2151,,FALSE,,5,1,0,5,5,1
-glob of gray ooze,desire all,globs of gray ooze,,2152,,FALSE,TRUE,,,,,,
-glob of brown pudding,desire all,globs of brown pudding,,2153,,FALSE,TRUE,,,,,,
-glob of green slime,desire all,globs of green slime,,2154,,FALSE,TRUE,,,,,,
-glob of black pudding,desire all,globs of black pudding,,2155,,FALSE,TRUE,,,,,,
-kelp frond,desire all,kelp fronds,,2156,,FALSE,,6,1,0,30,30,1
-eucalyptus leaf,desire all,eucalyptus leaves,,2157,,FALSE,,6,1,3,30,30,1
-apple,desire all,apples,,2158,,FALSE,,7,2,15,50,25,1
-orange,desire all,oranges,,2159,,FALSE,,9,2,10,80,40,1
-pear,desire all,pears,,2160,,FALSE,,7,2,10,50,25,1
-melon,desire all,melons,,2161,,FALSE,,10,5,10,100,20,1
-banana,desire all,bananas,,2162,,FALSE,,9,2,10,80,40,1
-carrot,desire all,carrots,,2163,,FALSE,,7,2,15,50,25,1
-sprig of wolfsbane,desire all,sprigs of wolfsbane,,2164,,FALSE,,7,1,7,40,40,1
-clove of garlic,desire all,cloves of garlic,,2165,,FALSE,,7,1,7,40,40,1
-slime mold,desire all,slime molds,,2166,,FALSE,,17,5,75,250,50,1
-lump of royal jelly,desire all,lumps of royal jelly,,2167,,FALSE,,15,2,0,200,100,1
-cream pie,desire all,cream pies,,2168,,FALSE,,10,10,25,100,10,1
-candy bar,desire all,candy bars,,2169,,FALSE,,10,2,13,100,50,1
-fortune cookie,desire all,fortune cookies,,2170,,FALSE,,7,1,55,40,40,1
-pancake,desire all,pancakes,,2171,,FALSE,,15,2,25,200,100,2
-lembas wafer,desire all,lembas wafers,,2172,,FALSE,,45,5,20,800,160,2
-cram ration,desire all,cram rations,,2173,,FALSE,,35,15,20,600,40,3
-food ration,desire all,food rations,gunyoki,2174,,FALSE,,45,20,380,800,40,5
-K-ration,desire all,K-rations,,2175,,FALSE,,25,10,0,400,40,1
-C-ration,desire all,C-rations,,2176,,FALSE,,20,10,0,300,30,1
-tin,desire all,tins,,2177,,FALSE,,5,10,75,vary,vary,vary
-lichen corpse,desire all,lichen corpses,,1299,,FALSE,,0,20,,200,,
-lizard corpse,desire one,lizard corpses,,1466,,FALSE,,0,10,,40,,
+NAME,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,TAME_TYPE,GLYPH,APPEARANCE,SHUFFLED,PERISHABLE,COST,WEIGHT,PROB,NUTRITION,NUTR/WGT,TIME
+tripe ration,none,tripe rations,,meat,2145,,FALSE,,15,10,140,200,20,2
+corpse,none,corpses,,none,2146,,FALSE,,,,,,,
+egg,none,eggs,,meat,2147,,FALSE,TRUE,9,1,85,80,80,1
+meatball,desire all,meatballs,,meat,2148,,FALSE,,5.00,1,0,5,5,1
+meat stick,desire all,meat sticks,,meat,2149,,FALSE,,5,1,0,5,5,1
+huge chunk of meat,desire all,huge chunks of meat,,meat,2150,,FALSE,,105,400,0,2000,5,20
+meat ring,desire all,meat rings,,meat,2151,,FALSE,,5,1,0,5,5,1
+glob of gray ooze,desire all,globs of gray ooze,,none,2152,,FALSE,TRUE,,,,,,
+glob of brown pudding,desire all,globs of brown pudding,,none,2153,,FALSE,TRUE,,,,,,
+glob of green slime,desire all,globs of green slime,,none,2154,,FALSE,TRUE,,,,,,
+glob of black pudding,desire all,globs of black pudding,,none,2155,,FALSE,TRUE,,,,,,
+kelp frond,desire all,kelp fronds,,veg,2156,,FALSE,,6,1,0,30,30,1
+eucalyptus leaf,desire all,eucalyptus leaves,,veg,2157,,FALSE,,6,1,3,30,30,1
+apple,desire all,apples,,veg,2158,,FALSE,,7,2,15,50,25,1
+orange,desire all,oranges,,veg,2159,,FALSE,,9,2,10,80,40,1
+pear,desire all,pears,,veg,2160,,FALSE,,7,2,10,50,25,1
+melon,desire all,melons,,veg,2161,,FALSE,,10,5,10,100,20,1
+banana,desire all,bananas,,veg,2162,,FALSE,,9,2,10,80,40,1
+carrot,desire all,carrots,,veg,2163,,FALSE,,7,2,15,50,25,1
+sprig of wolfsbane,desire all,sprigs of wolfsbane,,veg,2164,,FALSE,,7,1,7,40,40,1
+clove of garlic,desire all,cloves of garlic,,veg,2165,,FALSE,,7,1,7,40,40,1
+slime mold,desire all,slime molds,,veg,2166,,FALSE,,17,5,75,250,50,1
+lump of royal jelly,desire all,lumps of royal jelly,,none,2167,,FALSE,,15,2,0,200,100,1
+cream pie,desire all,cream pies,,none,2168,,FALSE,,10,10,25,100,10,1
+candy bar,desire all,candy bars,,meat,2169,,FALSE,,10,2,13,100,50,1
+fortune cookie,desire all,fortune cookies,,meat,2170,,FALSE,,7,1,55,40,40,1
+pancake,desire all,pancakes,,meat,2171,,FALSE,,15,2,25,200,100,2
+lembas wafer,desire all,lembas wafers,,meat,2172,,FALSE,,45,5,20,800,160,2
+cram ration,desire all,cram rations,,meat,2173,,FALSE,,35,15,20,600,40,3
+food ration,desire all,food rations,gunyoki,meat,2174,,FALSE,,45,20,380,800,40,5
+K-ration,desire all,K-rations,,meat,2175,,FALSE,,25,10,0,400,40,1
+C-ration,desire all,C-rations,,meat,2176,,FALSE,,20,10,0,300,30,1
+tin,desire all,tins,,none,2177,,FALSE,,5,10,75,vary,vary,vary
+lichen corpse,desire all,lichen corpses,,veg,1299,,FALSE,,0,20,,200,,
+lizard corpse,desire one,lizard corpses,,none,1466,,FALSE,,0,10,,40,,

@@ -922,6 +922,9 @@ class FoodIdentity(ObjectIdentity):
             # A placeholder "non-zero" value
             self.nutrition = 1
 
+        self.taming_food_type = self.find_values('TAME_TYPE')
+        if self.taming_food_type == 'none': self.taming_food_type = None
+
     def safe_non_perishable(self, character):
         if character.sick_from_tripe() and self.name() == "tripe ration":
             return False

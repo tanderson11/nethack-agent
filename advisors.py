@@ -823,6 +823,7 @@ class MeleeHoldingMonster(Attack):
 
         targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
         return targets
+
 class MeleePriorityTargets(Attack):
     def targets(self, neighborhood, character):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
@@ -916,6 +917,46 @@ class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
         if targets is not None:
             print(f"Annoying monster at range: {targets.monsters[0]}")
         return targets
+
+class TameCarnivores(RangedAttackAdvisor):
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level)
+
+    def advice(self, rng, run_state, character, oracle):
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
+        #import pdb; pdb.set_trace()
+        attack_direction = self.prioritize(targets, character)
+        if attack_direction is None:
+            return None
+        food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'meat')
+        if food is None:
+            return None
+
+        menu_plan = self.make_throw_plan(food, attack_direction)
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan)
+
+class TameHerbivores(RangedAttackAdvisor):
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level)
+
+    def advice(self, rng, run_state, character, oracle):
+        targets = self.targets(run_state.neighborhood, character)
+        if targets is None:
+            return None
+        #import pdb; pdb.set_trace()
+        attack_direction = self.prioritize(targets, character)
+        if attack_direction is None:
+            return None
+        food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'veg')
+        if food is None:
+            return None
+
+        menu_plan = self.make_throw_plan(food, attack_direction)
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan)
 
 class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
     unsafe_hp_loss_fraction = 0.5
