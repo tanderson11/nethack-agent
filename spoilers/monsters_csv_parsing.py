@@ -11,6 +11,8 @@ class MonsterSpoiler():
 
 	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists):
 		self.name = name
+		self.tamed_by_meat = "dog" in name or "cat" in name or "kitten" in name
+		self.tamed_by_veg = "horse" in name or "pony" in name
 		self.melee_attack_bundle = melee_attack_bundle
 		self.ranged_attack_bundle = ranged_attack_bundle
 		self.death_attack_bundle = death_attack_bundle
@@ -59,11 +61,15 @@ class MonsterSpoiler():
 		excepted_hp_loss = self.melee_dps(character.AC) * kill_trajectory.time_to_kill + self.passive_damage_over_encounter(character, kill_trajectory) + self.death_damage_over_encounter(character)
 		return excepted_hp_loss
 
+	class FightOutcome(NamedTuple):
+		exepected_hp_loss: float
+		kill_trajectory: tuple
+
 	def fight_outcome(self, character):
 		kill_trajectory = character.average_time_to_kill_monster_in_melee(self)
 		excepted_hp_loss = self.excepted_hp_loss_in_melee(character, kill_trajectory)
-
-		return excepted_hp_loss, kill_trajectory
+		#print(self.name, kill_trajectory)
+		return self.FightOutcome(excepted_hp_loss, kill_trajectory)
 
 	def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.6):
 		# if we've recently seen a monster of this type flee, let's assume it's not dangerous

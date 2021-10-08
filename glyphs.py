@@ -480,6 +480,10 @@ class CMapGlyph(Glyph):
         return (offsets < 3)
 
     @staticmethod
+    def possible_secret_mask(numerals):
+        return (numerals >= nethack.GLYPH_CMAP_OFF) & (numerals < 3 + nethack.GLYPH_CMAP_OFF)
+
+    @staticmethod
     def open_door_mask(numerals):
         return (numerals > 12 + nethack.GLYPH_CMAP_OFF) & (numerals < 15 + nethack.GLYPH_CMAP_OFF)
 
@@ -918,6 +922,9 @@ class FoodIdentity(ObjectIdentity):
             # A placeholder "non-zero" value
             self.nutrition = 1
 
+        self.taming_food_type = self.find_values('TAME_TYPE')
+        if self.taming_food_type == 'none': self.taming_food_type = None
+
     def safe_non_perishable(self, character):
         if character.sick_from_tripe() and self.name() == "tripe ration":
             return False
@@ -976,7 +983,7 @@ class WandIdentity(ObjectIdentity):
     def is_attack(self):
         is_attack = self.find_values('ATTACK')
         if isinstance(is_attack, np.ndarray):
-            return is_attack.any()
+            return is_attack.all()
         else:
             return is_attack
 
@@ -1039,6 +1046,8 @@ class WeaponIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
+        self.stackable = self.is_identified() and not pd.isna(self.find_values('STACKED_NAME'))
+
         self.slot = self.find_values('SLOT')
         self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
         self.thrown = self.find_values('THROWN', false_if_na=True)
@@ -1059,13 +1068,36 @@ class WeaponIdentity(ObjectIdentity):
         else:
             has_second_slot = not pd.isnull(second_slot)
 
-
         if has_second_slot:
             self.slot = [self.slot, second_slot]
 
     def avg_melee_damage(self, monster):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
+
+    def process_message(self, message_obj, action):
+        if action == nethack.actions.Command.THROW or nethack.actions.Command.FIRE:
+            if "slips as you throw it" in message_obj.message or "misfires" in message_obj.message:
+                #import pdb; pdb.set_trace()
+                return "BUC_CURSED"
+
+        if action == nethack.actions.Command.WIELD and self.stackable:
+            #import pdb; pdb.set_trace()
+            return "NO_STACK"
+
+class BareHandsIdentity(WeaponIdentity):
+    def __init__(self):
+        self.slot = 'hand'
+        self.ranged = False
+        self.is_ammo = False
+        self.thrown = False
+        self.stackable = False
+
+    def name(self):
+        return "bare hands"
+
+    def is_identified(self):
+        return True
 
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph

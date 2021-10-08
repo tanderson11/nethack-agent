@@ -308,6 +308,9 @@ class Weapon(Item):
         if self.BUC == constants.BUC.unknown and self.enhancement is not None:
             self.BUC = constants.BUC.uncursed
 
+        if self.instance_name == "BUC_CURSED":
+            self.BUC = constants.BUC.cursed
+
     def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
         enhancement = self.enhancement if self.enhancement is not None else 0
@@ -324,7 +327,7 @@ class Weapon(Item):
     def uses_relevant_skill(self, character):
         return character.relevant_skills.loc[self.identity.skill]
 
-    def melee_desirability(self, character, desperate=False):
+    def melee_desirability(self, character, desperate=False, optimistic_to_unknown=False):
         if self.quantity > 1:
             return -1
 
@@ -332,12 +335,19 @@ class Weapon(Item):
             return -1
         relevant_skill = self.uses_relevant_skill(character)
 
+        if self.BUC == constants.BUC.cursed:
+            return -1
+
+        # don't wield unknown BUC or desperate (but once you've wielded it, damage has been done, so don't oscillate)
+        if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
+            return -1
+
         if not desperate:
             if relevant_skill == False:
                 return -1
 
-            if self.BUC == constants.BUC.cursed or self.BUC == constants.BUC.unknown:
-                return -1
+            #if self.BUC == constants.BUC.uncursed:
+            #    return -1
 
         if desperate:
             # restricted weapons not worth it even if desperate
@@ -361,7 +371,7 @@ class Weapon(Item):
         return inventory.get_items(Weapon)
 
     def better_than_equivalent(self, y, character):
-        is_better = self.melee_desirability(character) > y.melee_desirability(character)
+        is_better = self.melee_desirability(character, optimistic_to_unknown=True) > y.melee_desirability(character, optimistic_to_unknown=True)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
             print(f"Found better weapon: {self.identity.name()}")
@@ -377,9 +387,10 @@ class Weapon(Item):
 class BareHands(Weapon):
     def __init__(self):
         self.enhancement = 0
-        self.inventory_letter = '-'
+        self.inventory_letter = ord('-')
         self.BUC = constants.BUC.uncursed
-        self.identity = None
+        self.identity = gd.BareHandsIdentity()
+        self.quantity = 1
 
     def __repr__(self):
         return "bare hands dummy weapon"
@@ -442,7 +453,9 @@ class Tool(Item):
         return 1
 
     def melee_desirability(self, character, desperate=None):
-        return self.melee_damage(character)
+        if self.identity.type == 'weapon':
+            return self.melee_damage(character)
+        return -1
 
     def find_equivalents(self, inventory):
         if self.identity is None:
@@ -1039,14 +1052,17 @@ class PlayerInventory():
             return None
 
         current_weapon = self.wielded_weapon
-        desperate = not current_weapon.uses_relevant_skill(character)
+        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: not i.identity.is_ammo and i.uses_relevant_skill(character))
 
+        desperate = not current_weapon.uses_relevant_skill(character) and len(relevant_weapons) == 0
         current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
         max_desirability = current_desirability
+        #import pdb; pdb.set_trace()
 
         extra_weapons = self.get_items(Weapon, instance_selector=lambda i: i.equipped_status is None or i.equipped_status.status != 'wielded')
+        extra_weapons.append(BareHands())
         if len(extra_weapons) == 0:
             return None
 
@@ -1062,6 +1078,9 @@ class PlayerInventory():
                 max_desirability = desirability
 
         if most_desirable != current_weapon:
+            if isinstance(most_desirable, BareHands):
+                #import pdb; pdb.set_trace()
+                pass
             #import pdb; pdb.set_trace()
             return most_desirable
         else:
@@ -1168,6 +1187,10 @@ class PlayerInventory():
         object_class_num = object_class.glyph_class.class_number
         return object_class_num in self.inv_oclasses
 
+    def have_stethoscope(self):
+        stethoscope = self.get_item(Tool, name='stethoscope')
+        return not stethoscope is None
+
     def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         if oclass is None:
             items = self.all_items()
@@ -1218,7 +1241,7 @@ class PlayerInventory():
 
         #if None in all:
         #    import pdb; pdb.set_trace()
-        return all
+        return [i for i in all if i is not None]
 
     def get_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number
