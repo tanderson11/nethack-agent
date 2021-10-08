@@ -144,7 +144,7 @@ class Oracle():
 
     @functools.cached_property
     def desirable_object_on_space(self):
-        return self.neighborhood.desirable_object_on_space(self.run_state.global_identity_map, self.character)
+        return self.neighborhood.desirable_object_on_space(self.character)
 
     @functools.cached_property
     def have_moves(self):
@@ -1197,7 +1197,7 @@ class DropUnknownOnAltarAdvisor(Advisor):
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not (character.hankering_for_excalibur(run_state.global_identity_map) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+        if not (character.hankering_for_excalibur() and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
             return None
         dip = nethack.actions.Command.DIP
         long_sword = character.inventory.get_item(inv.Weapon, name='long sword', sort_key=lambda i: i.enhancement if i.enhancement else 0, instance_selector=lambda i: not i.identity.is_artifact)
@@ -1212,7 +1212,7 @@ class DipForExcaliburAdvisor(ExcaliburAdvisor):
 
 class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.hankering_for_excalibur(run_state.global_identity_map):
+        if not character.hankering_for_excalibur():
             return None
 
         travel = nethack.actions.Command.TRAVEL
@@ -1408,7 +1408,7 @@ class DropToPriceIDAdvisor(Advisor):
 
 class DropUndesirableAdvisor(Advisor):
     def drop_undesirable(self, run_state, character):
-        undesirable_items = character.inventory.all_undesirable_items(run_state.global_identity_map, character)
+        undesirable_items = character.inventory.all_undesirable_items(character)
         undesirable_items = [item for item in undesirable_items if item.equipped_status is None or item.equipped_status.status != 'worn']
         if len(undesirable_items) == 0:
             return None

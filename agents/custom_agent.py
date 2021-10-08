@@ -368,7 +368,6 @@ class RunState():
 
         self.neighborhood = None
         self.current_square = None
-        self.global_identity_map = gd.GlobalIdentityMap()
 
         self.latest_monster_flight = None
 
@@ -458,14 +457,12 @@ class RunState():
         )
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
+        self.character.make_global_identity_map()
         self.background_menu_plan.add_responses([menuplan.WishMenuResponse("For what do you wish?", self.character),])
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
-
-        if self.character.base_class == constants.BaseRole.Priest:
-            self.global_identity_map.is_priest = True
 
     def update_reward(self, reward):
         self.step_count += 1
@@ -538,10 +535,11 @@ class RunState():
         self.message_log.append(message.message)
         self.score_against_message_log.append(self.reward)
 
+        item_on_square = None
         if self.character is not None:
             self.character.listen_for_intrinsics(message.message)
+            item_on_square = inv.ItemParser.listen_for_item_on_square(self.character, message.message, glyph=self.current_square.glyph_under_player)
 
-        item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
         if item_on_square is not None:
             self.current_square.item_on_square = item_on_square
 
@@ -554,10 +552,11 @@ class RunState():
             if name_action is not None:
                 self.queued_name_action = name_action
 
-        dropped = inv.ItemParser.listen_for_dropped_item(self.global_identity_map, self.character, message.message)
-        if dropped is not None:
-            self.last_dropped_item = dropped
-        inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
+        if self.character is not None:
+            dropped = inv.ItemParser.listen_for_dropped_item(self.character.global_identity_map, message.message)
+            if dropped is not None:
+                self.last_dropped_item = dropped
+            inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
             if message.feedback.carrying_too_much_message:
@@ -677,7 +676,7 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character:
             run_state.character.update_inventory_from_observation(
-                run_state.global_identity_map, blstats.am_hallu(), observation)
+                run_state.character, blstats.am_hallu(), observation)
 
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
@@ -973,7 +972,7 @@ class CustomAgent(BatchedAgent):
                 search_succeeded = True
             run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
-        if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.global_identity_map, run_state.character):
+        if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.character):
             #import pdb; pdb.set_trace()
             level_map.lootable_squares_map[player_location] = False
 
