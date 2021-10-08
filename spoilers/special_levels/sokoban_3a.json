@@ -2,8 +2,8 @@
     "branch": "Sokoban",
     "level_name": "Sokoban 3",
     "level_variant": "a",
-    "min_branch_level": 4,
-    "max_branch_level": 4,
+    "min_branch_level": 2,
+    "max_branch_level": 2,
     "geometry_horizontal": "center",
     "geometry_vertical": "center",
     "properties": {

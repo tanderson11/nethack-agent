@@ -1,5 +1,4 @@
 import nle.nethack as nethack
-import glyphs as gd
 import numpy as np
 
 class ActiveRunState():
