@@ -293,7 +293,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
 
         if item_recognized:
-            return self.item_on_player.desirable(character)
+            return self.item_on_player.desirable(global_identity_map, character)
 
         if self.in_shop:
             return False

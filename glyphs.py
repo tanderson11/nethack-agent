@@ -1195,7 +1195,11 @@ class GlobalIdentityMap():
                 return constants.BUC.uncursed
             assert False, "bad buc string for non-priest"
 
+    def found_artifact(self, artifact):
+        self.generated_artifacts[artifact] = True
+
     def load_artifact_identities(self):
+        self.generated_artifacts = {}
         self.artifact_identity_by_name = {}
         self.artifact_identity_by_appearance_name = {}
         artifact_df = OBJECT_SPOILERS.artifact_spoilers
@@ -1209,6 +1213,7 @@ class GlobalIdentityMap():
 
             artifact_identity = artifact_identity_class([row["IDX"]], artifact_name, row)
             self.artifact_identity_by_name[artifact_name] = artifact_identity
+            self.generated_artifacts[artifact_name] = False
             self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
             self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity
         

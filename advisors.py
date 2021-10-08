@@ -1408,7 +1408,7 @@ class DropToPriceIDAdvisor(Advisor):
 
 class DropUndesirableAdvisor(Advisor):
     def drop_undesirable(self, run_state, character):
-        undesirable_items = character.inventory.all_undesirable_items(character)
+        undesirable_items = character.inventory.all_undesirable_items(run_state.global_identity_map, character)
         undesirable_items = [item for item in undesirable_items if item.equipped_status is None or item.equipped_status.status != 'worn']
         if len(undesirable_items) == 0:
             return None

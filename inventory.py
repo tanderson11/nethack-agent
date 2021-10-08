@@ -113,7 +113,7 @@ class Item():
     def less_cursed_than(self, y):
         return y.BUC == constants.BUC.cursed and self.BUC != constants.BUC.cursed
 
-    def desirable(self, character, consider_funds=True):
+    def desirable(self, global_identity_map, character, consider_funds=True):
         if self.identity is None:
             return False
 
@@ -194,8 +194,8 @@ class Armor(Item):
             import pdb; pdb.set_trace()
         return better
 
-    def desirable(self, character, consider_funds=True):
-        return super().desirable(character, consider_funds=consider_funds)
+    def desirable(self, global_identity_map, character, consider_funds=True):
+        return super().desirable(global_identity_map, character, consider_funds=consider_funds)
 
 class Wand(Item):
     glyph_class = gd.WandGlyph
@@ -219,8 +219,8 @@ class Wand(Item):
         if self.BUC == constants.BUC.unknown and self.charges is not None:
             self.BUC = constants.BUC.uncursed
 
-    def desirable(self, character):
-        des = super().desirable(character)
+    def desirable(self, global_identity_map, character):
+        des = super().desirable(global_identity_map, character)
 
         # keep even a 0 charge wand of wishing
         if self.identity.name() == 'wishing':
@@ -379,11 +379,11 @@ class Weapon(Item):
             pass
         return is_better
 
-    def desirable(self, character, consider_funds=True):
+    def desirable(self, global_identity_map, character, consider_funds=True):
         if self.enhancement is not None and (self.identity.ranged or self.identity.is_ammo):
             return True
 
-        des = super().desirable(character, consider_funds=consider_funds)
+        des = super().desirable(global_identity_map, character, consider_funds=consider_funds)
         return des
 
 class BareHands(Weapon):
@@ -483,7 +483,7 @@ class Tool(Item):
 
         return self.identity.weight() < y.identity.weight()
 
-    def desirable(self, character, consider_funds=True):
+    def desirable(self, global_identity_map, character, consider_funds=True):
         identity_desirability = self.identity.desirable_identity(character)
 
         if identity_desirability == constants.IdentityDesirability.desire_seven:
@@ -494,7 +494,7 @@ class Tool(Item):
                 return True
             return self == seven_stacks[0]
 
-        return super().desirable(character, consider_funds=consider_funds)
+        return super().desirable(global_identity_map, character, consider_funds=consider_funds)
 
 class Gem(Item):
     try_to_price_id = False
@@ -704,11 +704,13 @@ class ItemParser():
         if match_components.instance_name is not None:
             identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
             if identity is not None:
+                global_identity_map.found_artifact(match_components.instance_name)
                 base_identity = global_identity_map.identity_by_numeral[item_glyph]
                 global_identity_map.associate_identity_and_name(base_identity, identity.name())
 
         # Second line of defense: figure out if this is the {ARTIFACT NAME}
         if identity is None:
+            global_identity_map.found_artifact(match_components.instance_name)
             identity = global_identity_map.artifact_identity_by_name.get(match_components.description, None)
 
         # Third line of defense: this isn't an artifact, get its identity from the numeral
@@ -744,6 +746,7 @@ class ItemParser():
 
             if identity is not None:
                 # we've found an artifact
+                global_identity_map.found_artifact(match_components.instance_name)
                 item_class = cls.item_class_by_glyph_class[identity.associated_glyph_class]
                 return item_class(identity, match_components, inventory_letter=inventory_letter)
 
@@ -773,6 +776,7 @@ class ItemParser():
                 # try to extract as an artifact
                 artifact_identity = global_identity_map.identity_by_name.get((glyph_class, match_components.description), None)
                 if artifact_identity is not None and artifact_identity.is_artifact:
+                    global_identity_map.found_artifact(match_components.instance_name)
                     item_class = cls.item_class_by_glyph_class[artifact_identity.associated_glyph_class]
                     return item_class(artifact_identity, match_components, inventory_letter=inventory_letter)
 
@@ -1234,10 +1238,10 @@ class PlayerInventory():
         food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
         return sum(map(lambda x: x.quantity * x.identity.nutrition, food))
 
-    def all_undesirable_items(self, character):
+    def all_undesirable_items(self, global_identity_map, character):
         all_items = self.all_items()
         #import pdb; pdb.set_trace()
-        undesirable_items = [item for item in all_items if item is not None and not item.desirable(character)]
+        undesirable_items = [item for item in all_items if item is not None and not item.desirable(global_identity_map, character)]
 
         # BAND AID FOR WEAPON DROPPING
         undesirable_items = [i for i in undesirable_items if i != self.wielded_weapon]

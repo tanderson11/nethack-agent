@@ -1319,7 +1319,7 @@ class TestDrop(unittest.TestCase):
             oclass = item_class.glyph_class.class_number
             inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
             character.inventory = inventory
-            undesirable = inventory.all_undesirable_items(character)
+            undesirable = inventory.all_undesirable_items(global_identity_map, character)
 
             try:
                 if do_drop:
