@@ -766,8 +766,10 @@ class SpecialLevelLoader():
 
         hardcoded_y_offsets = {
             11: 5,
-            14: 4,
+            12: 5,
             13: 5,
+            14: 4,
+            17: 3,
             18: 3,
         }
 
@@ -786,4 +788,10 @@ class SpecialLevelLoader():
 ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_1a'),
     SpecialLevelLoader.load('sokoban_1b'),
+    SpecialLevelLoader.load('sokoban_2a'),
+    SpecialLevelLoader.load('sokoban_2b'),
+    SpecialLevelLoader.load('sokoban_3a'),
+    SpecialLevelLoader.load('sokoban_3b'),
+    SpecialLevelLoader.load('sokoban_4a'),
+    SpecialLevelLoader.load('sokoban_4b'),
 ]

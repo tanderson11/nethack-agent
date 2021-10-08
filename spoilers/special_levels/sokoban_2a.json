@@ -1,0 +1,15 @@
+{
+    "branch": "Sokoban",
+    "level_name": "Sokoban 2",
+    "level_variant": "a",
+    "min_branch_level": 4,
+    "max_branch_level": 4,
+    "geometry_horizontal": "center",
+    "geometry_vertical": "center",
+    "properties": {
+        "mappable": true,
+        "teleportable": false,
+        "diggable_walls": true,
+        "diggable_floor": false
+    }
+}
