@@ -1113,6 +1113,14 @@ class PlayerInventory():
             if isinstance(current_occupant, Armor) and current_occupant.BUC == constants.BUC.cursed:
                 continue
 
+            blockers = self.armaments.get_blockers(slot_name)
+            weapon_blocked = False
+            for b in blockers:
+                if isinstance(b, Weapon):
+                    weapon_blocked = True
+            if weapon_blocked:
+                continue
+
             most_desirable = None
             max_desirability = None
             for item in unequipped_in_slot:
@@ -1130,16 +1138,17 @@ class PlayerInventory():
                 current_desirability = 0
 
             if max_desirability > current_desirability:
-                blockers = self.armaments.get_blockers(slot_name)
-
                 if len(blockers) == 0:
                     proposed_items.append(most_desirable)
                     proposal_blockers.append(blockers)
                 else:
                     for b in blockers:
-                        proposed_items.append(most_desirable)
                         proposal_blockers.append(blockers)
+                    proposed_items.append(most_desirable)
 
+        if len(proposed_items) > 0:
+            #import pdb; pdb.set_trace()
+            pass
         return self.AttireProposal(proposed_items, proposal_blockers)
 
     def get_ordinary_ranged_attack(self, character):
