@@ -866,6 +866,9 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug:
                 import pdb; pdb.set_trace()
 
+        if "From the murky depths, a hand reaches up to bless the sword" in message.message:
+            print(message.message)
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 

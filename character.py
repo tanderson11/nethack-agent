@@ -81,17 +81,22 @@ class Character():
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
 
-    def hankering_for_excalibur(self):
-        if not (self.base_alignment == 'lawful' and self.experience_level >= 5):
+    def wants_excalibur(self):
+        if not self.base_alignment == 'lawful': return False
+        return self.relevant_skills.loc['long sword'] == True
+
+    def hankering_for_excalibur(self, global_identity_map):
+        if global_identity_map.generated_artifacts['Excalibur'] == True:
+            return False
+        if self.wants_excalibur() == False:
+            return False
+        if self.experience_level < 5:
             return False
 
         #if not self.has_intrinsic(constants.Intrinsics.poison_resistance):
         #    return False
-
-        current_weapon = self.inventory.wielded_weapon
-        if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
-            return True
-        return False
+        long_sword = self.inventory.get_item(inv.Weapon, name='long sword', instance_selector=lambda i: not i.identity.is_artifact)
+        return long_sword is not None
 
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level

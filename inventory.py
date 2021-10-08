@@ -366,6 +366,11 @@ class Weapon(Item):
 
         return enhancement + melee_damage
 
+    def find_equivalents_vis_excalibur(self, inventory):
+        if self.identity is None:
+            return []
+        return inventory.get_items(Weapon, name='long sword', identity_selector=lambda i: not i.is_artifact)
+
     def find_equivalents(self, inventory):
         if self.identity is None:
             return []
@@ -380,7 +385,18 @@ class Weapon(Item):
         return is_better
 
     def desirable(self, global_identity_map, character, consider_funds=True):
-        if self.enhancement is not None and (self.identity.ranged or self.identity.is_ammo):
+        if consider_funds is True and not self.can_afford(character):
+            return False
+        if self.enhancement is not None and self.identity.is_ammo:
+            return True
+
+        if character.wants_excalibur() and self.identity.name() == 'long sword':
+            long_swords = self.find_equivalents_vis_excalibur(character.inventory)
+            equal_or_better_versions = [i for i in long_swords if self != i and not self.better_than_equivalent(i, character)]
+            if len(equal_or_better_versions) > 0:
+                return False
+
+            #import pdb; pdb.set_trace()
             return True
 
         des = super().desirable(global_identity_map, character, consider_funds=consider_funds)

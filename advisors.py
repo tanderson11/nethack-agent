@@ -1197,10 +1197,10 @@ class DropUnknownOnAltarAdvisor(Advisor):
 
 class DipForExcaliburAdvisor(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not (character.hankering_for_excalibur() and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
+        if not (character.hankering_for_excalibur(run_state.global_identity_map) and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
             return None
         dip = nethack.actions.Command.DIP
-        long_sword = character.inventory.wielded_weapon
+        long_sword = character.inventory.get_item(inv.Weapon, name='long sword', sort_key=lambda i: i.enhancement if i.enhancement else 0, instance_selector=lambda i: not i.identity.is_artifact)
         menu_plan = menuplan.MenuPlan(
             "dip long sword", self, [
                 menuplan.CharacterMenuResponse("What do you want to dip?", chr(long_sword.inventory_letter)),
@@ -1212,7 +1212,7 @@ class DipForExcaliburAdvisor(ExcaliburAdvisor):
 
 class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if not character.hankering_for_excalibur():
+        if not character.hankering_for_excalibur(run_state.global_identity_map):
             return None
 
         travel = nethack.actions.Command.TRAVEL
