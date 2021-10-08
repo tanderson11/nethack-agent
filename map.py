@@ -14,6 +14,7 @@ import inventory
 import physics
 import utilities
 import constants
+from spoilers.special_levels.sokoban_solutions import SOKOBAN_SOLUTIONS
 
 import functools
 from utilities import ARS
@@ -60,7 +61,7 @@ class DMap():
         self.dlevels = {}
         self.target_dcoords = {
             Branches.DungeonsOfDoom: DCoord(Branches.DungeonsOfDoom, 1),
-            Branches.Sokoban: DCoord(Branches.Sokoban, 1),
+            Branches.Sokoban: DCoord(Branches.Sokoban, 2),
         }
         self.branch_connections = {}
         self.oracle_level = None
@@ -93,14 +94,14 @@ class DMap():
             pass
         else:
             level_map = self.dlevels.get(current_dcoord, None)
-            if level_map and not level_map.clear:
+            if level_map and not level_map.solved:
                 new_targets[Branches.Sokoban] = current_dcoord
 
         # Mines
         if character.ready_for_mines() and character.inventory.get_item(inventory.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
             new_targets[Branches.GnomishMines] = DCoord(Branches.GnomishMines, 20)
 
-        self.target_dcoords = new_targets        
+        self.target_dcoords.update(new_targets)
 
 
     def add_branch_traversal(self, start_dcoord, end_dcoord):
@@ -137,6 +138,9 @@ class DMap():
         raise Exception("Can't figure out how to get anywhere")
 
     def dungeon_direction_to_target(self, current_dcoord, target_dcoord):
+        if current_dcoord.branch == Branches.Sokoban:
+            #import pdb; pdb.set_trace()
+            pass
         if current_dcoord.branch == target_dcoord.branch:
             return DungeonHeading(DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level)), target_dcoord.branch)
 
@@ -341,6 +345,11 @@ class DLevelMap():
 
         if self.special_level is None:
             self.special_level = self.special_level_searcher.match_level(self)
+            if self.special_level is not None:
+                if self.special_level.branch == Branches.Sokoban:
+                    import pdb; pdb.set_trace()
+                    self.sokoban_move_index = 0
+                    self.solved = False
 
     def expand_mask_along_room_floor(self, mask):
         while True:
@@ -567,7 +576,7 @@ class ThreatMap(FloodMap):
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
 
-        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid)
+        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid) | gd.RockGlyph.boulder_mask(glyph_grid)
         if reject_peaceful:
             blocking_geometry |= (gd.PetGlyph.class_mask(glyph_grid) | gd.MonsterGlyph.always_peaceful_mask(glyph_grid))
         if stop_on_monsters:
@@ -647,6 +656,7 @@ class CMapGlyphDecoder(SpecialLevelDecoder):
         'F': 'bars',
         'I': 'ice',
         'L': 'lava',
+        #'+': '', # 'vcdoor' or 'hcdoor' depending of horizontal or vertical,
     }
 
 class PotentialWallDecoder(SpecialLevelDecoder):
@@ -672,6 +682,9 @@ class IDAbleStackDecoder(SpecialLevelDecoder):
 class BoulderDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['0']
 
+#class DoorDecoder(SpecialLevelDecoder):
+#    CHARACTER_SET = ['+']
+
 KNOWN_WIKI_ENCODINGS = set([ord(' '), ord('.')])
 
 for cls in SpecialLevelDecoder.__subclasses__():
@@ -686,7 +699,7 @@ class SpecialLevelMap():
     potential_secret_door_decoder = PotentialSecretDoorDecoder()
     traps_to_avoid_decoder = TrapsToAvoidDecoder()
 
-    def __init__(self, config_data, nethack_wiki_encoding):
+    def __init__(self, config_data, nethack_wiki_encoding, initial_offset=(0,0)):
         self.level_name = config_data['level_name']
         self.level_variant = config_data['level_variant']
         self.branch = Branches.__members__[config_data['branch']]
@@ -694,6 +707,7 @@ class SpecialLevelMap():
         self.max_branch_level = config_data['max_branch_level']
         self.teleportable = config_data['properties']['teleportable']
         self.diggable_floor = config_data['properties']['diggable_floor']
+        self.initial_offset = physics.Square(*initial_offset)
 
         self.nethack_wiki_encoding = nethack_wiki_encoding
         if self.nethack_wiki_encoding.shape != constants.GLYPHS_SHAPE:
@@ -709,6 +723,12 @@ class SpecialLevelMap():
         self.potential_walls = self.potential_wall_decoder.decode(nethack_wiki_encoding)
         self.potential_secret_doors = self.potential_secret_door_decoder.decode(nethack_wiki_encoding)
         self.traps_to_avoid = self.traps_to_avoid_decoder.decode(nethack_wiki_encoding)
+
+        if self.branch == Branches.Sokoban:
+            self.sokoban_solution = SOKOBAN_SOLUTIONS[(self.level_name, self.level_variant)]
+
+    def offset_in_level(self, absolute):
+        return absolute - self.initial_offset
 
 class SpecialLevelSearcher():
     def __init__(self, all_special_levels: list[SpecialLevelMap]):
@@ -738,19 +758,16 @@ class SpecialLevelLoader():
             characters = f.readlines()
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
             properties = json.load(f)
+        
+        initial_offset = SpecialLevelLoader.make_initial_offset(characters)
         return SpecialLevelMap(
             properties,
-            SpecialLevelLoader.make_character_array(characters, properties["geometry_horizontal"], properties["geometry_vertical"])
+            SpecialLevelLoader.make_character_array(initial_offset, characters, properties["geometry_horizontal"], properties["geometry_vertical"]),
+            initial_offset = initial_offset,
         )
 
     @staticmethod
-    def make_character_array(characters, geometry_horizontal, geometry_vertical):
-        if not (geometry_horizontal == "center" and geometry_vertical == "center"):
-            raise Exception("Don't know how to handle other geometries yet")
-
-        # Space (i.e. ' ') means no observation
-        retval = np.full(constants.GLYPHS_SHAPE, ord(' '), dtype=int)
-
+    def make_initial_offset(characters):
         map_height = len(characters)
         map_length = max(map(lambda x: len(x.strip("\n")), characters))
 
@@ -776,6 +793,22 @@ class SpecialLevelLoader():
         offset_y = hardcoded_y_offsets[map_height]
 
         offset_x = initial_offset_x
+
+        #row, col
+        return (offset_y, offset_x)
+
+    @staticmethod
+    def make_character_array(initial_offset, characters, geometry_horizontal, geometry_vertical):
+        if not (geometry_horizontal == "center" and geometry_vertical == "center"):
+            raise Exception("Don't know how to handle other geometries yet")
+
+        initial_offset_y, initial_offset_x = initial_offset
+        offset_x = initial_offset_x
+        offset_y = initial_offset_y
+
+        # Space (i.e. ' ') means no observation
+        retval = np.full(constants.GLYPHS_SHAPE, ord(' '), dtype=int)
+
         for line in characters:
             for character in line.strip("\n"):
                 retval[offset_y, offset_x] = ord(character)
@@ -788,10 +821,10 @@ class SpecialLevelLoader():
 ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_1a'),
     SpecialLevelLoader.load('sokoban_1b'),
-    SpecialLevelLoader.load('sokoban_2a'),
-    SpecialLevelLoader.load('sokoban_2b'),
-    SpecialLevelLoader.load('sokoban_3a'),
-    SpecialLevelLoader.load('sokoban_3b'),
-    SpecialLevelLoader.load('sokoban_4a'),
-    SpecialLevelLoader.load('sokoban_4b'),
+    #SpecialLevelLoader.load('sokoban_2a'),
+    #SpecialLevelLoader.load('sokoban_2b'),
+    #SpecialLevelLoader.load('sokoban_3a'),
+    #SpecialLevelLoader.load('sokoban_3b'),
+    #SpecialLevelLoader.load('sokoban_4a'),
+    #SpecialLevelLoader.load('sokoban_4b'),
 ]

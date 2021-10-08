@@ -31,6 +31,7 @@ class TestItemRegex(unittest.TestCase):
         "a scroll labeled NR 9": "NR 9",
         "2 food rations": "food ration",
         "30 +2 darts": "dart",
+        "an unlabeled scroll": "unlabeled scroll",
         "an uncursed sack containing 1 item": "sack",
         #"a blessed tin of yellow mold": "tin", # currently broken, waiting on a better pattern
         "a +0 pick-axe (alternate weapon; not wielded)": "pick-axe",

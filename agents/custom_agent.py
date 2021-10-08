@@ -797,6 +797,10 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
+            if dcoord.branch == map.Branches.Sokoban.value:
+                import pdb; pdb.set_trace()
+                pass
+
             if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
                 print(run_state.message_log[-2])
                 # create the staircases (idempotent)
@@ -903,7 +907,9 @@ class CustomAgent(BatchedAgent):
             return advice
 
         if message.has_more or message.yn_question or message.getline:
-            raise Exception(f"We somehow missed a message {message.message}")
+            import pdb; pdb.set_trace()
+            pass
+            #raise Exception(f"We somehow missed a message {message.message}")
 
         if run_state.auto_pickup:
             advice = ActionAdvice(

@@ -1265,7 +1265,8 @@ class PlayerInventory():
 
         balance = sum(unpaid)
         if balance > 0 and environment.env.debug:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
+            pass
         return balance
 
     @functools.cached_property

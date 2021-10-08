@@ -1541,3 +1541,23 @@ class NameItemAdvisor(Advisor):
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
+
+class SolveSokoban(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        level_map = run_state.neighborhood.level_map
+        special_level = level_map.special_level
+        if special_level is None or special_level.branch != map.Branches.Sokoban:
+            return None
+        #import pdb; pdb.set_trace()
+        if level_map.solved:
+            return None
+        sokoban_move = special_level.sokoban_solution[level_map.sokoban_move_index]
+        position_in_level = special_level.offset_in_level(run_state.neighborhood.absolute_player_location)
+        #print(position_in_level)
+        if position_in_level == sokoban_move.start_square:
+            #import pdb; pdb.set_trace()
+            # QUICK AND DIRTY: Need to process feedback to make it actually work
+            level_map.sokoban_move_index += 1
+            return ActionAdvice(self, sokoban_move.action)
+
+        return None

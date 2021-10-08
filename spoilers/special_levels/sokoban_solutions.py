@@ -63,13 +63,16 @@ class SokobanMove(NamedTuple):
 
 class SokobanSolution():
     def __init__(self) -> None:
+        self.spoiler_by_level = {}
         for level_info, operations in sokoban_operations.items():
             level_name, variant = level_info
             moves = []
             for operation in operations:
                 op_moves = self.make_operation(*operation)
-                print(op_moves)
+                #print(op_moves)
                 moves.extend(op_moves)
+
+            self.spoiler_by_level[level_info] = moves
 
     @staticmethod
     def make_operation(boulder_start, op_string):
@@ -91,3 +94,5 @@ class SokobanSolution():
             expect_plug = False
 
         return moves
+
+SOKOBAN_SOLUTIONS = SokobanSolution().spoiler_by_level

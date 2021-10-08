@@ -240,7 +240,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # pretend the targets are walkable so we can actually reach them in pathfinding
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
-            doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
+            doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended),
+            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban
         )
         it = np.nditer(target_mask, flags=['multi_index'])
 
@@ -391,9 +392,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return Targets(satisfying_monsters, satisfying_directions)
 
 class Pathfinder(AStar):
-    def __init__(self, walkable_mesh, doors):
+    def __init__(self, walkable_mesh, doors, diagonal=True):
         self.walkable_mesh = walkable_mesh
         self.doors = doors
+        self.diagonal = diagonal
 
     def neighbors(self, node):
         box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
@@ -408,7 +410,7 @@ class Pathfinder(AStar):
             square = Square(*it.multi_index)
             #import pdb; pdb.set_trace()
             is_orthogonal = np.sum(np.abs(square-current_square)) == 1
-            if walkable and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
+            if walkable and (self.diagonal or is_orthogonal) and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
                 neighboring_walkable_squares.append(square + upper_left)
 
         return neighboring_walkable_squares
