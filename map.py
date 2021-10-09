@@ -309,6 +309,11 @@ class DLevelMap():
         self.fog_of_war = (offsets == 0)
         adjacent_to_fog = FloodMap.flood_one_level_from_mask(self.fog_of_war)
 
+        # once we're happy with our Sokoban performance and don't need to seed, switch this to using the dungeon feature map
+        self.possible_secrets = gd.CMapGlyph.is_possible_secret_check(glyphs - gd.CMapGlyph.OFFSET)
+        if self.special_level is not None:
+            self.possible_secrets &= self.special_level.potential_secret_doors
+
         if np.count_nonzero(gd.CMapGlyph.is_poorly_understood_check(offsets)):
             if environment.env.debug: import pdb; pdb.set_trace()
             pass
@@ -446,6 +451,11 @@ class DLevelMap():
         search_mask = FloodMap.flood_one_level_from_mask(self.player_location_mask)
         self.searches_count_map[search_mask] += 1
 
+    @staticmethod
+    def is_square_mask(absolute_square):
+        mask = np.full(constants.GLYPHS_SHAPE, False, dtype=bool)
+        mask[absolute_square] = True
+        return mask
 
 class FloodMap():
     @staticmethod

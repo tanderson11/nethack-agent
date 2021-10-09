@@ -87,6 +87,7 @@ new_advisors = [
         WaitAdvisor(),
     ]),
     SolveSokoban(),
+    PathfindSokobanSquare(),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # OPEN PATHS

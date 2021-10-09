@@ -398,7 +398,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'UaONlQ=='
+        seed = b'OmgAlw=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -554,6 +554,17 @@ class RunState():
         if dropped is not None:
             self.last_dropped_item = dropped
         inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
+
+        if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
+            if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
+                self.neighborhood.level_map.sokoban_move_index += 1
+                if self.advice_log[-1].sokoban_move.expect_plug and "The boulder falls into and plugs a hole" not in message.message and environment.env.debug:
+                    import pdb; pdb.set_trace()
+                if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
+                    self.neighborhood.level_map.solved = True
+            else:
+                import pdb; pdb.set_trace()
+                pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
             if message.feedback.carrying_too_much_message:
