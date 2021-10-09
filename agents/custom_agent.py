@@ -397,6 +397,10 @@ class RunState():
                         self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
                     else:
                         self.replay_run_number = 0
+        if self.replay_log:
+            self.auto_pickup = False
+            if self.wizmode_prep:
+                self.wizmode_prep.prepped = True
 
     def make_seeded_rng(self):
         import random
