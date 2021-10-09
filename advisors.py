@@ -1418,6 +1418,8 @@ class PathfindSokobanSquare(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
+        if run_state.neighborhood.level_map.solved:
+            return None
         return run_state.neighborhood.path_next_sokoban_square()
 
 class PathfindUnvisitedShopSquares(PathAdvisor):
@@ -1572,3 +1574,24 @@ class SolveSokoban(Advisor):
             return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move)
 
         return None
+
+class TravelToSokobanSquare(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
+            return None
+        lmap = run_state.neighborhood.level_map
+        if lmap.solved:
+            return None
+        travel = nethack.actions.Command.TRAVEL
+
+        next_square = lmap.special_level.sokoban_solution[lmap.sokoban_move_index].start_square
+        next_square += lmap.special_level.initial_offset
+
+        menu_plan = menuplan.MenuPlan(
+            "travel to unexplored", self, [
+                menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, next_square),
+            ],
+            fallback=ord('.')
+        )
+
+        return ActionAdvice(self, travel, menu_plan)
