@@ -28,7 +28,7 @@ class BatchedEnv:
                         continue
                     self.seeds.append((int(row[0]), int(row[1])))
         # If you want to manually try a single seed
-        self.seeds = [(1213825146419450404, 1708584361657171746)]
+        self.seeds = [(3997455137147802980, 3235767150374461190)]
         self.num_envs = num_envs
         self.env_make_fn = env_make_fn
         self.envs = []

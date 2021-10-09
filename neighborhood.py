@@ -312,7 +312,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             ViewField.Extended
         )
         if is_next_square.any():
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
+            pass
         return self.path_to_targets(is_next_square)
 
     def path_to_desirable_objects(self):
