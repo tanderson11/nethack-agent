@@ -211,6 +211,7 @@ class DLevelMap():
         self.dcoord = dcoord
         self.special_level_searcher = special_level_searcher
         self.special_level = None
+        self.clear = False
 
         self.downstairs_count = 0
         self.upstairs_count = 0
@@ -330,7 +331,7 @@ class DLevelMap():
         self.player_location = player_location
         if self.visits_count_map[self.player_location] == 0:
             self.time_of_new_square = time
-        if environment.env.debug and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
+        if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
             import pdb; pdb.set_trace()
         self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False

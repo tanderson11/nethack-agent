@@ -38,8 +38,8 @@ new_advisors = [
         MeleePriorityTargets(),
     ]),
     RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
-        ReduceThreatFromManyEnemiesWithMove(): 9,
-        SafeMeleeAttackAdvisor(): 1,
+        ReduceThreatFromManyEnemiesWithMove(): 95,
+        SafeMeleeAttackAdvisor(): 5,
         #RandomMoveAdvisor(),
     }),
     PassiveMonsterRangedAttackAdvisor(),
@@ -57,10 +57,10 @@ new_advisors = [
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # DISTANT THREAT
-    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
-        RandomMoveAdvisor(square_threat_tolerance=0.),
-        HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
-        ]),
+    RandomCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors={
+        RandomMoveAdvisor(square_threat_tolerance=0.): 95,
+        HuntNearestEnemyAdvisor(): 5, # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
+    }),
     WaitAdvisor(oracle_consultation=lambda o: o.in_shop and o.blind),
     WaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
     ###### OUT OF DANGER ###### ()
