@@ -144,7 +144,7 @@ class Oracle():
 
     @functools.cached_property
     def desirable_object_on_space(self):
-        return self.neighborhood.desirable_object_on_space(self.run_state.global_identity_map, self.character)
+        return self.neighborhood.desirable_object_on_space(self.character)
 
     @functools.cached_property
     def have_moves(self):
@@ -574,7 +574,7 @@ class IdentifyUnidentifiedScrolls(Advisor):
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(character, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
 
         return ActionAdvice(self, read, menu_plan)
 
@@ -599,14 +599,14 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(character, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
 
         return ActionAdvice(self, read, menu_plan)
 
 class AnyScrollAdvisor(Advisor):
     def make_menu_plan(self, run_state, character, scroll):
         interactive_menus = [
-            menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+            menuplan.InteractiveIdentifyMenu(character, character.inventory), # identifies first choice since we don't specify anything
         ]
 
         menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
@@ -723,8 +723,8 @@ class EatCorpseAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan(
             "eat corpse on square", self,
             [
-                menuplan.YesMenuResponse(f"{run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat"),
-                menuplan.YesMenuResponse(f"{run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpses here; eat"),
+                menuplan.YesMenuResponse(f" {run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpse here; eat"),
+                menuplan.YesMenuResponse(f" {run_state.neighborhood.fresh_corpse_on_square_glyph.name} corpses here; eat"),
                 menuplan.NoMenuResponse("here; eat"),
                 menuplan.EscapeMenuResponse("want to eat?"),
                 menuplan.MoreMenuResponse("You're having a hard time getting all of it down."),
@@ -1208,7 +1208,7 @@ class DipForExcaliburAdvisor(ExcaliburAdvisor):
         if not (character.hankering_for_excalibur() and run_state.neighborhood.dungeon_glyph_on_player and run_state.neighborhood.dungeon_glyph_on_player.is_fountain):
             return None
         dip = nethack.actions.Command.DIP
-        long_sword = character.inventory.wielded_weapon
+        long_sword = character.inventory.get_item(inv.Weapon, name='long sword', sort_key=lambda i: i.enhancement if i.enhancement else 0, instance_selector=lambda i: not i.identity.is_artifact)
         menu_plan = menuplan.MenuPlan(
             "dip long sword", self, [
                 menuplan.CharacterMenuResponse("What do you want to dip?", chr(long_sword.inventory_letter)),
@@ -1409,7 +1409,7 @@ class DropToPriceIDAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=unidentified_letters),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=unidentified_letters),
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1435,7 +1435,7 @@ class DropUndesirableAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1506,7 +1506,7 @@ class DropShopOwnedAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=shop_owned_letters)
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=shop_owned_letters)
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1521,7 +1521,7 @@ class PickupDesirableItems(Advisor):
             "pick up all desirable objects",
             self,
             [],
-            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
+            interactive_menu=menuplan.InteractivePickupMenu(character, select_desirable='desirable')
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
@@ -1659,7 +1659,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
             menuplan.MoreMenuResponse("You may wish for an object"),
-            menuplan.PhraseMenuResponse("For what do you wish?", "+2 blessed silver dragon scale mail"),
+            menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
             menuplan.MoreMenuResponse("silver dragon scale mail"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),

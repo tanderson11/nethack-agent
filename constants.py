@@ -231,7 +231,7 @@ RACE_TO_INTRINSIC = {
     },
 }
 
-class BUC(enum.Enum):
+class BUC(enum.IntEnum):
     cursed = 0
     uncursed = 1
     blessed = 2

@@ -197,8 +197,8 @@ class ObjectGlyph(Glyph):
         self.appearance = appearance
         self.name = name # not accurate for shuffled glyphs
 
-    def desirable_glyph(self, global_identity_map, character):
-        identity = global_identity_map.identity_by_numeral[self.numeral]
+    def desirable_glyph(self, character):
+        identity = character.global_identity_map.identity_by_numeral[self.numeral]
         if not identity:
             if not self.numeral == RandomClassGlyph.OFFSET + RandomClassGlyph.COUNT: # strange objecst
                 import pdb; pdb.set_trace()
@@ -302,7 +302,7 @@ class CoinGlyph(ObjectGlyph):
     COUNT = 1
     class_number = 12
 
-    def desirable_glyph(self, global_identity_map, character):
+    def desirable_glyph(self, character):
         return True
 
 class GemGlyph(ObjectGlyph):
@@ -330,7 +330,7 @@ class ChainGlyph(ObjectGlyph):
     COUNT = 1
     class_number = 16
 
-    def desirable_glyph(self, global_identity_map, character):
+    def desirable_glyph(self, character):
         return False
 
 class VenomGlyph(ObjectGlyph):
@@ -338,7 +338,7 @@ class VenomGlyph(ObjectGlyph):
     COUNT = 2
     class_number = 17
 
-    def desirable_glyph(self, global_identity_map, character):
+    def desirable_glyph(self, character):
         return False
 
 class CMapGlyph(Glyph):
@@ -563,7 +563,7 @@ class CorpseGlyph(Glyph):
         self.always_safe_non_perishable = (self.offset in self.always_safe_non_perishable_offsets)
 
     # TODO hard-coding this for now until we have a CorpseIdentity that we can use
-    def desirable_glyph(self, global_identity_map, character):
+    def desirable_glyph(self, character):
         return self.always_safe_non_perishable
 
 class RiddenGlyph(MonsterAlikeGlyph):
@@ -1202,7 +1202,15 @@ class GlobalIdentityMap():
                 return constants.BUC.uncursed
             assert False, "bad buc string for non-priest"
 
+    def found_artifact(self, artifact):
+        if self.generated_artifacts[artifact] == False:
+            if artifact == 'Excalibur':
+                #import pdb; pdb.set_trace()
+                pass
+            self.generated_artifacts[artifact] = True
+
     def load_artifact_identities(self):
+        self.generated_artifacts = {}
         self.artifact_identity_by_name = {}
         self.artifact_identity_by_appearance_name = {}
         artifact_df = OBJECT_SPOILERS.artifact_spoilers
@@ -1216,6 +1224,7 @@ class GlobalIdentityMap():
 
             artifact_identity = artifact_identity_class([row["IDX"]], artifact_name, row)
             self.artifact_identity_by_name[artifact_name] = artifact_identity
+            self.generated_artifacts[artifact_name] = False
             self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
             self.identity_by_name[(glyph_class,  artifact_name)] = artifact_identity
         
@@ -1223,7 +1232,7 @@ class GlobalIdentityMap():
         # go through table of artifacts, for each row, find base item row and join it in (dropping some columns)
         # then instantiate the appropriate artifact identity
 
-    def __init__(self):
+    def __init__(self, is_priest=False):
         self.identity_by_numeral = {}
         # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
         self.identity_by_name = {} # this we will have to be careful to keep updated
@@ -1233,7 +1242,7 @@ class GlobalIdentityMap():
 
         self.appearance_counts = {} # when we '#name' or identify an object, we can decrement this
 
-        self.is_priest = False # If we are a priest then we see BUC differently
+        self.is_priest = is_priest # If we are a priest then we see BUC differently
 
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]

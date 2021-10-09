@@ -44,10 +44,14 @@ class Character():
     executing_ranged_plan: bool = False
     gold: int = 0
     hunger_state: int = 1
+    global_identity_map: gd.GlobalIdentityMap = None
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
+
+    def make_global_identity_map(self):
+        self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
 
     intrinsic_gain_messages = {
         "You speed up": constants.Intrinsics.speed,
@@ -81,17 +85,22 @@ class Character():
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
 
+    def wants_excalibur(self):
+        if not self.base_alignment == 'lawful': return False
+        return self.relevant_skills.loc['long sword'] == True
+
     def hankering_for_excalibur(self):
-        if not (self.base_alignment == 'lawful' and self.experience_level >= 5):
+        if self.global_identity_map.generated_artifacts['Excalibur'] == True:
+            return False
+        if self.wants_excalibur() == False:
+            return False
+        if self.experience_level < 5:
             return False
 
         #if not self.has_intrinsic(constants.Intrinsics.poison_resistance):
         #    return False
-
-        current_weapon = self.inventory.wielded_weapon
-        if current_weapon.identity is not None and current_weapon.identity.name() == 'long sword' and not current_weapon.identity.is_artifact:
-            return True
-        return False
+        long_sword = self.inventory.get_item(inv.Weapon, name='long sword', instance_selector=lambda i: not i.identity.is_artifact)
+        return long_sword is not None
 
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
@@ -191,7 +200,7 @@ class Character():
     def set_attributes(self, attributes):
         self.attributes = attributes
 
-    def update_inventory_from_observation(self, global_identity_map, am_hallu, observation):
+    def update_inventory_from_observation(self, character, am_hallu, observation):
         if self.inventory and ((observation['inv_strs'] == self.inventory.inv_strs).all()):
             return
 
@@ -203,7 +212,7 @@ class Character():
         if not am_hallu:
             inv_glyphs = observation['inv_glyphs'].copy()
 
-        self.inventory = inv.PlayerInventory(global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs)
+        self.inventory = inv.PlayerInventory(character.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs)
 
     def can_cannibalize(self):
         if self.base_race == constants.BaseRace.orc:

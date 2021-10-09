@@ -9,6 +9,7 @@ import glyphs as gd
 import utilities
 import inventory as inv
 import physics
+import wish
 
 import nle.nethack as nethack
 
@@ -164,6 +165,26 @@ class PhraseMenuResponse(MenuResponse):
         except StopIteration:
             return ord('\r')
 
+class WishMenuResponse(MenuResponse):
+    def __init__(self, match_str, character, wand=None):
+        super().__init__(match_str)
+        self.character = character
+        self.wand = wand
+        self.phrase = None
+    
+    def value(self, message_obj, expect_getline=True):
+        if expect_getline and not message_obj.getline and environment.env.debug:
+            pdb.set_trace()
+        import pdb; pdb.set_trace()
+        if self.phrase is None:
+            self.phrase = (c for c in wish.get_wish(self.character, wand=self.wand))
+        try:
+            next_chr = next(self.phrase)
+            return ord(next_chr)
+        except StopIteration:
+            self.phrase = None
+            return ord('\r')
+
 class ExtendedCommandResponse(PhraseMenuResponse):
         def __init__(self, phrase):
             super().__init__("#", phrase)
@@ -240,8 +261,8 @@ class MenuPlan():
 
         return None
 
-    def add_responses(self, menu_plan):
-        self.menu_responses = self.menu_responses + menu_plan.menu_responses
+    def add_responses(self, responses):
+        self.menu_responses = self.menu_responses + responses
 
     def __repr__(self):
         return self.name
@@ -384,8 +405,10 @@ class ParsingInventoryMenu(InteractiveMenu):
         'armor': lambda x: isinstance(x.item, inv.Armor) and (x.item.parenthetical_status is None or ("for sale" not in x.item.parenthetical_status and "unpaid" not in x.item.parenthetical_status)),
     }
 
-    def __init__(self, run_state, selector_name=None, select_desirable=None):
-        self.run_state = run_state
+    def __init__(self, player_character, selector_name=None, select_desirable=None):
+        from agents.custom_agent import RunState
+        assert not isinstance(player_character, RunState)
+        self.player_character = player_character
         if selector_name and select_desirable:
             raise Exception("Please only specify one of these")
         super().__init__(selector_name=selector_name)
@@ -418,9 +441,9 @@ class ParsingInventoryMenu(InteractiveMenu):
                     else:
                         return False
                 else:
-                    if menu_item.item.desirable(run_state.character): print(menu_item.item_text)
-                    menu_item.item.price_id(run_state.character)
-                    return menu_item.item.desirable(run_state.character)
+                    if menu_item.item.desirable(player_character): print(menu_item.item_text)
+                    menu_item.item.price_id(player_character)
+                    return menu_item.item.desirable(player_character)
             if select_desirable == 'desirable':
                 self.item_selector = lambda x: select_desirable_func(x)
             else:
@@ -428,12 +451,12 @@ class ParsingInventoryMenu(InteractiveMenu):
 
     class MenuItem:
         def __init__(self, ambient_menu, category, character, selected, item_text):
-            run_state = ambient_menu.run_state
+            player_character = ambient_menu.player_character
             self.category = category
             self.character = character
             self.selected = selected
             self.item_text = item_text
-            self.item = inv.ItemParser.make_item_with_string(run_state.global_identity_map, item_text, category=category)
+            self.item = inv.ItemParser.make_item_with_string(player_character.global_identity_map, item_text, category=category)
 
 class InteractiveDropTypeChooseTypeMenu(InteractiveMenu):
     first_page_header_rows = 2
@@ -453,8 +476,8 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     multi_select = True
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
-    def __init__(self, run_state, inventory, selector_name=None, desired_letter=None):
-        super().__init__(run_state, selector_name=selector_name)
+    def __init__(self, player_character, inventory, selector_name=None, desired_letter=None):
+        super().__init__(player_character, selector_name=selector_name)
         self.inventory = inventory
 
         if desired_letter is not None:

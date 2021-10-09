@@ -203,6 +203,7 @@ class Wand(Item):
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
         self.charges = None
+        self.recharges = None
 
         if self.instance_name == "NO_CHARGE":
             self.charges = 0
@@ -339,8 +340,9 @@ class Weapon(Item):
             return -1
 
         # don't wield unknown BUC or desperate (but once you've wielded it, damage has been done, so don't oscillate)
-        if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
-            return -1
+        if not self.identity.is_artifact:
+            if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
+                return -1
 
         if not desperate:
             if relevant_skill == False:
@@ -355,15 +357,17 @@ class Weapon(Item):
             if pd.isna(constants.SkillRank(skill_rank)):
                 return -1
 
-        enhancement = self.enhancement
-        if enhancement is None:
-            enhancement = 0
+        melee_damage = self.melee_damage(character, None)
 
-        melee_damage = self.identity.avg_melee_damage(None)
         if isinstance(melee_damage, np.ndarray):
             melee_damage = melee_damage.max()
 
-        return enhancement + melee_damage
+        return melee_damage
+
+    def find_equivalents_vis_excalibur(self, inventory):
+        if self.identity is None:
+            return []
+        return inventory.get_items(Weapon, name='long sword', identity_selector=lambda i: not i.is_artifact)
 
     def find_equivalents(self, inventory):
         if self.identity is None:
@@ -374,11 +378,23 @@ class Weapon(Item):
         is_better = self.melee_desirability(character, optimistic_to_unknown=True) > y.melee_desirability(character, optimistic_to_unknown=True)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
-            print(f"Found better weapon: {self.identity.name()}")
+            #print(f"Found better weapon: {self.identity.name()}")
+            pass
         return is_better
 
     def desirable(self, character, consider_funds=True):
-        if self.enhancement is not None and (self.identity.ranged or self.identity.is_ammo):
+        if consider_funds is True and not self.can_afford(character):
+            return False
+        if self.enhancement is not None and (self.identity.is_ammo or self.identity.ranged):
+            return True
+
+        if character.wants_excalibur() and self.identity.name() == 'long sword':
+            long_swords = self.find_equivalents_vis_excalibur(character.inventory)
+            equal_or_better_versions = [i for i in long_swords if self != i and not self.better_than_equivalent(i, character)]
+            if len(equal_or_better_versions) > 0:
+                return False
+
+            #import pdb; pdb.set_trace()
             return True
 
         des = super().desirable(character, consider_funds=consider_funds)
@@ -532,7 +548,7 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = item.identity.slot
 
-            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status:
+            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status or "weapon in claw" in parenthetical_status:
                 self.status = 'wielded'
 
                 if parenthetical_status == "(weapon in hands)":
@@ -560,7 +576,7 @@ class BadStringOnWhitelist(Exception):
     pass
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]*[a-zA-Z!'_]))? ?(\(.+\))?$")
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
@@ -702,13 +718,15 @@ class ItemParser():
         if match_components.instance_name is not None:
             identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
             if identity is not None:
+                global_identity_map.found_artifact(identity.artifact_name)
                 base_identity = global_identity_map.identity_by_numeral[item_glyph]
                 global_identity_map.associate_identity_and_name(base_identity, identity.name())
 
         # Second line of defense: figure out if this is the {ARTIFACT NAME}
         if identity is None:
             identity = global_identity_map.artifact_identity_by_name.get(match_components.description, None)
-
+            if identity is not None:
+                global_identity_map.found_artifact(identity.artifact_name)
         # Third line of defense: this isn't an artifact, get its identity from the numeral
         if identity is None:
             try:
@@ -742,6 +760,7 @@ class ItemParser():
 
             if identity is not None:
                 # we've found an artifact
+                global_identity_map.found_artifact(identity.artifact_name)
                 item_class = cls.item_class_by_glyph_class[identity.associated_glyph_class]
                 return item_class(identity, match_components, inventory_letter=inventory_letter)
 
@@ -771,6 +790,7 @@ class ItemParser():
                 # try to extract as an artifact
                 artifact_identity = global_identity_map.identity_by_name.get((glyph_class, match_components.description), None)
                 if artifact_identity is not None and artifact_identity.is_artifact:
+                    global_identity_map.found_artifact(artifact_identity.artifact_name)
                     item_class = cls.item_class_by_glyph_class[artifact_identity.associated_glyph_class]
                     return item_class(artifact_identity, match_components, inventory_letter=inventory_letter)
 
@@ -867,7 +887,8 @@ class ItemParser():
 
     item_on_square_pattern = re.compile("You see here (.+?)\.")
     @classmethod
-    def listen_for_item_on_square(cls, global_identity_map, character, message, glyph=None):
+    def listen_for_item_on_square(cls, character, message, glyph=None):
+        global_identity_map = character.global_identity_map
         item_match = re.search(cls.item_on_square_pattern, message)
         if item_match:
             item_string = item_match[1]
@@ -882,7 +903,7 @@ class ItemParser():
 
     item_sell_pattern = re.compile("offers ([0-9]+) gold pieces for (.+?)\.")
     @classmethod
-    def listen_for_price_offer(cls, global_identity_map, character, message, last_dropped):
+    def listen_for_price_offer(cls, character, message, last_dropped):
         item_match = re.search(cls.item_sell_pattern, message)
         if item_match:
             price = int(item_match[1])
@@ -904,7 +925,7 @@ class ItemParser():
 
     item_drop_pattern = re.compile("You drop (.+?)\.")
     @classmethod
-    def listen_for_dropped_item(cls, global_identity_map, character, message):
+    def listen_for_dropped_item(cls, global_identity_map, message):
         item_match = re.search(cls.item_drop_pattern, message)
         if item_match:
             if "your gloves and weapon!" in message:
@@ -1109,6 +1130,14 @@ class PlayerInventory():
             if isinstance(current_occupant, Armor) and current_occupant.BUC == constants.BUC.cursed:
                 continue
 
+            blockers = self.armaments.get_blockers(slot_name)
+            weapon_blocked = False
+            for b in blockers:
+                if isinstance(b, Weapon):
+                    weapon_blocked = True
+            if weapon_blocked:
+                continue
+
             most_desirable = None
             max_desirability = None
             for item in unequipped_in_slot:
@@ -1126,16 +1155,17 @@ class PlayerInventory():
                 current_desirability = 0
 
             if max_desirability > current_desirability:
-                blockers = self.armaments.get_blockers(slot_name)
-
                 if len(blockers) == 0:
                     proposed_items.append(most_desirable)
                     proposal_blockers.append(blockers)
                 else:
                     for b in blockers:
-                        proposed_items.append(most_desirable)
                         proposal_blockers.append(blockers)
+                    proposed_items.append(most_desirable)
 
+        if len(proposed_items) > 0:
+            #import pdb; pdb.set_trace()
+            pass
         return self.AttireProposal(proposed_items, proposal_blockers)
 
     def get_ordinary_ranged_attack(self, character):
@@ -1189,7 +1219,7 @@ class PlayerInventory():
         stethoscope = self.get_item(Tool, name='stethoscope')
         return not stethoscope is None
 
-    def get_items(self, oclass=None, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
+    def get_items(self, oclass=None, sort_key=None, ascending=False, name=None, identity_selector=lambda i: True, instance_selector=lambda i: True):
         if oclass is None:
             items = self.all_items()
         else:
@@ -1203,6 +1233,10 @@ class PlayerInventory():
         for item in items:
             if item and item.identity and (name is None or item.identity.name() == name) and identity_selector(item.identity) and instance_selector(item):
                 matches.append(item)
+
+        if sort_key is not None:
+            reverse = not ascending
+            return sorted(matches, key=sort_key, reverse=reverse)
 
         return matches
 
@@ -1270,6 +1304,7 @@ class PlayerInventory():
                     self.items_by_letter[letter] = item
                 else:
                     import pdb; pdb.set_trace() # why did we ever check this? why are we here?
+                    pass
 
             self.items_by_class[object_class] = class_contents
             return class_contents

@@ -217,7 +217,6 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
-    menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
 ]
 
 wizard_background_menu_plan_options = [
@@ -231,11 +230,6 @@ wizard_background_menu_plan_options = [
 ]
 
 background_advisor = advs.BackgroundActionsAdvisor()
-BackgroundMenuPlan = menuplan.MenuPlan(
-    "background",
-    background_advisor,
-    normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
-)
 
 class RunState():
     def __init__(self, debug_env=None):
@@ -339,7 +333,13 @@ class RunState():
         self.reward = 0
         self.time = None
 
-        self.active_menu_plan = BackgroundMenuPlan
+        background_menu_plan = menuplan.MenuPlan(
+            "background",
+            background_advisor,
+            normal_background_menu_plan_options + wizard_background_menu_plan_options if environment.env.wizard else normal_background_menu_plan_options
+        )
+        self.background_menu_plan = background_menu_plan
+        self.active_menu_plan = background_menu_plan
         self.message_log = []
         self.score_against_message_log = []
         self.action_log = []
@@ -369,7 +369,6 @@ class RunState():
 
         self.neighborhood = None
         self.current_square = None
-        self.global_identity_map = gd.GlobalIdentityMap()
 
         self.latest_monster_flight = None
 
@@ -402,7 +401,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'OmgAlw=='
+        #seed = b'q++zhA=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -459,13 +458,12 @@ class RunState():
         )
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
+        self.character.make_global_identity_map()
+        self.background_menu_plan.add_responses([menuplan.WishMenuResponse("For what do you wish?", self.character),])
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
         self.gods_by_alignment[attribute_match_3[4]] = attribute_match_3[3]
-
-        if self.character.base_class == constants.BaseRole.Priest:
-            self.global_identity_map.is_priest = True
 
     def update_reward(self, reward):
         self.step_count += 1
@@ -513,12 +511,12 @@ class RunState():
 
         if retval is None and self.active_menu_plan.fallback:
             retval = self.active_menu_plan.fallback
-            self.active_menu_plan = BackgroundMenuPlan
+            self.active_menu_plan = self.background_menu_plan
             return retval
 
-        if self.active_menu_plan != BackgroundMenuPlan:
+        if self.active_menu_plan != self.background_menu_plan:
             if retval is None:
-                self.active_menu_plan = BackgroundMenuPlan
+                self.active_menu_plan = self.background_menu_plan
                 retval = self.active_menu_plan.interact(message)
 
         if retval is None and (message.yn_question or message.getline):
@@ -549,10 +547,11 @@ class RunState():
         self.message_log.append(message.message)
         self.score_against_message_log.append(self.reward)
 
+        item_on_square = None
         if self.character is not None:
             self.character.listen_for_intrinsics(message.message)
+            item_on_square = inv.ItemParser.listen_for_item_on_square(self.character, message.message, glyph=self.current_square.glyph_under_player)
 
-        item_on_square = inv.ItemParser.listen_for_item_on_square(self.global_identity_map, self.character, message.message, glyph=self.current_square.glyph_under_player)
         if item_on_square is not None:
             self.current_square.item_on_square = item_on_square
 
@@ -565,10 +564,11 @@ class RunState():
             if name_action is not None:
                 self.queued_name_action = name_action
 
-        dropped = inv.ItemParser.listen_for_dropped_item(self.global_identity_map, self.character, message.message)
-        if dropped is not None:
-            self.last_dropped_item = dropped
-        inv.ItemParser.listen_for_price_offer(self.global_identity_map, self.character, message.message, last_dropped=self.last_dropped_item)
+        if self.character is not None:
+            dropped = inv.ItemParser.listen_for_dropped_item(self.character.global_identity_map, message.message)
+            if dropped is not None:
+                self.last_dropped_item = dropped
+            inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
 
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
             if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
@@ -700,7 +700,7 @@ class CustomAgent(BatchedAgent):
 
         if run_state.character:
             run_state.character.update_inventory_from_observation(
-                run_state.global_identity_map, blstats.am_hallu(), observation)
+                run_state.character, blstats.am_hallu(), observation)
 
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
@@ -896,6 +896,9 @@ class CustomAgent(BatchedAgent):
             if environment.env.debug:
                 import pdb; pdb.set_trace()
 
+        if "From the murky depths, a hand reaches up to bless the sword" in message.message:
+            print(message.message)
+
         if run_state.debugger_on:
             import pdb; pdb.set_trace()
 
@@ -1006,7 +1009,7 @@ class CustomAgent(BatchedAgent):
                 search_succeeded = True
             run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
 
-        if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.global_identity_map, run_state.character):
+        if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.character):
             #import pdb; pdb.set_trace()
             level_map.lootable_squares_map[player_location] = False
 

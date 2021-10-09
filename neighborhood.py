@@ -291,7 +291,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return self.path_to_targets(weak_monsters, target_monsters=True)
 
-    def desirable_object_on_space(self, global_identity_map, character):
+    def desirable_object_on_space(self, character):
         item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
 
         if item_recognized:
@@ -302,7 +302,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         desirable_object_on_space = (
             (isinstance(self.previous_glyph_on_player, gd.ObjectGlyph) or isinstance(self.previous_glyph_on_player, gd.CorpseGlyph)) and
-            self.previous_glyph_on_player.desirable_glyph(global_identity_map, character)
+            self.previous_glyph_on_player.desirable_glyph(character)
         )
 
         return desirable_object_on_space
