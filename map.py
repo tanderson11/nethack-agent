@@ -883,7 +883,7 @@ ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_2a'),
     SpecialLevelLoader.load('sokoban_2b'),
     SpecialLevelLoader.load('sokoban_3a'),
-    #SpecialLevelLoader.load('sokoban_3b'),
+    SpecialLevelLoader.load('sokoban_3b'),
     SpecialLevelLoader.load('sokoban_4a'),
-    #SpecialLevelLoader.load('sokoban_4b'),
+    SpecialLevelLoader.load('sokoban_4b'),
 ]
