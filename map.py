@@ -674,7 +674,6 @@ class CMapGlyphDecoder(SpecialLevelDecoder):
         'F': 'bars',
         'I': 'ice',
         'L': 'lava',
-        '+': 'hcdoor', # TODO TODO TODO'vcdoor' or 'hcdoor' depending of horizontal or vertical,
     }
 
 class PotentialWallDecoder(SpecialLevelDecoder):
@@ -685,6 +684,9 @@ class PotentialWallDecoder(SpecialLevelDecoder):
         'D', # maybe wall, maybe door
         'H', # maybe wall, maybe open
     ]
+
+class DoorDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['+']
 
 class PotentialSecretDoorDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['S']
@@ -699,9 +701,6 @@ class IDAbleStackDecoder(SpecialLevelDecoder):
 
 class BoulderDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['0']
-
-class DoorDecoder(SpecialLevelDecoder):
-    CHARACTER_SET = ['+']
 
 KNOWN_WIKI_ENCODINGS = set([ord(' '), ord('.')])
 

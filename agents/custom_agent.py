@@ -530,6 +530,17 @@ class RunState():
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
 
+    def messages_since_last_input(self):
+        messages = []
+        for m,a in zip(reversed(self.message_log), reversed(self.advice_log)):
+            messages.append(m)
+            if not isinstance(a, advs.MenuAdvice) or a.keypress != nethack.actions.TextCharacters.SPACE:
+                break
+        out_message = ""
+        for m in reversed(messages):
+            out_message += m + "\n"
+        return out_message
+
     def handle_message(self, message):
         self.message_log.append(message.message)
         self.score_against_message_log.append(self.reward)
@@ -812,27 +823,28 @@ class CustomAgent(BatchedAgent):
             if dcoord.branch == map.Branches.Sokoban.value:
                 import pdb; pdb.set_trace()
                 pass
+            if len(run_state.message_log) > 1:
+                collected_message = run_state.messages_since_last_input()
+                if ("You descend the" in collected_message or "You fall down the stairs" in collected_message or "You climb" in collected_message):
+                    print(run_state.message_log[-2])
+                    # create the staircases (idempotent)
+                    if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
+                        direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                    elif "You climb" in run_state.message_log[-2]:
+                        direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
-            if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-                print(run_state.message_log[-2])
-                # create the staircases (idempotent)
-                if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                    direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
-                elif "You climb" in run_state.message_log[-2]:
-                    direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+                    if dcoord.branch != previous_square.dcoord.branch:
+                        run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
 
-                if dcoord.branch != previous_square.dcoord.branch:
-                    run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
-
-                # staircase we just took
-                previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
-                previous_level_map.add_traversed_staircase(
-                    previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
-                # staircase it's implied we've arrived on (probably breaks in the Valley)
-                level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
-                print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
-            elif environment.env.debug:
-                import pdb; pdb.set_trace()
+                    # staircase we just took
+                    previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
+                    previous_level_map.add_traversed_staircase(
+                        previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                    # staircase it's implied we've arrived on (probably breaks in the Valley)
+                    level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+                    print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
+                elif environment.env.debug:
+                    import pdb; pdb.set_trace()
 
         level_map.update(player_location, observation['glyphs'])
 
