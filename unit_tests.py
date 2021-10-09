@@ -351,17 +351,17 @@ def make_glyphs(vals = {}):
 
 class TestDLevelMap(unittest.TestCase):
     def setUp(self):
-        self.lmap = map.DMap().make_level_map(map.DCoord(0,2), make_glyphs(), (0,0))
+        self.lmap = map.DMap().make_level_map(map.DCoord(0,2), 0, make_glyphs(), (0,0))
 
     def test_update(self):
         upstair = gd.get_by_name(gd.CMapGlyph, 'upstair')
         monster = gd.get_by_name(gd.MonsterAlikeGlyph, 'fire ant')
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), None)
         self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
-        self.lmap.update((1,1), make_glyphs({(0, 0): upstair.numeral}))
+        self.lmap.update(True, 0, (1,1), make_glyphs({(0, 0): upstair.numeral}))
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
         self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
-        self.lmap.update((1,1), make_glyphs({(0, 0): monster.numeral}))
+        self.lmap.update(True, 0, (1,1), make_glyphs({(0, 0): monster.numeral}))
         self.assertEqual(self.lmap.get_dungeon_glyph((0, 0)), upstair)
         self.assertEqual(self.lmap.get_dungeon_glyph((1, 1)), None)
 
@@ -384,13 +384,13 @@ class TestDLevelMap(unittest.TestCase):
         self.assertEqual(self.lmap.searches_count_map[(1,0)], 0)
         self.assertEqual(self.lmap.searches_count_map[(0,1)], 0)
         self.assertEqual(self.lmap.searches_count_map[(1,1)], 0)
-        self.lmap.update((0, 0), make_glyphs())
+        self.lmap.update(True, 0, (0, 0), make_glyphs())
         self.lmap.log_search((0, 0))
         self.assertEqual(self.lmap.searches_count_map[(0,0)], 1)
         self.assertEqual(self.lmap.searches_count_map[(1,0)], 1)
         self.assertEqual(self.lmap.searches_count_map[(0,1)], 1)
         self.assertEqual(self.lmap.searches_count_map[(1,1)], 1)
-        self.lmap.update((1, 1), make_glyphs())
+        self.lmap.update(True, 0, (1, 1), make_glyphs())
         self.lmap.log_search((1, 1))
         self.assertEqual(self.lmap.searches_count_map[(0,0)], 2)
         self.assertEqual(self.lmap.searches_count_map[(1,0)], 2)
@@ -630,7 +630,7 @@ class TestNeighborhood(unittest.TestCase):
             10,
             current_square,
             glyphs,
-            dmap.make_level_map(map.DCoord(0,1), glyphs, (0,0)),
+            dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
             None,
             None,
             False,
@@ -1476,10 +1476,11 @@ class TestSpecialLevelLoader(unittest.TestCase):
         player_location = (6, 35)
         observed_level_map = map.DMap().make_level_map(
             map.DCoord(map.Branches.Sokoban, 4),
+            0,
             string_to_glyphs(sokoban_1a_observation),
             player_location
         )
-        observed_level_map.update(player_location, string_to_glyphs(sokoban_1a_observation))
+        observed_level_map.update(True, 0, player_location, string_to_glyphs(sokoban_1a_observation))
         observed_level_map.add_traversed_staircase(
             player_location,
             to_dcoord=map.DCoord(map.Branches.DungeonsOfDoom, 7),
@@ -1496,10 +1497,11 @@ class TestSpecialLevelLoader(unittest.TestCase):
         player_location = (9, 38)
         observed_level_map = map.DMap().make_level_map(
             map.DCoord(map.Branches.Sokoban, 4),
+            0,
             string_to_glyphs(sokoban_1b_observation),
             player_location
         )
-        observed_level_map.update(player_location, string_to_glyphs(sokoban_1b_observation))
+        observed_level_map.update(True, 0, player_location, string_to_glyphs(sokoban_1b_observation))
         observed_level_map.add_traversed_staircase(
             player_location,
             to_dcoord=map.DCoord(map.Branches.DungeonsOfDoom, 7),

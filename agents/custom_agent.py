@@ -709,7 +709,7 @@ class CustomAgent(BatchedAgent):
         try:
             level_map = run_state.dmap.dlevels[dcoord]
         except KeyError:
-            level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
+            level_map = run_state.dmap.make_level_map(dcoord, time, observation['glyphs'], player_location)
 
         if run_state.character:
             run_state.dmap.update_target_dcoords(run_state.character)
@@ -723,9 +723,11 @@ class CustomAgent(BatchedAgent):
             if run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
+        changed_level = (run_state.current_square is None or run_state.current_square.dcoord != dcoord)
         changed_square = False
         previous_square = False
-        if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
+
+        if changed_level or run_state.current_square.location != player_location:
             changed_square = True
             previous_square = run_state.current_square
 
@@ -854,8 +856,7 @@ class CustomAgent(BatchedAgent):
                 elif environment.env.debug:
                     import pdb; pdb.set_trace()
 
-        level_map.update(player_location, observation['glyphs'])
-
+        level_map.update(changed_level, time, player_location, observation['glyphs'])
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:

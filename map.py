@@ -112,15 +112,15 @@ class DMap():
         self.branch_connections[(start_dcoord, end_dcoord)] = True
         self.branch_connections[(end_dcoord, start_dcoord)] = True
 
-    def make_level_map(self, dcoord, glyphs, initial_player_location):
-        lmap = DLevelMap(self.special_level_searcher, dcoord)
+    def make_level_map(self, dcoord, time, glyphs, initial_player_location):
+        lmap = DLevelMap(self.special_level_searcher, dcoord, time)
         self.dlevels[dcoord] = lmap
 
         # if we just made the map of level 1 of dungeons of doom, add the staircase on our square
         if dcoord.branch == Branches.DungeonsOfDoom and dcoord.level == 1:
             lmap.add_feature(initial_player_location, gd.get_by_name(gd.CMapGlyph, 'upstair'))
 
-        lmap.update(initial_player_location, glyphs)
+        lmap.update(True, time, initial_player_location, glyphs)
 
         return lmap
 
@@ -207,7 +207,7 @@ class DLevelMap():
         dungeon_features[(dungeon_features == 0) & ((gd.MonsterGlyph.class_mask(glyphs)) | (gd.ObjectGlyph.class_mask(glyphs)))] = gd.CMapGlyph.OFFSET + 19
         return dungeon_features
 
-    def __init__(self, special_level_searcher, dcoord):
+    def __init__(self, special_level_searcher, dcoord, time):
         self.dcoord = dcoord
         self.special_level_searcher = special_level_searcher
         self.special_level = None
@@ -219,6 +219,9 @@ class DLevelMap():
 
         self.player_location = None
         self.player_location_mask = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+
+        self.time_of_recent_arrival = time
+        self.time_of_new_square = time
 
         # These are our map layers
         self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
@@ -285,7 +288,10 @@ class DLevelMap():
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
     
-    def update(self, player_location, glyphs):
+    def update(self, changed_level, time, player_location, glyphs):
+        if changed_level:
+            self.time_of_recent_arrival = time
+
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
@@ -322,6 +328,10 @@ class DLevelMap():
         self.update_stair_counts()
         old_player_location = self.player_location
         self.player_location = player_location
+        if self.visits_count_map[self.player_location] == 0:
+            self.time_of_new_square = time
+        if environment.env.debug and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
+            import pdb; pdb.set_trace()
         self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True

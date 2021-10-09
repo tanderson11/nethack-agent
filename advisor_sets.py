@@ -51,6 +51,8 @@ new_advisors = [
         ]),
     # LYCANTHROPY PUNISHED ETC
     PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
+    # HUNT WEAK
+    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # DISTANT THREAT
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
         RandomMoveAdvisor(square_threat_tolerance=0.),
@@ -93,8 +95,6 @@ new_advisors = [
     SolveSokoban(),
     PathfindSokobanSquare(),
     TravelToSokobanSquare(),
-    # HUNT WEAK
-    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(oracle_consultation=lambda o: not o.in_shop),
