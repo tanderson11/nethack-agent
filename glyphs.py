@@ -316,6 +316,10 @@ class RockGlyph(ObjectGlyph):
     COUNT = 2
     class_number = 14
 
+    @classmethod
+    def boulder_mask(cls, numerals):
+        return numerals == cls.OFFSET + 0
+
 class BallGlyph(ObjectGlyph):
     OFFSET = RockGlyph.OFFSET + RockGlyph.COUNT
     COUNT = 1
@@ -438,7 +442,6 @@ class CMapGlyph(Glyph):
     def is_poorly_understood_check(cls, offsets):
         # Christian: Glyphs that I don't really know what they are
         return (
-            ((offsets >= 7) & (offsets <= 11)) | # weird walls
             ((offsets >= 39) & (offsets <= 41)) | # air, cloud, water. Planes only?
             (offsets == 60) | # statue trap uses this glyph or not?
             (offsets >= 65) # cruft?
@@ -476,8 +479,12 @@ class CMapGlyph(Glyph):
         return (offsets < 12)
 
     @staticmethod
+    def is_observed_wall_check(offsets):
+        return (offsets > 0) & (offsets < 12)
+
+    @staticmethod
     def is_possible_secret_check(offsets):
-        return (offsets < 3)
+        return (offsets >= 0) & (offsets < 3)
 
     @staticmethod
     def possible_secret_mask(numerals):

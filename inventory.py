@@ -1066,8 +1066,6 @@ class PlayerInventory():
         if len(extra_weapons) == 0:
             return None
 
-        #import pdb; pdb.set_trace()
-
         for weapon in extra_weapons:
             desirability = weapon.melee_desirability(character, desperate=desperate)
             if desirability > max_desirability:
@@ -1290,7 +1288,8 @@ class PlayerInventory():
 
         balance = sum(unpaid)
         if balance > 0 and environment.env.debug:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
+            pass
         return balance
 
     @functools.cached_property

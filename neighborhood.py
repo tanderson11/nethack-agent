@@ -141,7 +141,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
-        self.extended_possible_secret_mask = gd.CMapGlyph.possible_secret_mask(extended_visible_raw_glyphs)
+        self.extended_possible_secret_mask = self.zoom_glyph_alike(self.level_map.possible_secrets, ViewField.Extended)
+
         self.extended_has_item_stack = gd.stackable_mask(extended_visible_raw_glyphs)
 
         self.extended_is_hostile_monster = self.extended_is_monster & ~self.extended_is_peaceful_monster
@@ -181,7 +182,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
-        walkable_tile = extended_walkable_tile[neighborhood_view]
+        walkable_tile = extended_walkable_tile[neighborhood_view].copy()
 
         # in the narrow sense
         self.walkable = walkable_tile
@@ -201,7 +202,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         # we're not calculating the true walkable mesh in extended vision, but we can at least add our local calculation
         # to help with pathfinding (which depends on an extended walkable mesh)
-        extended_walkable_tile[neighborhood_view] = self.walkable
+        #extended_walkable_tile[neighborhood_view] = self.walkable
         self.extended_walkable = extended_walkable_tile
 
         #########################################
@@ -243,7 +244,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # pretend the targets are walkable so we can actually reach them in pathfinding
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
-            doors = self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended)
+            doors=self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended),
+            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban
         )
         it = np.nditer(target_mask, flags=['multi_index'])
 
@@ -304,6 +306,18 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
 
         return desirable_object_on_space
+
+    def path_next_sokoban_square(self):
+        sokoban_square = self.level_map.special_level.sokoban_solution[self.level_map.sokoban_move_index].start_square
+        sokoban_square += self.level_map.special_level.initial_offset
+        is_next_square = self.zoom_glyph_alike(
+            self.level_map.is_square_mask(sokoban_square),
+            ViewField.Extended
+        )
+        if is_next_square.any():
+            #import pdb; pdb.set_trace()
+            pass
+        return self.path_to_targets(is_next_square)
 
     def path_to_desirable_objects(self):
         desirable_corpses = self.zoom_glyph_alike(
@@ -413,9 +427,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return Targets(satisfying_monsters, satisfying_directions)
 
 class Pathfinder(AStar):
-    def __init__(self, walkable_mesh, doors):
+    def __init__(self, walkable_mesh, doors, diagonal=True):
         self.walkable_mesh = walkable_mesh
         self.doors = doors
+        self.diagonal = diagonal
 
     def neighbors(self, node):
         box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
@@ -430,7 +445,7 @@ class Pathfinder(AStar):
             square = Square(*it.multi_index)
             #import pdb; pdb.set_trace()
             is_orthogonal = np.sum(np.abs(square-current_square)) == 1
-            if walkable and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
+            if walkable and (self.diagonal or is_orthogonal) and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
                 neighboring_walkable_squares.append(square + upper_left)
 
         return neighboring_walkable_squares

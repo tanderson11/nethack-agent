@@ -1,6 +1,6 @@
 NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,SHUFFLE_CLASS,NLE_NAME,READ_MESSAGE,COST,WEIGHT,PROB,INK_COST
 amnesia,none,2219,DUAM XNAHT,TRUE,scroll,amnesia,,200,5,35,8
-blank paper,desire all,2245,unlabeled,FALSE,,blank paper,,60,5,28,0
+blank paper,desire all,2245,unlabeled scroll,FALSE,,blank paper,,60,5,28,0
 charging,desire all,2223,HACKEM MUCHE,TRUE,scroll,charging,,300,5,15,16
 confuse monster,none,2206,NR 9,TRUE,scroll,confuse monster,Your hands begin to glow red.,100,5,53,12
 create monster,none,2210,LEP GEX VEN ZEA,TRUE,scroll,create monster,,200,5,45,10
