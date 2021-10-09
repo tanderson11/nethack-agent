@@ -37,7 +37,61 @@ sokoban_operations = {
         ((2, 10), 'dddd dddd llll llll uuuu *r'), #B dddd dddd llll llll uuuu r*
         ((3,3), 'rrrr rrrd dddd ddll llll lluu uur*r'),
         ((2,2), 'drrr rrrr rddd dddd llll llll uuuu rr*r'),
+    ],
+    ("Sokoban 2", "a"): [
+        ((3,8), 'dd'),
+        ((4,9), 'l'),
+        ((11,3), 'rrru'),
+        ((10,10), 'r*r'),
+        ((10, 7), 'd'),
+        ((9,10), 'l'),
+        ((4,9), 'u'), #F u
+        ((4,8), 'll'),
+        ((8,7), 'd'),
+        ((9,9), 'rdrr *r'), #M rdrr r*
+        ((11,7), 'llll lrrr rrrr uu'),
+        ((9,7), 'dd'), #K dd
+        ((9,9), 'rdrr r*r'),
+        ((9,5), 'dd'),
+        ((10,6), 'r'),
+        ((11,7), 'rruu rdrr rr*r'), #K rruu rdrr rrr*
+        ((10,7), 'drru urdr rrrr r*r'),
+        ((11,5), 'lllr rrrr rruu rdrr rrr*r'),
+        ((7,6), 'drdd drru urdr rrrr rr*r'),
+        ((8,3), 'rrrr dddr ruur drrr rrrr r*r'),
+        ((3,2), 'u'), #A u
+        ((6,2), 'r'),
+        ((5,2), 'u'),
+        ((5,4), 'r'),
+        ((5,6), 'dddr dddr ruur drrr rrrr rr*r'), #finish B
+        ((5,5), 'rddd rddd rruu rdrr rrrr rrrr *r'),
+        ((6,5), 'rrdd dddr ruur drrr rrrr rrrr *r'),
+        ((6,3), 'rrrr dddd drru urdr rrrr rrrr rrr*r'),
+        ((2,2), 'u'), # clear blockage
+    ],
+    ("Sokoban 2", "b"): [
+        ((3,6), 'lllr rrrr u'),
+        ((7,2), 'uuuu u'),
+        ((9,2), 'uuuu uur'),
+        ((8,3), 'rrrr r'),
+        ((9,9), 'r'), #R r
+        ((10,10), 'r*r'),
+        ((10,8), 'rrrr *r'),
+        ((8,9), 'ddrr rr*r'),
+        ((9,10), 'drrr r*r'),
+        ((7,10), 'dddr rrrr *r'),
+        ((8,8), 'rrdd rrrr rr*r'),
+        ((7,8), 'dddr rrrr rrrr *r'),
+        ((9,3), 'urrr rrrr ddrr rrrr rr*r'), #finish O
+        ((9,4), 'urrr rrrd drrr rrrr rr*r'),
+        ((7,3), 'ldrr rrrr rrdd rrrr rrrr rrr*'),
+        ((2,2), 'dddd ddrr rrrr rrdd rrrr rrrr rrr*r'), #finish G
+        ((3,3), 'lddd ddrr rrrr rrdd rrrr rrrr rrrr *r'),
+        ((2,3), 'ddld dddr rrrr rrrd drrr rrrr rrrr rrr*'),
+        ((9,6), 'ulll rrrr rrrd drrr rrrr rrrr rrr*r'),
+        ((7,6), 'dlll rrrr rrrd drrr rrrr rrrr rrrr *r'),
     ]
+
 }
 
 import physics
