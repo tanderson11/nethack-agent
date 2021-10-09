@@ -184,8 +184,8 @@ class DMap():
         if initial_start is None or final_start is None:
             return None
 
-        return DungeonHeading(DirectionThroughDungeon(
-            direction=np.sign(initial_start.level - current_dcoord.level)),
+        return DungeonHeading(
+            direction=DirectionThroughDungeon(np.sign(initial_start.level - current_dcoord.level)),
             target_branch=target_dcoord.branch,
             next_new_branch=final_start.branch,
         )
