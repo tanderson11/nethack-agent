@@ -239,7 +239,7 @@ class Character():
         return False
 
     def ready_for_mines(self):
-        return self.experience_level > 7
+        return self.experience_level > 9
 
     def melee_prioritize_monster_beyond_damage(self, monster_spoiler):
         melee_types = monster_spoiler.melee_attack_bundle.damage_types

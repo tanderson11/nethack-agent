@@ -246,6 +246,10 @@ class ActionAdvice(Advice):
             self.action = utilities.INT_TO_ACTION[self.action]
 
 @dataclass
+class SokobanAdvice(ActionAdvice):
+    sokoban_move: tuple = None
+
+@dataclass
 class StethoscopeAdvice(Advice):
     from_advisor: Advisor
     action: enum.IntEnum # The nle Command
@@ -385,11 +389,15 @@ class SearchDeadEndAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not run_state.neighborhood.at_dead_end():
             return None
-        lowest_search_count = run_state.neighborhood.zoom_glyph_alike(
+        search_count = run_state.neighborhood.zoom_glyph_alike(
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
-        ).min()
-        if lowest_search_count > 30:
+        )[run_state.neighborhood.local_possible_secret_mask]
+        if not search_count.any():
+            return None
+        lowest_search_count = search_count.min()
+
+        if (lowest_search_count > 30):
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
@@ -1239,7 +1247,7 @@ class TravelToDesiredEgress(Advisor):
 
         heading = run_state.dmap.dungeon_direction_to_best_target(lmap.dcoord)
 
-        if heading.direction == map.DirectionThroughDungeon.flat:
+        if heading.direction == map.DirectionThroughDungeon.flat and heading.next_new_branch is None:
             return None
 
         for location, staircase in lmap.staircases.items():
@@ -1353,7 +1361,7 @@ class OpenClosedDoorAdvisor(Advisor):
 class KickLockedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         # don't kick outside dungeons of doom
-        if oracle.blstats.get('dungeon_number') != 0:
+        if run_state.neighborhood.level_map.dcoord.branch == map.Branches.GnomishMines:
             return None
         if oracle.on_warning_engraving:
             return None
@@ -1530,6 +1538,14 @@ class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         return run_state.neighborhood.path_to_desirable_objects()
 
+class PathfindSokobanSquare(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
+            return None
+        if run_state.neighborhood.level_map.solved:
+            return None
+        return run_state.neighborhood.path_next_sokoban_square()
+
 class PathfindUnvisitedShopSquares(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         return run_state.neighborhood.path_to_unvisited_shop_sqaures()
@@ -1635,6 +1651,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
+            menuplan.MoreMenuResponse("Wizard the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
             menuplan.MoreMenuResponse("You wipe out the message that was written"),
             menuplan.MoreMenuResponse("usage fee"),
@@ -1675,3 +1692,41 @@ class NameItemAdvisor(Advisor):
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
+
+class SolveSokoban(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        level_map = run_state.neighborhood.level_map
+        special_level = level_map.special_level
+        if special_level is None or special_level.branch != map.Branches.Sokoban:
+            return None
+        #import pdb; pdb.set_trace()
+        if level_map.solved:
+            return None
+        sokoban_move = special_level.sokoban_solution[level_map.sokoban_move_index]
+        position_in_level = special_level.offset_in_level(run_state.neighborhood.absolute_player_location)
+        #print(position_in_level)
+        if position_in_level == sokoban_move.start_square:
+            return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move)
+
+        return None
+
+class TravelToSokobanSquare(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
+            return None
+        lmap = run_state.neighborhood.level_map
+        if lmap.solved:
+            return None
+        travel = nethack.actions.Command.TRAVEL
+
+        next_square = lmap.special_level.sokoban_solution[lmap.sokoban_move_index].start_square
+        next_square += lmap.special_level.initial_offset
+
+        menu_plan = menuplan.MenuPlan(
+            "travel to unexplored", self, [
+                menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, next_square),
+            ],
+            fallback=ord('.')
+        )
+
+        return ActionAdvice(self, travel, menu_plan)

@@ -36,12 +36,13 @@ new_advisors = [
         TameCarnivores(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
-        ReduceThreatFromManyEnemiesWithMove(),
-        SafeMeleeAttackAdvisor(),
-        PassiveMonsterRangedAttackAdvisor(),
+    ]),
+    RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
+        ReduceThreatFromManyEnemiesWithMove(): 95,
+        SafeMeleeAttackAdvisor(): 5,
         #RandomMoveAdvisor(),
-        UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
-        ]),
+    }),
+    PassiveMonsterRangedAttackAdvisor(),
     RangedAttackNuisanceMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
@@ -51,11 +52,15 @@ new_advisors = [
         ]),
     # LYCANTHROPY PUNISHED ETC
     PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
+    # Stuck and gotta bust out
+    UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
+    # HUNT WEAK
+    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # DISTANT THREAT
-    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors=[
-        RandomMoveAdvisor(square_threat_tolerance=0.),
-        HuntNearestEnemyAdvisor(), # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
-        ]),
+    RandomCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors={
+        RandomMoveAdvisor(square_threat_tolerance=0.): 95,
+        HuntNearestEnemyAdvisor(): 5, # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
+    }),
     WaitAdvisor(oracle_consultation=lambda o: o.in_shop and o.blind),
     WaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
     ###### OUT OF DANGER ###### ()
@@ -90,8 +95,9 @@ new_advisors = [
         PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop and o.character.desperate_for_food()),
         WaitAdvisor(),
     ]),
-    # HUNT WEAK
-    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
+    SolveSokoban(),
+    PathfindSokobanSquare(),
+    TravelToSokobanSquare(),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(oracle_consultation=lambda o: not o.in_shop),

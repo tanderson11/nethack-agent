@@ -221,6 +221,7 @@ normal_background_menu_plan_options = [
 
 wizard_background_menu_plan_options = [
     menuplan.YesMenuResponse("Die?"),
+    menuplan.YesMenuResponse("Dry up fountain?"),
     menuplan.NoMenuResponse("Force the gods to be pleased?"),
     menuplan.NoMenuResponse("Advance skills without practice?"),
     menuplan.EscapeMenuResponse("Where do you want to be teleported?"),
@@ -531,6 +532,17 @@ class RunState():
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
 
+    def messages_since_last_input(self):
+        messages = []
+        for m,a in zip(reversed(self.message_log), reversed(self.advice_log)):
+            messages.append(m)
+            if not isinstance(a, advs.MenuAdvice) or a.keypress != nethack.actions.TextCharacters.SPACE:
+                break
+        out_message = ""
+        for m in reversed(messages):
+            out_message += m + "\n"
+        return out_message
+
     def handle_message(self, message):
         self.message_log.append(message.message)
         self.score_against_message_log.append(self.reward)
@@ -557,6 +569,18 @@ class RunState():
             if dropped is not None:
                 self.last_dropped_item = dropped
             inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
+
+        if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
+            if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
+                self.neighborhood.level_map.sokoban_move_index += 1
+                if self.advice_log[-1].sokoban_move.expect_plug and "The boulder falls into and plugs a hole" not in message.message and environment.env.debug:
+                    import pdb; pdb.set_trace()
+                if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
+                    import pdb; pdb.set_trace()
+                    self.neighborhood.level_map.solved = True
+            else:
+                import pdb; pdb.set_trace()
+                pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
             if message.feedback.carrying_too_much_message:
@@ -684,9 +708,8 @@ class CustomAgent(BatchedAgent):
 
         try:
             level_map = run_state.dmap.dlevels[dcoord]
-            level_map.update(player_location, observation['glyphs'])
         except KeyError:
-            level_map = run_state.dmap.make_level_map(dcoord, observation['glyphs'], player_location)
+            level_map = run_state.dmap.make_level_map(dcoord, time, observation['glyphs'], player_location)
 
         if run_state.character:
             run_state.dmap.update_target_dcoords(run_state.character)
@@ -700,9 +723,11 @@ class CustomAgent(BatchedAgent):
             if run_state.target_roles and run_state.character.base_class not in run_state.target_roles:
                 run_state.scumming = True
 
+        changed_level = (run_state.current_square is None or run_state.current_square.dcoord != dcoord)
         changed_square = False
         previous_square = False
-        if run_state.current_square is None or run_state.current_square.dcoord != dcoord or run_state.current_square.location != player_location:
+
+        if changed_level or run_state.current_square.location != player_location:
             changed_square = True
             previous_square = run_state.current_square
 
@@ -805,27 +830,33 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
-            if len(run_state.message_log) > 1 and ("You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2] or "You climb" in run_state.message_log[-2]):
-                print(run_state.message_log[-2])
-                # create the staircases (idempotent)
-                if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                    direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
-                elif "You climb" in run_state.message_log[-2]:
-                    direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
-
-                if dcoord.branch != previous_square.dcoord.branch:
-                    run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
-
-                # staircase we just took
-                previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
-                previous_level_map.add_traversed_staircase(
-                    previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
-                # staircase it's implied we've arrived on (probably breaks in the Valley)
-                level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
-                print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
-            elif environment.env.debug:
+            if dcoord.branch == map.Branches.Sokoban.value:
                 import pdb; pdb.set_trace()
+                pass
+            if len(run_state.message_log) > 1:
+                collected_message = run_state.messages_since_last_input()
+                if ("You descend the" in collected_message or "You fall down the stairs" in collected_message or "You climb" in collected_message):
+                    print(run_state.message_log[-2])
+                    # create the staircases (idempotent)
+                    if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
+                        direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                    elif "You climb" in run_state.message_log[-2]:
+                        direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
 
+                    if dcoord.branch != previous_square.dcoord.branch:
+                        run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
+
+                    # staircase we just took
+                    previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
+                    previous_level_map.add_traversed_staircase(
+                        previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                    # staircase it's implied we've arrived on (probably breaks in the Valley)
+                    level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+                    print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
+                elif environment.env.debug:
+                    import pdb; pdb.set_trace()
+
+        level_map.update(changed_level, time, player_location, observation['glyphs'])
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
@@ -877,6 +908,10 @@ class CustomAgent(BatchedAgent):
         if "while wearing a shield" in message.message:
             print(message.message)
 
+        if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
+            run_state.dmap.oracle_level = dcoord.level
+            print(message.message)
+ 
         if " stole " in message.message:
             print(message.message)
 
@@ -907,8 +942,10 @@ class CustomAgent(BatchedAgent):
             )
             return advice
 
-        if message.has_more:
-            if environment.env.debug: pdb.set_trace() # should have been handled by our menu plan or by our blind mashing of space
+        if message.has_more or message.yn_question or message.getline:
+            import pdb; pdb.set_trace()
+            pass
+            #raise Exception(f"We somehow missed a message {message.message}")
 
         if run_state.auto_pickup:
             advice = ActionAdvice(
