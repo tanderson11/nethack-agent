@@ -109,7 +109,24 @@ sokoban_operations = {
         ((2,4), 'rr'), #A rr
         ((3,5), 'ddrd dddd drrr rrrr rrr*r'),
     ],
-    ("Sokoban 4", "a"): [
+    ("Sokoban 3", "b"): [
+        ((9,3), 'lrrr rr*r'),
+        ((7,2), 'r'),
+        ((8,2), 'drrr rrr*r'),
+        ((7,3), 'ddrr rrrr *r'),
+        ((2,2), 'dddd dddr rrrr rrr*r'),
+        ((2,3), 'lddd dddd rrrr rrrr r*r'),
+        ((3,5), 'u'), # E u
+        ((2,8), 'dd'),
+        ((3,7), 'lllu'),
+        ((2,5), 'd'),
+        ((2,4), 'lldd dddd drrr rrrr rrr*r'),
+        ((3,5), 'lull dddd dddr rrrr rrrr rr*r'),
+        ((2,7), 'dlll ulld dddd ddrr rrrr rrrr rr*r'),
+        ((6,6), 'dddr rrrr rrrr *r'), # finish I
+        ((7,5), 'ddll lrrr rrrr rrrr rrr*r'),
+    ],
+    ("Sokoban 4", "a"): [ # successful
         ((10,4), 'l'),
         ((11,7), 'rrr'),
         ((14,3), 'rrr'),
@@ -136,6 +153,39 @@ sokoban_operations = {
         ((5,5), 'rrrd ddll lddd uuuu rrru uulu uurr rrrr rrrr rrr*r'),
         ((5,3), 'rrrr rddd llld dduu uurr ruuu luuu rrrr rrrr rrrr rr*r'),
         ((5,11), 'llld ddll lddd uuuu rrru uulu uurr rrrr rrrr rrrr r*r'),
+    ],
+    ("Sokoban 4", "b"): [
+        ((14,8), 'rrru uuu'),
+        ((10,12), 'u'),
+        ((9,13), 'uu'),
+        ((7,12), 'u'),
+        ((7,11), 'lll'),
+        ((8,5), 'll'), #K ll
+        ((9,4), 'd'),
+        ((7,4), 'u'),
+        ((7,5), 'u'),
+        ((6,2), 'ud'), #C ud
+        ((4,4), 'uuu*r'),
+        ((6,4), 'dduu uuuu ur*r'),
+        ((6,2), 'u'),
+        ((6,3), 'ruuu uurr *r'),
+        ((5,2), 'rruu uurr r*r'),
+        ((10,4), 'uuuu uuuu urrr r*r'), # N finish
+        ((10,3), 'ruuu uuuu uurr rrr*r'),
+        ((9,3), 'ruuu uuuu urrr rrr*r'),
+        ((8,3), 'uuur uuuu rrrr rrr*r'),
+        ((8,2), 'uuur ruuu urrr rrrr r*r'),
+        ((7,7), 'dlll uuuu uuur rrrr rrrr *r'), # finish H
+        ((9,11), 'd'),
+        ((8,10), 'ulll dlll uuuu uuur rrrr rrrr r*r'),
+        ((10,10), 'uuul lldl lluu uuuu urrr rrrr rrrr *r'),
+        ((10,11), 'luuu llld lllu uuuu uurr rrrr rrrr rr*r'),
+        ((5,11), 'r'),
+        ((6,11), 'dddl uull ldll luuu uuuu rrrr rrrr rrrr r*r'),
+        ((6,12), 'lldl lldl lluu uuuu urrr rrrr rrrr rrr*r'),
+        ((5,12), 'dlld llld lllu uuuu uurr rrrr rrrr rrrr r*r'),
+        ((6,5), 'ddlu uuuu uurr rrrr rrrr rrrr rr*r'),
+        ((10,5), 'uulu uuuu uurr rrrr rrrr rrrr rrr*r'),
     ]
 }
 
