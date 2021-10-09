@@ -324,11 +324,13 @@ class SearchDeadEndAdvisor(Advisor):
             ]
             if not walkable_count in edge_counts: # i.e. if no edge holds all of them
                 return None
-        #possible_secret = run_state.neighborhood.extended_possible_secret_mask
-        lowest_search_count = run_state.neighborhood.zoom_glyph_alike(
+        search_count = run_state.neighborhood.zoom_glyph_alike(
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
-        ).min()
+        )[run_state.neighborhood.local_possible_secret_mask]
+        if not search_count.any():
+            return None
+        lowest_search_count = search_count.min()
 
         if (lowest_search_count > 30):
             return None

@@ -484,8 +484,7 @@ class CMapGlyph(Glyph):
 
     @staticmethod
     def is_possible_secret_check(offsets):
-        # TODO when done with seed: add (offsets >= 0) & 
-        return (offsets < 3)
+        return (offsets >= 0) & (offsets < 3)
 
     @staticmethod
     def open_door_mask(numerals):
