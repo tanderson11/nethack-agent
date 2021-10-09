@@ -55,6 +55,7 @@ class DirectionThroughDungeon(enum.IntEnum):
 class DungeonHeading(NamedTuple):
     direction: DirectionThroughDungeon
     target_branch: Branches
+    next_new_branch: Branches
 
 class DMap():
     def __init__(self):
