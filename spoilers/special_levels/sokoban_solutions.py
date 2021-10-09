@@ -22,7 +22,7 @@ sokoban_operations = {
         ((2,11), 'ddll dddd llll llll uuuu *u'),
         ((3,7), 'urrr ddld dddl llll lllu uuuu *u')
     ],
-    ("Sokoban 1", "b"): [
+    ("Sokoban 1", "b"): [ # successful
         ((2,2), 'r'),
         ((3,2), 'u'),
         ((3,9), 'rlll llll'),
@@ -69,7 +69,7 @@ sokoban_operations = {
         ((6,3), 'rrrr dddd drru urdr rrrr rrrr rrr*r'),
         ((2,2), 'u'), # clear blockage
     ],
-    ("Sokoban 2", "b"): [
+    ("Sokoban 2", "b"): [ # successful
         ((3,6), 'lllr rrrr u'),
         ((7,2), 'uuuu u'),
         ((9,2), 'uuuu uur'),
@@ -90,8 +90,51 @@ sokoban_operations = {
         ((2,3), 'ddld dddr rrrr rrrd drrr rrrr rrrr rrr*'),
         ((9,6), 'ulll rrrr rrrd drrr rrrr rrrr rrr*r'),
         ((7,6), 'dlll rrrr rrrd drrr rrrr rrrr rrrr *r'),
+    ],
+    ("Sokoban 3", "a"): [ # successful
+        ((10,5), 'll'),
+        ((11,5), 'r*r'),
+        ((9,6), 'ddr*r'),
+        ((7,4), 'ddd'),
+        ((10,3), 'u'),
+        ((10,4), 'rrdr r*r'),
+        ((9,3), 'rddr rrrr *r'),
+        ((7,3), 'rddd drrr rrr*r'),
+        ((4,3), 'dddr dddd rrrr rrr*r'), #finish G
+        ((4,2), 'rddd rddd drrr rrrr r*r'),
+        ((7,7), 'rrll llld dddr rrrr rrrr *r'),
+        ((6,9), 'uu'),
+        ((6,6), 'dddd drrr rrrr r*r'),
+        ((5,5), 'rddd dddr rrrr rrrr r*'),
+        ((2,4), 'rr'), #A rr
+        ((3,5), 'ddrd dddd drrr rrrr rrr*r'),
+    ],
+    ("Sokoban 4", "a"): [
+        ((10,4), 'l'),
+        ((11,7), 'rrr'),
+        ((14,3), 'rrr'),
+        ((12,5), 'rrdd dlll lur'),
+        ((8,4), 'll'),
+        ((9,4), 'rddd drrd ddll lllu'),
+        ((7,6), 'll'), #G ll
+        ((7,9), 'll'),
+        ((5,9), 'lddd llld dddr'),
+        ((5,7), 'rddd llld dd'),
+        ((7,7), 'ruuu luuu *r'), # finish H
+        ((7,4), 'rrrr uuul uuur *r'),
+        ((7,2), 'rrrr rruu uluu urrr*'),
+        ((7,11), 'lllu uulu uurr r*r'),
+        ((10,6), 'uuuu rrru uulu uurr rr*r'),
+        ((10,8), 'lllu uurr ruuu luuu rrrr rrr*r'),
+        ((11,10), 'llll luuu urrr uuul uuur rrrr rrr*r'),
+        ((14,6), 'ruuu ullu uurr ruuu luuu rrrr rrrr r*r'), # finish R
+        ((14,4), 'rrru uuul luuu rrru uulu uurr rrrr rrrr *r'),
+        ((14,2), 'rrrr ruuu ullu uurr ruuu luuu rrrr rrrr rrr*r'),
+        ((12,6), 'rddd llll lurr rrru uuul luuu rrru uulu uurr rrrr rrrr rr*r'),
+        ((5,5), 'rrrd ddll lddd uuuu rrru uulu uurr rrrr rrrr rrr*r'),
+        ((5,3), 'rrrr rddd llld dduu uurr ruuu luuu rrrr rrrr rrrr rr*r'),
+        ((5,11), 'llld ddll lddd uuuu rrru uulu uurr rrrr rrrr rrrr r*r'),
     ]
-
 }
 
 import physics

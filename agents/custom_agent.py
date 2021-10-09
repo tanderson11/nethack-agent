@@ -561,6 +561,7 @@ class RunState():
                 if self.advice_log[-1].sokoban_move.expect_plug and "The boulder falls into and plugs a hole" not in message.message and environment.env.debug:
                     import pdb; pdb.set_trace()
                 if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
+                    import pdb; pdb.set_trace()
                     self.neighborhood.level_map.solved = True
             else:
                 import pdb; pdb.set_trace()

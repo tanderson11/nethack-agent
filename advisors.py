@@ -1237,7 +1237,7 @@ class OpenClosedDoorAdvisor(Advisor):
 class KickLockedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         # don't kick outside dungeons of doom
-        if oracle.blstats.get('dungeon_number') != 0:
+        if run_state.neighborhood.level_map.dcoord.branch == map.Branches.GnomishMines:
             return None
         if oracle.on_warning_engraving:
             return None

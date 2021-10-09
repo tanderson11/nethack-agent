@@ -61,7 +61,7 @@ class DMap():
         self.dlevels = {}
         self.target_dcoords = {
             Branches.DungeonsOfDoom: DCoord(Branches.DungeonsOfDoom, 1),
-            Branches.Sokoban: DCoord(Branches.Sokoban, 2),
+            Branches.Sokoban: DCoord(Branches.Sokoban, 1),
         }
         self.branch_connections = {}
         self.oracle_level = None
@@ -94,7 +94,7 @@ class DMap():
             pass
         else:
             level_map = self.dlevels.get(current_dcoord, None)
-            if level_map and not level_map.solved:
+            if level_map and level_map.special_level and not level_map.solved:
                 new_targets[Branches.Sokoban] = current_dcoord
 
         # Mines
@@ -349,6 +349,14 @@ class DLevelMap():
         self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
 
         if self.special_level is None:
+            if self.dcoord == DCoord(4,3):
+                #import pdb; pdb.set_trace()
+                pass
+            if self.dcoord == DCoord(4,2):
+                #import pdb; pdb.set_trace()
+                pass
+            if self.dcoord == DCoord(4,1):
+                import pdb; pdb.set_trace(),
             self.special_level = self.special_level_searcher.match_level(self)
             if self.special_level is not None:
                 if self.special_level.branch == Branches.Sokoban:
@@ -666,7 +674,7 @@ class CMapGlyphDecoder(SpecialLevelDecoder):
         'F': 'bars',
         'I': 'ice',
         'L': 'lava',
-        #'+': '', # 'vcdoor' or 'hcdoor' depending of horizontal or vertical,
+        '+': 'hcdoor', # TODO TODO TODO'vcdoor' or 'hcdoor' depending of horizontal or vertical,
     }
 
 class PotentialWallDecoder(SpecialLevelDecoder):
@@ -692,8 +700,8 @@ class IDAbleStackDecoder(SpecialLevelDecoder):
 class BoulderDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['0']
 
-#class DoorDecoder(SpecialLevelDecoder):
-#    CHARACTER_SET = ['+']
+class DoorDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['+']
 
 KNOWN_WIKI_ENCODINGS = set([ord(' '), ord('.')])
 
@@ -800,9 +808,16 @@ class SpecialLevelLoader():
             18: 3,
         }
 
-        offset_y = hardcoded_y_offsets[map_height]
+        hardcoded_x_offsets = {
+            20: 30,
+            29: 24,
+        }
 
-        offset_x = initial_offset_x
+        offset_y = hardcoded_y_offsets[map_height]
+        try:
+            offset_x = hardcoded_x_offsets[map_length]
+        except KeyError:
+            offset_x = initial_offset_x
 
         #row, col
         return (offset_y, offset_x)
@@ -831,10 +846,10 @@ class SpecialLevelLoader():
 ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_1a'),
     SpecialLevelLoader.load('sokoban_1b'),
-    #SpecialLevelLoader.load('sokoban_2a'),
-    #SpecialLevelLoader.load('sokoban_2b'),
-    #SpecialLevelLoader.load('sokoban_3a'),
+    SpecialLevelLoader.load('sokoban_2a'),
+    SpecialLevelLoader.load('sokoban_2b'),
+    SpecialLevelLoader.load('sokoban_3a'),
     #SpecialLevelLoader.load('sokoban_3b'),
-    #SpecialLevelLoader.load('sokoban_4a'),
+    SpecialLevelLoader.load('sokoban_4a'),
     #SpecialLevelLoader.load('sokoban_4b'),
 ]
