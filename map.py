@@ -142,34 +142,52 @@ class DMap():
             #import pdb; pdb.set_trace()
             pass
         if current_dcoord.branch == target_dcoord.branch:
-            return DungeonHeading(DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level)), target_dcoord.branch)
+            return DungeonHeading(
+                direction=DirectionThroughDungeon(np.sign(target_dcoord.level - current_dcoord.level)),
+                target_branch=target_dcoord.branch,
+                next_new_branch=None,
+            )
 
+        # We are now in the case that we need a branch connection.
+        # This pathfinding logic assumes that either
+        # (A) We need a single branch connection or
+        # (B) We need two, where we go through the Dungeons of Doom
         initial_start=None
         final_start=None
         one_and_only_start=None
-        #import pdb; pdb.set_trace()
-        for start_dcoord, end_dcoord in self.branch_connections.keys():
+        for connection_start, connection_end in self.branch_connections.keys():
             # if not relevant in any way, continue
-            if start_dcoord.branch != current_dcoord.branch and end_dcoord.branch != target_dcoord.branch:
+            if connection_start.branch != current_dcoord.branch and connection_end.branch != target_dcoord.branch:
                 continue
 
-            if end_dcoord.branch == target_dcoord.branch:
-                if start_dcoord.branch == current_dcoord.branch:
-                    one_and_only_start = start_dcoord
-                else:
-                    final_start = start_dcoord
+            if connection_end.branch == target_dcoord.branch:
+                if connection_start.branch == current_dcoord.branch:
+                    one_and_only_start = connection_start
+                elif connection_start.branch == Branches.DungeonsOfDoom:
+                    final_start = connection_start
                 continue # don't want to grab this as our initial leg and double count it
 
-            if current_dcoord.branch != Branches.DungeonsOfDoom and (start_dcoord.branch == current_dcoord.branch and end_dcoord.branch == Branches.DungeonsOfDoom):
-                initial_start = start_dcoord
+            if (
+                current_dcoord.branch != Branches.DungeonsOfDoom and
+                (connection_start.branch == current_dcoord.branch and connection_end.branch == Branches.DungeonsOfDoom)
+            ):
+                initial_start = connection_start
 
         if one_and_only_start is not None:
-            return DungeonHeading(DirectionThroughDungeon(np.sign(one_and_only_start.level - current_dcoord.level)), target_dcoord.branch)
+            return DungeonHeading(
+                direction=DirectionThroughDungeon(np.sign(one_and_only_start.level - current_dcoord.level)),
+                target_branch=target_dcoord.branch,
+                next_new_branch=target_dcoord.branch,
+            )
 
         if initial_start is None or final_start is None:
             return None
 
-        return DungeonHeading(DirectionThroughDungeon(np.sign(initial_start.level - current_dcoord.level)), target_dcoord.branch)
+        return DungeonHeading(DirectionThroughDungeon(
+            direction=np.sign(initial_start.level - current_dcoord.level)),
+            target_branch=target_dcoord.branch,
+            next_new_branch=final_start.branch,
+        )
 
 class Staircase():
     def __init__(self, dcoord, location, to_dcoord, to_location, direction):
@@ -182,7 +200,10 @@ class Staircase():
         self.direction = direction
 
     def matches_heading(self, heading):
-        return (self.end_dcoord.branch == heading.target_branch and not self.start_dcoord.branch == self.end_dcoord.branch) or (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
+        return (
+            (self.end_dcoord.branch == heading.next_new_branch and not self.start_dcoord.branch == self.end_dcoord.branch) or
+            (self.direction == heading.direction and self.end_dcoord.branch == self.start_dcoord.branch)
+        )
 
 class TimedCorpse(NamedTuple):
     ACCEPTABLE_CORPSE_AGE = 50

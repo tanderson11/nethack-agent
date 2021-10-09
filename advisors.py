@@ -1247,7 +1247,7 @@ class TravelToDesiredEgress(Advisor):
 
         heading = run_state.dmap.dungeon_direction_to_best_target(lmap.dcoord)
 
-        if heading.direction == map.DirectionThroughDungeon.flat:
+        if heading.direction == map.DirectionThroughDungeon.flat and heading.next_new_branch is None:
             return None
 
         for location, staircase in lmap.staircases.items():
