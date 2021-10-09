@@ -550,7 +550,7 @@ class EquippedStatus():
                 self.status = 'worn'
                 self.slot = item.identity.slot
 
-            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status:
+            elif "weapon in hand" in parenthetical_status or "(wielded)" == parenthetical_status or "weapon in claw" in parenthetical_status:
                 self.status = 'wielded'
 
                 if parenthetical_status == "(weapon in hands)":
