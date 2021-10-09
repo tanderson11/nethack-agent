@@ -32,6 +32,8 @@ new_advisors = [
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
+        TameHerbivores(),
+        TameCarnivores(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
         ReduceThreatFromManyEnemiesWithMove(),
@@ -40,7 +42,7 @@ new_advisors = [
         #RandomMoveAdvisor(),
         UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
         ]),
-    #RangedAttackNuisanceMonsters(),
+    RangedAttackNuisanceMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
@@ -59,6 +61,8 @@ new_advisors = [
     ###### OUT OF DANGER ###### ()
     BuyDesirableAdvisor(),
     DrinkHealingForMaxHPAdvisor(),
+    DrinkGainAbility(),
+    DrinkGainLevel(),
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
@@ -100,12 +104,14 @@ new_advisors = [
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
     # EXPLORE
-    SearchDeadEndAdvisor(),
+    SearchWithStethoscope(oracle_consultation=lambda o:o.have_free_stethoscope_action),
+    SearchDeadEndsWithStethoscope(),
+    SearchDeadEndAdvisor(oracle_consultation=lambda o: not o.have_stethoscope),
     UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
     RandomCompositeAdvisor(advisors={
         MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
         RandomMoveAdvisor(square_threat_tolerance=0.): 1,
-        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving): 4,
+        SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving and not o.have_stethoscope): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         TravelToAltarAdvisor(): 2,

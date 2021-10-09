@@ -11,7 +11,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice
+from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
 import advisor_sets
 
 import menuplan
@@ -214,6 +214,9 @@ normal_background_menu_plan_options = [
     menuplan.NoMenuResponse("Would you wear it for me?"),
     menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
     menuplan.EscapeMenuResponse("trouble lifting"),
+    menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
+    menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
+    menuplan.MoreMenuResponse("You may wish for an object."),
     menuplan.PhraseMenuResponse("For what do you wish?", "blessed +2 silver dragon scale mail"),
 ]
 
@@ -362,6 +365,7 @@ class RunState():
         self.time_stuck = 0
         self.rng = self.make_seeded_rng()
         self.time_did_advance = True
+        self.used_free_stethoscope_move = False
 
         self.neighborhood = None
         self.current_square = None
@@ -643,6 +647,10 @@ class RunState():
         if self.last_non_menu_action in self.actions_without_consequence:
             # Why are we confused about this.
             if environment.env.debug: import pdb; pdb.set_trace()
+        if self.time is not None and self.last_non_menu_action_timestamp is not None:
+            if self.time != self.last_non_menu_action_timestamp:
+                self.used_free_stethoscope_move = False
+
         game_did_advance = True
         if self.time is not None and self.last_non_menu_action_timestamp is not None and self.time_hung > 4: # time_hung > 4 is a bandaid for fast characters
             if self.time - self.last_non_menu_action_timestamp == 0: # we keep this timestamp because we won't call this function every step: menu plans bypass it
@@ -791,7 +799,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
+            if run_state.last_non_menu_action not in [nethack.actions.Command.THROW, nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
                 if run_state.character.held_by is not None:
                     run_state.character.held_by = None
 
@@ -1033,6 +1041,15 @@ class CustomAgent(BatchedAgent):
             #if environment.env.debug: import pdb; pdb.set_trace()
             print("WARNING: Fell through advisors to fallback search")
 
+        if isinstance(advice, advs.StethoscopeAdvice) and not blstats.check_condition(nethack.BL_MASK_DEAF):
+            run_state.used_free_stethoscope_move = True
+            try:
+                delta = physics.Square(*physics.action_to_delta[advice.direction])
+            except:
+                import pdb; pdb.set_trace()
+            level_map.log_stethoscope_search(neighborhood.absolute_player_location + delta)
+            #import pdb; pdb.set_trace()
+
         return advice
 
     def step(self, run_state, observation, reward, done, info):
@@ -1056,7 +1073,7 @@ class CustomAgent(BatchedAgent):
 
         run_state.log_action(advice)
 
-        if isinstance(advice, ActionAdvice):
+        if isinstance(advice, ActionAdvice) or isinstance(advice, StethoscopeAdvice):
             if advice.from_advisor:
                 advice.from_advisor.advice_selected()
             return utilities.ACTION_LOOKUP[advice.action]

@@ -451,6 +451,9 @@ class DLevelMap():
 
             return staircase
 
+    def log_stethoscope_search(self, location):
+        self.searches_count_map[location] = 1000
+
     def log_search(self, player_location):
         if player_location != self.player_location:
             if environment.env.debug:

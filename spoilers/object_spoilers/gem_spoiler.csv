@@ -20,7 +20,7 @@ loadstone,none,2349,gray,FALSE,loadstone,1,500,10,soft,gray stone
 luckstone,desire one,2348,gray,FALSE,luckstone,60,10,10,soft,gray stone
 obsidian,desire all,2336,black,FALSE,obsidian,200,1,1*,soft,black
 opal,desire all,2330,white,FALSE,opal,800,1,1*,soft,white
-rock,desire all,2352,rock,FALSE,rock,0,10,100,soft,rock
+rock,none,2352,rock,FALSE,rock,0,10,100,soft,rock
 ruby,desire all,2319,red,FALSE,ruby,3500,1,22*,hard,red
 sapphire,desire all,2321,blue,FALSE,sapphire,3000,1,16*,hard,blue
 topaz,desire all,2328,yellowish brown,FALSE,topaz,900,1,1*,hard,yellowish brown

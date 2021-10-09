@@ -133,8 +133,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+
+        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
+
         self.extended_is_monster = extended_is_monster
-        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), extended_visible_glyphs)
+        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), monsters)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
@@ -353,6 +356,25 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.adjacent_monsters = self.glyphs[self.is_monster]
         
         #import pdb; pdb.set_trace()
+
+    def at_dead_end(self):
+        # Consider the 8-location square surrounding the player
+        # We define a dead end as a situation where a single edge holds all
+        # the walkable locations
+        walkable_count = np.count_nonzero(self.walkable)
+        if walkable_count > 3:
+            return False
+        elif walkable_count > 1:
+            edge_counts = [
+                np.count_nonzero(self.walkable[0,:]),
+                np.count_nonzero(self.walkable[-1,:]),
+                np.count_nonzero(self.walkable[:,0]),
+                np.count_nonzero(self.walkable[:,-1]),
+            ]
+            if not walkable_count in edge_counts: # i.e. if no edge holds all of them
+                return False
+
+        return True
 
     def safe_detonation(self, monster, monster_square):
         if not isinstance(monster, gd.MonsterGlyph):

@@ -238,7 +238,7 @@ class Character():
             melee_types.steal or
             melee_types.seduce or 
             melee_types.stone or
-            melee_types.spell or
+            (melee_types.spell and monster_spoiler.level > 8) or
             (melee_types.sleep and not self.has_intrinsic(constants.Intrinsics.sleep_resistance))
         )
 
