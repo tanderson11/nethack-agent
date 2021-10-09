@@ -717,7 +717,7 @@ class TestArtifacts(unittest.TestCase):
         base_item_name: str
 
     from_str_test_values = {
-        "n - a runed broadsword named Stormbringer": ArtifactValue("Stormbringer", "runesword"),
+        "n - a runed broadsword named Stormbringer (weapon in hand)": ArtifactValue("Stormbringer", "runesword"),
         "n - the blessed +5 Stormbringer": ArtifactValue("Stormbringer", "runesword"),
         "m - a gray stone named The Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),
         "m - the uncursed Heart of Ahriman": ArtifactValue("Heart of Ahriman", "luckstone"),

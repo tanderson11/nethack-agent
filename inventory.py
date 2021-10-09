@@ -340,8 +340,9 @@ class Weapon(Item):
             return -1
 
         # don't wield unknown BUC or desperate (but once you've wielded it, damage has been done, so don't oscillate)
-        if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
-            return -1
+        if not self.identity.is_artifact:
+            if not desperate and not optimistic_to_unknown and self.BUC == constants.BUC.unknown and (self != character.inventory.wielded_weapon):
+                return -1
 
         if not desperate:
             if relevant_skill == False:
@@ -356,15 +357,12 @@ class Weapon(Item):
             if pd.isna(constants.SkillRank(skill_rank)):
                 return -1
 
-        enhancement = self.enhancement
-        if enhancement is None:
-            enhancement = 0
+        melee_damage = self.melee_damage(character, None)
 
-        melee_damage = self.identity.avg_melee_damage(None)
         if isinstance(melee_damage, np.ndarray):
             melee_damage = melee_damage.max()
 
-        return enhancement + melee_damage
+        return melee_damage
 
     def find_equivalents_vis_excalibur(self, inventory):
         if self.identity is None:
@@ -578,7 +576,7 @@ class BadStringOnWhitelist(Exception):
     pass
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]+))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]*[a-zA-Z!'_]))? ?(\(.+\))?$")
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
@@ -1308,6 +1306,7 @@ class PlayerInventory():
                     self.items_by_letter[letter] = item
                 else:
                     import pdb; pdb.set_trace() # why did we ever check this? why are we here?
+                    pass
 
             self.items_by_class[object_class] = class_contents
             return class_contents

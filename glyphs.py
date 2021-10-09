@@ -1197,6 +1197,9 @@ class GlobalIdentityMap():
 
     def found_artifact(self, artifact):
         if self.generated_artifacts[artifact] == False:
+            if artifact == 'Excalibur':
+                #import pdb; pdb.set_trace()
+                pass
             self.generated_artifacts[artifact] = True
 
     def load_artifact_identities(self):
