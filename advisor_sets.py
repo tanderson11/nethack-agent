@@ -36,12 +36,13 @@ new_advisors = [
         TameCarnivores(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
-        ReduceThreatFromManyEnemiesWithMove(),
-        SafeMeleeAttackAdvisor(),
-        PassiveMonsterRangedAttackAdvisor(),
+    ]),
+    RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
+        ReduceThreatFromManyEnemiesWithMove(): 9,
+        SafeMeleeAttackAdvisor(): 1,
         #RandomMoveAdvisor(),
-        UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: not o.have_moves),
-        ]),
+    }),
+    PassiveMonsterRangedAttackAdvisor(),
     RangedAttackNuisanceMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
@@ -51,6 +52,8 @@ new_advisors = [
         ]),
     # LYCANTHROPY PUNISHED ETC
     PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
+    # Stuck and gotta bust out
+    UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
     # DISTANT THREAT
