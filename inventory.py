@@ -387,7 +387,7 @@ class Weapon(Item):
     def desirable(self, character, consider_funds=True):
         if consider_funds is True and not self.can_afford(character):
             return False
-        if self.enhancement is not None and self.identity.is_ammo:
+        if self.enhancement is not None and (self.identity.is_ammo or self.identity.ranged):
             return True
 
         if character.wants_excalibur() and self.identity.name() == 'long sword':
@@ -720,7 +720,7 @@ class ItemParser():
         if match_components.instance_name is not None:
             identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
             if identity is not None:
-                global_identity_map.found_artifact(match_components.instance_name)
+                global_identity_map.found_artifact(identity.artifact_name)
                 base_identity = global_identity_map.identity_by_numeral[item_glyph]
                 global_identity_map.associate_identity_and_name(base_identity, identity.name())
 
@@ -728,7 +728,7 @@ class ItemParser():
         if identity is None:
             identity = global_identity_map.artifact_identity_by_name.get(match_components.description, None)
             if identity is not None:
-                global_identity_map.found_artifact(match_components.instance_name)
+                global_identity_map.found_artifact(identity.artifact_name)
         # Third line of defense: this isn't an artifact, get its identity from the numeral
         if identity is None:
             try:
@@ -762,7 +762,7 @@ class ItemParser():
 
             if identity is not None:
                 # we've found an artifact
-                global_identity_map.found_artifact(match_components.instance_name)
+                global_identity_map.found_artifact(identity.artifact_name)
                 item_class = cls.item_class_by_glyph_class[identity.associated_glyph_class]
                 return item_class(identity, match_components, inventory_letter=inventory_letter)
 
@@ -792,7 +792,7 @@ class ItemParser():
                 # try to extract as an artifact
                 artifact_identity = global_identity_map.identity_by_name.get((glyph_class, match_components.description), None)
                 if artifact_identity is not None and artifact_identity.is_artifact:
-                    global_identity_map.found_artifact(match_components.instance_name)
+                    global_identity_map.found_artifact(artifact_identity.artifact_name)
                     item_class = cls.item_class_by_glyph_class[artifact_identity.associated_glyph_class]
                     return item_class(artifact_identity, match_components, inventory_letter=inventory_letter)
 

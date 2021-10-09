@@ -1198,8 +1198,6 @@ class GlobalIdentityMap():
     def found_artifact(self, artifact):
         if self.generated_artifacts[artifact] == False:
             self.generated_artifacts[artifact] = True
-            self.character.found_artifact(artifact)
-
 
     def load_artifact_identities(self):
         self.generated_artifacts = {}
@@ -1224,8 +1222,7 @@ class GlobalIdentityMap():
         # go through table of artifacts, for each row, find base item row and join it in (dropping some columns)
         # then instantiate the appropriate artifact identity
 
-    def __init__(self, character):
-        self.character = character
+    def __init__(self, is_priest=False):
         self.identity_by_numeral = {}
         # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
         self.identity_by_name = {} # this we will have to be careful to keep updated
@@ -1235,7 +1232,7 @@ class GlobalIdentityMap():
 
         self.appearance_counts = {} # when we '#name' or identify an object, we can decrement this
 
-        self.is_priest = character.base_class == constants.BaseRole.Priest # If we are a priest then we see BUC differently
+        self.is_priest = is_priest # If we are a priest then we see BUC differently
 
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]

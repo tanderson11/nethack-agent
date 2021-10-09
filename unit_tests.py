@@ -53,13 +53,12 @@ class TestItemRegex(unittest.TestCase):
     }
     def test_all_test_values(self):
         global_identity_map = gd.GlobalIdentityMap()
-        run_state = agents.custom_agent.RunState()
-        run_state.global_identity_map = global_identity_map
+        character = MagicMock(global_identity_map=global_identity_map)
         for key, value in self.test_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=run_state), None, "a", False, key
+                MagicMock(player_character=character), None, "a", False, key
             )
             if item.item is None:
                 import pdb; pdb.set_trace()
@@ -67,13 +66,12 @@ class TestItemRegex(unittest.TestCase):
 
     def test_holy_water(self):
         global_identity_map = gd.GlobalIdentityMap()
-        run_state = agents.custom_agent.RunState()
-        run_state.global_identity_map = global_identity_map
+        character = MagicMock(global_identity_map=global_identity_map)
         for key, value in self.holy_water_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=run_state), None, "a", False, key
+                MagicMock(player_character=character), None, "a", False, key
             )
             #if item.item is None:
             #    import pdb; pdb.set_trace()
@@ -82,13 +80,12 @@ class TestItemRegex(unittest.TestCase):
 
     def test_paperbacks_dont_crash(self):
         global_identity_map = gd.GlobalIdentityMap()
-        run_state = agents.custom_agent.RunState()
-        run_state.global_identity_map = global_identity_map
+        character = MagicMock(global_identity_map=global_identity_map)
         for key, value in self.paperback_values.items():
             print(key)
 
             item = menuplan.ParsingInventoryMenu.MenuItem(
-                MagicMock(run_state=run_state), None, "a", False, key
+                MagicMock(player_character=character), None, "a", False, key
             )
             #if item.item is None:
             #    import pdb; pdb.set_trace()
@@ -691,8 +688,7 @@ class TestBUC(unittest.TestCase):
             print(k,buc.non_priest_out)
 
             global_identity_map = gd.GlobalIdentityMap()
-            run_state = agents.custom_agent.RunState()
-            run_state.global_identity_map = global_identity_map
+            character = MagicMock(global_identity_map=global_identity_map)
 
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
@@ -706,8 +702,7 @@ class TestBUC(unittest.TestCase):
 
             global_identity_map = gd.GlobalIdentityMap()
             global_identity_map.is_priest = True
-            run_state = agents.custom_agent.RunState()
-            run_state.global_identity_map = global_identity_map
+            character = MagicMock(global_identity_map=global_identity_map)
 
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
@@ -746,8 +741,7 @@ class TestArtifacts(unittest.TestCase):
     def test_base_gets_identified(self):
         numeral, item_str = (2090, "a hexagonal amulet named The Eye of the Aethiopica")
         global_identity_map = gd.GlobalIdentityMap()
-        run_state = agents.custom_agent.RunState()
-        run_state.global_identity_map = global_identity_map
+        #character = MagicMock(global_identity_map=global_identity_map)
 
         artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
@@ -762,8 +756,7 @@ class TestArtifacts(unittest.TestCase):
             print(k,v)
 
             global_identity_map = gd.GlobalIdentityMap()
-            run_state = agents.custom_agent.RunState()
-            run_state.global_identity_map = global_identity_map
+            #character = MagicMock(global_identity_map=global_identity_map)
 
             artifact = inv.ItemParser.make_item_with_glyph(global_identity_map, numeral, item_str)
 
@@ -775,11 +768,10 @@ class TestArtifacts(unittest.TestCase):
     def test_from_string(self):
         for k,v in self.from_str_test_values.items():
             global_identity_map = gd.GlobalIdentityMap()
-            run_state = agents.custom_agent.RunState()
-            run_state.global_identity_map = global_identity_map
+            character = MagicMock(global_identity_map=global_identity_map)
 
             menu_text = string_to_tty_chars(k)
-            interactive_menu = menuplan.ParsingInventoryMenu(run_state)
+            interactive_menu = menuplan.ParsingInventoryMenu(character)
             result = interactive_menu.search_through_rows(menu_text)
             print(result.item.identity.name())
 
@@ -802,8 +794,6 @@ class TestWeaponPickup(unittest.TestCase):
     }
 
     def test(self):
-        run_state = agents.custom_agent.RunState()
-
         character = agents.custom_agent.Character(
             base_class=constants.BaseRole.Tourist,
             base_race=constants.BaseRace.human,
@@ -814,14 +804,13 @@ class TestWeaponPickup(unittest.TestCase):
 
         inventory = inv.PlayerInventory(np.array([]), np.array([]), np.array([]), np.array([]))
         inventory.wielded_weapon = inv.BareHands()
-        run_state.character = character
-        run_state.character.inventory = inventory
+        character.inventory = inventory
         global_identity_map = gd.GlobalIdentityMap()
-        run_state.global_identity_map = global_identity_map
+        character.global_identity_map = global_identity_map
 
         for k,v in self.test_values.items():
             menu_text = string_to_tty_chars(self.test_header + k)
-            interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
+            interactive_menu = menuplan.InteractivePickupMenu(character, select_desirable='desirable')
             result = interactive_menu.search_through_rows(menu_text)
             print(result)
 
@@ -861,10 +850,8 @@ m - a wand of teleportation (0:6) >> teleport wands|desirable
     def test_pickup(self):
         # use | between selectors for items picked by many selectors
         # TK `e - a lichen corpse >> comestibles`
-        run_state = agents.custom_agent.RunState()
         global_identity_map = gd.GlobalIdentityMap()
-        run_state.global_identity_map = global_identity_map
-
+        character = MagicMock(global_identity_map=global_identity_map)
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
 
@@ -876,7 +863,7 @@ m - a wand of teleportation (0:6) >> teleport wands|desirable
             self.assertTrue(selector_name in expected.keys())
 
             #import pdb; pdb.set_trace()
-            interactive_menu = menuplan.InteractivePickupMenu(run_state, selector_name)
+            interactive_menu = menuplan.InteractivePickupMenu(character, selector_name)
             result = interactive_menu.search_through_rows(text)
             print(result)
 
@@ -897,10 +884,8 @@ m - a wand of teleportation (0:6) >> teleport wands|desirable
         )
         character.set_class_skills()
         character.attributes = MagicMock(charisma=18)
-        run_state = agents.custom_agent.RunState()
-        run_state.character = character
         global_identity_map = gd.GlobalIdentityMap()
-        run_state.global_identity_map = global_identity_map
+        character.global_identity_map = global_identity_map
 
         character.inventory = inv.PlayerInventory(np.array([]), np.array([]), np.array([]), np.array([]))
         character.inventory.armaments = inv.ArmamentSlots()
@@ -908,7 +893,7 @@ m - a wand of teleportation (0:6) >> teleport wands|desirable
 
         string, expected = labeled_string_to_raw_and_expected(self.labeled_text)
         text = string_to_tty_chars(string)
-        interactive_menu = menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
+        interactive_menu = menuplan.InteractivePickupMenu(character, select_desirable='desirable')
         results = []
         for i in range(0, 20):
             try:
@@ -1305,7 +1290,7 @@ class TestDrop(unittest.TestCase):
 
     def test_single_items(self):
         character = agents.custom_agent.Character(
-            base_class=constants.BaseRole.Caveperson,
+            base_class=constants.BaseRole.Samurai,
             base_race=constants.BaseRace.human,
             base_sex='male',
             base_alignment='lawful'
@@ -1319,7 +1304,7 @@ class TestDrop(unittest.TestCase):
             oclass = item_class.glyph_class.class_number
             inventory = inv.PlayerInventory(global_identity_map, np.array([ord("a")]), np.array([oclass]), string, inv_glyphs=np.array([numeral]))
             character.inventory = inventory
-            undesirable = inventory.all_undesirable_items(global_identity_map, character)
+            undesirable = inventory.all_undesirable_items(character)
 
             try:
                 if do_drop:
@@ -1328,6 +1313,7 @@ class TestDrop(unittest.TestCase):
                     self.assertEqual(len(undesirable), 0, item_str)
             except:
                 import pdb; pdb.set_trace()
+                pass
 
 class TestSpecialItemNames(unittest.TestCase):
     def test_no_charges(self):

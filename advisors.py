@@ -566,7 +566,7 @@ class IdentifyUnidentifiedScrolls(Advisor):
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(character, character.inventory, desired_letter=chr(unidentified_scrolls.inventory_letter)))
 
         return ActionAdvice(self, read, menu_plan)
 
@@ -591,14 +591,14 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
-        ], interactive_menu=menuplan.InteractiveIdentifyMenu(run_state, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
+        ], interactive_menu=menuplan.InteractiveIdentifyMenu(character, character.inventory, desired_letter=chr(unidentified_magic_armor.inventory_letter)))
 
         return ActionAdvice(self, read, menu_plan)
 
 class AnyScrollAdvisor(Advisor):
     def make_menu_plan(self, run_state, character, scroll):
         interactive_menus = [
-            menuplan.InteractiveIdentifyMenu(run_state, character.inventory), # identifies first choice since we don't specify anything
+            menuplan.InteractiveIdentifyMenu(character, character.inventory), # identifies first choice since we don't specify anything
         ]
 
         menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
@@ -1401,7 +1401,7 @@ class DropToPriceIDAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=unidentified_letters),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=unidentified_letters),
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1427,7 +1427,7 @@ class DropUndesirableAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=undesirable_letters)
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1498,7 +1498,7 @@ class DropShopOwnedAdvisor(Advisor):
             ],
             interactive_menu=[
                 menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
-                menuplan.InteractiveDropTypeMenu(run_state, character.inventory, desired_letter=shop_owned_letters)
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=shop_owned_letters)
             ]
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
@@ -1513,7 +1513,7 @@ class PickupDesirableItems(Advisor):
             "pick up all desirable objects",
             self,
             [],
-            interactive_menu=menuplan.InteractivePickupMenu(run_state, select_desirable='desirable')
+            interactive_menu=menuplan.InteractivePickupMenu(character, select_desirable='desirable')
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 

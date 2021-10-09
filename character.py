@@ -51,7 +51,7 @@ class Character():
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
 
     def make_global_identity_map(self):
-        self.global_identity_map = gd.GlobalIdentityMap(self)
+        self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
 
     intrinsic_gain_messages = {
         "You speed up": constants.Intrinsics.speed,
@@ -88,9 +88,6 @@ class Character():
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
         return self.relevant_skills.loc['long sword'] == True
-
-    def found_artifact(self, artifact):
-        pass
 
     def hankering_for_excalibur(self):
         if self.global_identity_map.generated_artifacts['Excalibur'] == True:
