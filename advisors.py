@@ -887,7 +887,7 @@ class RangedAttackAdvisor(Attack):
         menu_plan = menuplan.MenuPlan("zap ranged attack wand", self, [
             menuplan.CharacterMenuResponse("What do you want to zap?", chr(item.inventory_letter)),
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ],)
+        ], listening_item=item)
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):
