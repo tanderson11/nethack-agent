@@ -946,9 +946,8 @@ class CustomAgent(BatchedAgent):
             return advice
 
         if message.has_more or message.yn_question or message.getline:
-            import pdb; pdb.set_trace()
-            pass
-            #raise Exception(f"We somehow missed a message {message.message}")
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
 
         if run_state.auto_pickup:
             advice = ActionAdvice(
