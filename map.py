@@ -314,7 +314,7 @@ class DLevelMap():
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
     
-    def update(self, changed_level, time, player_location, glyphs):
+    def update(self, changed_level, time, player_location, glyphs, update_visits=True):
         if changed_level:
             self.time_of_recent_arrival = time
 
@@ -361,7 +361,8 @@ class DLevelMap():
             self.time_of_new_square = time
         if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
             import pdb; pdb.set_trace()
-        self.visits_count_map[self.player_location] += 1
+        if update_visits:
+            self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
