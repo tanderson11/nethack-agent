@@ -1,0 +1,15 @@
+{
+    "branch": "DungeonsOfDoom",
+    "level_name": "Medusa",
+    "level_variant": "2",
+    "min_branch_level": 21,
+    "max_branch_level": 28,
+    "geometry_horizontal": "center",
+    "geometry_vertical": "center",
+    "properties": {
+        "mappable": true,
+        "teleportable": false,
+        "diggable_walls": false,
+        "diggable_floor": true
+    }
+}

@@ -867,6 +867,8 @@ class SpecialLevelLoader():
             14: 5,
             17: 3,
             18: 3,
+            20: 1,
+            21: 0,
         }
 
         hardcoded_x_offsets = {
@@ -917,6 +919,10 @@ ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('mines_end_catacomb'),
     SpecialLevelLoader.load('mines_end_mimic'),
     SpecialLevelLoader.load('mines_end_winecellar'),
+    SpecialLevelLoader.load('medusa_1'),
+    SpecialLevelLoader.load('medusa_2'),
+    SpecialLevelLoader.load('medusa_3'),
+    SpecialLevelLoader.load('medusa_4'),
 ]
 
 if len(set(map(lambda x: x.id, ALL_SPECIAL_LEVELS))) < len(ALL_SPECIAL_LEVELS):
