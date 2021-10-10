@@ -112,7 +112,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visits = level_map.visits_count_map[self.vision]
         extended_open_door = gd.CMapGlyph.open_door_mask(extended_visible_raw_glyphs)
+
+        self.extended_embeds = self.zoom_glyph_alike(
+            level_map.embedded_object_map,
+            ViewField.Extended
+        )
+
         extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
+        extended_walkable_tile &= ~self.extended_embeds
 
         extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
 
@@ -328,7 +335,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.level_map.lootable_squares_map,
             ViewField.Extended
         )
-        return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
+        return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & ~self.extended_embeds & (desirable_corpses | lootable_squares))
 
     def path_to_unvisited_shop_sqaures(self):
         unvisited_squares = self.zoom_glyph_alike(

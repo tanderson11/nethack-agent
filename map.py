@@ -260,6 +260,7 @@ class DLevelMap():
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.embedded_object_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
 
         self.staircases = {}
@@ -372,7 +373,8 @@ class DLevelMap():
         reachable = (
             (self.safely_walkable | self.doors) &
             (~self.owned_doors) &
-            (self.special_room_map == constants.SpecialRoomTypes.NONE.value)
+            (self.special_room_map == constants.SpecialRoomTypes.NONE.value) &
+            (~self.embedded_object_map)
         )
 
         self.frontier_squares = (
