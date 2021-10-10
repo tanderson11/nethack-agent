@@ -131,6 +131,7 @@ class Message():
         "There is a grave here.": gd.get_by_name(gd.CMapGlyph, 'grave'),
         "There is a sink here.": gd.get_by_name(gd.CMapGlyph, 'sink'),
         "There is an altar to ": gd.get_by_name(gd.CMapGlyph, 'altar'),
+        "There is a magic trap here": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
         "An arrow shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'arrow_trap'),
         "A little dart shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'dart_trap'),
         "A tower of flame erupts from the floor!": gd.get_by_name(gd.CMapGlyph, 'fire_trap'),
@@ -143,6 +144,15 @@ class Message():
         "A cloud of gas puts you to sleep!": gd.get_by_name(gd.CMapGlyph, 'sleeping_gas_trap'),
         "bear trap closes": gd.get_by_name(gd.CMapGlyph, 'bear_trap'),
         "The fountain dries up!": gd.get_by_name(gd.CMapGlyph, 'room'),
+        "You are momentarily blinded by a flash of light!": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You hear a deafening roar": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You see a flash of light": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You feel rankled": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "A shiver runs up and down your": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You suddenly yearn for": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "Your pack shakes violently": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You smell charred flesh": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You feel tired": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
     }
 
     class Feedback():
@@ -573,13 +583,13 @@ class RunState():
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
             if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
                 self.neighborhood.level_map.sokoban_move_index += 1
-                if self.advice_log[-1].sokoban_move.expect_plug and "The boulder falls into and plugs a hole" not in message.message and environment.env.debug:
+                if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message) and environment.env.debug:
                     import pdb; pdb.set_trace()
                 if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
                     #import pdb; pdb.set_trace()
                     self.neighborhood.level_map.solved = True
             else:
-                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
                 pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:

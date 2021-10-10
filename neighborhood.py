@@ -105,6 +105,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                         level_map.add_room_from_square(absolute_shopkeeper_position, constants.SpecialRoomTypes.shop)
 
         extended_special_rooms = level_map.special_room_map[self.vision]
+        self.in_shop = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.shop.value
 
         ###################################
         ### RELATIVE POSITION IN VISION ###
@@ -112,24 +113,20 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visits = level_map.visits_count_map[self.vision]
         extended_open_door = gd.CMapGlyph.open_door_mask(extended_visible_raw_glyphs)
-        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
-
-        extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)  # don't go into vault closets
-
-        self.in_shop = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.shop.value
-        if not self.in_shop:
-            pass
-            #extended_walkable_tile &= ~(extended_special_rooms == constants.SpecialRoomTypes.shop.value)  # don't step on shop sqaures unless you are in a shop
-        extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
-
         self.extended_boulders = self.zoom_glyph_alike(
             level_map.boulder_map,
             ViewField.Extended
         )
-
+        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
+        extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
+        extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
+        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)
         if level_map.dcoord.branch == map.Branches.Sokoban:
-            # Corrections to what is moveable in Sokoban
-            extended_walkable_tile &= ~(self.extended_boulders)
+            imprudent |= self.extended_boulders
+        prudent_walkable = extended_walkable_tile & ~imprudent
+        if extended_nasty_traps.any():
+            #import pdb; pdb.set_trace()
+            pass
 
         extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
@@ -142,7 +139,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
         self.extended_possible_secret_mask = self.zoom_glyph_alike(self.level_map.possible_secrets, ViewField.Extended)
-
         self.extended_has_item_stack = gd.stackable_mask(extended_visible_raw_glyphs)
 
         self.extended_is_hostile_monster = self.extended_is_monster & ~self.extended_is_peaceful_monster
@@ -182,7 +178,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
-        walkable_tile = extended_walkable_tile[neighborhood_view].copy()
+        walkable_tile = prudent_walkable[neighborhood_view].copy()
 
         # in the narrow sense
         self.walkable = walkable_tile
@@ -204,7 +200,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # to help with pathfinding (which depends on an extended walkable mesh)
         #extended_walkable_tile[neighborhood_view] = self.walkable
         self.extended_walkable = extended_walkable_tile
-
+        self.imprudent = imprudent
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
@@ -233,7 +229,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         delta: tuple
         threat: float
 
-    def path_to_targets(self, target_mask, target_monsters=False):
+    def path_to_targets(self, target_mask, target_monsters=False, be_prudent=True):
+        if be_prudent:
+            target_mask = target_mask & ~self.imprudent
         if not target_mask.any():
             return None
 

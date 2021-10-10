@@ -457,6 +457,13 @@ class CMapGlyph(Glyph):
         )
 
     @classmethod
+    def is_trap_to_avoid_check(cls, offsets):
+        return (
+            ((offsets >= 42) & (offsets <= 63)) &
+            ~((offsets == 62) | (offsets == 45) | (offsets == 58))
+        )
+
+    @classmethod
     def is_safely_walkable_check(cls, offsets):
          return (
              ~((offsets < 0) | (offsets > cls.OFFSET + cls.COUNT)) &
