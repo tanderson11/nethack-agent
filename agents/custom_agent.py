@@ -131,6 +131,7 @@ class Message():
         "There is a grave here.": gd.get_by_name(gd.CMapGlyph, 'grave'),
         "There is a sink here.": gd.get_by_name(gd.CMapGlyph, 'sink'),
         "There is an altar to ": gd.get_by_name(gd.CMapGlyph, 'altar'),
+        "There is a magic trap here": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
         "An arrow shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'arrow_trap'),
         "A little dart shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'dart_trap'),
         "A tower of flame erupts from the floor!": gd.get_by_name(gd.CMapGlyph, 'fire_trap'),
@@ -143,6 +144,15 @@ class Message():
         "A cloud of gas puts you to sleep!": gd.get_by_name(gd.CMapGlyph, 'sleeping_gas_trap'),
         "bear trap closes": gd.get_by_name(gd.CMapGlyph, 'bear_trap'),
         "The fountain dries up!": gd.get_by_name(gd.CMapGlyph, 'room'),
+        "You are momentarily blinded by a flash of light!": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You hear a deafening roar": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You see a flash of light": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You feel rankled": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "A shiver runs up and down your": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You suddenly yearn for": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "Your pack shakes violently": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You smell charred flesh": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
+        "You feel tired": gd.get_by_name(gd.CMapGlyph, 'magic_trap'),
     }
 
     class Feedback():
@@ -405,7 +415,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'q++zhA=='
+        seed = b'TVeT0g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -463,7 +473,10 @@ class RunState():
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
         self.character.make_global_identity_map()
-        self.background_menu_plan.add_responses([menuplan.WishMenuResponse("For what do you wish?", self.character),])
+        self.background_menu_plan.add_responses([
+            menuplan.WishMenuResponse("For what do you wish?", self.character),
+            menuplan.WishMoreMenuResponse(self.character),
+        ])
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
@@ -946,8 +959,9 @@ class CustomAgent(BatchedAgent):
             return advice
 
         if message.has_more or message.yn_question or message.getline:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+            if environment.env.debug: import pdb; pdb.set_trace()
+            pass
+            #raise Exception(f"We somehow missed a message {message.message}")
 
         if run_state.auto_pickup:
             advice = ActionAdvice(
