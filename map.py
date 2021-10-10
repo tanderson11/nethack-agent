@@ -22,6 +22,7 @@ from utilities import ARS
 # TODO: I am not sure these ints are constant across nethack games
 class Branches(enum.IntEnum):
     DungeonsOfDoom = 0
+    Gehennom = 1
     GnomishMines = 2
     Quest = 3
     Sokoban = 4
@@ -315,6 +316,7 @@ class DLevelMap():
             self.downstairs_target = self.downstairs_count
     
     def update(self, changed_level, time, player_location, glyphs, update_visits=True):
+        self.recent_glyphs = glyphs
         if changed_level:
             self.time_of_recent_arrival = time
 
@@ -712,16 +714,18 @@ class SpecialLevelDecoder():
 class CMapGlyphDecoder(SpecialLevelDecoder):
     CHARACTER_MAPPING = {
         # '.': 'room', # Too much confusion about room / dark room
+        # '~': 'darkroom', # Too much confusion about room / dark room
         '<': 'upstair', # Probably needs configuration (ladder)
         '>': 'dnstair', # Probably needs configuration (ladder)
         '{': 'fountain',
-        '}': 'pool', # I don't think there's a separate moat glyph
-        # '#': 'sink', # Not sure if corridors will be a thing
+        # '}': 'pool', # No moat glyph? Skipping this because swimming/flying monsters cover it
+        # '#': '', # Not sure if corridors will be a thing. Drawbridge definitely is.
         '_': 'altar',
         'T': 'tree',
         'F': 'bars',
         'I': 'ice',
         'L': 'lava',
+        '\\': 'throne',
     }
 
 class PotentialWallDecoder(SpecialLevelDecoder):
@@ -750,7 +754,16 @@ class IDAbleStackDecoder(SpecialLevelDecoder):
 class BoulderDecoder(SpecialLevelDecoder):
     CHARACTER_SET = ['0']
 
-KNOWN_WIKI_ENCODINGS = set([ord(' '), ord('.')])
+class RoomDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['.', '~'] # Lit, Dark
+
+class IgnoredFeatureDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = ['}', '#']
+
+class UnobservedDecoder(SpecialLevelDecoder):
+    CHARACTER_SET = [' ']
+
+KNOWN_WIKI_ENCODINGS = set()
 
 for cls in SpecialLevelDecoder.__subclasses__():
     if cls.CHARACTER_SET:
@@ -763,6 +776,7 @@ class SpecialLevelMap():
     potential_wall_decoder = PotentialWallDecoder()
     potential_secret_door_decoder = PotentialSecretDoorDecoder()
     traps_to_avoid_decoder = TrapsToAvoidDecoder()
+    unobserved_decoder = UnobservedDecoder()
 
     def __repr__(self) -> str:
         return self.id
@@ -793,6 +807,7 @@ class SpecialLevelMap():
         self.potential_secret_doors = self.potential_secret_door_decoder.decode(nethack_wiki_encoding)
         self.adjacent_to_secret = FloodMap.flood_one_level_from_mask(self.potential_secret_doors)
         self.traps_to_avoid = self.traps_to_avoid_decoder.decode(nethack_wiki_encoding)
+        self.unobserved = self.unobserved_decoder.decode(nethack_wiki_encoding)
 
         if self.branch == Branches.Sokoban:
             self.sokoban_solution = SOKOBAN_SOLUTIONS[(self.level_name, self.level_variant)]
@@ -818,7 +833,7 @@ class SpecialLevelSearcher():
                 continue
             verbose_message = f"Trying to match {level_map.dcoord} to {possible_match.id} on pre-offset location of {(player_location[0] - possible_match.initial_offset[0], player_location[1] - possible_match.initial_offset[1])}"
 
-            too_many_walls = (level_map.observed_walls & ~possible_match.potential_walls)
+            too_many_walls = (level_map.observed_walls & ~possible_match.potential_walls & ~possible_match.unobserved)
             if np.count_nonzero(too_many_walls):
                 self.ruled_out_for_dcoord[level_map.dcoord].add(possible_match.id)
                 if verbose:
@@ -852,8 +867,8 @@ class SpecialLevelLoader():
             characters = f.readlines()
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
             properties = json.load(f)
-        
-        initial_offset = SpecialLevelLoader.make_initial_offset(characters, properties["geometry_horizontal"], properties["geometry_vertical"])
+
+        initial_offset = SpecialLevelLoader.make_initial_offset(level_name, characters, properties["geometry_horizontal"], properties["geometry_vertical"])
         return SpecialLevelMap(
             properties,
             SpecialLevelLoader.make_character_array(initial_offset, characters),
@@ -861,7 +876,7 @@ class SpecialLevelLoader():
         )
 
     @staticmethod
-    def make_initial_offset(characters, geometry_horizontal, geometry_vertical):
+    def make_initial_offset(level_name, characters, geometry_horizontal, geometry_vertical):
         if not (geometry_horizontal == "center"):
             raise Exception("Don't know how to handle other horizontal geometries yet")
 
@@ -881,13 +896,22 @@ class SpecialLevelLoader():
             14: 5,
             17: 3,
             18: 3,
+            19: 2,
             20: 1,
             21: 0,
         }
 
         hardcoded_x_offsets = {
+            14: 32,
+            15: 32,
             20: 30,
+            26: 26,
             29: 24,
+            63: 8,
+            69: 5,
+            75: 2,
+            76: 2,
+            77: 1,
         }
 
         if geometry_vertical == "center":
@@ -898,6 +922,7 @@ class SpecialLevelLoader():
         try:
             offset_x = hardcoded_x_offsets[map_length]
         except KeyError:
+            print(f"Guessing offset for {level_name}. Should burn in {map_length}:{initial_offset_x}")
             offset_x = initial_offset_x
 
         #row, col
@@ -937,6 +962,9 @@ ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('medusa_2'),
     SpecialLevelLoader.load('medusa_3'),
     SpecialLevelLoader.load('medusa_4'),
+    SpecialLevelLoader.load('castle'),
+    SpecialLevelLoader.load('valley'),
+    SpecialLevelLoader.load('sanctum'),
 ]
 
 if len(set(map(lambda x: x.id, ALL_SPECIAL_LEVELS))) < len(ALL_SPECIAL_LEVELS):

@@ -1321,7 +1321,6 @@ class GlobalIdentityMap():
 
         if identity.is_shuffled:
             if len(identity.idx) == 0:
-                import pdb; pdb.set_trace()
                 if environment.env.debug: import pdb; pdb.set_trace()
                 return None
             data_idx = identity.idx[0]
