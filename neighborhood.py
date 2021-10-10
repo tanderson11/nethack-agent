@@ -242,11 +242,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         if not target_mask.any():
             return None
 
-        walkable_mesh = ((self.extended_walkable & ~self.extended_boulders) | target_mask)
-        if not target_monsters:
-            walkable_mesh = walkable_mesh & ~self.extended_is_monster
+        walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
+        if target_monsters:
+            # we only need to be adjacent to monsters to attack them
+            target_mask = map.FloodMap.flood_one_level_from_mask(target_mask)
 
-        # pretend the targets are walkable so we can actually reach them in pathfinding
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
             doors=self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended),
@@ -311,6 +311,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
 
         return desirable_object_on_space
+
+    def path_invisible_monster(self):
+        invisible_monsters = gd.InvisibleGlyph.class_mask(self.vision_glyphs)
+        return self.path_to_targets(invisible_monsters, target_monsters=True)
 
     def path_next_sokoban_square(self):
         sokoban_square = self.level_map.special_level.sokoban_solution[self.level_map.sokoban_move_index].start_square

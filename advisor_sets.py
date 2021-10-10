@@ -99,6 +99,7 @@ new_advisors = [
         PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop and o.character.desperate_for_food()),
         WaitAdvisor(),
     ]),
+    PathfindInvisibleMonstersSokoban(),
     SolveSokoban(),
     PathfindSokobanSquare(),
     TravelToSokobanSquare(),
