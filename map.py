@@ -504,6 +504,13 @@ class DLevelMap():
         mask[absolute_square] = True
         return mask
 
+    def listen_for_special_engraving(self, player_location, message):
+        if self.special_level is None:
+            return None
+        if self.visits_count_map[player_location] == 1 and "Some text has been burned into the floor here." in message.message:
+            import pdb; pdb.set_trace()
+            pass
+
 class FloodMap():
     @staticmethod
     def flood_one_level_from_mask(mask):

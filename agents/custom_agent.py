@@ -874,10 +874,7 @@ class CustomAgent(BatchedAgent):
 
         update_visits = len(run_state.advice_log) == 0 or not isinstance(run_state.advice_log[-1], advs.MenuAdvice)
         level_map.update(changed_level, time, player_location, observation['glyphs'], update_visits=update_visits)
-
-        if level_map.visits_count_map[player_location] == 1 and "Some text has been burned into the floor here." in message.message:
-            import pdb; pdb.set_trace()
-            pass
+        level_map.listen_for_special_engraving(player_location, message.message)
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
