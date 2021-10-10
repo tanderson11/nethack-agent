@@ -45,8 +45,8 @@ sokoban_operations = {
         ((10,10), 'r*r'),
         ((10, 7), 'd'),
         ((9,10), 'l'),
-        ((4,9), 'u'), #F u
-        ((4,8), 'll'),
+        ((5,9), 'u'), #F u
+        ((5,8), 'll'),
         ((8,7), 'd'),
         ((9,9), 'rdrr *r'), #M rdrr r*
         ((11,7), 'llll lrrr rrrr uu'),
@@ -55,8 +55,8 @@ sokoban_operations = {
         ((9,5), 'dd'),
         ((10,6), 'r'),
         ((11,7), 'rruu rdrr rr*r'), #K rruu rdrr rrr*
-        ((10,7), 'drru urdr rrrr r*r'),
-        ((11,5), 'lllr rrrr rruu rdrr rrr*r'),
+        ((10,7), 'drru urdr rrrr *r'),
+        ((11,5), 'lllr rrrr rruu rdrr rrrr*r'),
         ((7,6), 'drdd drru urdr rrrr rr*r'),
         ((8,3), 'rrrr dddr ruur drrr rrrr r*r'),
         ((3,2), 'u'), #A u
@@ -155,11 +155,11 @@ sokoban_operations = {
         ((5,11), 'llld ddll lddd uuuu rrru uulu uurr rrrr rrrr rrrr r*r'),
     ],
     ("Sokoban 4", "b"): [
-        ((14,8), 'rrru uuu'),
-        ((10,12), 'u'),
-        ((9,13), 'uu'),
-        ((7,12), 'u'),
-        ((7,11), 'lll'),
+        ((14,7), 'rrru uuu'),
+        ((10,11), 'u'),
+        ((9,12), 'uu'),
+        ((7,11), 'u'),
+        ((7,10), 'lll'),
         ((8,5), 'll'), #K ll
         ((9,4), 'd'),
         ((7,4), 'u'),

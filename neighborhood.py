@@ -113,12 +113,19 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visits = level_map.visits_count_map[self.vision]
         extended_open_door = gd.CMapGlyph.open_door_mask(extended_visible_raw_glyphs)
+        self.extended_embeds = self.zoom_glyph_alike(
+            level_map.embedded_object_map,
+            ViewField.Extended
+        )
+
+        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
+        extended_walkable_tile &= ~self.extended_embeds
+        extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
+
         self.extended_boulders = self.zoom_glyph_alike(
             level_map.boulder_map,
             ViewField.Extended
         )
-        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
-        extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
         extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
         imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)
         if level_map.dcoord.branch == map.Branches.Sokoban:
@@ -326,7 +333,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.level_map.lootable_squares_map,
             ViewField.Extended
         )
-        return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & (desirable_corpses | lootable_squares))
+        return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & ~self.extended_embeds & (desirable_corpses | lootable_squares))
 
     def path_to_unvisited_shop_sqaures(self):
         unvisited_squares = self.zoom_glyph_alike(
@@ -373,6 +380,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 return False
 
         return True
+
+    def at_likely_secret(self):
+        if self.at_dead_end():
+            return True
+        if self.level_map.special_level is None:
+            return False
+        if self.level_map.special_level.adjacent_to_secret[self.absolute_player_location]:
+            return True
+        return False
 
     def safe_detonation(self, monster, monster_square):
         if not isinstance(monster, gd.MonsterGlyph):

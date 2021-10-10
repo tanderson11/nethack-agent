@@ -1,0 +1,15 @@
+{
+    "branch": "GnomishMines",
+    "level_name": "Mine's End",
+    "level_variant": "Mimic",
+    "min_branch_level": 8,
+    "max_branch_level": 9,
+    "geometry_horizontal": "center",
+    "geometry_vertical": "center",
+    "properties": {
+        "mappable": true,
+        "teleportable": true,
+        "diggable_walls": false,
+        "diggable_floor": false
+    }
+}
