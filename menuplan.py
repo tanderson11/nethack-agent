@@ -418,10 +418,7 @@ class ParsingInventoryMenu(InteractiveMenu):
             def select_desirable_func(menu_item):
                 if menu_item.item is None:
                     if environment.env.debug:
-                        if menu_item.item_text[0] in '123456789':
-                            # Known thing that we can't count yet
-                            pass
-                        elif 'corpse' in menu_item.item_text:
+                        if 'corpse' in menu_item.item_text:
                             pass
                         elif 'spellbook' in menu_item.item_text:
                             pass
@@ -435,6 +432,8 @@ class ParsingInventoryMenu(InteractiveMenu):
                           pass
                         elif 'pair of lenses' in menu_item.item_text:
                           pass
+                        elif 'rock' in menu_item.item_text:
+                            pass
                         else:
                             import pdb; pdb.set_trace()
                         return False

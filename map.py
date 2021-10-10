@@ -386,19 +386,13 @@ class DLevelMap():
         self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
 
         if self.special_level is None:
-            if self.dcoord == DCoord(4,3):
-                #import pdb; pdb.set_trace()
-                pass
-            if self.dcoord == DCoord(4,2) and environment.env.debug:
-                import pdb; pdb.set_trace()
-            if self.dcoord == DCoord(4,1) and environment.env.debug:
-                import pdb; pdb.set_trace(),
             self.special_level = self.special_level_searcher.match_level(self, player_location)
+            if self.dcoord.branch == Branches.Sokoban and environment.env.debug:
+                import pdb; pdb.set_trace()
             if self.special_level is not None:
                 self.diggable_floor = self.special_level.diggable_floor
                 self.teleportable = self.special_level.teleportable
                 if self.special_level.branch == Branches.Sokoban:
-                    import pdb; pdb.set_trace()
                     self.sokoban_move_index = 0
                     self.solved = False
 
