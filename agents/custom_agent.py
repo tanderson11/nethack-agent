@@ -415,7 +415,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        seed = b'TVeT0g=='
+        #seed = b'TVeT0g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 

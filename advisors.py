@@ -416,15 +416,18 @@ class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
         healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != constants.BUC.cursed, identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
-
+        best_potion = None
+        most_healing = None
         for potion in healing_potions:
             expected_healing = potion.expected_healing(character)
-            if expected_healing < (character.max_hp / 2):
-                menu_plan = self.make_menu_plan(potion.inventory_letter)
-                #import pdb; pdb.set_trace()
-                return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
-
-        return None
+            if expected_healing < (character.max_hp / 2) or character.max_hp < 20:
+                if most_healing is None or expected_healing > most_healing:
+                    most_healing = expected_healing
+                    best_potion = potion
+        if best_potion is None:
+            return None
+        menu_plan = self.make_menu_plan(potion.inventory_letter)
+        return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
 
 class DrinkGainAbility(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
