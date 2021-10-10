@@ -260,6 +260,7 @@ class DLevelMap():
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.embedded_object_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
 
 
         self.staircases = {}
@@ -372,7 +373,8 @@ class DLevelMap():
         reachable = (
             (self.safely_walkable | self.doors) &
             (~self.owned_doors) &
-            (self.special_room_map == constants.SpecialRoomTypes.NONE.value)
+            (self.special_room_map == constants.SpecialRoomTypes.NONE.value) &
+            (~self.embedded_object_map)
         )
 
         self.frontier_squares = (
@@ -384,19 +386,13 @@ class DLevelMap():
         self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
 
         if self.special_level is None:
-            if self.dcoord == DCoord(4,3):
-                #import pdb; pdb.set_trace()
-                pass
-            if self.dcoord == DCoord(4,2) and environment.env.debug:
-                import pdb; pdb.set_trace()
-            if self.dcoord == DCoord(4,1) and environment.env.debug:
-                import pdb; pdb.set_trace(),
             self.special_level = self.special_level_searcher.match_level(self, player_location)
+            if self.dcoord.branch == Branches.Sokoban and environment.env.debug:
+                import pdb; pdb.set_trace()
             if self.special_level is not None:
                 self.diggable_floor = self.special_level.diggable_floor
                 self.teleportable = self.special_level.teleportable
                 if self.special_level.branch == Branches.Sokoban:
-                    import pdb; pdb.set_trace()
                     self.sokoban_move_index = 0
                     self.solved = False
 
@@ -863,19 +859,12 @@ class SpecialLevelLoader():
 
         initial_offset_x = (constants.GLYPHS_SHAPE[1] - map_length) // 2
 
-        # I do not understand how the vertical offseting is done
-        # In Sokoban a room N squares high is padded Y1 above and Y2 below, where:
-        # 11, 5, 5 makes sense
-        # 14, 4, 2 makes sense
-        # 13, 5, 3 wtf who ordered this?
-        # 18, 3, 0 wtf
-        # 12 -- haven't seen this one yet
-
+        # TODO figure out this pattern at some point
         hardcoded_y_offsets = {
             11: 5,
             12: 5,
             13: 5,
-            14: 4,
+            14: 5,
             17: 3,
             18: 3,
         }

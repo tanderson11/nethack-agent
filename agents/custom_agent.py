@@ -593,15 +593,6 @@ class RunState():
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
                 self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
-
-                if message.feedback.solid_stone:
-                    if environment.env.debug:
-                        import pdb; pdb.set_trace()
-                    #target_location = physics.Square(*physics.action_to_delta[self.last_non_menu_action]) + self.neighborhood.absolute_player_location
-                    # can't add stone: we'll assume it's fog and trample it.
-                    # hacky solution: add a wall
-                    # no, this also gets trampled
-                    #self.neighborhood.level_map.add_feature(target_location, gd.GLYPH_NAME_LOOKUP['vwall'])
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -859,8 +850,14 @@ class CustomAgent(BatchedAgent):
                     # staircase it's implied we've arrived on (probably breaks in the Valley)
                     level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
                     print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
-                elif environment.env.debug:
+                elif environment.env.debug and not "A trap door opens up under you!" in collected_message:
                     import pdb; pdb.set_trace()
+
+        if message.feedback.solid_stone:
+            target_location = physics.Square(*physics.action_to_delta[run_state.last_non_menu_action]) + player_location
+            if not gd.ObjectGlyph.class_mask(observation['glyphs'][target_location]):
+                import pdb; pdb.set_trace()
+            level_map.embedded_object_map[target_location] = True
 
         level_map.update(changed_level, time, player_location, observation['glyphs'])
 
@@ -949,9 +946,8 @@ class CustomAgent(BatchedAgent):
             return advice
 
         if message.has_more or message.yn_question or message.getline:
-            import pdb; pdb.set_trace()
-            pass
-            #raise Exception(f"We somehow missed a message {message.message}")
+            if environment.env.debug:
+                import pdb; pdb.set_trace()
 
         if run_state.auto_pickup:
             advice = ActionAdvice(
