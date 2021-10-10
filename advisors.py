@@ -420,7 +420,7 @@ class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
         most_healing = None
         for potion in healing_potions:
             expected_healing = potion.expected_healing(character)
-            if expected_healing < (character.max_hp / 2) or character.max_hp < 20:
+            if expected_healing < (character.max_hp / 2) or character.max_hp < 19:
                 if most_healing is None or expected_healing > most_healing:
                     most_healing = expected_healing
                     best_potion = potion
