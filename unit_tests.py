@@ -1318,7 +1318,7 @@ class TestDrop(unittest.TestCase):
 
 class TestSpecialItemNames(unittest.TestCase):
     def test_no_charges(self):
-        numeral, item_class, item_str, _ = ItemTestInputs(2311, inv.Wand, "a wand of digging named NO_CHARGE")
+        numeral, item_class, item_str, _ = ItemTestInputs(2311, inv.Wand, "a wand of digging named C_0")
 
         global_identity_map = gd.GlobalIdentityMap()
         string = np.array(string_to_tty_chars(item_str), dtype='uint8')
