@@ -874,6 +874,10 @@ class CustomAgent(BatchedAgent):
 
         level_map.update(changed_level, time, player_location, observation['glyphs'])
 
+        if level_map.visits_count_map[player_location] == 1 and "Some text has been burned into the floor here." in message.message:
+            import pdb; pdb.set_trace()
+            pass
+
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
                 level_map.add_warning_engraving(player_location)
