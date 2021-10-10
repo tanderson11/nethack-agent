@@ -865,19 +865,12 @@ class SpecialLevelLoader():
 
         initial_offset_x = (constants.GLYPHS_SHAPE[1] - map_length) // 2
 
-        # I do not understand how the vertical offseting is done
-        # In Sokoban a room N squares high is padded Y1 above and Y2 below, where:
-        # 11, 5, 5 makes sense
-        # 14, 4, 2 makes sense
-        # 13, 5, 3 wtf who ordered this?
-        # 18, 3, 0 wtf
-        # 12 -- haven't seen this one yet
-
+        # TODO figure out this pattern at some point
         hardcoded_y_offsets = {
             11: 5,
             12: 5,
             13: 5,
-            14: 4,
+            14: 5,
             17: 3,
             18: 3,
         }
