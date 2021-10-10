@@ -1215,7 +1215,7 @@ class PlayerInventory():
                 return RangedPreparednessProposal(wield_item=bow)
 
     def get_powerful_ranged_attack(self, character):
-        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack())
+        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack(), instance_selector=lambda i: i.charges is None or i.charges > 0)
 
         if len(attack_wands) > 0:
             plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])

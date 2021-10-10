@@ -474,8 +474,8 @@ class GainSpeedFromWand(Advisor):
             return None
 
         zap = nethack.actions.Command.ZAP
-        wand_of_speed_monster = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'speed monster')
-        if wand_of_speed_monster is not None and (wand_of_speed_monster.charges is None or wand_of_speed_monster.charges > 0):
+        wand_of_speed_monster = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'speed monster', instance_selector=lambda i: i.charges is None or i.charges > 0)
+        if wand_of_speed_monster is not None:
             menu_plan = menuplan.MenuPlan("zap speed monster wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_speed_monster.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '.'),
@@ -493,9 +493,9 @@ class ZapDiggingDownAdvisor(Advisor):
             return None
 
         zap = nethack.actions.Command.ZAP
-        wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
+        wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging', instance_selector=lambda i: i.charges is None or i.charges > 0)
 
-        if wand_of_digging is not None and (wand_of_digging.charges is None or wand_of_digging.charges > 0):
+        if wand_of_digging is not None:
             menu_plan = menuplan.MenuPlan("zap digging wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
                 menuplan.CharacterMenuResponse("In what direction?", '>'),
@@ -508,9 +508,9 @@ class ZapTeleportOnSelfAdvisor(Advisor):
             return None
 
         zap = nethack.actions.Command.ZAP
-        wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation')
+        wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation', instance_selector=lambda i: i.charges is None or i.charges > 0)
 
-        if wand_of_teleport is not None and (wand_of_teleport.charges is None or wand_of_teleport.charges > 0):
+        if wand_of_teleport is not None:
             menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
                 menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
