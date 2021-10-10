@@ -457,6 +457,13 @@ class CMapGlyph(Glyph):
         )
 
     @classmethod
+    def is_trap_to_avoid_check(cls, offsets):
+        return (
+            ((offsets >= 42) & (offsets <= 63)) &
+            ~((offsets == 62) | (offsets == 45) | (offsets == 58))
+        )
+
+    @classmethod
     def is_safely_walkable_check(cls, offsets):
          return (
              ~((offsets < 0) | (offsets > cls.OFFSET + cls.COUNT)) &
@@ -996,10 +1003,12 @@ class WandIdentity(ObjectIdentity):
 
     def process_message(self, message_obj, action):
         self.listened_actions[action] = True
-
+        if action == nethack.actions.Command.READ:
+            if 'glows blue' in message_obj.message:
+                return "R_1"
         if action == nethack.actions.Command.ZAP:
             if "Nothing happens." in message_obj.message and self.name() is not None:
-                return "NO_CHARGE"
+                return "C_0"
 
 
         # engrave testing
@@ -1091,7 +1100,7 @@ class WeaponIdentity(ObjectIdentity):
         if action == nethack.actions.Command.THROW or nethack.actions.Command.FIRE:
             if "slips as you throw it" in message_obj.message or "misfires" in message_obj.message:
                 #import pdb; pdb.set_trace()
-                return "BUC_CURSED"
+                return "BUC_C"
 
         if action == nethack.actions.Command.WIELD and self.stackable:
             #import pdb; pdb.set_trace()

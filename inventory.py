@@ -16,8 +16,9 @@ class Item():
     try_to_price_id = True
     price_pattern = re.compile("\((for sale|unpaid), ([0-9]+) zorkmids?\)")
     class NameAction(NamedTuple):
-        letter: str
+        letter: int
         name: str
+        additional: bool = False
 
     def __init__(self, identity, instance_attributes, inventory_letter=None, seen_as=None):
         # copy fields
@@ -27,6 +28,10 @@ class Item():
         self.BUC = instance_attributes.BUC
         self.condition = instance_attributes.condition
         self.instance_name = instance_attributes.instance_name
+        if self.instance_name == 'BUC_C':
+            self.BUC = constants.BUC.cursed
+        elif self.instance_name == 'BUC_B':
+            self.BUC = constants.BUC.blessed
 
         self.parenthetical_status = instance_attributes.parenthetical_status_str
         self.price = None
@@ -223,9 +228,11 @@ class Wand(Item):
         super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
         self.charges = None
         self.recharges = None
-
-        if self.instance_name == "NO_CHARGE":
-            self.charges = 0
+        if self.instance_name is not None:
+            if "C_0" in self.instance_name:
+                self.charges = 0
+            if "R_1" in self.instance_name:
+                self.recharges = 1
 
         p_status = instance_attributes.parenthetical_status_str
         if p_status is not None:
@@ -237,6 +244,17 @@ class Wand(Item):
 
         if self.BUC == constants.BUC.unknown and self.charges is not None:
             self.BUC = constants.BUC.uncursed
+    
+    def process_message(self, *args):
+        name = self.identity.process_message(*args)
+        if name is None:
+            return None
+        name_to_give = name
+        if self.instance_name is not None and "R_1" in self.instance_name and "C_0" in name:
+            name_to_give = "R_1@C_0"
+        if name_to_give == self.instance_name:
+            return None
+        return self.NameAction(self.inventory_letter, name_to_give)
 
     def desirable(self, character):
         des = super().desirable(character)
@@ -327,9 +345,6 @@ class Weapon(Item):
 
         if self.BUC == constants.BUC.unknown and self.enhancement is not None:
             self.BUC = constants.BUC.uncursed
-
-        if self.instance_name == "BUC_CURSED":
-            self.BUC = constants.BUC.cursed
 
     def melee_damage(self, character, monster):
         weapon_damage = self.identity.avg_melee_damage(monster)
@@ -595,7 +610,7 @@ class BadStringOnWhitelist(Exception):
     pass
 
 class ItemParser():
-    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z!' _]*[a-zA-Z!'_]))? ?(\(.+\))?$")
+    item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z0-9!'@ _]*[a-zA-Z0-9!']))? ?(\(.+\))?$")
 
     defuzzing_unidentified_class_patterns = {
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),

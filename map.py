@@ -260,8 +260,8 @@ class DLevelMap():
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.traps_to_avoid = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.embedded_object_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
-
 
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)
@@ -335,6 +335,9 @@ class DLevelMap():
         self.room_floor = gd.CMapGlyph.is_room_floor_check(offsets)
         self.safely_walkable = gd.CMapGlyph.is_safely_walkable_check(offsets)
         self.doors = gd.CMapGlyph.is_door_check(offsets)
+        self.traps_to_avoid = gd.CMapGlyph.is_trap_to_avoid_check(offsets)
+        if self.special_level:
+            self.traps_to_avoid |= self.special_level.traps_to_avoid
         self.fountain_map = (offsets == 31)
 
         # Solid stone and fog of war both show up here
