@@ -177,15 +177,44 @@ class WishMenuResponse(MenuResponse):
     def value(self, message_obj, expect_getline=True):
         if expect_getline and not message_obj.getline and environment.env.debug:
             pdb.set_trace()
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if self.phrase is None:
-            self.phrase = (c for c in wish.get_wish(self.character, wand=self.wand))
+            wish_obj, wish_string = wish.get_wish(self.character, wand=self.wand)
+            self.last_wish = wish_obj
+            self.phrase = (c for c in wish_string)
         try:
             next_chr = next(self.phrase)
             return ord(next_chr)
         except StopIteration:
             self.phrase = None
+            self.character.wish_in_progress = self.last_wish
+            self.last_wish = None
             return ord('\r')
+
+class WishMoreMenuResponse(MenuResponse):
+    def __init__(self, character):
+        self.character = character
+        self.match_str = None
+
+    def value(self, message_obj, expect_getline=True):
+        return ord(' ')
+
+    def action_message(self, message_obj):
+        last_wish = self.character.wish_in_progress
+        if last_wish is None:
+            return None
+        try:
+            item = inv.ItemParser.make_item_with_string(self.character.global_identity_map, message_obj.message[4:-1])
+        except:
+            item = None
+        if item is not None:
+            self.character.inventory.all_items()
+            real_version = self.character.inventory.items_by_letter[ord(message_obj.message[0])]
+            real_version.identity.give_name(last_wish.item.name)
+        val = self.value(message_obj)
+        self.character.wish_in_progress = None
+        #import pdb; pdb.set_trace()
+        return val
 
 class ExtendedCommandResponse(PhraseMenuResponse):
         def __init__(self, phrase):

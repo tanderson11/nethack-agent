@@ -35,6 +35,7 @@ class WishlistItem(NamedTuple):
     def wish_string(self):
         return f'{self.modifier} {self.item.name}'
 
+charging = WishlistItem(ItemName(inventory.Scroll, 'charging'), modifier='2 blessed')
 basic_wishlist = (
     WishlistItem(ItemName(inventory.Armor, 'gray dragon scale mail'), modifier='blessed +2'),
     WishlistItem(ItemName(inventory.Armor, 'boots of speed'), modifier='blessed +2 fireproof'),
@@ -46,7 +47,7 @@ basic_wishlist = (
 
 def get_wish(character, wand=None):
     if want_charging(wand, character):
-        return '2 blessed scrolls of charging'
+        return charging, charging.wish_string()
     
     for wishlist_line in basic_wishlist:
         if wishlist_line.pure_addition is True:
@@ -61,7 +62,7 @@ def get_wish(character, wand=None):
             if alternate_item_in_inventory is not None:
                 continue
 
-        return wishlist_line.wish_string()
+        return wishlist_line, wishlist_line.wish_string()
 
 
 # Special roles:

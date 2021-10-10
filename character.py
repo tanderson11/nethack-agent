@@ -45,6 +45,7 @@ class Character():
     gold: int = 0
     hunger_state: int = 1
     global_identity_map: gd.GlobalIdentityMap = None
+    wish_in_progress: tuple = None
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]

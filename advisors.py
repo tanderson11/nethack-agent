@@ -478,6 +478,7 @@ class ZapWandOfWishing(Advisor):
                 menuplan.MoreMenuResponse("You may wish for an object"),
                 menuplan.MoreMenuResponse("You wrest one last charge"),
                 menuplan.WishMenuResponse("For what do you wish?", character, wand=wand_of_wishing),
+                menuplan.WishMoreMenuResponse(character),
             ], listening_item=wand_of_wishing)
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
@@ -508,6 +509,7 @@ class WrestWandOfWishing(Advisor):
                 menuplan.MoreMenuResponse("You may wish for an object"),
                 menuplan.MoreMenuResponse("You wrest one last charge"),
                 menuplan.WishMenuResponse("For what do you wish?", character, wand=wand_of_wishing),
+                menuplan.WishMoreMenuResponse(character),
             ], listening_item=wand_of_wishing)
 
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
@@ -1708,6 +1710,7 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
             menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
+            menuplan.WishMoreMenuResponse(character),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),

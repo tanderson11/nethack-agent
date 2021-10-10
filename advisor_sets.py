@@ -71,6 +71,9 @@ new_advisors = [
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
+        ZapWandOfWishing(),
+        ChargeWandOfWishing(),
+        WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
         DropToPriceIDAdvisor(),

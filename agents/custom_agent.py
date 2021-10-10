@@ -411,7 +411,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'q++zhA=='
+        seed = b'TVeT0g=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -469,7 +469,10 @@ class RunState():
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
         self.character.make_global_identity_map()
-        self.background_menu_plan.add_responses([menuplan.WishMenuResponse("For what do you wish?", self.character),])
+        self.background_menu_plan.add_responses([
+            menuplan.WishMenuResponse("For what do you wish?", self.character),
+            menuplan.WishMoreMenuResponse(self.character),
+        ])
 
         self.gods_by_alignment[self.character.base_alignment] = attribute_match_2[2]
         self.gods_by_alignment[attribute_match_3[2]] = attribute_match_3[1]
