@@ -383,7 +383,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         source_square = monster_square + self.player_location_in_extended - self.local_player_location
         adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
         adjacent_to_mon_glyphs = self.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
-
         if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
             return False
         # don't attack gas spores next to gas spores
@@ -398,7 +397,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             satisfying_directions = []
             for i, monster in enumerate(self.adjacent_monsters):
                 monster_square = physics.Square(self.adjacent_monsters_idx[0][i], self.adjacent_monsters_idx[1][i])
-                if monster_selector(monster) and (not allow_anger or self.safe_detonation(monster, monster_square)):
+                #if monster_selector(monster): import pdb; pdb.set_trace()
+                if monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
                     satisfying_monsters.append(monster)
                     direction = self.action_grid[monster_square]
                     satisfying_directions.append(direction)
@@ -414,7 +414,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True)
             for i, monster in enumerate(self.monsters):
                 monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
-                if can_hit_mask[monster_square] and monster_selector(monster) and (not allow_anger or self.safe_detonation(monster, monster_square)):
+                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
                     satisfying_monsters.append(monster)
                     offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
                     direction = physics.delta_to_action[offset]
