@@ -11,5 +11,6 @@
         "teleportable": true,
         "diggable_walls": true,
         "diggable_floor": false
-    }
+    },
+    "item_objective": "luckstone"
 }

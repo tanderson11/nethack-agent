@@ -190,6 +190,26 @@ class WishMenuResponse(MenuResponse):
             self.last_wish = None
             return ord('\r')
 
+class SpecialItemPickupResponse(MenuResponse):
+    def __init__(self, character, item_name):
+        self.character = character
+        self.item_name = item_name
+
+    def value(self, message_obj, expect_getline=True):
+        return ord(' ')
+
+    def action_message(self, message_obj):
+        try:
+            item = inv.ItemParser.make_item_with_string(self.character.global_identity_map, message_obj.message[4:-1])
+        except:
+            item = None
+        if item is not None:
+            self.character.inventory.all_items()
+            real_version = self.character.inventory.items_by_letter[ord(message_obj.message[0])]
+            real_version.identity.give_name(self.item.name)
+        val = self.value(message_obj)
+        return val
+
 class WishMoreMenuResponse(MenuResponse):
     def __init__(self, character):
         self.character = character
@@ -511,6 +531,21 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     trigger_action = None
     trigger_phrase = "Pick up what?"
     multi_select = True
+
+class SpecialItemPickupMenu(ParsingInventoryMenu):
+    first_page_header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Pick up what?"
+    multi_select = True
+
+    def __init__(self, player_character, item_class):
+        self.player_character = player_character
+        def selector(menu_item):
+            if menu_item.item is None:
+                return False
+            if isinstance(menu_item.item, item_class):
+                return True
+        self.item_selector = selector
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, player_character, inventory, selector_name=None, desired_letter=None):

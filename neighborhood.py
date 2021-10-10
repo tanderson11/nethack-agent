@@ -33,6 +33,7 @@ class CurrentSquare:
     stack_on_square: bool = False
     item_on_square: inventory.Item = None
     failed_moves_on_square: List[int] = field(default_factory=list)
+    special_fact: map.SpecialFact = None
 
 class ViewField(enum.Enum):
     Local = enum.auto()

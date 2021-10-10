@@ -12,5 +12,8 @@
         "diggable_walls": true,
         "diggable_floor": false
     },
+    "special_engravings": {
+        "Some text has been burned into the floor here.": "item_objective"
+    },
     "item_objective": "bag of holding"
 }

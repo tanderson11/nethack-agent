@@ -1590,6 +1590,21 @@ class DropShopOwnedAdvisor(Advisor):
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
+class SpecialItemFactAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.current_square.special_fact is None:
+            return
+        special_fact = run_state.current_square.special_fact
+        if not isinstance(special_fact, map.ItemFact):
+            return None
+        menu_plan = menuplan.MenuPlan(
+            "pick up all special object", self, [
+                menuplan.SpecialItemPickupResponse(character, special_fact.item_name)
+            ],
+            interactive_menu=menuplan.SpecialItemPickupMenu(character, special_fact.item_class)
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
+
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not (oracle.desirable_object_on_space or run_state.neighborhood.stack_on_square):

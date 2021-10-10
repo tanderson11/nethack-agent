@@ -266,6 +266,7 @@ class DLevelMap():
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)
         self.warning_engravings = {}
+        self.special_facts = {}
 
     def record_edible_corpse(self, square, time, monster_glyph):
         self.edible_corpse_dict[square].append(TimedCorpse(time=time, monster_glyph=monster_glyph))
@@ -507,9 +508,18 @@ class DLevelMap():
     def listen_for_special_engraving(self, player_location, message):
         if self.special_level is None:
             return None
-        if self.visits_count_map[player_location] == 1 and "Some text has been burned into the floor here." in message:
+        if self.special_level.special_engravings is None:
+            return None
+        if self.visits_count_map[player_location] != 1:
+            return None
+        for engraving,fact_name in self.special_level.special_engravings.items():
+            if engraving not in message:
+                continue
             import pdb; pdb.set_trace()
-            pass
+            self.add_special_fact(player_location, SPECIAL_FACTS[fact_name])
+
+    def add_special_fact(self, location, fact):
+        self.special_facts[location] = fact
 
 class FloodMap():
     @staticmethod
@@ -776,6 +786,10 @@ class SpecialLevelMap():
         self.max_branch_level = config_data['max_branch_level']
         self.teleportable = config_data['properties']['teleportable']
         self.diggable_floor = config_data['properties']['diggable_floor']
+        try:
+            self.special_engravings = config_data['special_engravings']
+        except KeyError:
+            self.special_engravings = None
         self.initial_offset = physics.Square(*initial_offset)
 
         self.nethack_wiki_encoding = nethack_wiki_encoding
@@ -920,6 +934,22 @@ class SpecialLevelLoader():
             offset_y += 1
 
         return retval
+
+class SpecialFact():
+    def __init__(self) -> None:
+        pass
+
+class ItemFact(SpecialFact):
+    def __init__(self, item_class, item_name) -> None:
+        super().__init__()
+        self.item_class = item_class
+        self.item_name = item_name
+
+
+SPECIAL_FACTS = {
+    "sokoban_bag": ItemFact(inventory.Tool, "bag of holding"),
+    "sokoban_amulet": ItemFact(inventory.Amulet, "reflection")
+}
 
 ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_1a'),

@@ -12,5 +12,8 @@
         "diggable_walls": true,
         "diggable_floor": false
     },
+    "special_engravings": {
+        "Some text has been burned into the floor here.": "sokoban_amulet"
+    },
     "item_objective": "amulet of reflection"
 }
