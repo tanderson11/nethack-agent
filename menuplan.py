@@ -171,14 +171,12 @@ class WishMenuResponse(MenuResponse):
         super().__init__(match_str)
         self.character = character
         self.wand = wand
-        if environment.env.debug:
-            import pdb; pdb.set_trace()
         self.phrase = None
     
     def value(self, message_obj, expect_getline=True):
         if expect_getline and not message_obj.getline and environment.env.debug:
             pdb.set_trace()
-        #import pdb; pdb.set_trace()
+        if environment.env.debug: import pdb; pdb.set_trace()
         if self.phrase is None:
             wish_obj, wish_string = wish.get_wish(self.character, wand=self.wand)
             self.last_wish = wish_obj
