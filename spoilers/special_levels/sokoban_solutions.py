@@ -155,11 +155,11 @@ sokoban_operations = {
         ((5,11), 'llld ddll lddd uuuu rrru uulu uurr rrrr rrrr rrrr r*r'),
     ],
     ("Sokoban 4", "b"): [
-        ((14,8), 'rrru uuu'),
-        ((10,12), 'u'),
-        ((9,13), 'uu'),
-        ((7,12), 'u'),
-        ((7,11), 'lll'),
+        ((14,7), 'rrru uuu'),
+        ((10,11), 'u'),
+        ((9,12), 'uu'),
+        ((7,11), 'u'),
+        ((7,10), 'lll'),
         ((8,5), 'll'), #K ll
         ((9,4), 'd'),
         ((7,4), 'u'),
