@@ -55,7 +55,7 @@ sokoban_operations = {
         ((9,5), 'dd'),
         ((10,6), 'r'),
         ((11,7), 'rruu rdrr rr*r'), #K rruu rdrr rrr*
-        ((10,7), 'drru urdr rrrr *r*'),
+        ((10,7), 'drru urdr rrrr *r'),
         ((11,5), 'lllr rrrr rruu rdrr rrrr*r'),
         ((7,6), 'drdd drru urdr rrrr rr*r'),
         ((8,3), 'rrrr dddr ruur drrr rrrr r*r'),
