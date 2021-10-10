@@ -786,6 +786,7 @@ class SpecialLevelMap():
 
         if self.branch == Branches.Sokoban:
             self.sokoban_solution = SOKOBAN_SOLUTIONS[(self.level_name, self.level_variant)]
+            self.traps_to_avoid = np.full_like(self.traps_to_avoid, False, dtype=bool)
 
     def offset_in_level(self, absolute):
         return absolute - self.initial_offset
