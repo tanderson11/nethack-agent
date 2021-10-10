@@ -1017,12 +1017,17 @@ class ArmorIdentity(ObjectIdentity):
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
-
         try:
             self.slot = self.find_values('SLOT')
         except AttributeError:
             if environment.env.debug: pdb.set_trace()
             pass
+
+    def tier(self):
+        tier = self.find_values('TIER')
+        if isinstance(tier, np.ndarray):
+            return tier.max()
+        return tier
 
     def AC(self):
         return self.find_values('AC')
