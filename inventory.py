@@ -151,21 +151,23 @@ class Amulet(Item):
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
-    def instance_desirability_to_wear(self, character):
+    def instance_desirability_to_wear(self, character, optimistic=False):
+        if self.identity.tier() == -1:
+            return -1
+
         body_armor_penalty = 0
         if character.body_armor_penalty() and self.identity.slot == 'suit':
-            body_armor_penalty = -20
-            return -20 # to enforce for the moment that we never wear body armor as a monk
+            return -1 # to enforce for the moment that we never wear body armor as a monk
 
         if self.enhancement is None:
             if self.BUC == constants.BUC.cursed:
-                return -10
+                return -1
             elif self.BUC is constants.BUC.unknown:
-                best_case_enhancement = 0
-            else:
-                best_case_enhancement = 5
+                imagined_enhancement = 3 if optimistic else -0.5
+            else: # blessed or uncursed
+                imagined_enhancement = 5
         else:
-            best_case_enhancement = self.enhancement
+            imagined_enhancement = self.enhancement
 
         if self.BUC == constants.BUC.blessed:
             buc_adjustment = 0.5
@@ -179,17 +181,34 @@ class Armor(Item):
             # assume we're the worst item we could be if we might be cursed -- cause you'll be stuck with us forever!
             raw_value = self.identity.converted_wear_value().min()
 
-        desirability = raw_value + best_case_enhancement + body_armor_penalty + buc_adjustment
+        desirability = raw_value + imagined_enhancement + body_armor_penalty + buc_adjustment
         return desirability
 
     def find_equivalents(self, inventory):
         if self.identity is None:
             return []
-        same_slot = inventory.get_items(Armor, identity_selector=lambda i: i.slot == self.identity.slot)
-        return same_slot
+        if self.identity.tier() == -1:
+            # helm of oa, levitation, etc. require same exact item, but only care about owning it
+            return super().find_equivalents(inventory)
+        # We could find all the items that go into this slot
+        # but then we won't pick up multiples of items that we're nervous to put on
+        # which is a major strategy around armor: get a whole bunch and take it to altar
+        # so we only compare to equipped
+        current = inventory.get_items([Armor, Weapon], instance_selector=lambda i: i.equipped_status and i.equipped_status.slot == self.identity.slot)
+        return current
 
-    def better_than_equivalent(self, y, character):
-        better = self.instance_desirability_to_wear(character) > y.instance_desirability_to_wear(character)
+    def better_than_equivalent(self, y, character, optimistic=True):
+        if isinstance(y, Weapon):
+            return False
+        if self.identity.tier() == -1 and y.identity.tier() == -1:
+            return self.BUC > y.BUC
+        if self.identity.tier() == -1:
+            return False
+        if y.identity.tier() == -1:
+            return True
+        if self.identity.tier() != y.identity.tier():
+            return self.identity.tier() < y.identity.tier()
+        better = self.instance_desirability_to_wear(character, optimistic=optimistic) > y.instance_desirability_to_wear(character, optimistic=optimistic)
         if better and y.better_than_equivalent(self, character) and environment.env.debug:
             import pdb; pdb.set_trace()
         return better
@@ -688,6 +707,8 @@ class ItemParser():
 
     @classmethod
     def appearance_from_description_given_glyph_class(cls, global_identity_map, description, glyph_class):
+        if glyph_class == gd.ScrollGlyph and "unlabeled scroll" == description:
+            return cls.AppearanceMatch("unlabeled scroll", [2245])
         pattern = cls.defuzzing_unidentified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
         match = re.search(pattern, description)
 
@@ -1126,7 +1147,6 @@ class PlayerInventory():
             unequipped_in_slot = unequipped_by_slot.get(slot_name, [])
             if len(unequipped_in_slot) == 0:
                 continue
-
             if isinstance(current_occupant, Armor) and current_occupant.BUC == constants.BUC.cursed:
                 continue
 
@@ -1138,23 +1158,14 @@ class PlayerInventory():
             if weapon_blocked:
                 continue
 
-            most_desirable = None
-            max_desirability = None
+            most_desirable = current_occupant
             for item in unequipped_in_slot:
-                if isinstance(item, Armor):
-                    desirability = item.instance_desirability_to_wear(character)
-                else:
-                    desirability = 0
-                if max_desirability is None or desirability > max_desirability:
-                    max_desirability = desirability
+                if not isinstance(item, Armor):
+                    continue
+                if (most_desirable is None or item.better_than_equivalent(most_desirable, character, optimistic=False)) and item.instance_desirability_to_wear(character) > 0:
                     most_desirable = item
 
-            if current_occupant is not None and isinstance(current_occupant, Armor):
-                current_desirability = current_occupant.instance_desirability_to_wear(character)
-            else:
-                current_desirability = 0
-
-            if max_desirability > current_desirability:
+            if most_desirable != current_occupant:
                 if len(blockers) == 0:
                     proposed_items.append(most_desirable)
                     proposal_blockers.append(blockers)

@@ -579,13 +579,13 @@ class RunState():
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
             if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
                 self.neighborhood.level_map.sokoban_move_index += 1
-                if self.advice_log[-1].sokoban_move.expect_plug and "The boulder falls into and plugs a hole" not in message.message and environment.env.debug:
+                if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message) and environment.env.debug:
                     import pdb; pdb.set_trace()
                 if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
-                    import pdb; pdb.set_trace()
+                    #import pdb; pdb.set_trace()
                     self.neighborhood.level_map.solved = True
             else:
-                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
                 pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
@@ -837,7 +837,7 @@ class CustomAgent(BatchedAgent):
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
             if dcoord.branch == map.Branches.Sokoban.value:
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 pass
             if len(run_state.message_log) > 1:
                 collected_message = run_state.messages_since_last_input()

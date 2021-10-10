@@ -1394,7 +1394,11 @@ class DropToPriceIDAdvisor(Advisor):
         if not oracle.in_shop:
             return None
 
-        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        doors = run_state.neighborhood.zoom_glyph_alike(
+            run_state.neighborhood.level_map.doors,
+            neighborhood.ViewField.Extended,
+        )
+        #doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
         if np.count_nonzero(doors) > 0:
             # don't drop if on the first square of the shop next to the door
             return None
