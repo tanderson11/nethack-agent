@@ -472,6 +472,7 @@ class ZapWandOfWishing(Advisor):
     def advice(self, rng, run_state, character, oracle):
         zap = nethack.actions.Command.ZAP
         wand_of_wishing = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'wishing')
+        #if wand_of_wishing is not None: import pdb; pdb.set_trace()
         if wand_of_wishing is not None and (wand_of_wishing.charges is None or wand_of_wishing.charges > 0):
             menu_plan = menuplan.MenuPlan("zap wand of wishing", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_wishing.inventory_letter)),
@@ -490,13 +491,14 @@ class ChargeWandOfWishing(Advisor):
         charging = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.BUC == constants.BUC.blessed, identity_selector=lambda i: i.name() == 'charging')
         if charging is None:
             return None
+        #import pdb; pdb.set_trace()
 
         read = nethack.actions.Command.READ
         menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(charging.inventory_letter)),
             menuplan.MoreMenuResponse("This is a charging scroll"),
             menuplan.CharacterMenuResponse("What do you want to charge?", chr(wand_of_wishing.inventory_letter))
-        ])
+        ], listening_item=wand_of_wishing)
         return ActionAdvice(self, read, menu_plan)
 
 class WrestWandOfWishing(Advisor):
@@ -504,7 +506,7 @@ class WrestWandOfWishing(Advisor):
         zap = nethack.actions.Command.ZAP
         wand_of_wishing = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'wishing')
         if wand_of_wishing is not None and wand_of_wishing.charges == 0 and wand_of_wishing.recharges == 1:
-            menu_plan = menuplan.MenuPlan("zap wand of wishing", self, [
+            menu_plan = menuplan.MenuPlan("wrest wand of wishing", self, [
                 menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_wishing.inventory_letter)),
                 menuplan.MoreMenuResponse("You may wish for an object"),
                 menuplan.MoreMenuResponse("You wrest one last charge"),
@@ -1718,6 +1720,27 @@ class EngraveTestWandsAdvisor(Advisor):
         ], listening_item=w)
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
+
+class NameWishItemAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        name_action = character.queued_wish_name
+        character.queued_wish_name = None
+        if name_action is None:
+            return None
+        #import pdb; pdb.set_trace()
+        character.inventory.all_items()
+        # sometimes the item has left our inventory when we seek to name it. handle that
+        try:
+            character.inventory.items_by_letter[name_action.letter]
+        except KeyError:
+            return None
+        menu_plan = menuplan.MenuPlan("name item", self, [
+                    menuplan.CharacterMenuResponse(re.compile("What do you want to name\?$"), "i"),
+                    menuplan.CharacterMenuResponse("What do you want to name? [", chr(name_action.letter)),
+                    menuplan.PhraseMenuResponse("What do you want to name th", name_action.name)
+            ])
+
+        return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
 
 class NameItemAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

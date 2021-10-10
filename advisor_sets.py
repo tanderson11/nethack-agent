@@ -4,6 +4,7 @@ from  advisors import *
 new_advisors = [
     # FREE IMPROVEMENT
     NameItemAdvisor(),
+    NameWishItemAdvisor(),
     EnhanceSkillsAdvisor(),
     # STONING ILL ETC
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.deadly_condition),
@@ -71,8 +72,8 @@ new_advisors = [
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
-        ZapWandOfWishing(),
         ChargeWandOfWishing(),
+        ZapWandOfWishing(),
         WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),

@@ -10,6 +10,7 @@ import utilities
 import inventory as inv
 import physics
 import wish
+import constants
 
 import nle.nethack as nethack
 
@@ -213,6 +214,14 @@ class WishMoreMenuResponse(MenuResponse):
             real_version.identity.give_name(last_wish.item.name)
         val = self.value(message_obj)
         self.character.wish_in_progress = None
+        if last_wish.BUC == constants.BUC.blessed:
+            name_str = 'BUC_B'
+        elif last_wish.BUC == constants.BUC.cursed:
+            name_str = 'BUC_C'
+        else:
+            name_str = None
+        if name_str is not None:
+            self.character.queued_wish_name = inv.Item.NameAction(ord(message_obj.message[0]), name_str)
         #import pdb; pdb.set_trace()
         return val
 

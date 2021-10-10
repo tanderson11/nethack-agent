@@ -30,16 +30,17 @@ class WishlistItem(NamedTuple):
     item: ItemName
     alternate: ItemName = None
     modifier: str = None
+    BUC: int = constants.BUC.blessed
     pure_addition: bool = False
 
     def wish_string(self):
         return f'{self.modifier} {self.item.name}'
 
-charging = WishlistItem(ItemName(inventory.Scroll, 'charging'), modifier='2 blessed')
+charging = WishlistItem(ItemName(inventory.Scroll, 'charging'), modifier='2 blessed scrolls of')
 basic_wishlist = (
     WishlistItem(ItemName(inventory.Armor, 'gray dragon scale mail'), modifier='blessed +2'),
-    WishlistItem(ItemName(inventory.Armor, 'boots of speed'), modifier='blessed +2 fireproof'),
-    WishlistItem(ItemName(inventory.Armor, 'shield of reflection'), alternate=ItemName(inventory.Amulet, 'amulet of reflection'), modifier='blessed +2'),
+    WishlistItem(ItemName(inventory.Armor, 'speed boots'), modifier='blessed +2 fireproof'),
+    WishlistItem(ItemName(inventory.Armor, 'shield of reflection'), alternate=ItemName(inventory.Amulet, 'amulet of reflection'), modifier='blessed +2', BUC=constants.BUC.blessed),
     WishlistItem(ItemName(inventory.Armor, 'gauntlets of power'), modifier='blessed +2 rustproof'),
     WishlistItem(ItemName(inventory.Armor, 'cloak of protection'), modifier='blessed +2 rotproof'),
     WishlistItem(ItemName(inventory.Tool, 'magic marker'), modifier='blessed', pure_addition=True),
