@@ -12,5 +12,5 @@
         "diggable_walls": false,
         "diggable_floor": false
     },
-    "item_objective": "luckstone",
+    "item_objective": "luckstone"
 }
