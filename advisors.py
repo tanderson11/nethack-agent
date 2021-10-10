@@ -630,7 +630,7 @@ class IdentifyUnidentifiedScrolls(Advisor):
             return None
 
         print("Trying to identify")
-
+        character.inventory.all_items()
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
@@ -655,7 +655,7 @@ class IdentifyPotentiallyMagicArmorAdvisor(Advisor):
             return None
 
         print("Trying to identify")
-
+        character.inventory.all_items()
         menu_plan = menuplan.MenuPlan("identify boilerplate", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(identify_scroll.inventory_letter)),
             menuplan.MoreMenuResponse("As you read the scroll, it disappears."),
@@ -668,7 +668,7 @@ class AnyScrollAdvisor(Advisor):
         interactive_menus = [
             menuplan.InteractiveIdentifyMenu(character, character.inventory), # identifies first choice since we don't specify anything
         ]
-
+        character.inventory.all_items() # for identify
         menu_plan = menuplan.MenuPlan("read unidentified scroll", self, [
                 menuplan.CharacterMenuResponse("What do you want to read?", chr(scroll.inventory_letter)),
                 menuplan.PhraseMenuResponse("What monster do you want to genocide?", "fire ant"),
