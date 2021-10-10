@@ -431,7 +431,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             satisfying_directions = []
             player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
             player_mask[self.player_location_in_extended] = True
-            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=True)
+            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
             for i, monster in enumerate(self.monsters):
                 monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
                 if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
