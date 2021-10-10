@@ -390,7 +390,7 @@ class DLevelMap():
                 pass
             if self.dcoord == DCoord(4,1):
                 import pdb; pdb.set_trace(),
-            self.special_level = self.special_level_searcher.match_level(self)
+            self.special_level = self.special_level_searcher.match_level(self, player_location)
             if self.special_level is not None:
                 if self.special_level.branch == Branches.Sokoban:
                     import pdb; pdb.set_trace()
@@ -752,9 +752,13 @@ class SpecialLevelMap():
     potential_secret_door_decoder = PotentialSecretDoorDecoder()
     traps_to_avoid_decoder = TrapsToAvoidDecoder()
 
+    def __repr__(self) -> str:
+        return self.id
+
     def __init__(self, config_data, nethack_wiki_encoding, initial_offset=(0,0)):
         self.level_name = config_data['level_name']
         self.level_variant = config_data['level_variant']
+        self.id = f"{self.level_name}/{self.level_variant}"
         self.branch = Branches.__members__[config_data['branch']]
         self.min_branch_level = config_data['min_branch_level']
         self.max_branch_level = config_data['max_branch_level']
@@ -787,22 +791,45 @@ class SpecialLevelSearcher():
     def __init__(self, all_special_levels: list[SpecialLevelMap]):
         self.lookup = defaultdict(lambda: defaultdict(lambda: []))
         self.level_found = {}
+        self.ruled_out_for_dcoord = defaultdict(lambda: set())
         for level in all_special_levels:
             self.level_found[level.level_name] = False
             for depth in range(level.min_branch_level, level.max_branch_level + 1):
                 self.lookup[level.branch][depth].append(level)
 
-    def match_level(self, level_map: DLevelMap):
+    def match_level(self, level_map: DLevelMap, player_location, verbose=True):
         possible_matches = self.lookup[level_map.dcoord.branch][level_map.dcoord.level]
         for possible_match in possible_matches:
-            if np.count_nonzero(level_map.observed_walls & ~possible_match.potential_walls):
+            if possible_match.id in self.ruled_out_for_dcoord[level_map.dcoord]:
+                continue
+            verbose_message = f"Trying to match {level_map.dcoord} to {possible_match.id} on pre-offset location of {(player_location[0] - possible_match.initial_offset[0], player_location[1] - possible_match.initial_offset[1])}"
+
+            too_many_walls = (level_map.observed_walls & ~possible_match.potential_walls)
+            if np.count_nonzero(too_many_walls):
+                self.ruled_out_for_dcoord[level_map.dcoord].add(possible_match.id)
+                if verbose:
+                    print(f"{verbose_message} -- Miss on extra walls")
                 continue
 
-            if np.count_nonzero((level_map.dungeon_feature_map != possible_match.cmap_glyphs) & (possible_match.cmap_glyphs != 2359)):
+            mismatched_features = (
+                (level_map.dungeon_feature_map != possible_match.cmap_glyphs) &
+                (possible_match.cmap_glyphs != 2359) &
+                (level_map.dungeon_feature_map != 0)
+            )
+            if np.count_nonzero(mismatched_features):
+                if verbose:
+                    print(f"{verbose_message} -- Miss on mismatched features")
                 continue
 
-            if np.count_nonzero(level_map.observed_walls & possible_match.potential_walls) > 8:
+            wall_hits = (level_map.observed_walls & possible_match.potential_walls)
+
+            if np.count_nonzero(wall_hits) > 8:
+                print(f"{verbose_message} -- HIT")
+                self.level_found[possible_match.level_name] = True
                 return possible_match
+            else:
+                if verbose:
+                    print(f"{verbose_message} -- Miss on {np.count_nonzero(wall_hits)} wall hits")
 
 class SpecialLevelLoader():
     @staticmethod
@@ -812,15 +839,21 @@ class SpecialLevelLoader():
         with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
             properties = json.load(f)
         
-        initial_offset = SpecialLevelLoader.make_initial_offset(characters)
+        initial_offset = SpecialLevelLoader.make_initial_offset(characters, properties["geometry_horizontal"], properties["geometry_vertical"])
         return SpecialLevelMap(
             properties,
-            SpecialLevelLoader.make_character_array(initial_offset, characters, properties["geometry_horizontal"], properties["geometry_vertical"]),
+            SpecialLevelLoader.make_character_array(initial_offset, characters),
             initial_offset = initial_offset,
         )
 
     @staticmethod
-    def make_initial_offset(characters):
+    def make_initial_offset(characters, geometry_horizontal, geometry_vertical):
+        if not (geometry_horizontal == "center"):
+            raise Exception("Don't know how to handle other horizontal geometries yet")
+
+        if not (geometry_vertical == "center" or geometry_vertical == "bottom"):
+            raise Exception("Don't know how to handle other vertical geometries yet")
+
         map_height = len(characters)
         map_length = max(map(lambda x: len(x.strip("\n")), characters))
 
@@ -848,7 +881,11 @@ class SpecialLevelLoader():
             29: 24,
         }
 
-        offset_y = hardcoded_y_offsets[map_height]
+        if geometry_vertical == "center":
+            offset_y = hardcoded_y_offsets[map_height]
+        else:
+            offset_y = 21 - map_height
+
         try:
             offset_x = hardcoded_x_offsets[map_length]
         except KeyError:
@@ -858,10 +895,7 @@ class SpecialLevelLoader():
         return (offset_y, offset_x)
 
     @staticmethod
-    def make_character_array(initial_offset, characters, geometry_horizontal, geometry_vertical):
-        if not (geometry_horizontal == "center" and geometry_vertical == "center"):
-            raise Exception("Don't know how to handle other geometries yet")
-
+    def make_character_array(initial_offset, characters):
         initial_offset_y, initial_offset_x = initial_offset
         offset_x = initial_offset_x
         offset_y = initial_offset_y
@@ -887,4 +921,10 @@ ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_3b'),
     SpecialLevelLoader.load('sokoban_4a'),
     SpecialLevelLoader.load('sokoban_4b'),
+    SpecialLevelLoader.load('mines_end_catacomb'),
+    SpecialLevelLoader.load('mines_end_mimic'),
+    SpecialLevelLoader.load('mines_end_winecellar'),
 ]
+
+if len(set(map(lambda x: x.id, ALL_SPECIAL_LEVELS))) < len(ALL_SPECIAL_LEVELS):
+    raise Exception("Duplicated special level IDs")

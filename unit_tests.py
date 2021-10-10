@@ -1473,7 +1473,7 @@ class TestSpecialLevelLoader(unittest.TestCase):
             to_location=(0,0),
             direction=map.DirectionThroughDungeon.down
         )
-        self.assertIsNotNone(searcher.match_level(observed_level_map))
+        self.assertIsNotNone(searcher.match_level(observed_level_map, player_location))
         
     def test_sokoban_1b(self):
         special_level = map.SpecialLevelLoader.load('sokoban_1b')
@@ -1494,7 +1494,7 @@ class TestSpecialLevelLoader(unittest.TestCase):
             to_location=(0,0),
             direction=map.DirectionThroughDungeon.down
         )
-        self.assertIsNotNone(searcher.match_level(observed_level_map))
+        self.assertIsNotNone(searcher.match_level(observed_level_map, player_location))
 
 if __name__ == '__main__':
     unittest.main()
