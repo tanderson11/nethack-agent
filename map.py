@@ -629,11 +629,13 @@ class ThreatMap(FloodMap):
         return np.logical_or.reduce(masks)
 
     @staticmethod
-    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False):
+    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False, stop_on_boulders=True):
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
 
-        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid) | gd.RockGlyph.boulder_mask(glyph_grid)
+        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid)
+        if stop_on_boulders:
+            blocking_geometry |= gd.RockGlyph.boulder_mask(glyph_grid)
         if reject_peaceful:
             blocking_geometry |= (gd.PetGlyph.class_mask(glyph_grid) | gd.MonsterGlyph.always_peaceful_mask(glyph_grid))
         if stop_on_monsters:

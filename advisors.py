@@ -986,6 +986,21 @@ class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
             print(f"Annoying monster at range: {targets.monsters[0]}")
         return targets
 
+class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
+    attack_strength = 'powerful'
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
+            return None
+        if run_state.neighborhood.level_map.solved:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+    def targets(self, neighborhood, character):
+        range = physics.AttackRange('line', 4)
+        targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range)
+        if targets is not None:
+            print(f"Invisible monster: {targets.monsters[0]}")
+        return targets
+
 class TameCarnivores(RangedAttackAdvisor):
     def targets(self, neighborhood, character):
         range = physics.AttackRange('line', 3)

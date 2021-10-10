@@ -100,6 +100,7 @@ new_advisors = [
         WaitAdvisor(),
     ]),
     PathfindInvisibleMonstersSokoban(),
+    RangedAttackInvisibleInSokoban(),
     SolveSokoban(),
     PathfindSokobanSquare(),
     TravelToSokobanSquare(),
