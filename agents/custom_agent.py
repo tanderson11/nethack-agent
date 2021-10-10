@@ -540,7 +540,9 @@ class RunState():
         messages = []
         for m,a in zip(reversed(self.message_log), reversed(self.advice_log)):
             messages.append(m)
-            if not isinstance(a, advs.MenuAdvice) or a.keypress != nethack.actions.TextCharacters.SPACE:
+            hit_space = (isinstance(a, advs.MenuAdvice) and a.keypress == nethack.actions.TextCharacters.SPACE)
+            replayed_space = (isinstance(a, advs.ReplayAdvice) and a.is_menu_action and a.action == nethack.actions.TextCharacters.SPACE)
+            if not (hit_space or replayed_space):
                 break
         out_message = ""
         for m in reversed(messages):

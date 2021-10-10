@@ -376,6 +376,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return True
 
+    def at_likely_secret(self):
+        if self.at_dead_end():
+            return True
+        if self.level_map.special_level is None:
+            return False
+        if self.level_map.special_level.adjacent_to_secret[self.absolute_player_location]:
+            return True
+        return False
+
     def safe_detonation(self, monster, monster_square):
         if not isinstance(monster, gd.MonsterGlyph):
             return True
