@@ -1007,6 +1007,23 @@ class CustomAgent(BatchedAgent):
             else:
                 run_state.stall_detection_on = True
 
+        if False and environment.env.wizard and (dcoord == DCoord(0,1) or dcoord == DCoord(1,1)):
+            action = nethack.actions.Command.EXTCMD
+            menu_plan = menuplan.MenuPlan(
+                "wizmode_teleport", None,
+                [
+                    menuplan.ExtendedCommandResponse("wizlevelport"),
+                    menuplan.PhraseMenuResponse("To what level do you want to teleport?", "quest"),
+                ],
+                # interactive_menu=menuplan.WizmodeLevelportMenu(selector_name="target")
+            )
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=action,
+                new_menu_plan=menu_plan,
+            )
+            return advice
+
         level_map.garbage_collect_corpses(time)
 
         neighborhood = Neighborhood(
