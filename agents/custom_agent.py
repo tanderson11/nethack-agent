@@ -389,8 +389,7 @@ class RunState():
         self.dmap = DMap()
         self.glyphs = None
 
-        self.debugger_on = False
-        self.debug_tripwire = False
+        self.debugger_on = None
 
         self.replay_log_path = None
         self.replay_log = []
@@ -918,7 +917,10 @@ class CustomAgent(BatchedAgent):
             print(message.message)
 
         if run_state.debugger_on:
-            import pdb; pdb.set_trace()
+            if run_state.debugger_on == True:
+                import pdb; pdb.set_trace()
+            elif run_state.step_count % run_state.debugger_on == 0:
+                import pdb; pdb.set_trace()
 
         if "unknown comand" in message.message:
             raise Exception(f"Unknown command: {message.message}")
