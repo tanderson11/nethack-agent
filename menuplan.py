@@ -539,7 +539,7 @@ class SpecialItemPickupMenu(ParsingInventoryMenu):
     multi_select = True
 
     def __init__(self, player_character, item_class):
-        self.player_character = player_character
+        super().__init__(player_character)
         def selector(menu_item):
             if menu_item.item is None:
                 return False

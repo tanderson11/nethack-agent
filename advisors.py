@@ -1599,10 +1599,12 @@ class SpecialItemFactAdvisor(Advisor):
             return None
         menu_plan = menuplan.MenuPlan(
             "pick up all special object", self, [
-                menuplan.SpecialItemPickupResponse(character, special_fact.item_name)
+                menuplan.SpecialItemPickupResponse(character, special_fact.item_name),
+                menuplan.YesMenuResponse("trouble lifting"),
             ],
             interactive_menu=menuplan.SpecialItemPickupMenu(character, special_fact.item_class)
         )
+        import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
 class PickupDesirableItems(Advisor):
