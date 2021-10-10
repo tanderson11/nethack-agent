@@ -468,6 +468,50 @@ class ApplyUnicornHornAdvisor(Advisor):
             ], listening_item=unicorn_horn)
             return ActionAdvice(from_advisor=self, action=apply, new_menu_plan=menu_plan)
 
+class ZapWandOfWishing(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        zap = nethack.actions.Command.ZAP
+        wand_of_wishing = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'wishing')
+        if wand_of_wishing is not None and (wand_of_wishing.charges is None or wand_of_wishing.charges > 0):
+            menu_plan = menuplan.MenuPlan("zap wand of wishing", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_wishing.inventory_letter)),
+                menuplan.MoreMenuResponse("You may wish for an object"),
+                menuplan.MoreMenuResponse("You wrest one last charge"),
+                menuplan.WishMenuResponse("For what do you wish?", character, wand=wand_of_wishing),
+            ], listening_item=wand_of_wishing)
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
+class ChargeWandOfWishing(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        wand_of_wishing = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'wishing', instance_selector=lambda i: i.charges == 0 and (i.recharges is None or i.recharges == 0))
+        if wand_of_wishing is None:
+            return None
+        charging = character.inventory.get_item(inv.Scroll, instance_selector=lambda i: i.BUC == constants.BUC.blessed, identity_selector=lambda i: i.name() == 'charging')
+        if charging is None:
+            return None
+
+        read = nethack.actions.Command.READ
+        menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(charging.inventory_letter)),
+            menuplan.MoreMenuResponse("This is a charging scroll"),
+            menuplan.CharacterMenuResponse("What do you want to charge?", chr(wand_of_wishing.inventory_letter))
+        ])
+        return ActionAdvice(self, read, menu_plan)
+
+class WrestWandOfWishing(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        zap = nethack.actions.Command.ZAP
+        wand_of_wishing = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'wishing')
+        if wand_of_wishing is not None and wand_of_wishing.charges == 0 and wand_of_wishing.recharges == 1:
+            menu_plan = menuplan.MenuPlan("zap wand of wishing", self, [
+                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_wishing.inventory_letter)),
+                menuplan.MoreMenuResponse("You may wish for an object"),
+                menuplan.MoreMenuResponse("You wrest one last charge"),
+                menuplan.WishMenuResponse("For what do you wish?", character, wand=wand_of_wishing),
+            ], listening_item=wand_of_wishing)
+
+            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+
 class GainSpeedFromWand(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.has_intrinsic(constants.Intrinsics.speed):
@@ -1664,7 +1708,6 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("The engraving on the ground vanishes"),
             menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
-            menuplan.MoreMenuResponse("silver dragon scale mail"),
             menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),

@@ -170,6 +170,8 @@ class WishMenuResponse(MenuResponse):
         super().__init__(match_str)
         self.character = character
         self.wand = wand
+        if environment.env.debug:
+            import pdb; pdb.set_trace()
         self.phrase = None
     
     def value(self, message_obj, expect_getline=True):
