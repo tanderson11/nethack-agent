@@ -397,7 +397,7 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         lowest_search_count = search_count.min()
 
-        if (lowest_search_count > 30):
+        if (lowest_search_count > 40):
             return None
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
