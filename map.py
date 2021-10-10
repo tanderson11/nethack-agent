@@ -234,6 +234,8 @@ class DLevelMap():
         self.special_level_searcher = special_level_searcher
         self.special_level = None
         self.clear = False
+        self.diggable_floor = True
+        self.teleportable = True
 
         self.downstairs_count = 0
         self.upstairs_count = 0
@@ -392,6 +394,8 @@ class DLevelMap():
                 import pdb; pdb.set_trace(),
             self.special_level = self.special_level_searcher.match_level(self, player_location)
             if self.special_level is not None:
+                self.diggable_floor = self.special_level.diggable_floor
+                self.teleportable = self.special_level.teleportable
                 if self.special_level.branch == Branches.Sokoban:
                     import pdb; pdb.set_trace()
                     self.sokoban_move_index = 0
@@ -779,6 +783,7 @@ class SpecialLevelMap():
         self.cmap_glyphs = self.cmap_glyph_decoder.decode(nethack_wiki_encoding)
         self.potential_walls = self.potential_wall_decoder.decode(nethack_wiki_encoding)
         self.potential_secret_doors = self.potential_secret_door_decoder.decode(nethack_wiki_encoding)
+        self.adjacent_to_secret = FloodMap.flood_one_level_from_mask(self.potential_secret_doors)
         self.traps_to_avoid = self.traps_to_avoid_decoder.decode(nethack_wiki_encoding)
 
         if self.branch == Branches.Sokoban:

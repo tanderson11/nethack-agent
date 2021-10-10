@@ -363,7 +363,7 @@ class SearchDeadEndsWithStethoscope(Advisor):
         if stethoscope is None:
             return None
 
-        if not run_state.neighborhood.at_dead_end():
+        if not run_state.neighborhood.at_likely_secret():
             return None
 
         low_search_count = run_state.neighborhood.zoom_glyph_alike(
@@ -387,7 +387,7 @@ class SearchDeadEndsWithStethoscope(Advisor):
 
 class SearchDeadEndAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if not run_state.neighborhood.at_dead_end():
+        if not run_state.neighborhood.at_likely_secret():
             return None
         search_count = run_state.neighborhood.zoom_glyph_alike(
             run_state.neighborhood.level_map.searches_count_map,
@@ -489,6 +489,9 @@ class ZapDiggingDownAdvisor(Advisor):
         if character.held_by is not None:
             return None
 
+        if not run_state.neighborhood.level_map.diggable_floor:
+            return None
+
         zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging')
 
@@ -501,6 +504,9 @@ class ZapDiggingDownAdvisor(Advisor):
 
 class ZapTeleportOnSelfAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.level_map.teleportable:
+            return None
+
         zap = nethack.actions.Command.ZAP
         wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation')
 
@@ -513,6 +519,9 @@ class ZapTeleportOnSelfAdvisor(Advisor):
 
 class ReadTeleportAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.level_map.teleportable:
+            return None
+
         read = nethack.actions.Command.READ
         scrolls = character.inventory.get_oclass(inv.Scroll)
 
