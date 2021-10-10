@@ -707,6 +707,8 @@ class ItemParser():
 
     @classmethod
     def appearance_from_description_given_glyph_class(cls, global_identity_map, description, glyph_class):
+        if glyph_class == gd.ScrollGlyph and "unlabeled scroll" == description:
+            return cls.AppearanceMatch("unlabeled scroll", [2245])
         pattern = cls.defuzzing_unidentified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
         match = re.search(pattern, description)
 

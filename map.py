@@ -385,10 +385,9 @@ class DLevelMap():
             if self.dcoord == DCoord(4,3):
                 #import pdb; pdb.set_trace()
                 pass
-            if self.dcoord == DCoord(4,2):
-                #import pdb; pdb.set_trace()
-                pass
-            if self.dcoord == DCoord(4,1):
+            if self.dcoord == DCoord(4,2) and environment.env.debug:
+                import pdb; pdb.set_trace()
+            if self.dcoord == DCoord(4,1) and environment.env.debug:
                 import pdb; pdb.set_trace(),
             self.special_level = self.special_level_searcher.match_level(self)
             if self.special_level is not None:
