@@ -1594,10 +1594,12 @@ class SpecialItemFactAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if run_state.current_square.special_facts is None:
             return
+        action = None
         special_facts = run_state.current_square.special_facts
         for f in special_facts:
             if not isinstance(f, map.StackFact):
                 continue
+            action = nethack.actions.Command.PICKUP
             menu_plan = menuplan.MenuPlan(
                 "pick up all special object", self, [
                     menuplan.SpecialItemPickupResponse(character, f.items),
@@ -1605,8 +1607,10 @@ class SpecialItemFactAdvisor(Advisor):
                 ],
                 interactive_menu=menuplan.SpecialItemPickupMenu(character, f.items)
             )
-            import pdb; pdb.set_trace()
-            return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
+            break
+        if action is not None:
+            run_state.report_special_fact_handled(f)
+            return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
 
 class PickupDesirableItems(Advisor):
     def advice(self, rng, run_state, character, oracle):

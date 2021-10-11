@@ -528,6 +528,11 @@ class DLevelMap():
             self.add_special_facts(player_location, facts)
             return facts
 
+    def report_special_fact_handled(self, player_location, fact):
+        self.special_facts[player_location].remove(fact)
+        if len(self.special_facts[player_location]) == 0:
+            self.special_facts[player_location] = None
+
     def add_special_facts(self, location, facts):
         self.special_facts[location] = facts
 

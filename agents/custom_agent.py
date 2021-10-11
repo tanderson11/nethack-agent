@@ -548,6 +548,11 @@ class RunState():
         self.neighborhood = neighborhood
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
+    
+    def report_special_fact_handled(self, fact):
+        player_location = self.current_square.location
+        self.neighborhood.level_map.report_special_fact_handled(player_location, fact)
+        self.current_square.special_facts = self.neighborhood.level_map.special_facts[player_location]
 
     def messages_since_last_input(self):
         messages = []
