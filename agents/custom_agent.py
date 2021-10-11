@@ -415,7 +415,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'Jly03g=='
+        seed = b'vYIDlQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -744,13 +744,13 @@ class CustomAgent(BatchedAgent):
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
 
-            special_fact = level_map.special_facts.get(player_location, None)
+            square_facts = level_map.special_facts.get(player_location, None)
 
             new_square = CurrentSquare(
                 arrival_time=time,
                 dcoord=dcoord,
                 location=player_location,
-                special_fact=special_fact,
+                special_facts=square_facts,
             )
             # If still on the same level, know what's under us
             if run_state.last_non_menu_action != nethack.actions.Command.TRAVEL and run_state.neighborhood and run_state.neighborhood.dcoord == dcoord:
@@ -875,8 +875,8 @@ class CustomAgent(BatchedAgent):
                 import pdb; pdb.set_trace()
             level_map.embedded_object_map[target_location] = True
 
-        update_visits = len(run_state.advice_log) == 0 or not isinstance(run_state.advice_log[-1], advs.MenuAdvice)
-        level_map.update(changed_level, time, player_location, observation['glyphs'], update_visits=update_visits)
+        last_action_menu = len(run_state.advice_log) != 0 and isinstance(run_state.advice_log[-1], advs.MenuAdvice)
+        level_map.update(changed_level, time, player_location, observation['glyphs'], last_action_menu=last_action_menu)
         special_fact = level_map.listen_for_special_engraving(player_location, message.message)
         if special_fact is not None:
             run_state.current_square.special_fact = special_fact

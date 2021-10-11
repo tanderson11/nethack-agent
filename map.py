@@ -315,7 +315,7 @@ class DLevelMap():
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
     
-    def update(self, changed_level, time, player_location, glyphs, update_visits=True):
+    def update(self, changed_level, time, player_location, glyphs, last_action_menu=False):
         if changed_level:
             self.time_of_recent_arrival = time
 
@@ -362,8 +362,11 @@ class DLevelMap():
             self.time_of_new_square = time
         if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
             import pdb; pdb.set_trace()
-        if update_visits:
+        if self.visits_count_map[self.player_location] == 0:
             self.visits_count_map[self.player_location] += 1
+        else:
+            if last_action_menu is False:
+                self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
@@ -516,10 +519,12 @@ class DLevelMap():
             if engraving not in message:
                 continue
             import pdb; pdb.set_trace()
-            self.add_special_fact(player_location, SPECIAL_FACTS[fact_name])
+            facts = SPECIAL_FACTS[fact_name]
+            self.add_special_facts(player_location, facts)
+            return facts
 
-    def add_special_fact(self, location, fact):
-        self.special_facts[location] = fact
+    def add_special_facts(self, location, facts):
+        self.special_facts[location] = facts
 
 class FloodMap():
     @staticmethod
@@ -788,6 +793,7 @@ class SpecialLevelMap():
         self.diggable_floor = config_data['properties']['diggable_floor']
         try:
             self.special_engravings = config_data['special_engravings']
+            print(self.special_engravings)
         except KeyError:
             self.special_engravings = None
         self.initial_offset = physics.Square(*initial_offset)
@@ -947,8 +953,7 @@ class ItemFact(SpecialFact):
 
 
 SPECIAL_FACTS = {
-    "sokoban_bag": ItemFact(inventory.Tool, "bag of holding"),
-    "sokoban_amulet": ItemFact(inventory.Amulet, "reflection")
+    "sokoban_prize": [ItemFact(inventory.Tool, "bag of holding"), ItemFact(inventory.Amulet, "reflection")],
 }
 
 ALL_SPECIAL_LEVELS = [

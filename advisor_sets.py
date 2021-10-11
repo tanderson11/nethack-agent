@@ -6,6 +6,8 @@ new_advisors = [
     NameItemAdvisor(),
     NameWishItemAdvisor(),
     EnhanceSkillsAdvisor(),
+    # SPECIAL TIME SENSITIVE OPERATIONS
+    SpecialItemFactAdvisor(),
     # STONING ILL ETC
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.deadly_condition),
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),

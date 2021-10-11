@@ -61,7 +61,7 @@ CLASS_SKILLS = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "
 CLASS_SKILLS = CLASS_SKILLS.set_index("SKILL")
 
 best_skills_by_class = {
-    BaseRole.Archeologist: 'pick-axe',
+    BaseRole.Archeologist: 'saber',
     BaseRole.Barbarian: 'axe',
     BaseRole.Caveperson: 'spear',
     BaseRole.Healer: 'quarterstaff',

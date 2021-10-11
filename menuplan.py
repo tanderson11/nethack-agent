@@ -541,11 +541,16 @@ class SpecialItemPickupMenu(ParsingInventoryMenu):
     def __init__(self, player_character, item_class):
         super().__init__(player_character)
         def selector(menu_item):
+            import pdb; pdb.set_trace()
             if menu_item.item is None:
                 return False
             if isinstance(menu_item.item, item_class):
                 return True
+            return False
         self.item_selector = selector
+    def search_through_rows(self, tty_chars):
+        import pdb; pdb.set_trace()
+        return super().search_through_rows(tty_chars)
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, player_character, inventory, selector_name=None, desired_letter=None):
