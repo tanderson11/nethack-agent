@@ -442,3 +442,10 @@ class Character():
     
     def get_spell_attack(self, preference):
         return None
+
+    def prefer_ranged(self):
+        if not self.inventory.wielded_weapon.uses_relevant_skill(self):
+            return True
+        if self.base_class == constants.BaseRole.Tourist and self.current_hp < 30:
+            return True
+        return False

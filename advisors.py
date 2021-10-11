@@ -881,21 +881,6 @@ class Attack(Advisor):
     def prioritize(self, targets, character):
         return targets.directions[0]
 
-class MeleeHoldingMonster(Attack):
-    def prioritize(self, targets, character):
-        return targets.directions[0]
-
-    def targets(self, neighborhood, character):
-        if character.held_by is None:
-            return None
-
-        targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
-        return targets
-
-class MeleePriorityTargets(Attack):
-    def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
-
 class RangedAttackAdvisor(Attack):
     preference = constants.ranged_default
     def prepare_for_ranged(self, character, preference):
@@ -1081,6 +1066,15 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
         return targets.directions[target_index]
 
+class AnyRangedAttackIfPreferred(RangedAttackAdvisor):
+    preference = constants.ranged_powerful
+
+    def advice(self, rng, run_state, character, oracle):
+        if not character.prefer_ranged():
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+
 class AdjustRangedPlanDummy(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if not character.executing_ranged_plan:
@@ -1092,6 +1086,21 @@ class AdjustRangedPlanDummy(Advisor):
             character.executing_ranged_plan = False
 
         return None
+
+class MeleeHoldingMonster(Attack):
+    def prioritize(self, targets, character):
+        return targets.directions[0]
+
+    def targets(self, neighborhood, character):
+        if character.held_by is None:
+            return None
+
+        targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
+        return targets
+
+class MeleePriorityTargets(Attack):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
 class LowerDPSAttack(Attack):
     def prioritize(self, targets, character):
