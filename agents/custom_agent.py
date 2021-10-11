@@ -219,7 +219,7 @@ normal_background_menu_plan_options = [
     menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
     menuplan.EscapeMenuResponse("Call a "),
     menuplan.EscapeMenuResponse("Call an "),
-    menuplan.YesMenuResponse("Really attack"),
+    menuplan.NoMenuResponse("Really attack"),
     menuplan.NoMenuResponse("Shall I remove"),
     menuplan.NoMenuResponse("Would you wear it for me?"),
     menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
