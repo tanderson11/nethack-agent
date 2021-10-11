@@ -1,0 +1,15 @@
+{
+    "branch": "DungeonsOfDoom",
+    "level_name": "Castle",
+    "level_variant": "",
+    "min_branch_level": 25,
+    "max_branch_level": 29,
+    "geometry_horizontal": "center",
+    "geometry_vertical": "center",
+    "properties": {
+        "mappable": true,
+        "teleportable": false,
+        "diggable_walls": false,
+        "diggable_floor": false
+    }
+}

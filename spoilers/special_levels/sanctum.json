@@ -1,0 +1,15 @@
+{
+    "branch": "Gehennom",
+    "level_name": "Sanctum",
+    "level_variant": "",
+    "min_branch_level": 20,
+    "max_branch_level": 24,
+    "geometry_horizontal": "center",
+    "geometry_vertical": "center",
+    "properties": {
+        "mappable": false,
+        "teleportable": false,
+        "diggable_walls": false,
+        "diggable_floor": false
+    }
+}
