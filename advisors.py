@@ -1102,6 +1102,32 @@ class MeleePriorityTargets(Attack):
     def targets(self, neighborhood, character):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
+class BlindWithCamera(Attack):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m not in character.recently_fled_enemies)
+
+    def advice(self, rng, run_state, character, oracle):
+        camera = run_state.character.inventory.get_item(inv.Tool, name='expensive camera')
+        if camera is None:
+            return None
+        melee_advice = super().advice(rng, run_state, character, oracle)
+        if melee_advice is None:
+            return None
+        menu_plan = menuplan.MenuPlan("search with stethoscope", self, [
+            menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(camera.inventory_letter)),
+            menuplan.DirectionMenuResponse("In what direction?", melee_advice.action),
+        ], listening_item=camera)
+        import pdb; pdb.set_trace()
+        apply = nethack.actions.Command.APPLY
+        return ActionAdvice(self, apply, menu_plan)
+
+class BlindWithCameraIfLow(BlindWithCamera):
+    def advice(self, rng, run_state, character, oracle):
+        if character.current_hp >= 30:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+
 class LowerDPSAttack(Attack):
     def prioritize(self, targets, character):
         monsters = targets.monsters
