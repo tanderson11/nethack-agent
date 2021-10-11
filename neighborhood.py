@@ -127,8 +127,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             level_map.boulder_map,
             ViewField.Extended
         )
+        self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
-        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)
+        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value) | self.obvious_mimics
         if level_map.dcoord.branch == map.Branches.Sokoban:
             imprudent |= self.extended_boulders
         prudent_walkable = extended_walkable_tile & ~imprudent
@@ -136,7 +137,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             #import pdb; pdb.set_trace()
             pass
 
-        self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         if self.level_map.dcoord.branch == map.Branches.Sokoban:
