@@ -590,8 +590,15 @@ class RunState():
             inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
 
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
-            if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
+            absolute_player_end = self.advice_log[-1].sokoban_move.end_square + self.neighborhood.level_map.special_level.initial_offset
+            absolute_boulder_end = self.advice_log[-1].sokoban_move.boulder_end + self.neighborhood.level_map.special_level.initial_offset
+            if absolute_player_end == physics.Square(*self.current_square.location):
                 self.neighborhood.level_map.sokoban_move_index += 1
+                #import pdb;pdb.set_trace()
+                self.neighborhood.level_map.sokoban_boulders[absolute_player_end] = False
+                if not self.advice_log[-1].sokoban_move.expect_plug:
+                    self.neighborhood.level_map.sokoban_boulders[absolute_boulder_end] = True
+
                 if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message) and environment.env.debug:
                     import pdb; pdb.set_trace()
                 if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
@@ -875,11 +882,14 @@ class CustomAgent(BatchedAgent):
                 import pdb; pdb.set_trace()
             level_map.embedded_object_map[target_location] = True
 
+        #if "Some text has been burned into the floor here" in message.message:
+        #    import pdb; pdb.set_trace()
+
         last_action_menu = len(run_state.advice_log) != 0 and isinstance(run_state.advice_log[-1], advs.MenuAdvice)
         level_map.update(changed_level, time, player_location, observation['glyphs'], last_action_menu=last_action_menu)
-        special_fact = level_map.listen_for_special_engraving(player_location, message.message)
-        if special_fact is not None:
-            run_state.current_square.special_fact = special_fact
+        special_facts = level_map.listen_for_special_engraving(player_location, message.message)
+        if special_facts is not None:
+            run_state.current_square.special_facts = special_facts
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:

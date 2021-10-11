@@ -10,6 +10,21 @@ class SpecialRoomTypes(enum.Enum):
     shop = 1
     vault_closet = 2
 
+class RangedAttackPreference(enum.Flag):
+    wand = enum.auto()
+    spell = enum.auto()
+    death = enum.auto()
+    striking = enum.auto()
+    sleep = enum.auto()
+    setup = enum.auto()
+    strong = enum.auto()
+
+    def includes(self, flag):
+        return self & flag == flag
+
+ranged_default = ~RangedAttackPreference.wand
+ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
+
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
     desire_all_uncursed = "desire all uncursed"

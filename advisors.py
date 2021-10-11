@@ -897,9 +897,9 @@ class MeleePriorityTargets(Attack):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
 
 class RangedAttackAdvisor(Attack):
-    attack_strength = 'ordinary'
-    def prepare_for_ranged(self, character):
-        ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
+    preference = constants.ranged_default
+    def prepare_for_ranged(self, character, preference):
+        ranged_plan = character.get_ranged_attack(preference)
         if ranged_plan is None or ranged_plan.attack_plan is not None:
             return None
 
@@ -948,13 +948,13 @@ class RangedAttackAdvisor(Attack):
         attack_direction = self.prioritize(targets, character)
         if attack_direction is None:
             return None
-        ranged_preparation = self.prepare_for_ranged(character)
+        preference = self.preference
+        if run_state.neighborhood.level_map.dcoord.branch == map.Branches.Sokoban:
+            preference = self.preference & ~constants.RangedAttackPreference.striking
+        ranged_preparation = self.prepare_for_ranged(character, preference)
         if ranged_preparation is not None:
             return ranged_preparation
-        if self.attack_strength == 'ordinary':
-            ranged_plan = character.inventory.get_ordinary_ranged_attack(character)
-        elif self.attack_strength == 'powerful':
-            ranged_plan = character.inventory.get_powerful_ranged_attack(character)
+        ranged_plan = character.get_ranged_attack(preference)
         if ranged_plan is None:
             return None
         attack_plan = ranged_plan.attack_plan
@@ -972,7 +972,7 @@ class RangedAttackAdvisor(Attack):
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
 class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
-    attack_strength = 'powerful'
+    preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
@@ -987,7 +987,7 @@ class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
         return targets
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
-    attack_strength = 'powerful'
+    preference = constants.ranged_powerful # main advisor knows not to do striking
     def advice(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
@@ -1596,14 +1596,14 @@ class SpecialItemFactAdvisor(Advisor):
             return
         special_facts = run_state.current_square.special_facts
         for f in special_facts:
-            if not isinstance(f, map.ItemFact):
+            if not isinstance(f, map.StackFact):
                 continue
             menu_plan = menuplan.MenuPlan(
                 "pick up all special object", self, [
-                    menuplan.SpecialItemPickupResponse(character, f.item_name),
+                    menuplan.SpecialItemPickupResponse(character, f.items),
                     menuplan.YesMenuResponse("trouble lifting"),
                 ],
-                interactive_menu=menuplan.SpecialItemPickupMenu(character, f.item_class)
+                interactive_menu=menuplan.SpecialItemPickupMenu(character, f.items)
             )
             import pdb; pdb.set_trace()
             return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
@@ -1642,6 +1642,17 @@ class PathfindInvisibleMonstersSokoban(PathAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         return run_state.neighborhood.path_invisible_monster()
+
+class PathfindObivousMimicsSokoban(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
+            return None
+        if run_state.neighborhood.level_map.solved:
+            return None
+        mimic_path = run_state.neighborhood.path_obvious_mimics()
+        if mimic_path is not None:
+            import pdb; pdb.set_trace()
+        return mimic_path
 
 class PathfindSokobanSquare(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):

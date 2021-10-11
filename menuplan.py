@@ -191,9 +191,9 @@ class WishMenuResponse(MenuResponse):
             return ord('\r')
 
 class SpecialItemPickupResponse(MenuResponse):
-    def __init__(self, character, item_name):
+    def __init__(self, character, items):
         self.character = character
-        self.item_name = item_name
+        self.items = items
 
     def value(self, message_obj, expect_getline=True):
         return ord(' ')
@@ -206,7 +206,12 @@ class SpecialItemPickupResponse(MenuResponse):
         if item is not None:
             self.character.inventory.all_items()
             real_version = self.character.inventory.items_by_letter[ord(message_obj.message[0])]
-            real_version.identity.give_name(self.item.name)
+            for i in self.items:
+                if isinstance(real_version, i.item_class):
+                    name = i.item_name
+                    break
+            import pdb; pdb.set_trace()
+            real_version.identity.give_name(name)
         val = self.value(message_obj)
         return val
 
@@ -538,19 +543,17 @@ class SpecialItemPickupMenu(ParsingInventoryMenu):
     trigger_phrase = "Pick up what?"
     multi_select = True
 
-    def __init__(self, player_character, item_class):
+    def __init__(self, player_character, items):
         super().__init__(player_character)
         def selector(menu_item):
             import pdb; pdb.set_trace()
             if menu_item.item is None:
                 return False
-            if isinstance(menu_item.item, item_class):
-                return True
+            for i in items:
+                if isinstance(menu_item.item, i.item_class):
+                    return True
             return False
         self.item_selector = selector
-    def search_through_rows(self, tty_chars):
-        import pdb; pdb.set_trace()
-        return super().search_through_rows(tty_chars)
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, player_character, inventory, selector_name=None, desired_letter=None):

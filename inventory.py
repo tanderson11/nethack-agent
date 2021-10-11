@@ -1194,7 +1194,7 @@ class PlayerInventory():
             pass
         return self.AttireProposal(proposed_items, proposal_blockers)
 
-    def get_ordinary_ranged_attack(self, character):
+    def get_ranged_weapon_attack(self, preference):
         # shoot from your bow
         if not isinstance(self.wielded_weapon, BareHands): 
             if self.wielded_weapon.identity.ranged:
@@ -1223,19 +1223,24 @@ class PlayerInventory():
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 
         # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
-        bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
-        for bow in bows:
-            matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
-            if len(matching_ammo) > 0:
-                return RangedPreparednessProposal(wield_item=bow)
+        if preference.includes(constants.RangedAttackPreference.setup):
+            bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
+            for bow in bows:
+                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
+                if len(matching_ammo) > 0:
+                    return RangedPreparednessProposal(wield_item=bow)
 
-    def get_powerful_ranged_attack(self, character):
-        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack(), instance_selector=lambda i: i.charges is None or i.charges > 0)
+    def get_wand_attack(self, preference):
+        forbidden_names = []
+        if not preference.includes(constants.RangedAttackPreference.sleep): forbidden_names.append("sleep")
+        if not preference.includes(constants.RangedAttackPreference.death): forbidden_names.append("death")
+        if not preference.includes(constants.RangedAttackPreference.striking): forbidden_names.append("striking")
+        attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack() and i.name() not in forbidden_names, instance_selector=lambda i: i.charges is None or i.charges > 0)
 
         if len(attack_wands) > 0:
             plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])
             return RangedPreparednessProposal(attack_plan=plan)
-        return self.get_ordinary_ranged_attack(character)
+        return None
 
     def have_item_oclass(self, object_class):
         object_class_num = object_class.glyph_class.class_number

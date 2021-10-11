@@ -136,12 +136,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             #import pdb; pdb.set_trace()
             pass
 
+        self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
-
-        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
+        if self.level_map.dcoord.branch == map.Branches.Sokoban:
+            extended_is_monster[self.obvious_mimics] = True
 
         self.extended_is_monster = extended_is_monster
+        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
+
         extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), monsters)
         extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
@@ -316,6 +319,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def path_invisible_monster(self):
         invisible_monsters = gd.InvisibleGlyph.class_mask(self.vision_glyphs)
         return self.path_to_targets(invisible_monsters, target_monsters=True)
+    
+    def path_obvious_mimics(self):
+        return self.path_to_targets(self.obvious_mimics, target_monsters=True)
 
     def path_next_sokoban_square(self):
         sokoban_square = self.level_map.special_level.sokoban_solution[self.level_map.sokoban_move_index].start_square

@@ -257,6 +257,7 @@ class DLevelMap():
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.obvious_mimics = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
@@ -322,6 +323,9 @@ class DLevelMap():
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
+        self.obvious_mimics = gd.RandomClassGlyph.class_mask(glyphs)
+        if self.dcoord.branch == Branches.Sokoban and self.special_level is not None:
+            self.obvious_mimics |= ~self.sokoban_boulders & self.boulder_map
 
         # Basic terrain types
 
@@ -401,6 +405,7 @@ class DLevelMap():
                 self.diggable_floor = self.special_level.diggable_floor
                 self.teleportable = self.special_level.teleportable
                 if self.special_level.branch == Branches.Sokoban:
+                    self.sokoban_boulders = self.special_level.initial_boulders
                     self.sokoban_move_index = 0
                     self.solved = False
 
@@ -778,6 +783,7 @@ class SpecialLevelMap():
     potential_wall_decoder = PotentialWallDecoder()
     potential_secret_door_decoder = PotentialSecretDoorDecoder()
     traps_to_avoid_decoder = TrapsToAvoidDecoder()
+    boulder_decoder = BoulderDecoder()
 
     def __repr__(self) -> str:
         return self.id
@@ -817,6 +823,7 @@ class SpecialLevelMap():
         if self.branch == Branches.Sokoban:
             self.sokoban_solution = SOKOBAN_SOLUTIONS[(self.level_name, self.level_variant)]
             self.traps_to_avoid = np.full_like(self.traps_to_avoid, False, dtype=bool)
+            self.initial_boulders = self.boulder_decoder.decode(nethack_wiki_encoding)
 
     def offset_in_level(self, absolute):
         return absolute - self.initial_offset
@@ -945,15 +952,17 @@ class SpecialFact():
     def __init__(self) -> None:
         pass
 
-class ItemFact(SpecialFact):
-    def __init__(self, item_class, item_name) -> None:
-        super().__init__()
-        self.item_class = item_class
-        self.item_name = item_name
+class SingleItemFact(NamedTuple):
+    item_class: type
+    item_name: str
 
+class StackFact(SpecialFact):
+    def __init__(self, items) -> None:
+        super().__init__()
+        self.items = items
 
 SPECIAL_FACTS = {
-    "sokoban_prize": [ItemFact(inventory.Tool, "bag of holding"), ItemFact(inventory.Amulet, "reflection")],
+    "sokoban_prize": [StackFact([SingleItemFact(inventory.Tool, "bag of holding"), SingleItemFact(inventory.Amulet, "amulet of reflection")])],
 }
 
 ALL_SPECIAL_LEVELS = [

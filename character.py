@@ -428,3 +428,17 @@ class Character():
             #pdb.set_trace()
 
         return pd.DataFrame(danger_rows, columns=columns)
+
+    def get_ranged_attack(self, preference):
+        if preference.includes(constants.RangedAttackPreference.wand):
+            wand_attack = self.inventory.get_wand_attack(preference)
+            if wand_attack is not None:
+                return wand_attack
+        if preference.includes(constants.RangedAttackPreference.spell):
+            spell_attack = self.get_spell_attack(preference)
+            if spell_attack is not None:
+                return spell_attack
+        return self.inventory.get_ranged_weapon_attack(preference)
+    
+    def get_spell_attack(self, preference):
+        return None

@@ -208,6 +208,7 @@ class SokobanMove(NamedTuple):
     start_square: physics.Square
     end_square: physics.Square
     action: enum.IntEnum
+    boulder_end: physics.Square
     expect_plug: bool = False
 
 class SokobanSolution():
@@ -235,7 +236,7 @@ class SokobanSolution():
                 continue
             step_offset = chr_to_offset[c]
             player_location_needed = boulder_current - step_offset
-            move = SokobanMove(start_square=player_location_needed, end_square=boulder_current, action=chr_to_dir[c], expect_plug=expect_plug)
+            move = SokobanMove(start_square=player_location_needed, end_square=boulder_current, action=chr_to_dir[c], boulder_end=boulder_current+step_offset,expect_plug=expect_plug)
             moves.append(move)
 
             #print(f"{tuple(player_location_needed)}, {chr_to_dir[c]}") 
