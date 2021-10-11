@@ -73,7 +73,7 @@ class DMap():
     def report_special_fact_handled(self, fact):
         self.handled_facts[fact.name] = True
         if fact.name == 'sokoban_prize':
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             self.target_dcoords.pop(Branches.Sokoban)
 
     def update_target_dcoords(self, character):
