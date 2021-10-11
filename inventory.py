@@ -481,7 +481,7 @@ class Tool(Item):
         super().__init__(identity, instance_attributes, inventory_letter=inventory_letter, seen_as=seen_as)
         self.charges = None
 
-        if self.instance_name == "NO_CHARGE":
+        if self.instance_name == "C_0":
             self.charges = 0
 
         p_status = instance_attributes.parenthetical_status_str
