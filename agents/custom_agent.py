@@ -550,9 +550,11 @@ class RunState():
             raise Exception("Somehow got out of sync")
     
     def report_special_fact_handled(self, fact):
+        print(f"Reporting special fact handled! {fact.name}")
         player_location = self.current_square.location
         self.neighborhood.level_map.report_special_fact_handled(player_location, fact)
         self.current_square.special_facts = self.neighborhood.level_map.special_facts[player_location]
+        self.dmap.report_special_fact_handled(fact)
 
     def messages_since_last_input(self):
         messages = []

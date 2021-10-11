@@ -67,6 +67,13 @@ class DMap():
         self.branch_connections = {}
         self.oracle_level = None
         self.special_level_searcher = SpecialLevelSearcher(ALL_SPECIAL_LEVELS)
+        self.handled_facts = {}
+
+    def report_special_fact_handled(self, fact):
+        self.handled_facts[fact.name] = True
+        if fact.name == 'sokoban_prize':
+            import pdb; pdb.set_trace()
+            self.target_dcoords.pop(Branches.Sokoban)
 
     def update_target_dcoords(self, character):
         new_targets = {}
@@ -523,7 +530,7 @@ class DLevelMap():
         for engraving,fact_name in self.special_level.special_engravings.items():
             if engraving not in message:
                 continue
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             facts = SPECIAL_FACTS[fact_name]
             self.add_special_facts(player_location, facts)
             return facts
@@ -954,20 +961,20 @@ class SpecialLevelLoader():
         return retval
 
 class SpecialFact():
-    def __init__(self) -> None:
-        pass
+    def __init__(self, name) -> None:
+        self.name = name
 
 class SingleItemFact(NamedTuple):
     item_class: type
     item_name: str
 
 class StackFact(SpecialFact):
-    def __init__(self, items) -> None:
-        super().__init__()
+    def __init__(self, name, items) -> None:
+        super().__init__(name)
         self.items = items
 
 SPECIAL_FACTS = {
-    "sokoban_prize": [StackFact([SingleItemFact(inventory.Tool, "bag of holding"), SingleItemFact(inventory.Amulet, "amulet of reflection")])],
+    "sokoban_prize": [StackFact("sokoban_prize", [SingleItemFact(inventory.Tool, "bag of holding"), SingleItemFact(inventory.Amulet, "amulet of reflection")])],
 }
 
 ALL_SPECIAL_LEVELS = [

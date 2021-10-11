@@ -210,7 +210,7 @@ class SpecialItemPickupResponse(MenuResponse):
                 if isinstance(real_version, i.item_class):
                     name = i.item_name
                     break
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             real_version.identity.give_name(name)
         val = self.value(message_obj)
         return val
@@ -546,7 +546,7 @@ class SpecialItemPickupMenu(ParsingInventoryMenu):
     def __init__(self, player_character, items):
         super().__init__(player_character)
         def selector(menu_item):
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             if menu_item.item is None:
                 return False
             for i in items:
