@@ -1054,7 +1054,7 @@ def make_inventory(global_identity_map, inventory_inputs):
     return inventory
 
 class TestWeaponWielding(unittest.TestCase):
-    def test_good_armor_vs_bad(self):
+    def test_tin_opener(self):
         character = agents.custom_agent.Character(
             base_class=constants.BaseRole.Tourist,
             base_race=constants.BaseRace.human,
@@ -1064,13 +1064,32 @@ class TestWeaponWielding(unittest.TestCase):
         character.set_class_skills()
 
         inventory = [
-            ItemTestInputs(2120, inv.Armor, "an uncursed tin opener (weapon in hand)", ord("a")),
+            ItemTestInputs(2120, inv.Tool, "an uncursed tin opener (weapon in hand)", ord("a")),
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
 
         proposal = character.inventory.proposed_weapon_changes(character)
         self.assertEqual(chr(proposal.inventory_letter), '-')
+
+    def test_complex(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Archeologist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(1939, inv.Weapon, "a curved sword (weapon in hand)", ord("a")),
+            ItemTestInputs(1923, inv.Weapon, "a dagger (at the ready)", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_weapon_changes(character)
+        assert proposal is None
 
 class TestArmorWearing(unittest.TestCase):
     def test_good_armor_vs_bad(self):
