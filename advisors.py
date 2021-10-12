@@ -1117,7 +1117,7 @@ class MeleeHoldingMonster(Attack):
 
 class BlindWithCamera(Attack):
     def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and not character.blinding_attempts.get(m, False))
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and not character.blinding_attempts.get(m, False) and m.monster_spoiler.has_active_attacks)
 
     def prioritize(self, run_state, targets, character):
         monster = targets.monsters[0]

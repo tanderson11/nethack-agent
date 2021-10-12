@@ -19,6 +19,8 @@ class MonsterSpoiler():
 		self.engulf_attack_bundle = engulf_attack_bundle
 		self.passive_attack_bundle = passive_attack_bundle
 
+		self.has_active_attacks = (self.melee_attack_bundle.num_attacks + self.ranged_attack_bundle.num_attacks) > 0
+
 		self.level = level
 		self.AC = AC
 		self.speed = speed
