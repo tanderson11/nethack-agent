@@ -1,4 +1,10 @@
 SPECIES,LETTER,LVL,TIER,SPD,AC,MR,RESISTS,ATTACKS
+fog cloud,v,3,-2,1,0,0,sp*,E1d6
+lichen,F,0,-2,1,9,0,,0d0m
+long worm tail,~,0,-2,0,10,0,,
+shrieker,F,3,-2,1,7,0,P,
+violet fungus,F,3,-2,1,7,0,P,1d4 0d0m
+yellow mold,F,1,-2,0,9,0,P,(0d4s)
 abbot,@,5,-1,12,10,20,,8d2 3d2s M0d0+
 acolyte,@,5,-1,12,10,20,,W1d6 M0d0+
 aligned priest,@,12,-1,12,10,50,e,W4d10 1d4 M0d0+
@@ -83,6 +89,7 @@ water nymph,n,3,0,12,9,20,,0d0- 0d0-
 Wizard of Yendor,@,30,0,12,-8,100,FP,2d12- M0d0+
 wood nymph,n,3,0,12,9,20,,0d0- 0d0-
 Yeenoghu,&,56,0,18,-5,80,fp,W3d6 W2d8c W1d6. M2d6M
+floating eye,e,2,0,1,9,10,,(3d70.)
 demilich,L,14,1,9,-2,60,Csp,3d4C M0d0+
 lich,L,11,1,6,0,30,Csp,1d10C M0d0+
 air elemental,E,8,2,36,2,30,p*,E1d10
@@ -174,7 +181,6 @@ rock troll,T,9,5,12,0,0,,W3d6 2d8 2d6
 rogue,@,10,5,12,10,1,,W1d6 W1d6
 samurai,@,10,5,12,10,1,,W1d8 W1d8
 shade,,12,5,10,10,0,csdp*,2d6. 1d6<
-soldier ant,a,3,5,18,3,0,P,2d4 3d4P
 stalker,E,8,5,12,3,0,,4d4
 tourist,@,10,5,12,10,1,,W1d6 W1d6
 valkyrie,@,10,5,12,10,1,c,W1d8 W1d8
@@ -184,6 +190,11 @@ water troll,T,11,5,14,4,40,,2W2d8 2d8 2d6
 winged gargoyle,g,9,5,15,-2,0,*,3d6 3d6 3d4
 wizard,@,10,5,12,10,3,,W1d6
 zruty,z,9,5,8,3,0,,3d4 3d4 3d6
+ochre jelly,j,6,5,3,8,20,a*,E3d6A (3d6A)
+spotted jelly,j,5,5,0,8,10,a*,(6d6A)
+brown mold,F,1,5,0,9,0,CP,(2d6C)
+blue jelly,j,4,5,0,8,10,CP,(5d6C)
+soldier ant,a,3,6,18,3,0,P,2d4 3d4P
 baby long worm,w,8,6,3,5,0,,1d6
 baby purple worm,w,8,6,3,5,0,,1d6
 barbed devil,&,8,6,12,0,35,fp,2d4 2d4 3d4
@@ -200,8 +211,6 @@ djinni,&,7,6,12,4,30,p*,W2d8
 dog,d,4,6,16,5,0,,1d6
 dwarf king,h,6,6,6,10,20,,W2d6 W2d6
 dwarf lord,h,4,6,6,10,10,,W2d4 W2d4
-dwarf mummy,M,5,6,10,5,20,csp,1d6
-elf mummy,M,6,6,12,4,30,csp,2d4
 elf-lord,@,8,6,12,10,20,S,W2d4 W2d4
 erinys,&,7,6,12,2,30,fp,W2d4P
 ettin mummy,M,7,6,12,4,30,csp,2d6 2d6
@@ -212,13 +221,11 @@ gargoyle,g,6,6,10,-4,0,*,2d6 2d6 2d4
 ghost,,10,6,3,-5,50,csdp*,1d1
 ghoul,Z,3,6,6,10,0,csp,1d2. 1d3
 giant,H,6,6,6,0,0,,W2d10
-giant beetle,a,5,6,6,4,0,P,3d6
 giant mummy,M,8,6,14,3,30,csp,3d4 3d4
 giant spider,s,5,6,15,4,0,P,2d4P
 giant zombie,Z,8,6,8,6,0,csp,2d8 2d8
 glass piercer,p,7,6,1,0,0,a,4d6
 gnome king,G,5,6,10,10,20,,W2d6
-gold golem,,5,6,9,6,0,spa,2d3 2d3
 gray unicorn,u,4,6,24,2,70,P,1d12 1d6
 green slime,P,6,6,6,6,0,cepa*,1d4@ (0d0@)
 Green-elf,@,5,6,12,10,10,S,W2d4
@@ -238,21 +245,15 @@ jaguar,f,4,6,15,6,0,,1d4 1d4 1d8
 killer bee,a,1,6,18,-1,0,P,1d3P
 large mimic,m,8,6,3,7,10,a,3d4m
 leather golem,,6,6,6,6,0,sp,1d6 1d6
-leprechaun,l,5,7,15,8,20,,1d2$
-long worm,w,8,7,3,5,10,,1d4
 lynx,f,5,6,15,6,0,,1d4 1d4 1d10
-marilith,&,7,6,12,-6,80,fp,W2d4 W2d4 2d4 2d4 2d4 2d4
+marilith,&,7,5,12,-6,80,fp,W2d4 W2d4 2d4 2d4 2d4 2d4
 mountain centaur,C,6,6,20,2,10,,W1d10 1d6 1d6
-mumak,q,5,6,9,0,0,,4d12 2d6
-ochre jelly,j,6,5,3,8,20,a*,E3d6A (3d6A)
+mumak,q,5,5,9,0,0,,4d12 2d6
 ogre,O,5,6,10,5,0,,W2d5
 ogre lord,O,7,6,12,3,30,,W2d6
-orc mummy,M,5,6,10,5,20,csp,1d6
-orc-captain,o,5,7,5,10,0,,W2d4 W2d4
 owlbear,Y,5,6,12,5,0,,1d6 1d6 H2d8
 panther,f,5,6,15,6,0,,1d6 1d6 1d10
 pit viper,S,6,6,15,2,0,P,1d4P 1d4P
-python,S,6,7,3,5,0,,1d4 0d0 H1d4w H2d4
 quantum mechanic,Q,7,6,12,3,10,p,1d4t
 quivering blob,b,5,6,1,8,0,sP,1d8
 red naga,N,6,6,12,4,0,FP,2d4 B2d6F
@@ -261,12 +262,9 @@ salamander,:,8,6,12,-1,0,Fs,W2d8 1d6F H2d6 H3d6F
 sasquatch,Y,7,6,15,6,0,,1d6 1d6 1d8
 scorpion,s,5,6,15,3,0,P,1d2 1d2 1d4P
 sergeant,@,8,6,10,10,5,,W2d6
-shark,;,7,6,12,2,0,,5d6
 soldier,@,6,6,10,10,0,,W1d8
-spotted jelly,j,5,5,0,8,10,a*,(6d6A)
 steam vortex,v,7,6,22,2,30,fsp*,E1d8F
 stone giant,H,6,6,6,0,0,,W2d10
-tengu,i,6,6,13,5,30,P,1d7
 tiger,f,6,6,12,6,0,,2d4 2d4 1d10
 troll,T,7,6,12,4,0,,W4d2 4d2 2d6
 vampire bat,B,5,6,20,6,0,sp,1d6 0d0P
@@ -286,6 +284,17 @@ wumpus,q,8,6,3,2,10,,3d6
 xan,x,7,6,18,-4,0,P,1d4x
 xorn,X,8,6,9,-2,20,fc*,1d3 1d3 1d3 4d6
 yeti,Y,5,6,15,6,0,C,1d6 1d6 1d4
+gas spore,e,1,6,3,10,0,,[X4d6]
+dwarf mummy,M,5,7,10,5,20,csp,1d6
+elf mummy,M,6,7,12,4,30,csp,2d4
+giant beetle,a,5,7,6,4,0,P,3d6
+gold golem,,5,7,9,6,0,spa,2d3 2d3
+shark,;,7,7,12,2,0,,5d6
+tengu,i,6,7,13,5,30,P,1d7
+leprechaun,l,5,7,15,8,20,,1d2$
+long worm,w,8,7,3,5,10,,1d4
+orc-captain,o,5,7,5,10,0,,W2d4 W2d4
+python,S,6,7,3,5,0,,1d4 0d0 H1d4w H2d4
 ape,Y,4,7,12,6,0,,1d3 1d3 1d6
 bugbear,h,3,7,9,5,0,,W2d4
 giant bat,B,2,7,22,7,0,,1d6
@@ -294,7 +303,6 @@ human zombie,Z,4,7,6,8,0,csp,1d8
 imp,i,3,7,12,2,20,,1d4
 kitten,f,2,7,18,6,0,,1d6
 Kop Kaptain,K,4,7,12,10,20,,W2d6
-lemure,i,3,7,3,7,0,Sp,1d3
 little dog,d,2,7,18,6,0,,1d6
 lizard,:,5,7,6,6,10,*,1d6
 Mordor orc,o,3,7,5,10,0,,W1d6
@@ -313,6 +321,10 @@ water moccasin,S,4,7,15,3,0,P,1d6P
 woodchuck,r,3,7,3,0,20,,1d6
 Woodland-elf,@,4,7,12,10,10,S,W2d4
 yellow light,y,3,7,15,0,0,fcsdepa*,X10d20b
+acid blob,b,1,7,3,8,0,spa*,(1d8A)
+green mold,F,1,7,0,9,0,a*,(2d4A)
+red mold,F,1,7,0,9,0,FP,(2d4F)
+orc mummy,M,5,8,10,5,20,csp,1d6
 baby crocodile,:,3,8,6,7,0,,1d4
 barrow wight,W,3,8,12,5,5,csp,W0d0V M0d0+ 1d4
 black naga hatchling,N,3,8,10,6,0,Pa*,1d4
@@ -323,7 +335,6 @@ dwarf,h,2,8,6,10,10,,W1d8
 dwarf zombie,Z,2,8,6,9,0,csp,1d6
 elf zombie,Z,3,8,6,9,0,csp,1d7
 giant ant,a,2,8,18,3,0,,1d4
-giant rat,r,1,9,10,7,0,,1d3
 gnome,G,1,8,6,10,4,,W1d6
 gnome lord,G,3,8,8,10,4,,W1d8
 gnomish wizard,G,3,8,10,4,10,,M0d0+
@@ -337,11 +348,9 @@ iguana,:,2,8,6,7,0,,1d4
 jellyfish,;,3,8,3,6,0,P,3d3P
 kobold lord,k,2,8,6,10,0,p,W2d4
 kobold mummy,M,3,8,8,6,20,csp,1d4
-kobold shaman,k,2,9,6,6,10,p,M0d0+
 Kop Lieutenant,K,3,8,10,10,20,,W1d8
 Kop Sergeant,K,2,8,8,10,10,,W1d6
 large kobold,k,1,8,6,10,0,p,W1d6
-manes,i,1,8,3,7,0,sp,1d3 1d3 1d4
 monkey,Y,2,8,12,6,0,,0d0- 1d3
 orc,o,1,8,9,10,0,,W1d8
 orc zombie,Z,2,8,6,9,0,csp,1d6
@@ -350,30 +359,21 @@ rabid rat,r,2,8,12,6,0,p,2d4!C
 red naga hatchling,N,3,8,10,6,0,FP,1d4
 rothe,q,2,8,9,7,0,,1d3 1d3 1d8
 straw golem,,3,8,12,10,0,sp,1d2 1d2
+lemure,i,3,9,3,7,0,Sp,1d3
+manes,i,1,9,3,7,0,sp,1d3 1d3 1d4
+giant rat,r,1,9,10,7,0,,1d3
 bat,B,0,9,22,8,0,,1d4
 cave spider,s,1,9,12,3,0,P,1d2
 fox,d,0,9,15,7,0,,1d3
-garter snake,S,1,9,8,8,0,,1d2
 gecko,:,1,9,6,8,0,,1d3
 gnome zombie,Z,1,9,6,10,0,csp,1d5
 goblin,o,0,9,6,10,0,,W1d4
-grid bug,x,0,9,12,9,0,ep,1d1E
-jackal,d,0,9,12,7,0,,1d2
 Keystone Kop,K,1,9,6,10,10,,W1d4
 kobold,k,0,9,6,10,0,p,W1d4
-kobold zombie,Z,0,9,6,10,0,csp,1d4
-newt,:,0,9,6,8,0,,1d2
-sewer rat,r,0,9,12,7,0,,1d3
-acid blob,b,1,7,3,8,0,spa*,(1d8A)
-blue jelly,j,4,,0,8,10,CP,(5d6C)
-brown mold,F,1,5,0,9,0,CP,(2d6C)
-floating eye,e,2,0,1,9,10,,(3d70.)
-fog cloud,v,3,10,1,0,0,sp*,E1d6
-gas spore,e,1,6,3,10,0,,[X4d6]
-green mold,F,1,7,0,9,0,a*,(2d4A)
-lichen,F,0,10,1,9,0,,0d0m
-long worm tail,~,0,10,0,10,0,,
-red mold,F,1,7,0,9,0,FP,(2d4F)
-shrieker,F,3,10,1,7,0,P,
-violet fungus,F,3,10,1,7,0,P,1d4 0d0m
-yellow mold,F,1,10,0,9,0,P,(0d4s)
+kobold shaman,k,2,10,6,6,10,p,M0d0+
+garter snake,S,1,10,8,8,0,,1d2
+grid bug,x,0,10,12,9,0,ep,1d1E
+jackal,d,0,10,12,7,0,,1d2
+kobold zombie,Z,0,10,6,10,0,csp,1d4
+newt,:,0,10,6,8,0,,1d2
+sewer rat,r,0,10,12,7,0,,1d3

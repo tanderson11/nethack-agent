@@ -115,16 +115,28 @@ class Character():
         elif self.base_class == constants.BaseRole.Valkyrie or self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai or self.base_class == constants.BaseRole.Barbarian: self.role_tier_mod = -1
 
     def calculate_tier(self):
-        base_tier = (30-self.experience_level) // 3 + 1
-        AC_mod = -1 * ((10 - self.AC) // 5)/2
-        HP_mod = -1 * (self.max_hp // 50) / 2
-        speed_mod = -0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
+        AC_mod = min(((10 - self.AC) // 5)/2, 5)
+        HP_mod = min((self.max_hp // 18)/2, 2.5)
+        if self.attributes.strength < 18: strength_mod = 0
+        elif self.attributes.strength == 18 and self.attributes.strength_pct < 51: strength_mod = 0.5
+        else: strength_mod = 1.0
+
+        if self.attributes.dexterity_to_hit(self.attributes.dexterity) < 0: dex_mod = -0.5
+        elif self.attributes.dexterity_to_hit(self.attributes.dexterity) >= 2: dex_mod = 0.5
+        else: dex_mod = 0.0
+
+        weapon_mod = 0
+        if self.inventory is not None:
+            if self.inventory.wielded_weapon.melee_damage(self, None) > 5: weapon_mod += 0.5
+            if self.inventory.wielded_weapon.melee_damage(self, None) > 10: weapon_mod += 0.5
+            if not self.inventory.wielded_weapon.uses_relevant_skill(self): weapon_mod -= 0.5
+
+        speed_mod = 0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
         #import pdb; pdb.set_trace()
-        return min(np.ceil(base_tier + self.role_tier_mod + AC_mod + HP_mod + speed_mod), 9)
+        return min(10, np.ceil(10 - AC_mod - HP_mod - speed_mod - strength_mod - weapon_mod - dex_mod))
 
     def fearful_tier(self, tier):
-        if tier == -1: return False
-        if tier == 10: return False
+        if tier < 0: return False
         #import pdb; pdb.set_trace()
         return tier < self.tier
 

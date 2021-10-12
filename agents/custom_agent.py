@@ -790,6 +790,12 @@ class CustomAgent(BatchedAgent):
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
 
+        #if run_state.time % 1000 == 0:
+        #    ARS.rs.debug_env.render()
+        #    print(ARS.rs.character.inventory.wielded_weapon)
+        #    print(ARS.rs.character.tier)
+            #import pdb; pdb.set_trace()
+
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
 
