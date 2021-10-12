@@ -1239,6 +1239,7 @@ class PlayerInventory():
 
         if len(attack_wands) > 0:
             plan = RangedAttackPlan(attack_action=nethack.actions.Command.ZAP, attack_item = attack_wands[0])
+            #import pdb; pdb.set_trace()
             return RangedPreparednessProposal(attack_plan=plan)
         return None
 

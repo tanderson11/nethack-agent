@@ -1093,6 +1093,27 @@ class TestArmorWearing(unittest.TestCase):
         self.assertEqual(len(proposal.proposed_items), 1)
         self.assertEqual(len(proposal.proposal_blockers[0]), 1)
 
+    def test_medium_unoccupied_armor(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Wizard,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2033, inv.Armor, "a blessed +0 cloak of magic resistance (being worn)", ord("a")),
+            ItemTestInputs(1978, inv.Armor, "a blessed +0 orcish helm (being worn)", ord("b")),
+            ItemTestInputs(2015, inv.Armor, "a scale mail", ord("c")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
     def test_unrelated_blocker(self):
         # with unaffiliated cursed blocker
 

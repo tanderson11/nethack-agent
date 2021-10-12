@@ -816,31 +816,25 @@ class InventoryEatAdvisor(Advisor):
         ])
         return menu_plan
 
-    def check_comestible(self, comestible, rng, run_state, character, oracle):
-        if comestible.identity is None:
-            return True
-
-        return comestible.identity.safe_non_perishable(character)
-
     def advice(self, rng, run_state, character, oracle):
         eat = nethack.actions.Command.EAT
-        food = character.inventory.get_oclass(inv.Food)
-
-        for comestible in food:
-            if comestible and self.check_comestible(comestible, rng, run_state, character, oracle):
-                letter = comestible.inventory_letter
-                menu_plan = self.make_menu_plan(letter)
-                return ActionAdvice(from_advisor=self, action=eat, new_menu_plan=menu_plan)
-        return None
+        food_item = character.inventory.get_item(inv.Food, sort_key=lambda x:x.identity.nutrition, instance_selector=lambda i: i.identity.safe_non_perishable(character))
+        if food_item is None:
+            return None
+        letter = food_item.inventory_letter
+        menu_plan = self.make_menu_plan(letter)
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=eat, new_menu_plan=menu_plan)
 
 class CombatEatAdvisor(InventoryEatAdvisor):
-    def check_comestible(self, comestible, rng, run_state, character, oracle):
-        if not super().check_comestible(comestible, rng, run_state, character, oracle):
-            return False
-        if comestible.identity: # if statement = bandaid for lack of corpse identities
-            return comestible.identity and comestible.identity.name() != 'tin'
-        else:
-            return True
+    def advice(self, rng, run_state, character, oracle):
+        eat = nethack.actions.Command.EAT
+        food_item = character.inventory.get_item(inv.Food, sort_key=lambda x:x.identity.nutrition, identity_selector=lambda i:i.name() != 'tin', instance_selector=lambda i: i.identity.safe_non_perishable(character))
+        if food_item is None:
+            return None
+        letter = food_item.inventory_letter
+        menu_plan = self.make_menu_plan(letter)
+        return ActionAdvice(from_advisor=self, action=eat, new_menu_plan=menu_plan)
 
 class PrayerAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
