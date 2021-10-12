@@ -37,8 +37,8 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
-        BlindWithCameraIfLow(),
-        AnyRangedAttackIfPreferred(),
+        BlindFearfulWithCamera(),
+        MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
     ]),
@@ -48,7 +48,7 @@ new_advisors = [
         #RandomMoveAdvisor(),
     }),
     PassiveMonsterRangedAttackAdvisor(),
-    RangedAttackNuisanceMonsters(),
+    RangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[

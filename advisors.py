@@ -956,7 +956,7 @@ class RangedAttackAdvisor(Attack):
             assert False
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
 
-class RangedAttackNuisanceMonsters(RangedAttackAdvisor):
+class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
         advice = super().advice(rng, run_state, character, oracle)
@@ -1066,8 +1066,10 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
         return targets.directions[target_index]
 
-class AnyRangedAttackIfPreferred(RangedAttackAdvisor):
+class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2)
 
     def advice(self, rng, run_state, character, oracle):
         if not character.prefer_ranged():
@@ -1100,7 +1102,7 @@ class MeleeHoldingMonster(Attack):
 
 class MeleePriorityTargets(Attack):
     def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.melee_prioritize_monster_beyond_damage(m.monster_spoiler))
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m))
 
 class BlindWithCamera(Attack):
     def targets(self, neighborhood, character):
@@ -1126,39 +1128,35 @@ class BlindWithCamera(Attack):
         apply = nethack.actions.Command.APPLY
         return ActionAdvice(self, apply, menu_plan)
 
-class BlindWithCameraIfLow(BlindWithCamera):
+class BlindFearfulWithCamera(BlindWithCamera):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.blinding_attempts.get(m, False))
     def advice(self, rng, run_state, character, oracle):
-        if character.current_hp >= 30:
-            return None
         return super().advice(rng, run_state, character, oracle)
 
-class LowerDPSAttack(Attack):
+class ScariestAttack(Attack):
     def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
         if len(monsters) == 1:
             return targets.directions[0]
         target_index = None
-        best_reduction_rate = 0
+        scariest_tier = None
         for i, m in enumerate(monsters):
             # prioritize invisible / swallow / whatever immediately as a patch
             if not isinstance(m, gd.MonsterGlyph):
                 target_index = i
                 break
-            untargeted_dps = m.monster_spoiler.melee_dps(character.AC)
-            kill_trajectory = character.average_time_to_kill_monster_in_melee(m.monster_spoiler)
-
-            dps_reduction_rate = untargeted_dps/kill_trajectory.time_to_kill
-
-            if target_index is None or dps_reduction_rate > best_reduction_rate:
+            monster_tier = m.monster_spoiler.tier
+            if scariest_tier is None or monster_tier < scariest_tier and monster_tier != -1:
                 target_index = i
-                best_reduction_rate = dps_reduction_rate
+                scariest_tier = monster_tier
 
         return targets.directions[target_index]
 
-class UnsafeMeleeAttackAdvisor(LowerDPSAttack):
+class UnsafeMeleeAttackAdvisor(ScariestAttack):
     pass
 
-class SafeMeleeAttackAdvisor(LowerDPSAttack):
+class SafeMeleeAttackAdvisor(ScariestAttack):
     unsafe_hp_loss_fraction = 0.5
 
     def targets(self, neighborhood, character):

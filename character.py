@@ -115,11 +115,18 @@ class Character():
         elif self.base_class == constants.BaseRole.Valkyrie or self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai or self.base_class == constants.BaseRole.Barbarian: self.role_tier_mod = -1
 
     def calculate_tier(self):
-        base_tier = (30-self.experience_level) % 3 + 1
-        AC_mod = -1 * ((10 - self.AC) % 5)/2
-        HP_mod = -1 * (self.max_hp % 50) / 2
+        base_tier = (30-self.experience_level) // 3 + 1
+        AC_mod = -1 * ((10 - self.AC) // 5)/2
+        HP_mod = -1 * (self.max_hp // 50) / 2
         speed_mod = -0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
+        #import pdb; pdb.set_trace()
         return np.ceil(base_tier + self.role_tier_mod + AC_mod + HP_mod + speed_mod)
+
+    def fearful_tier(self, tier):
+        if tier == -1: return False
+        if tier == 10: return False
+        #import pdb; pdb.set_trace()
+        return tier < self.tier
 
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
@@ -301,10 +308,7 @@ class Character():
             return False
 
         spoiler = monster.monster_spoiler
-        if self.melee_prioritize_monster_beyond_damage(spoiler):
-            return True
-
-        return False
+        return self.fearful_tier(spoiler.tier)
 
     #def threatened_by(self, monster):
     #    if not isinstance(monster, gd.MonsterGlyph):
