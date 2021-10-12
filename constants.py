@@ -23,7 +23,8 @@ class RangedAttackPreference(enum.Flag):
         return self & flag == flag
 
 ranged_default = ~RangedAttackPreference.wand
-ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
+#ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
+ranged_powerful = ~RangedAttackPreference.death
 
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
