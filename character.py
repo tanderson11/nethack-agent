@@ -44,6 +44,7 @@ class Character():
     executing_ranged_plan: bool = False
     gold: int = 0
     hunger_state: int = 1
+    enumberance: int = 0
     global_identity_map: gd.GlobalIdentityMap = None
     queued_wish_name: tuple = None
     wish_in_progress: tuple = None
@@ -138,11 +139,14 @@ class Character():
         if old_hunger_state != blstats.get('hunger_state'):
             self.hunger_state = blstats.get('hunger_state')
 
+        old_encumberance = self.enumberance
+        if old_encumberance != blstats.get('enumberance'):
+            self.encumberance = blstats.get('enumberance')
+
     def want_less_weight(self):
         if self.near_burdened or self.carrying_too_much_for_diagonal:
             return True
-
-        return False
+        return self.encumberance > 0
 
     def clear_weight_knowledge(self):
         self.near_burdened = False
