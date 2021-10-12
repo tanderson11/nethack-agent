@@ -1496,15 +1496,11 @@ class KickLockedDoorAdvisor(Advisor):
         if not "This door is locked" in oracle.message.message:
             return None
         kick = nethack.actions.Command.KICK
-        door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
-        door_directions = run_state.neighborhood.action_grid[door_mask]
-        if len(door_directions) > 0:
-            a = rng.choice(door_directions)
-        else: # we got the locked door message but didn't find a door
-            a = None
-        if a is not None:
+        direction = run_state.advice_log[-1].action
+
+        if direction is not None:
             menu_plan = menuplan.MenuPlan("kick locked door", self, [
-                menuplan.DirectionMenuResponse("In what direction?", a),
+                menuplan.DirectionMenuResponse("In what direction?", direction),
             ])
             return ActionAdvice(from_advisor=self, action=kick, new_menu_plan=menu_plan)
 
