@@ -452,7 +452,6 @@ class InteractiveZapSpellMenu(InteractiveMenu):
     trigger_action = None
     trigger_phrase = 'Choose which spell to cast'
 
-
     class MenuItem:
         spell_pattern = re.compile('([a-zA-Z ]+?) +[0-9].+([0-9]+)\% +(\(gone\)|([0-9]+)\%\-?([0-9]+)\%)')
         def __init__(self, ambient_menu, category, character, selected, item_text):

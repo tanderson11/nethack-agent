@@ -29,6 +29,7 @@ class Character():
     AC: int = None
     current_hp: int = None
     max_hp: int = None
+    current_energy: int = None
     inventory: inv.PlayerInventory = None
     attributes: constants.Attributes = None
     last_pray_time: Optional[int] = None
@@ -185,6 +186,10 @@ class Character():
         old_encumberance = self.encumberance
         if old_encumberance != blstats.get('encumberance'):
             self.encumberance = blstats.get('encumberance')
+
+        old_energy = self.current_energy
+        if old_energy != blstats.get('energy'):
+            self.current_energy = blstats.get('energy')
 
         self.tier = self.calculate_tier()
 
@@ -507,6 +512,8 @@ class Character():
         return self.inventory.get_ranged_weapon_attack(preference)
     
     def get_spell_attack(self, preference):
+        if self.current_energy is None or self.current_energy < 5:
+                return None
         if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
             attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
             proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
