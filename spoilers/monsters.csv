@@ -323,7 +323,7 @@ dwarf,h,2,8,6,10,10,,W1d8
 dwarf zombie,Z,2,8,6,9,0,csp,1d6
 elf zombie,Z,3,8,6,9,0,csp,1d7
 giant ant,a,2,8,18,3,0,,1d4
-giant rat,r,1,8,10,7,0,,1d3
+giant rat,r,1,9,10,7,0,,1d3
 gnome,G,1,8,6,10,4,,W1d6
 gnome lord,G,3,8,8,10,4,,W1d8
 gnomish wizard,G,3,8,10,4,10,,M0d0+
@@ -337,7 +337,7 @@ iguana,:,2,8,6,7,0,,1d4
 jellyfish,;,3,8,3,6,0,P,3d3P
 kobold lord,k,2,8,6,10,0,p,W2d4
 kobold mummy,M,3,8,8,6,20,csp,1d4
-kobold shaman,k,2,8,6,6,10,p,M0d0+
+kobold shaman,k,2,9,6,6,10,p,M0d0+
 Kop Lieutenant,K,3,8,10,10,20,,W1d8
 Kop Sergeant,K,2,8,8,10,10,,W1d6
 large kobold,k,1,8,6,10,0,p,W1d6

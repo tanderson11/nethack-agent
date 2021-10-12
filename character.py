@@ -120,7 +120,7 @@ class Character():
         HP_mod = -1 * (self.max_hp // 50) / 2
         speed_mod = -0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
         #import pdb; pdb.set_trace()
-        return np.ceil(base_tier + self.role_tier_mod + AC_mod + HP_mod + speed_mod)
+        return min(np.ceil(base_tier + self.role_tier_mod + AC_mod + HP_mod + speed_mod), 9)
 
     def fearful_tier(self, tier):
         if tier == -1: return False
