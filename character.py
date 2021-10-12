@@ -296,29 +296,8 @@ class Character():
         return False
 
     def ready_for_mines(self):
+        #if self.base_class == constants.BaseRole.Caveperson: return True
         return self.experience_level > 9
-
-    def melee_prioritize_monster_beyond_damage(self, monster_spoiler):
-        melee_types = monster_spoiler.melee_attack_bundle.damage_types
-        always_prioritize = (
-            melee_types.steal or
-            melee_types.seduce or 
-            melee_types.stone or
-            (melee_types.spell and monster_spoiler.level > 8) or
-            (melee_types.sleep and not self.has_intrinsic(constants.Intrinsics.sleep_resistance))
-        )
-
-        if always_prioritize:
-            return True
-
-        prioritize_early = (
-            melee_types.lycanthropy
-        )
-
-        if prioritize_early and self.experience_level < 10:
-            return True
-
-        return False
 
     def attempted_to_blind(self, monster, time):
         self.blinding_attempts[monster] = time
