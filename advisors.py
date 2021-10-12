@@ -324,6 +324,12 @@ class WaitAdvisor(Advisor):
         wait = nethack.actions.MiscDirection.WAIT
         return ActionAdvice(from_advisor=self, action=wait)
 
+class WaitForHPAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.desperate_for_food():
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
 class SearchWithStethoscope(Advisor):
     def advice(self, rng, run_state, character, oracle):
         stethoscope = character.inventory.get_item(inv.Tool, name='stethoscope')
