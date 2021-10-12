@@ -187,6 +187,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.is_monster = (self.extended_is_hostile_monster)[neighborhood_view]
         self.n_adjacent_monsters = np.count_nonzero(self.is_monster)
 
+        #floating_eyes = gd.MonsterGlyph.floating_eye_mask(self.raw_glyphs)
+        #if floating_eyes.any():
+        #    import pdb; pdb.set_trace()
+
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
 
         walkable_tile = prudent_walkable[neighborhood_view].copy()

@@ -3,7 +3,7 @@ from typing import NamedTuple, Tuple
 
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import constants
 import environment
@@ -47,6 +47,7 @@ class Character():
     global_identity_map: gd.GlobalIdentityMap = None
     queued_wish_name: tuple = None
     wish_in_progress: tuple = None
+    blinding_attempts: dict = field(default_factory=dict)
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
@@ -159,6 +160,8 @@ class Character():
         except Exception as e:
             print(f"Exception while finding holding monster. Are we hallu? {e}")
 
+        self.garbage_collect_camera_shots(time)
+
     def update_held_by_from_message(self, message_text, time):
         monster_name = None
 
@@ -265,6 +268,13 @@ class Character():
 
         return False
 
+    def attempted_to_blind(self, monster, time):
+        self.blinding_attempts[monster] = time
+        print(self.blinding_attempts)
+
+    def garbage_collect_camera_shots(self, time):
+        self.blinding_attempts = {k:v for k,v in self.blinding_attempts.items() if v >= time - 10}
+
     def scared_by(self, monster):
         if not isinstance(monster, gd.MonsterGlyph):
             return False
@@ -274,6 +284,11 @@ class Character():
             return True
 
         return False
+
+    #def threatened_by(self, monster):
+    #    if not isinstance(monster, gd.MonsterGlyph):
+    #        return False
+    #    return monster.monster_spoiler()
 
     exp_lvl_to_max_mazes_lvl = {
         1: 1,

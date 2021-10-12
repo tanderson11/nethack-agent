@@ -37,6 +37,7 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
+        BlindWithCameraIfLow(),
         AnyRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),

@@ -869,7 +869,7 @@ class Attack(Advisor):
         if targets is None:
             return None
 
-        attack_direction = self.prioritize(targets, character)
+        attack_direction = self.prioritize(run_state, targets, character)
 
         if attack_direction is None:
             return None
@@ -878,7 +878,7 @@ class Attack(Advisor):
     def targets(self, neighborhood, character):
         return neighborhood.target_monsters(lambda m: True)
 
-    def prioritize(self, targets, character):
+    def prioritize(self, run_state, targets, character):
         return targets.directions[0]
 
 class RangedAttackAdvisor(Attack):
@@ -930,7 +930,7 @@ class RangedAttackAdvisor(Attack):
         targets = self.targets(run_state.neighborhood, character)
         if targets is None:
             return None
-        attack_direction = self.prioritize(targets, character)
+        attack_direction = self.prioritize(run_state, targets, character)
         if attack_direction is None:
             return None
         preference = self.preference
@@ -996,7 +996,7 @@ class TameCarnivores(RangedAttackAdvisor):
         if targets is None:
             return None
         #import pdb; pdb.set_trace()
-        attack_direction = self.prioritize(targets, character)
+        attack_direction = self.prioritize(run_state, targets, character)
         if attack_direction is None:
             return None
         food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'meat')
@@ -1016,7 +1016,7 @@ class TameHerbivores(RangedAttackAdvisor):
         if targets is None:
             return None
         #import pdb; pdb.set_trace()
-        attack_direction = self.prioritize(targets, character)
+        attack_direction = self.prioritize(run_state, targets, character)
         if attack_direction is None:
             return None
         food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'veg')
@@ -1052,7 +1052,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         range = physics.AttackRange('line', 4)
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range)
 
-    def prioritize(self, targets, character):
+    def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
         max_damage = 0
         target_index = None
@@ -1088,7 +1088,7 @@ class AdjustRangedPlanDummy(Advisor):
         return None
 
 class MeleeHoldingMonster(Attack):
-    def prioritize(self, targets, character):
+    def prioritize(self, run_state, targets, character):
         return targets.directions[0]
 
     def targets(self, neighborhood, character):
@@ -1104,10 +1104,15 @@ class MeleePriorityTargets(Attack):
 
 class BlindWithCamera(Attack):
     def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m not in character.recently_fled_enemies)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and not character.blinding_attempts.get(m, False))
+
+    def prioritize(self, run_state, targets, character):
+        monster = targets.monsters[0]
+        character.attempted_to_blind(monster, run_state.time)
+        return targets.directions[0]
 
     def advice(self, rng, run_state, character, oracle):
-        camera = run_state.character.inventory.get_item(inv.Tool, name='expensive camera')
+        camera = run_state.character.inventory.get_item(inv.Tool, name='expensive camera', instance_selector=lambda i: i.charges and i.charges > 0)
         if camera is None:
             return None
         melee_advice = super().advice(rng, run_state, character, oracle)
@@ -1117,7 +1122,7 @@ class BlindWithCamera(Attack):
             menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(camera.inventory_letter)),
             menuplan.DirectionMenuResponse("In what direction?", melee_advice.action),
         ], listening_item=camera)
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         apply = nethack.actions.Command.APPLY
         return ActionAdvice(self, apply, menu_plan)
 
@@ -1127,9 +1132,8 @@ class BlindWithCameraIfLow(BlindWithCamera):
             return None
         return super().advice(rng, run_state, character, oracle)
 
-
 class LowerDPSAttack(Attack):
-    def prioritize(self, targets, character):
+    def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
         if len(monsters) == 1:
             return targets.directions[0]

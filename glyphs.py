@@ -171,6 +171,9 @@ class MonsterGlyph(MonsterAlikeGlyph):
     def gas_spore_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 27)
 
+    def floating_eye_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 28)
+
     def always_peaceful_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
 
