@@ -5,6 +5,8 @@ import pandas as pd
 import numpy as np
 from dataclasses import dataclass, field
 
+import nle.nethack as nethack
+
 import constants
 import environment
 import glyphs as gd
@@ -52,12 +54,17 @@ class Character():
     queued_wish_name: tuple = None
     wish_in_progress: tuple = None
     blinding_attempts: dict = field(default_factory=dict)
+    spells: list =  field(default_factory=list)
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
         self.ranged_relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant-ranged"]
         self.set_role_tier_mod()
+
+    def set_base_spells(self):
+        if self.base_class == constants.BaseRole.Wizard:
+            self.spells = ['force bolt']
 
     def make_global_identity_map(self):
         self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
@@ -500,6 +507,10 @@ class Character():
         return self.inventory.get_ranged_weapon_attack(preference)
     
     def get_spell_attack(self, preference):
+        if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
+            attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
+            proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
+            return proposal
         return None
 
     def prefer_ranged(self):

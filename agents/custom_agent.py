@@ -472,6 +472,7 @@ class RunState():
         )
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
+        self.character.set_base_spells()
         self.character.make_global_identity_map()
         self.background_menu_plan.add_responses([
             menuplan.WishMenuResponse("For what do you wish?", self.character),
@@ -835,7 +836,7 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.THROW, nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
+            if run_state.last_non_menu_action not in [nethack.actions.Command.CAST, nethack.actions.Command.THROW, nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
                 if run_state.character.held_by is not None:
                     run_state.character.held_by = None
 

@@ -932,6 +932,12 @@ class RangedAttackAdvisor(Attack):
         ], listening_item=item)
         return menu_plan
 
+    def make_spell_zap_plan(self, character, spell, direction):
+        menu_plan = menuplan.MenuPlan("zap ranged attack spell", self, [
+            menuplan.DirectionMenuResponse("In what direction?", direction),
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell))
+        return menu_plan
+
     def advice(self, rng, run_state, character, oracle):
         targets = self.targets(run_state.neighborhood, character)
         if targets is None:
@@ -958,6 +964,9 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+        elif attack_plan.attack_action == nethack.actions.Command.CAST:
+            #import pdb; pdb.set_trace()
+            menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
         else:
             assert False
         return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)

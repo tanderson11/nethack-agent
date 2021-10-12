@@ -447,6 +447,40 @@ class InteractiveMenu():
 class InteractiveLocationPickerMenu(InteractiveMenu):
     pass
 
+class InteractiveZapSpellMenu(InteractiveMenu):
+    header_rows = 3
+    trigger_action = None
+    trigger_phrase = 'Choose which spell to cast'
+
+
+    class MenuItem:
+        spell_pattern = re.compile('([a-zA-Z ]+?) +[0-9].+([0-9]+)\% +(\(gone\)|([0-9]+)\%\-?([0-9]+)\%)')
+        def __init__(self, ambient_menu, category, character, selected, item_text):
+            self.selected = selected
+            self.character = character
+            self.item_text = item_text
+            spell_match = re.match(self.spell_pattern, item_text)
+            self.spell_name = ''
+            if spell_match is not None:
+                self.spell_name = spell_match[1]
+                self.fail_chance = int(spell_match[2])
+                self.gone = 'gone' in spell_match[3]
+
+            #import pdb; pdb.set_trace()
+
+    def __init__(self, player_character, spell_name):
+        self.player_character = player_character
+        self.spell_name = spell_name
+        def item_selector(menu_item):
+            if not self.spell_name in menu_item.spell_name:
+                return False
+            if menu_item.fail_chance > 8 or menu_item.gone:
+                self.player_character.spells.remove(self.spell_name)
+                return False
+            #import pdb; pdb.set_trace()
+            return True
+        super().__init__(selector_name=None)
+
 class InteractiveValidPlacementMenu(InteractiveLocationPickerMenu):
     header_rows = 2
     trigger_action = None
