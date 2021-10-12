@@ -267,6 +267,7 @@ class DLevelMap():
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.obvious_mimics = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.altar_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.traps_to_avoid = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
@@ -353,6 +354,7 @@ class DLevelMap():
         if self.special_level:
             self.traps_to_avoid |= self.special_level.traps_to_avoid
         self.fountain_map = (offsets == 31)
+        self.altar_map = (offsets == 27)
 
         # Solid stone and fog of war both show up here
         self.fog_of_war = (offsets == 0)

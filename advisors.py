@@ -1280,8 +1280,10 @@ class ExcaliburAdvisor(Advisor):
 
 class TravelToAltarAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        any_unknown = character.inventory.get_item(instance_selector=lambda i: (i.BUC == constants.BUC.unknown and (i.equipped_status is None or i.equipped_status.status != 'worn')))
-        if any_unknown is None:
+        if not run_state.neighborhood.level_map.altar_map.any():
+            return None
+        unknown = character.inventory.get_items(instance_selector=lambda i: (i.BUC == constants.BUC.unknown and (i.equipped_status is None or i.equipped_status.status != 'worn')))
+        if len(unknown) < 5:
             return None
 
         travel = nethack.actions.Command.TRAVEL
