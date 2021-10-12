@@ -1134,8 +1134,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
-
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "a")
 
         inventory = [
@@ -1145,7 +1145,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "b")
 
         inventory = [
@@ -1156,7 +1157,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
     def test_throw(self):
@@ -1176,7 +1178,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "c")
 
         inventory = [
@@ -1188,7 +1191,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
     def test_many(self):
@@ -1210,7 +1214,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "b")
 
     def test_dont_throw_wielded(self):
@@ -1228,7 +1233,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal, None)
 
         inventory = [
@@ -1240,7 +1246,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
 
@@ -1264,7 +1271,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.THROW)
 
 class TestDrop(unittest.TestCase):
