@@ -135,7 +135,7 @@ class Message():
         "An arrow shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'arrow_trap'),
         "A little dart shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'dart_trap'),
         "A tower of flame erupts from the floor!": gd.get_by_name(gd.CMapGlyph, 'fire_trap'),
-        "A trapdoor in the ceiling opens and a rock falls on your head!": gd.get_by_name(gd.CMapGlyph, 'falling_rock_trap'),
+        "A trap door in the ceiling opens and a rock falls on your head!": gd.get_by_name(gd.CMapGlyph, 'falling_rock_trap'),
         "Click! You trigger a rolling boulder trap!": gd.get_by_name(gd.CMapGlyph, 'rolling_boulder_trap'),
         "A gush of water hits you": gd.get_by_name(gd.CMapGlyph, 'rust_trap'),
         "A pit opens up under you": gd.get_by_name(gd.CMapGlyph, 'pit'),
