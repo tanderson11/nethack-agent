@@ -626,7 +626,7 @@ class ThreatMap(FloodMap):
 
                 is_invis = isinstance(glyph, gd.InvisibleGlyph)
                 if isinstance(glyph, gd.MonsterGlyph) or is_invis:
-                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
+                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.single_always_peaceful()): # always peaceful monsters don't need to threaten
                         ### SHARED ###
                         can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.raw_glyph_grid)
                         ###

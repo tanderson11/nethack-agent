@@ -32,6 +32,8 @@ class Character():
     last_pray_time: Optional[int] = None
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
+    tier: int = 9
+    role_tier_mod: int = 0
     class_skills: pd.Series = None
     relevant_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
@@ -53,6 +55,7 @@ class Character():
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
+        self.set_role_tier_mod()
 
     def make_global_identity_map(self):
         self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
@@ -106,6 +109,18 @@ class Character():
         long_sword = self.inventory.get_item(inv.Weapon, name='long sword', instance_selector=lambda i: not i.identity.is_artifact)
         return long_sword is not None
 
+    def set_role_tier_mod(self):
+        if self.base_class == constants.BaseRole.Tourist or self.base_class == constants.BaseRole.Healer: self.role_tier_mod = 2
+        elif self.base_class == constants.BaseRole.Wizard or self.base_class == constants.BaseRole.Rogue or self.base_class == constants.BaseRole.Archeologist: self.role_tier_mod = 1
+        elif self.base_class == constants.BaseRole.Valkyrie or self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai or self.base_class == constants.BaseRole.Barbarian: self.role_tier_mod = -1
+
+    def calculate_tier(self):
+        base_tier = (30-self.experience_level) % 3 + 1
+        AC_mod = -1 * ((10 - self.AC) % 5)/2
+        HP_mod = -1 * (self.max_hp % 50) / 2
+        speed_mod = -0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
+        return np.ceil(base_tier + self.role_tier_mod + AC_mod + HP_mod + speed_mod)
+
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
         self.experience_level = blstats.get('experience_level')
@@ -142,6 +157,8 @@ class Character():
         old_encumberance = self.encumberance
         if old_encumberance != blstats.get('encumberance'):
             self.encumberance = blstats.get('encumberance')
+
+        self.tier = self.calculate_tier()
 
     def want_less_weight(self):
         if self.near_burdened or self.carrying_too_much_for_diagonal:
