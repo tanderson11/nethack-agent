@@ -148,7 +148,7 @@ class Oracle():
 
     @functools.cached_property
     def have_moves(self):
-        have_moves = self.neighborhood.walkable.any() # at least one square is walkable
+        have_moves = self.neighborhood.local_prudent_walkable.any() # at least one square is walkable
         return have_moves
 
     @functools.cached_property
@@ -403,8 +403,9 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         lowest_search_count = search_count.min()
 
-        if (lowest_search_count > 40):
+        if (lowest_search_count > 30):
             return None
+
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
 class PotionAdvisor(Advisor):
@@ -1197,7 +1198,7 @@ class MoveAdvisor(Advisor):
         super().__init__(oracle_consultation=oracle_consultation, no_adjacent_monsters=no_adjacent_monsters)
 
     def would_move_squares(self, rng, run_state, character, oracle):
-        move_mask  = run_state.neighborhood.walkable
+        move_mask  = run_state.neighborhood.local_prudent_walkable
         # don't move into intolerable threat
         if self.square_threat_tolerance is not None:
             return move_mask & (run_state.neighborhood.threat <= (self.square_threat_tolerance * character.current_hp))

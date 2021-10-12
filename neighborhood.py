@@ -118,8 +118,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             level_map.embedded_object_map,
             ViewField.Extended
         )
-
-        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
+        dungeon_features = self.zoom_glyph_alike(self.level_map.dungeon_feature_map, ViewField.Extended)
+        extended_walkable_tile = np.where(
+            dungeon_features != 0,
+            gd.walkable(dungeon_features),
+            False
+        )
         extended_walkable_tile &= ~self.extended_embeds
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
@@ -129,18 +133,21 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
-        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value) | self.obvious_mimics
+
+        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
+        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+        if self.level_map.dcoord.branch == map.Branches.Sokoban:
+            extended_is_monster[self.obvious_mimics] = True
+
+        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value) | self.obvious_mimics | extended_is_monster
         if level_map.dcoord.branch == map.Branches.Sokoban:
             imprudent |= self.extended_boulders
         prudent_walkable = extended_walkable_tile & ~imprudent
         if extended_nasty_traps.any():
             #import pdb; pdb.set_trace()
             pass
-
-        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
-        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
-        if self.level_map.dcoord.branch == map.Branches.Sokoban:
-            extended_is_monster[self.obvious_mimics] = True
+        self.extended_walkable = extended_walkable_tile
+        self.imprudent = imprudent
 
         self.extended_is_monster = extended_is_monster
         monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
@@ -153,7 +160,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #if extended_is_dangerous_monster.any():
             #import pdb; pdb.set_trace()
         #    pass
-        extended_is_dangerous_monster[player_location_in_extended] = False
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
         self.extended_possible_secret_mask = self.zoom_glyph_alike(self.level_map.possible_secrets, ViewField.Extended)
@@ -199,30 +205,21 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #    import pdb; pdb.set_trace()
 
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
-
-        walkable_tile = prudent_walkable[neighborhood_view].copy()
-
-        # in the narrow sense
-        self.walkable = walkable_tile
-        self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
+        self.local_walkable_feature = self.extended_walkable[neighborhood_view]
+        self.local_prudent_walkable = prudent_walkable[neighborhood_view].copy()
+        self.local_prudent_walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
 
         if level_map.dcoord.branch == map.Branches.Sokoban:
             # Corrections to what is moveable in Sokoban
-            self.walkable &= ~(self.diagonal_moves)
+            self.local_prudent_walkable &= ~(self.diagonal_moves)
 
         for f in current_square.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f)
             try:
-                self.walkable[failed_target] = False
+                self.local_prudent_walkable[failed_target] = False
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-
-        # we're not calculating the true walkable mesh in extended vision, but we can at least add our local calculation
-        # to help with pathfinding (which depends on an extended walkable mesh)
-        #extended_walkable_tile[neighborhood_view] = self.walkable
-        self.extended_walkable = extended_walkable_tile
-        self.imprudent = imprudent
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
@@ -388,15 +385,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # Consider the 8-location square surrounding the player
         # We define a dead end as a situation where a single edge holds all
         # the walkable locations
-        walkable_count = np.count_nonzero(self.walkable)
+        walkable_count = np.count_nonzero(self.local_walkable_feature)
         if walkable_count > 3:
             return False
         elif walkable_count > 1:
             edge_counts = [
-                np.count_nonzero(self.walkable[0,:]),
-                np.count_nonzero(self.walkable[-1,:]),
-                np.count_nonzero(self.walkable[:,0]),
-                np.count_nonzero(self.walkable[:,-1]),
+                np.count_nonzero(self.local_walkable_feature[0,:]),
+                np.count_nonzero(self.local_walkable_feature[-1,:]),
+                np.count_nonzero(self.local_walkable_feature[:,0]),
+                np.count_nonzero(self.local_walkable_feature[:,-1]),
             ]
             if not walkable_count in edge_counts: # i.e. if no edge holds all of them
                 return False
