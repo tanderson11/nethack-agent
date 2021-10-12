@@ -259,18 +259,6 @@ class Character():
             return False
         return True
 
-    def prefer_ranged(self):
-        if self.base_class == constants.BaseRole.Tourist:
-            if not isinstance(self.inventory.wielded_weapon, inv.BareHands):
-                return False
-            quivered = self.inventory.quivered
-            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'dart'
-        if self.base_class == constants.BaseRole.Ranger:
-            quivered = self.inventory.quivered
-            return quivered is not None and quivered.enhancement == 2 and quivered.identity.name() == 'arrow'
-
-        return False
-
     def ready_for_mines(self):
         return self.experience_level > 9
 

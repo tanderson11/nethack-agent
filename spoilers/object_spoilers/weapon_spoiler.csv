@@ -1,71 +1,40 @@
-NAME,GLYPH,IDENTITY_DESIRABILITY,STACKED_NAME,JAPANESE_NAME,COST,SLOT,SECOND_SLOT,WEIGHT,PROB,MATERIAL,APPEARANCE,SDAM,SAVG,LDAM,LAVG,SL_AVG,RANGED,USES_AMMO,AMMO_TYPE,THROWN,THROWN_FROM,AMMUNITION,SKILL,SHUFFLED
-aklys,1968,desire one,,,4,hand,,15,8,IRON,thonged club,d6,3.5,d3,2,2.75,FALSE,,,TRUE,hand,FALSE,club,FALSE
-arrow,1907,none,arrows,,2,quiver,,1,55,IRON,,d6,3.5,d6,3.5,3.5,FALSE,,arrow,,,TRUE,,FALSE
-athame,1927,desire one,athames,,4,hand,,10,0,IRON,,d4,2.5,d3,2,2.25,FALSE,,,,,FALSE,dagger,FALSE
-axe,1933,desire one,,,8,hand,,60,40,IRON,,d6,3.5,d4,2.5,3,FALSE,,,,,FALSE,axe,FALSE
-bardiche,1954,desire one,,,7,hand,off_hand,120,4,IRON,long poleaxe,2d4,5,3d4,7.5,6.25,FALSE,,,,,FALSE,polearm,FALSE
-battle-axe,1934,desire one,,,40,hand,off_hand,120,10,IRON,double-headed axe,d8+d4,7,d6+2d4,8.5,7.75,FALSE,,,,,FALSE,axe,FALSE
-bec-de-corbin,1961,desire one,,,8,hand,off_hand,100,4,IRON,beaked polearm,d8,4.5,d6,3.5,4,FALSE,,,,,FALSE,polearm,FALSE
-bill-guisarme,1959,desire one,,,7,hand,off_hand,120,4,IRON,hooked polearm,2d4,5,d10,5.5,5.25,FALSE,,,,,FALSE,polearm,FALSE
-boomerang,1915,none,,,20,quiver,,5,15,WOOD,,d9,5,d9,5,5,FALSE,,,TRUE,quiver,FALSE,boomerang,FALSE
-bow,1971,none,,,60,hand,,30,24,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
-broadsword,1941,desire one,,ninja-to,10,hand,,70,8,IRON,,2d4,5,d6+1,4.5,4.75,FALSE,,,,,FALSE,broadsword,FALSE
-bullwhip,1970,desire one,,,4,hand,,20,2,LEAT,,d2,1.5,1,1,1.25,FALSE,,,,,FALSE,whip,FALSE
-club,1965,desire one,,,3,hand,,30,12,WOOD,,d6,3.5,d3,2,2.75,FALSE,,,,,FALSE,club,FALSE
-crossbow,1976,none,,,40,hand,,50,45,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,bolt,,,,FALSE,crossbow,FALSE
-crossbow bolt,1912,none,crossbow bolts,,2,quiver,,1,55,IRON,,d4+1,3.5,d6+1,4.5,4,FALSE,,bolt,,,TRUE,,FALSE
-crysknife,1932,desire one,crysknives,,100,hand,,20,0,MINL,,d10,5.5,d10,5.5,5.5,FALSE,,,,,FALSE,knife,FALSE
-dagger,1923,desire all uncursed,daggers,,4,hand,,10,30,IRON,,d4,2.5,d3,2,2.25,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
-dart,1913,desire all uncursed,darts,,2,quiver,,1,60,IRON,,d3,2,d2,1.5,1.75,FALSE,,,TRUE,quiver,FALSE,dart,FALSE
-dwarvish mattock,1956,desire one,,,50,hand,off_hand,120,13,IRON,broad pick,d12,6.5,d8+2d6,11.5,9,FALSE,,,,,FALSE,pick-axe,FALSE
-dwarvish short sword,1938,desire one,,,10,hand,,30,2,IRON,broad short sword,d7,4,d8,4.5,4.25,FALSE,,,,,FALSE,short sword,FALSE
-dwarvish spear,1919,desire one,dwarvish spears,,3,hand,,35,12,IRON,stout spear,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,spear,FALSE
-elven arrow,1908,none,elven arrows,,2,quiver,,1,20,WOOD,runed arrow,d7,4,d6,3.5,3.75,FALSE,,arrow,,,TRUE,,FALSE
-elven bow,1972,none,,,60,hand,,30,12,WOOD,runed bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
-elven broadsword,1942,desire one,,,10,hand,,70,4,WOOD,runed broadsword,d6+d4,6,d6+1,4.5,5.25,FALSE,,,,,FALSE,broadsword,FALSE
-elven dagger,1924,desire all uncursed,elven daggers,,4,hand,,10,10,WOOD,runed dagger,d5,3,d3,2,2.5,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
-elven short sword,1936,desire one,,,10,hand,,30,2,WOOD,runed short sword,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,short sword,FALSE
-elven spear,1917,desire one,elven spears,,3,hand,,30,10,WOOD,runed spear,d7,4,d8,4.5,4.25,FALSE,,,,,FALSE,spear,FALSE
-fauchard,1957,desire one,,,5,hand,off_hand,60,6,IRON,pole sickle,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,polearm,FALSE
-flail,1969,desire one,,nunchaku,4,hand,,15,40,IRON,,d6+1,4.5,2d4,5,4.75,FALSE,,,,,FALSE,flail,FALSE
-glaive,1951,desire one,,naginata,6,hand,off_hand,75,8,IRON,single-edged polearm,d6,3.5,d10,5.5,4.5,FALSE,,,,,FALSE,polearm,FALSE
-guisarme,1958,desire one,,,5,hand,off_hand,80,6,IRON,pruning hook,2d4,5,d8,4.5,4.75,FALSE,,,,,FALSE,polearm,FALSE
-halberd,1953,desire one,,,10,hand,off_hand,150,8,IRON,angled poleaxe,d10,5.5,2d6,7,6.25,FALSE,,,,,FALSE,polearm,FALSE
-javelin,1921,desire all uncursed,javelins,,3,hand,,20,10,IRON,throwing spear,d6,3.5,d6,3.5,3.5,FALSE,,,TRUE,quiver,FALSE,spear,FALSE
-katana,1945,desire one,,,80,hand,,40,4,IRON,samurai sword,d10,5.5,d12,6.5,6,FALSE,,,,,FALSE,long sword,FALSE
-knife,1929,desire one,knives,shito,4,hand,,5,20,IRON,,d3,2,d2,1.5,1.75,FALSE,,,,,FALSE,knife,FALSE
-lance,1952,none,,,10,hand,,180,4,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,lance,FALSE
-long sword,1943,desire one,,,15,hand,,40,50,IRON,,d8,4.5,d12,6.5,5.5,FALSE,,,,,FALSE,long sword,FALSE
-lucern hammer,1960,desire one,,,7,hand,off_hand,150,5,IRON,pronged polearm,2d4,5,d6,3.5,4.25,FALSE,,,,,FALSE,polearm,FALSE
-mace,1962,desire one,,,5,hand,,30,40,IRON,,d6+1,4.5,d6,3.5,4,FALSE,,,,,FALSE,mace,FALSE
-morning star,1963,desire one,,,10,hand,,120,12,IRON,,2d4,5,d6+1,4.5,4.75,FALSE,,,,,FALSE,morning star,FALSE
-orcish arrow,1909,none,orcish arrows,,2,quiver,,1,20,IRON,crude arrow,d5,3,d6,3.5,3.25,FALSE,,arrow,,,TRUE,,FALSE
-orcish bow,1973,none,,,60,hand,,30,12,WOOD,crude bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
-orcish dagger,1925,desire one,orcish daggers,,4.00,hand,,10,12,IRON,crude dagger,d3,2,d3,2,2,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
-orcish short sword,1937,desire one,,,10,hand,,30,3,IRON,crude short sword,d5,3,d8,4.5,3.75,FALSE,,,,,FALSE,short sword,FALSE
-orcish spear,1918,desire one,orcish spears,,3,hand,,30,13,IRON,crude spear,d5,3,d8,4.5,3.75,FALSE,,,,,FALSE,spear,FALSE
-partisan,1948,desire one,,,10,hand,off_hand,80,5,IRON,vulgar polearm,d6,3.5,d6+1,4.5,4,FALSE,,,,,FALSE,polearm,FALSE
-quarterstaff,1967,desire one,,,5,hand,off_hand,40,11,WOOD,staff,d6,3.5,d6,3.5,3.5,FALSE,,,,,FALSE,quarterstaff,FALSE
-ranseur,1949,desire one,,,6,hand,off_hand,50,5,IRON,hilted polearm,2d4,5,2d4,5,5,FALSE,,,,,FALSE,polearm,FALSE
-rubber hose,1966,none,,,3,hand,,20,0,PLAS,,d4,2.5,d3,2,2.25,FALSE,,,,,FALSE,whip,FALSE
-runesword,1947,desire one,,,300,hand,,40,0,IRON,runed broadsword,2d4,5,d6+1,4.5,4.75,FALSE,,,,,FALSE,broadsword,FALSE
-scalpel,1928,desire one,scalepls,,6,hand,,5,0,METL,,d3,2,d3,2,2,FALSE,,,,,FALSE,knife,FALSE
-scimitar,1939,desire one,,,15,hand,,40,15,IRON,curved sword,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,scimitar,FALSE
-short sword,1935,desire one,,wakizashi,10,hand,,30,8,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,short sword,FALSE
-shuriken,1914,desire all uncursed,,,5,quiver,,1,35,IRON,throwing star,d8,4.5,d6,3.5,4,FALSE,,,TRUE,quiver,FALSE,shuriken,FALSE
-silver arrow,1910,none,silver arrows,,5,quiver,,1,12,SILV,,d6,3.5,d6,3.5,3.5,FALSE,,arrow,,,TRUE,,FALSE
-silver dagger,1926,desire all uncursed,silver daggers,,40,hand,,12,3,SILV,,d4,2.5,d3,2,2.25,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
-silver saber,1940,desire one,,,75,hand,,40,6,SILV,,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,saber,FALSE
-silver spear,1920,desire one,silver spears,,40,hand,,36,2,SILV,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,spear,FALSE
-sling,1975,none,,,20,hand,,3,40,LEAT,,d2,1.5,d2,1.5,1.5,TRUE,flint stone,,,,FALSE,sling,FALSE
-spear,1916,desire one,spears,,3,hand,,30,50,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,spear,FALSE
-spetum,1950,desire one,,,5,hand,off_hand,50,5,IRON,forked polearm,d6+1,4.5,2d6,7,5.75,FALSE,,,,,FALSE,polearm,FALSE
-stiletto,1930,desire one,,,4,hand,,5,5,IRON,,d3,2,d2,1.5,1.75,FALSE,,,,,FALSE,knife,FALSE
-trident,1922,desire one,,,5,hand,,25,8,IRON,,d6+1,4.5,3d4,7.5,6,FALSE,,,,,FALSE,trident,FALSE
-tsurugi,1946,desire one,,,500,hand,off_hand,60,0,METL,long samurai sword,d16,8.5,d8+2d6,11.5,10,FALSE,,,,,FALSE,two-handed sword,FALSE
-two-handed sword,1944,desire one,,,50,hand,off_hand,150,22,IRON,,d12,6.5,3d6,10.5,8.5,FALSE,,,,,FALSE,two-handed sword,FALSE
-voulge,1955,desire one,,,5,hand,off_hand,125,4,IRON,pole cleaver,2d4,5,2d4,5,5,FALSE,,,,,FALSE,polearm,FALSE
-war hammer,1964,desire one,,,5,hand,,50,15,IRON,,d4+1,3.5,d4,2.5,3,FALSE,,,,,FALSE,hammer,FALSE
-worm tooth,1931,desire one,worm teeth,,2,hand,,20,0,NONE,,d2,1.5,d2,1.5,1.5,FALSE,,,,,FALSE,knife,FALSE
-ya,1911,none,,,4,quiver,,1,15,METL,bamboo arrow,d7,4,d7,4,4,FALSE,,arrow,,,TRUE,,FALSE
-yumi,1974,none,,,60,hand,,30,0,WOOD,long bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
+SKILL,Archeologist,Archeologist-relevant,Barbarian,Barbarian-relevant,Caveperson,Caveperson-relevant,Healer,Healer-relevant,Knight,Knight-relevant,Monk,Monk-relevant,Priest,Priest-relevant,Rogue,Rogue-relevant,Ranger,Ranger-relevant,Samurai,Samurai-relevant,Tourist,Tourist-relevant,Valkyrie,Valkyrie-relevant,Wizard,Wizard-relevant
+dagger,b,TRUE,b,TRUE,b,TRUE,S,TRUE,b,TRUE,-,FALSE,-,FALSE,E,TRUE,E,TRUE,b,FALSE,E,TRUE,E,TRUE,E,TRUE
+knife,b,FALSE,-,FALSE,S,FALSE,E,TRUE,b,FALSE,-,FALSE,-,FALSE,E,FALSE,S,FALSE,S,FALSE,S,FALSE,-,FALSE,S,FALSE
+axe,-,FALSE,E,TRUE,S,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,E,FALSE,S,FALSE
+pick-axe,E,TRUE,S,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,S,FALSE,-,FALSE
+short sword,b,FALSE,E,FALSE,-,FALSE,S,TRUE,S,FALSE,-,FALSE,-,FALSE,E,TRUE,b,FALSE,E,FALSE,E,FALSE,S,FALSE,b,FALSE
+broadsword,-,FALSE,S,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE
+long sword,-,FALSE,S,TRUE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,E,TRUE,b,FALSE,E,TRUE,-,FALSE
+two-handed sword,-,FALSE,E,TRUE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,b,FALSE,E,FALSE,-,FALSE
+scimitar,S,FALSE,S,FALSE,-,FALSE,b,FALSE,b,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,S,FALSE,b,FALSE,-,FALSE
+saber,E,TRUE,b,TRUE,-,FALSE,b,FALSE,S,TRUE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,S,TRUE,b,FALSE,-,FALSE
+club,S,FALSE,S,FALSE,E,TRUE,S,TRUE,b,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE
+mace,-,FALSE,S,FALSE,E,TRUE,b,FALSE,S,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE
+morning star,-,FALSE,S,FALSE,b,FALSE,-,FALSE,S,FALSE,-,FALSE,E,FALSE,b,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+flail,-,FALSE,b,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,b,FALSE,S,FALSE,S,FALSE,b,FALSE,-,FALSE,-,FALSE
+hammer,-,FALSE,E,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,b,FALSE,b,FALSE,-,FALSE,b,FALSE,E,FALSE,-,FALSE
+quarterstaff,S,FALSE,b,FALSE,E,FALSE,E,TRUE,-,FALSE,b,FALSE,E,FALSE,-,FALSE,b,FALSE,b,FALSE,b,FALSE,b,FALSE,E,TRUE
+polearm,-,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE,S,TRUE,b,FALSE,S,FALSE,S,FALSE,b,FALSE,S,FALSE,S,FALSE
+spear,-,FALSE,S,FALSE,E,TRUE,b,FALSE,S,FALSE,b,FALSE,S,FALSE,b,FALSE,E,TRUE,S,FALSE,b,FALSE,S,FALSE,b,FALSE
+trident,-,FALSE,S,FALSE,S,FALSE,b,FALSE,b,FALSE,-,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,b,FALSE,b,FALSE
+lance,-,FALSE,-,FALSE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,b,FALSE,-,FALSE,-,FALSE,S,FALSE,b,FALSE,S,FALSE,-,FALSE
+bow,-,FALSE,b,FALSE,S,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,E,TRUE,E,TRUE,b,FALSE,-,FALSE,-,FALSE
+sling,S,FALSE,-,FALSE,E,TRUE,S,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,-,FALSE,b,FALSE,b,FALSE,S,FALSE
+crossbow,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,b,FALSE,b,FALSE,E,FALSE,E,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+dart,b,FALSE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,-,FALSE,b,TRUE,E,TRUE,E,TRUE,-,FALSE,E,TRUE,-,FALSE,E,TRUE
+shuriken,-,FALSE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,b,FALSE,b,TRUE,S,TRUE,S,TRUE,E,TRUE,b,FALSE,-,FALSE,b,FALSE
+boomerang,E,FALSE,-,FALSE,E,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,E,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+whip,E,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,FALSE,-,FALSE,b,FALSE,-,FALSE,-,FALSE
+unicorn horn,S,FALSE,-,FALSE,b,FALSE,E,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE,-,FALSE,S,FALSE,-,FALSE,-,FALSE
+bare hands,E,FALSE,M,TRUE,M,FALSE,b,FALSE,E,FALSE,-,FALSE,b,FALSE,E,FALSE,b,FALSE,-,FALSE,S,FALSE,E,FALSE,b,FALSE
+two weapon combat,b,TRUE,b,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,E,TRUE,-,FALSE,E,TRUE,S,TRUE,S,TRUE,-,FALSE
+riding,b,FALSE,b,FALSE,-,FALSE,-,FALSE,E,FALSE,-,FALSE,-,FALSE,b,FALSE,b,FALSE,S,FALSE,b,FALSE,S,FALSE,b,FALSE
+martial arts,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,GM,TRUE,-,FALSE,-,FALSE,-,FALSE,M,TRUE,-,FALSE,-,FALSE,-,FALSE
+attack,b,TRUE,b,TRUE,b,TRUE,-,FALSE,S,TRUE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,b,TRUE,E,FALSE
+healing,b,TRUE,-,FALSE,-,FALSE,E,TRUE,S,TRUE,E,TRUE,E,TRUE,-,FALSE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,S,FALSE
+divination,E,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,E,TRUE,S,TRUE,E,TRUE,b,TRUE,b,TRUE,-,FALSE,E,FALSE
+enchantment,-,FALSE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,S,FALSE
+clerical,-,FALSE,-,FALSE,-,FALSE,-,FALSE,S,TRUE,S,TRUE,E,TRUE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,S,FALSE
+escape,-,FALSE,b,FALSE,-,FALSE,-,FALSE,-,FALSE,S,TRUE,-,FALSE,S,TRUE,b,TRUE,-,FALSE,S,TRUE,b,TRUE,E,FALSE
+matter,b,TRUE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,b,TRUE,-,FALSE,S,TRUE,-,FALSE,-,FALSE,-,FALSE,-,FALSE,E,FALSE
