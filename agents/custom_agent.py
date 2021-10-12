@@ -389,8 +389,7 @@ class RunState():
         self.dmap = DMap()
         self.glyphs = None
 
-        self.debugger_on = False
-        self.debug_tripwire = False
+        self.debugger_on = None
 
         self.replay_log_path = None
         self.replay_log = []
@@ -918,7 +917,10 @@ class CustomAgent(BatchedAgent):
             print(message.message)
 
         if run_state.debugger_on:
-            import pdb; pdb.set_trace()
+            if run_state.debugger_on == True:
+                import pdb; pdb.set_trace()
+            elif run_state.step_count % run_state.debugger_on == 0:
+                import pdb; pdb.set_trace()
 
         if "unknown comand" in message.message:
             raise Exception(f"Unknown command: {message.message}")
@@ -1004,6 +1006,23 @@ class CustomAgent(BatchedAgent):
                 return advice
             else:
                 run_state.stall_detection_on = True
+
+        if False and environment.env.wizard and (dcoord == DCoord(0,1) or dcoord == DCoord(1,1)):
+            action = nethack.actions.Command.EXTCMD
+            menu_plan = menuplan.MenuPlan(
+                "wizmode_teleport", None,
+                [
+                    menuplan.ExtendedCommandResponse("wizlevelport"),
+                    menuplan.PhraseMenuResponse("To what level do you want to teleport?", "quest"),
+                ],
+                # interactive_menu=menuplan.WizmodeLevelportMenu(selector_name="target")
+            )
+            advice = ActionAdvice(
+                from_advisor=None,
+                action=action,
+                new_menu_plan=menu_plan,
+            )
+            return advice
 
         level_map.garbage_collect_corpses(time)
 

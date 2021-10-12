@@ -52,7 +52,7 @@ def get_wish(character, wand=None):
     
     for wishlist_line in basic_wishlist:
         if wishlist_line.pure_addition is True:
-            return wishlist_line.wish_string()
+            return wishlist_line, wishlist_line.wish_string()
 
         item_in_inventory = character.inventory.get_item(wishlist_line.item.type, name=wishlist_line.item.name)
         if item_in_inventory is not None:
