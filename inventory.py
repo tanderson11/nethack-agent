@@ -359,8 +359,11 @@ class Weapon(Item):
         # TK know about silver damage etc
         return weapon_damage
 
-    def uses_relevant_skill(self, character):
+    def uses_relevant_melee_skill(self, character):
         return character.relevant_skills.loc[self.identity.skill]
+
+    def uses_relevant_ranged_skill(self, character):
+        return character.ranged_relevant_skills.loc[self.identity.skill]
 
     def melee_desirability(self, character, desperate=False, optimistic_to_unknown=False):
         if self.quantity > 1:
@@ -368,7 +371,7 @@ class Weapon(Item):
 
         if self.identity.is_ammo or self.identity.ranged or self.identity.slot == 'quiver':
             return -1
-        relevant_skill = self.uses_relevant_skill(character)
+        relevant_skill = self.uses_relevant_melee_skill(character)
 
         if self.BUC == constants.BUC.cursed:
             return -1
@@ -406,9 +409,16 @@ class Weapon(Item):
     def find_equivalents(self, inventory):
         if self.identity is None:
             return []
-        return inventory.get_items(Weapon)
+        if self.identity.ranged:
+            return inventory.get_items(Weapon, identity_selector=lambda i: i.ranged)
+        else:
+            return inventory.get_items(Weapon, identity_selector=lambda i: not i.ranged)
 
     def better_than_equivalent(self, y, character):
+        if self.identity.ranged:
+            assert y.identity.ranged
+            if self.enhancement is not None and (y.enhancement is None or y.enhancement < self.enhancement):
+                return True
         is_better = self.melee_desirability(character, optimistic_to_unknown=True) > y.melee_desirability(character, optimistic_to_unknown=True)
         if is_better and (self.equipped_status is None or self.equipped_status.status != 'wielded') and (y.equipped_status is not None and y.equipped_status.status == 'wielded'):
             #import pdb; pdb.set_trace()
@@ -419,8 +429,14 @@ class Weapon(Item):
     def desirable(self, character, consider_funds=True):
         if consider_funds is True and not self.can_afford(character):
             return False
-        if self.enhancement is not None and (self.identity.is_ammo or self.identity.ranged):
-            return True
+        if self.identity.is_ammo:
+            bow = character.inventory.get_item(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
+            if bow is None:
+                return None
+            return self.identity.ammo_type == bow.identity.ammo_type_used
+
+        if self.identity.ranged and not self.uses_relevant_ranged_skill(character):
+            return False
 
         if character.wants_excalibur() and self.identity.name() == 'long sword':
             long_swords = self.find_equivalents_vis_excalibur(character.inventory)
@@ -456,8 +472,11 @@ class BareHands(Weapon):
 
         return bare_hands_skill
 
-    def uses_relevant_skill(self, character):
+    def uses_relevant_melee_skill(self, character):
         return character.relevant_skills.loc[self.which_skill(character)]
+
+    def uses_relevant_ranged_skill(self, character):
+        return False
 
     def melee_desirability(self, character, desperate=None):
         return self.melee_damage(character, None)
@@ -495,7 +514,10 @@ class Tool(Item):
         if self.BUC == constants.BUC.unknown and self.charges is not None:
             self.BUC = constants.BUC.uncursed
 
-    def uses_relevant_skill(self, character):
+    def uses_relevant_melee_skill(self, character):
+        return False
+
+    def uses_relevant_ranged_skill(self, character):
         return False
 
     def melee_damage(self, character, monster_spoiler=None):
@@ -1105,13 +1127,14 @@ class PlayerInventory():
         proposal_blockers: list = []
 
     def proposed_weapon_changes(self, character):
+        #import pdb; pdb.set_trace()
         if character.executing_ranged_plan:
             return None
 
         current_weapon = self.wielded_weapon
-        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: not i.identity.is_ammo and i.uses_relevant_skill(character))
+        relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: not i.identity.is_ammo and i.uses_relevant_melee_skill(character))
 
-        desperate = not current_weapon.uses_relevant_skill(character) and len(relevant_weapons) == 0
+        desperate = not current_weapon.uses_relevant_melee_skill(character) and len(relevant_weapons) == 0
         current_desirability = current_weapon.melee_desirability(character, desperate=desperate)
 
         most_desirable = current_weapon
