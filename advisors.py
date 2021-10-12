@@ -1101,10 +1101,6 @@ class MeleeHoldingMonster(Attack):
         targets = neighborhood.target_monsters(lambda m: m == character.held_by.monster_glyph)
         return targets
 
-class MeleePriorityTargets(Attack):
-    def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
-
 class BlindWithCamera(Attack):
     def targets(self, neighborhood, character):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and not character.blinding_attempts.get(m, False))
@@ -1153,6 +1149,10 @@ class ScariestAttack(Attack):
                 scariest_tier = monster_tier
 
         return targets.directions[target_index]
+
+class MeleePriorityTargets(ScariestAttack):
+    def targets(self, neighborhood, character):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
 
 class UnsafeMeleeAttackAdvisor(Attack):
     def prioritize(self, run_state, targets, character):
