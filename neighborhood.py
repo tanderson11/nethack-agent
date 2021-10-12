@@ -412,13 +412,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return True
         return False
 
-    def safe_detonation(self, monster, monster_square):
+    def safe_detonation(self, monster, monster_square, source_type="local"):
         if not isinstance(monster, gd.MonsterGlyph):
             return True
         if not monster.has_death_throes:
             return True
-
-        source_square = monster_square + self.player_location_in_extended - self.local_player_location
+        #import pdb; pdb.set_trace()
+        if source_type == 'local':
+            source_square = monster_square + self.player_location_in_extended - self.local_player_location
+        elif source_type == 'extended':
+            source_square = monster_square
         adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
         adjacent_to_mon_glyphs = self.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
         if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
@@ -452,7 +455,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
             for i, monster in enumerate(self.monsters):
                 monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
-                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
+                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square, source_type='extended')):
                     satisfying_monsters.append(monster)
                     offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
                     direction = physics.delta_to_action[offset]
