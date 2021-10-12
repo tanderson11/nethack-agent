@@ -257,7 +257,7 @@ class RunState():
     def print_action_log(self, total):
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
-    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
+    LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
 
     REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
@@ -292,6 +292,7 @@ class RunState():
                 'hunger': self.blstats.get('hunger_state'),
                 'message_log': "||".join(self.message_log[-10:]),
                 'action_log': self.print_action_log(10),
+                'wielded_weapon': str(self.character.inventory.wielded_weapon),
                 'score': self.reward,
                 'last_pray_time': self.character.last_pray_time,
                 'last_pray_reason': str(self.character.last_pray_reason),
