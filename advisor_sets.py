@@ -99,7 +99,7 @@ new_advisors = [
         UnblockedWardrobeChangesAdvisor(),
         EngraveTestWandsAdvisor(),
         ]),
-    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.low_hp and not (o.am_threatened or o.recently_damaged), advisors=[
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.low_hp and not (o.am_threatened), advisors=[
         PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop and o.character.desperate_for_food()),
         WaitAdvisor(),
     ]),

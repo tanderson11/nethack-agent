@@ -124,7 +124,7 @@ class Oracle():
 
     @functools.cached_property
     def am_threatened(self):
-        return self.neighborhood.threat_on_player > 0.
+        return self.neighborhood.threat_on_player > 0. or self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 2)
 
     @functools.cached_property
     def recently_damaged(self):
@@ -968,7 +968,8 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         range = physics.AttackRange('line', 4)
         targets = neighborhood.target_monsters(lambda m: character.scared_by(m), attack_range=range)
         if targets is not None:
-            print(f"Annoying monster at range: {targets.monsters[0]}")
+            #print(f"Annoying monster at range: {targets.monsters[0]}")
+            pass
         return targets
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
@@ -1102,7 +1103,7 @@ class MeleeHoldingMonster(Attack):
 
 class MeleePriorityTargets(Attack):
     def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m))
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
 
 class BlindWithCamera(Attack):
     def targets(self, neighborhood, character):
@@ -1153,19 +1154,32 @@ class ScariestAttack(Attack):
 
         return targets.directions[target_index]
 
-class UnsafeMeleeAttackAdvisor(ScariestAttack):
-    pass
+class UnsafeMeleeAttackAdvisor(Attack):
+    def prioritize(self, run_state, targets, character):
+        monsters = targets.monsters
+        if len(monsters) == 1:
+            return targets.directions[0]
+        target_index = None
+        least_scary_tier = None
+        for i, m in enumerate(monsters):
+            # prioritize invisible / swallow / whatever immediately as a patch
+            if not isinstance(m, gd.MonsterGlyph):
+                target_index = i
+                break
+            monster_tier = m.monster_spoiler.tier
+            if least_scary_tier is None or monster_tier > least_scary_tier and monster_tier != -1:
+                target_index = i
+                least_scary_tier = monster_tier
+
+        return targets.directions[target_index]
 
 class SafeMeleeAttackAdvisor(ScariestAttack):
-    unsafe_hp_loss_fraction = 0.5
-
     def targets(self, neighborhood, character):
         def target_p(monster):
             if not isinstance(monster, gd.MonsterGlyph):
                 return True
             spoiler = monster.monster_spoiler
-            trajectory = character.average_time_to_kill_monster_in_melee(spoiler)
-            if spoiler and spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
+            if spoiler and character.death_by_passive(spoiler):
                 return False
             return True
 

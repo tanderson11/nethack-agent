@@ -219,7 +219,7 @@ normal_background_menu_plan_options = [
     menuplan.PhraseMenuResponse("You are required to supply your name", "Agent"), # Vault message when deaf
     menuplan.EscapeMenuResponse("Call a "),
     menuplan.EscapeMenuResponse("Call an "),
-    menuplan.NoMenuResponse("Really attack"),
+    menuplan.YesMenuResponse("Really attack"),
     menuplan.NoMenuResponse("Shall I remove"),
     menuplan.NoMenuResponse("Would you wear it for me?"),
     menuplan.EscapeMenuResponse("zorkmids worth of damage!"),
@@ -907,6 +907,9 @@ class CustomAgent(BatchedAgent):
 
         if " tastes " in message.message or "finish eating" in message.message:
             print(message.message)
+
+        #if "frozen by" in message.message:
+        #    import pdb; pdb.set_trace()
 
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)

@@ -895,6 +895,7 @@ class SpecialLevelSearcher():
 
             if np.count_nonzero(wall_hits) > 8:
                 print(f"{verbose_message} -- HIT")
+                #import pdb; pdb.set_trace()
                 self.level_found[possible_match.level_name] = True
                 return possible_match
             else:
