@@ -27,9 +27,11 @@ def parse_target_roles(raw_str):
 def make_environment(**kwargs):
     default_environment = {
         'num_environments': 1,
+        'num_episodes':512,
         'debug': False,
         'log_runs': False,
         'print_seed': False,
+        'target_roles': set(),
         'wizard': False,
         'use_seed_whitelist': False,
         'max_score': 3000,
@@ -46,9 +48,10 @@ def make_environment(**kwargs):
         'use_seed_whitelist':(os.getenv("NLE_USE_SEED_WHITELIST") == "true"),
         'max_score':try_cast(int, os.getenv("NLE_DEV_MAX_SCORE")),
     }
-    default_environment.update(environment)
+    default_environment.update({k:v for k,v in environment.items() if v is not None})
     default_environment.update(kwargs)
 
     return EnvironmentVariable(**default_environment)
 
 env = make_environment()
+print(env)
