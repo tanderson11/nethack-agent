@@ -10,6 +10,8 @@ import constants
 import pandas as pd
 import nle.nethack as nethack
 
+import utilities
+
 from utilities import ARS
 
 class Item():
@@ -1039,7 +1041,7 @@ class PlayerInventory():
         self.inv_oclasses = inv_oclasses
         self.inv_glyphs = inv_glyphs
 
-    @functools.cached_property
+    @utilities.cached_property
     def armaments(self):
         return self.get_slots('armaments')
 
@@ -1293,7 +1295,7 @@ class PlayerInventory():
             import pdb; pdb.set_trace()
         return balance
 
-    @functools.cached_property
+    @utilities.cached_property
     def wielded_weapon(self):
         armaments = self.get_slots('armaments')
         hand_occupant = armaments.hand
@@ -1306,7 +1308,7 @@ class PlayerInventory():
         else:
             if environment.env.debug: pdb.set_trace()
 
-    @functools.cached_property
+    @utilities.cached_property
     def quivered(self):
         quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
         return quivered_item

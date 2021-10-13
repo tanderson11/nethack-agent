@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 import enum
-from typing import NamedTuple
+from typing import NamedTuple, List
 
 import numpy as np
 import scipy.signal
