@@ -19,12 +19,13 @@ from utilities import ARS
 class MenuResponse:
     follow_with = None
     def __init__(self, match_str):
-        if not isinstance(match_str, str) and not isinstance(match_str, re.Pattern):
-            raise TypeError()
+        # Doesn't work in Python 3.6
+        # if not isinstance(match_str, str) and not isinstance(match_str, re.Pattern):
+        #    raise TypeError()
 
         if isinstance(match_str, str):
             self.match_str = match_str
-        elif isinstance(match_str, re.Pattern):
+        else:
             self.match_pattern = match_str
             self.match_str = None
 
