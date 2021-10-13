@@ -79,6 +79,7 @@ new_advisors = [
         ChargeWandOfWishing(),
         ZapWandOfWishing(),
         WrestWandOfWishing(),
+        #DropUndesirableCursedQuivered(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
         DropToPriceIDAdvisor(),

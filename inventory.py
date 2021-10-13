@@ -435,6 +435,11 @@ class Weapon(Item):
         if self.identity.ranged and not self.uses_relevant_ranged_skill(character):
             return False
 
+        if self.identity.thrown and self.identity.thrown_from != 'hand':
+            if not self.uses_relevant_ranged_skill(character):
+                #import pdb; pdb.set_trace()
+                return False
+
         if character.wants_excalibur() and self.identity.name() == 'long sword':
             long_swords = self.find_equivalents_vis_excalibur(character.inventory)
             equal_or_better_versions = [i for i in long_swords if self != i and not self.better_than_equivalent(i, character)]
@@ -1239,7 +1244,11 @@ class PlayerInventory():
             return RangedPreparednessProposal(attack_plan=plan)
 
         # quiver your thrown weapons
-        quiver_thrown_weapons = self.get_items(Weapon, instance_selector=lambda i: i != self.wielded_weapon, identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver')
+        quiver_thrown_weapons = self.get_items(
+            Weapon,
+            instance_selector=lambda i: i != self.wielded_weapon,
+            identity_selector=lambda i: i.thrown and i.thrown_from == 'quiver'
+        )
         if len(quiver_thrown_weapons) > 0:
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 

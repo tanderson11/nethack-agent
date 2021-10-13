@@ -503,7 +503,7 @@ class Character():
         return None
 
     def prefer_ranged(self):
-        return False
+        #return False
         if not self.inventory.wielded_weapon.uses_relevant_melee_skill(self):
             return True
         if self.base_class == constants.BaseRole.Tourist and self.current_hp < 30:
