@@ -413,6 +413,20 @@ class SearchDeadEndAdvisor(Advisor):
 
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
+class CastHealing(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if (character.current_hp > character.max_hp * 1/2) and character.current_hp > 10:
+            return None
+        if 'healing' not in character.spells:
+            return None
+        if character.current_energy < 5:
+            return None
+        menu_plan = menuplan.MenuPlan("cast healing on self", self, [
+            menuplan.CharacterMenuResponse("In what direction?", '.'),
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, 'healing', max_fail=5))
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(self, nethack.actions.Command.CAST, menu_plan)
+
 class PotionAdvisor(Advisor):
     def make_menu_plan(self, letter):
         menu_plan = menuplan.MenuPlan(
@@ -979,7 +993,7 @@ class RangedAttackAdvisor(Attack):
     def make_spell_zap_plan(self, character, spell, direction):
         menu_plan = menuplan.MenuPlan("zap ranged attack spell", self, [
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell))
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=75))
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):

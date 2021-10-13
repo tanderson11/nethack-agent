@@ -64,6 +64,8 @@ class Character():
     def set_base_spells(self):
         if self.base_class == constants.BaseRole.Wizard:
             self.spells = ['force bolt']
+        if self.base_class == constants.BaseRole.Healer:
+            self.spells = ['healing']
 
     def make_global_identity_map(self):
         self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
