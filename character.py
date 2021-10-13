@@ -374,7 +374,7 @@ class Character():
         if self.base_class in self.tier_to_mazes_whitelist:
             return self.tier_to_max_mazes_lvl.get(self.tier, 60)
         else:
-            return self.exp_lvl_to_max_mazes_lvl.get(self.tier, 60)
+            return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
 
     def desperate_for_food(self):
         if self.hunger_state == 0:
