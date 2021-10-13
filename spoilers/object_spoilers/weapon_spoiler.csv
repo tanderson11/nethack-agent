@@ -8,11 +8,11 @@ battle-axe,1934,desire one,,,40,hand,off_hand,120,10,IRON,double-headed axe,d8+d
 bec-de-corbin,1961,desire one,,,8,hand,off_hand,100,4,IRON,beaked polearm,d8,4.5,d6,3.5,4,FALSE,,,,,FALSE,polearm,FALSE
 bill-guisarme,1959,desire one,,,7,hand,off_hand,120,4,IRON,hooked polearm,2d4,5,d10,5.5,5.25,FALSE,,,,,FALSE,polearm,FALSE
 boomerang,1915,none,,,20,quiver,,5,15,WOOD,,d9,5,d9,5,5,FALSE,,,TRUE,quiver,FALSE,boomerang,FALSE
-bow,1971,desire one,,,60,hand,,30,24,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
+bow,1971,none,,,60,hand,,30,24,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
 broadsword,1941,desire one,,ninja-to,10,hand,,70,8,IRON,,2d4,5,d6+1,4.5,4.75,FALSE,,,,,FALSE,broadsword,FALSE
 bullwhip,1970,desire one,,,4,hand,,20,2,LEAT,,d2,1.5,1,1,1.25,FALSE,,,,,FALSE,whip,FALSE
 club,1965,desire one,,,3,hand,,30,12,WOOD,,d6,3.5,d3,2,2.75,FALSE,,,,,FALSE,club,FALSE
-crossbow,1976,desire one,,,40,hand,,50,45,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,bolt,,,,FALSE,crossbow,FALSE
+crossbow,1976,none,,,40,hand,,50,45,WOOD,,d2,1.5,d2,1.5,1.5,TRUE,bolt,,,,FALSE,crossbow,FALSE
 crossbow bolt,1912,none,crossbow bolts,,2,quiver,,1,55,IRON,,d4+1,3.5,d6+1,4.5,4,FALSE,,bolt,,,TRUE,,FALSE
 crysknife,1932,desire one,crysknives,,100,hand,,20,0,MINL,,d10,5.5,d10,5.5,5.5,FALSE,,,,,FALSE,knife,FALSE
 dagger,1923,desire all uncursed,daggers,,4,hand,,10,30,IRON,,d4,2.5,d3,2,2.25,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
@@ -21,7 +21,7 @@ dwarvish mattock,1956,desire one,,,50,hand,off_hand,120,13,IRON,broad pick,d12,6
 dwarvish short sword,1938,desire one,,,10,hand,,30,2,IRON,broad short sword,d7,4,d8,4.5,4.25,FALSE,,,,,FALSE,short sword,FALSE
 dwarvish spear,1919,desire one,dwarvish spears,,3,hand,,35,12,IRON,stout spear,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,spear,FALSE
 elven arrow,1908,none,elven arrows,,2,quiver,,1,20,WOOD,runed arrow,d7,4,d6,3.5,3.75,FALSE,,arrow,,,TRUE,,FALSE
-elven bow,1972,desire one,,,60,hand,,30,12,WOOD,runed bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
+elven bow,1972,none,,,60,hand,,30,12,WOOD,runed bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
 elven broadsword,1942,desire one,,,10,hand,,70,4,WOOD,runed broadsword,d6+d4,6,d6+1,4.5,5.25,FALSE,,,,,FALSE,broadsword,FALSE
 elven dagger,1924,desire all uncursed,elven daggers,,4,hand,,10,10,WOOD,runed dagger,d5,3,d3,2,2.5,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
 elven short sword,1936,desire one,,,10,hand,,30,2,WOOD,runed short sword,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,short sword,FALSE
@@ -40,7 +40,7 @@ lucern hammer,1960,desire one,,,7,hand,off_hand,150,5,IRON,pronged polearm,2d4,5
 mace,1962,desire one,,,5,hand,,30,40,IRON,,d6+1,4.5,d6,3.5,4,FALSE,,,,,FALSE,mace,FALSE
 morning star,1963,desire one,,,10,hand,,120,12,IRON,,2d4,5,d6+1,4.5,4.75,FALSE,,,,,FALSE,morning star,FALSE
 orcish arrow,1909,none,orcish arrows,,2,quiver,,1,20,IRON,crude arrow,d5,3,d6,3.5,3.25,FALSE,,arrow,,,TRUE,,FALSE
-orcish bow,1973,desire one,,,60,hand,,30,12,WOOD,crude bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
+orcish bow,1973,none,,,60,hand,,30,12,WOOD,crude bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
 orcish dagger,1925,desire one,orcish daggers,,4.00,hand,,10,12,IRON,crude dagger,d3,2,d3,2,2,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
 orcish short sword,1937,desire one,,,10,hand,,30,3,IRON,crude short sword,d5,3,d8,4.5,3.75,FALSE,,,,,FALSE,short sword,FALSE
 orcish spear,1918,desire one,orcish spears,,3,hand,,30,13,IRON,crude spear,d5,3,d8,4.5,3.75,FALSE,,,,,FALSE,spear,FALSE
@@ -57,7 +57,7 @@ silver arrow,1910,none,silver arrows,,5,quiver,,1,12,SILV,,d6,3.5,d6,3.5,3.5,FAL
 silver dagger,1926,desire all uncursed,silver daggers,,40,hand,,12,3,SILV,,d4,2.5,d3,2,2.25,FALSE,,,TRUE,quiver,FALSE,dagger,FALSE
 silver saber,1940,desire one,,,75,hand,,40,6,SILV,,d8,4.5,d8,4.5,4.5,FALSE,,,,,FALSE,saber,FALSE
 silver spear,1920,desire one,silver spears,,40,hand,,36,2,SILV,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,spear,FALSE
-sling,1975,desire one,,,20,hand,,3,40,LEAT,,d2,1.5,d2,1.5,1.5,TRUE,flint stone,,,,FALSE,sling,FALSE
+sling,1975,none,,,20,hand,,3,40,LEAT,,d2,1.5,d2,1.5,1.5,TRUE,flint stone,,,,FALSE,sling,FALSE
 spear,1916,desire one,spears,,3,hand,,30,50,IRON,,d6,3.5,d8,4.5,4,FALSE,,,,,FALSE,spear,FALSE
 spetum,1950,desire one,,,5,hand,off_hand,50,5,IRON,forked polearm,d6+1,4.5,2d6,7,5.75,FALSE,,,,,FALSE,polearm,FALSE
 stiletto,1930,desire one,,,4,hand,,5,5,IRON,,d3,2,d2,1.5,1.75,FALSE,,,,,FALSE,knife,FALSE
@@ -68,4 +68,4 @@ voulge,1955,desire one,,,5,hand,off_hand,125,4,IRON,pole cleaver,2d4,5,2d4,5,5,F
 war hammer,1964,desire one,,,5,hand,,50,15,IRON,,d4+1,3.5,d4,2.5,3,FALSE,,,,,FALSE,hammer,FALSE
 worm tooth,1931,desire one,worm teeth,,2,hand,,20,0,NONE,,d2,1.5,d2,1.5,1.5,FALSE,,,,,FALSE,knife,FALSE
 ya,1911,none,,,4,quiver,,1,15,METL,bamboo arrow,d7,4,d7,4,4,FALSE,,arrow,,,TRUE,,FALSE
-yumi,1974,desire one,,,60,hand,,30,0,WOOD,long bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
+yumi,1974,none,,,60,hand,,30,0,WOOD,long bow,d2,1.5,d2,1.5,1.5,TRUE,arrow,,,,FALSE,bow,FALSE
