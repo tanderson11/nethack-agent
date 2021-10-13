@@ -554,12 +554,12 @@ class Gem(Item):
         if not self.can_afford(character): return False
         sling = character.inventory.get_item(
             Weapon,
-            instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed) and i.uses_relevant_ranged_skill(character),
+            instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed) and i.uses_relevant_skill(character),
             identity_selector=lambda i: i.ranged
         )
         if sling is not None:
             rocks = character.inventory.get_item(Gem, name='rock')
-            if rocks is None or rocks.quantity < 25:
+            if rocks is None or rocks.quantity < 20:
                 #import pdb; pdb.set_trace()
                 return True
         return super().desirable(character, consider_funds=consider_funds)
@@ -1248,6 +1248,9 @@ class PlayerInventory():
             bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
             for bow in bows:
                 if bow.identity.name() == 'sling':
+                    if not preference.includes(constants.RangedAttackPreference.weak):
+                        continue
+                    #import pdb; pdb.set_trace()
                     klasses = [Weapon, Gem]
                 else:
                     klasses = Weapon

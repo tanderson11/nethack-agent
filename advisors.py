@@ -1060,7 +1060,7 @@ class TameHerbivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent
+    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
