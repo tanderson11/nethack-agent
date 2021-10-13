@@ -39,7 +39,6 @@ class Character():
     role_tier_mod: int = 0
     class_skills: pd.Series = None
     relevant_skills: pd.Series = None
-    ranged_relevant_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
@@ -60,7 +59,6 @@ class Character():
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
-        self.ranged_relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant-ranged"]
         self.set_role_tier_mod()
 
     def set_base_spells(self):
@@ -139,7 +137,7 @@ class Character():
         if self.inventory is not None:
             if self.inventory.wielded_weapon.melee_damage(self, None) > 5: weapon_mod += 0.5
             if self.inventory.wielded_weapon.melee_damage(self, None) > 10: weapon_mod += 0.5
-            if not self.inventory.wielded_weapon.uses_relevant_melee_skill(self): weapon_mod -= 0.5
+            if not self.inventory.wielded_weapon.uses_relevant_skill(self): weapon_mod -= 0.5
 
         speed_mod = 0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
         #import pdb; pdb.set_trace()
@@ -521,7 +519,7 @@ class Character():
         return None
 
     def prefer_ranged(self):
-        if not self.inventory.wielded_weapon.uses_relevant_melee_skill(self):
+        if not self.inventory.wielded_weapon.uses_relevant_skill(self):
             return True
         if self.base_class == constants.BaseRole.Tourist and self.current_hp < 30:
             return True
