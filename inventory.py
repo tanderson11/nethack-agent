@@ -1228,7 +1228,11 @@ class PlayerInventory():
         if preference.includes(constants.RangedAttackPreference.setup):
             bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
             for bow in bows:
-                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
+                if bow.identity.name() == 'sling':
+                    klasses = [Weapon, Gem]
+                else:
+                    klasses = Weapon
+                matching_ammo = self.get_items(klasses, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
                 if len(matching_ammo) > 0:
                     return RangedPreparednessProposal(wield_item=bow)
 
