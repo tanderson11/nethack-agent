@@ -850,6 +850,8 @@ class ObjectIdentity():
                 unique[0] = False
             self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
+        if len(unique) == 0 and false_if_na and dropna:
+            return False
         return unique
 
     def weight(self):
@@ -1076,8 +1078,9 @@ class WeaponIdentity(ObjectIdentity):
         self.stackable = self.is_identified() and not pd.isna(self.find_values('STACKED_NAME'))
 
         self.slot = self.find_values('SLOT')
-        self.is_ammo = self.find_values('AMMUNITION', false_if_na=True)
-        self.thrown = self.find_values('THROWN', false_if_na=True)
+
+        self.is_ammo = self.find_values('AMMUNITION', false_if_na=True, dropna=True)
+        self.thrown = self.find_values('THROWN', false_if_na=True, dropna=True)
         self.thrown_from = self.find_values('THROWN_FROM')
 
         self.ammo_type = None
