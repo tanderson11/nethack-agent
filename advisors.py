@@ -1,7 +1,6 @@
 import abc
 from dataclasses import dataclass
 import enum
-from typing import NamedTuple
 
 import glyphs as gd
 import nle.nethack as nethack
@@ -894,10 +893,6 @@ class Attack(Advisor):
     def prioritize(self, run_state, targets, character):
         return Target(targets.monsters[0], targets.directions[0], targets.absolute_positions[0])
 
-class RangedPlanInMotion(NamedTuple):
-    advisor: Advisor
-    preference: constants.RangedAttackPreference
-
 class RangedAttackAdvisor(Attack):
     preference = constants.ranged_default
     def prepare_for_ranged(self, character, preference):
@@ -915,7 +910,7 @@ class RangedAttackAdvisor(Attack):
             ])
         if ranged_plan.wield_item is not None:
             action = nethack.actions.Command.WIELD
-            character.executing_ranged_plan = RangedPlanInMotion(self, preference)
+            character.executing_ranged_plan = self
             menu_plan = menuplan.MenuPlan("wield weapon for ranged", self, [
                 menuplan.CharacterMenuResponse("What do you want to wield?", chr(ranged_plan.wield_item.inventory_letter)),
                 ],
@@ -1078,7 +1073,6 @@ class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
         return neighborhood.target_monsters(lambda m: target_p(m), attack_range=range)
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent
     def targets(self, neighborhood, character):
         range = physics.AttackRange('line', 4)
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range)
@@ -1113,14 +1107,7 @@ class AdjustRangedPlanDummy(Advisor):
         if not character.executing_ranged_plan:
             return None
 
-        # stop trying to use your bow unless you are happy to target adjacent
-        if not character.executing_ranged_plan.preference.includes(constants.RangedAttackPreference.adjacent):
-            if run_state.neighborhood.n_adjacent_monsters > 0:
-                character.executing_ranged_plan = False
-                #import pdb; pdb.set_trace()
-                return None
-
-        ranged_advisor = character.executing_ranged_plan.advisor
+        ranged_advisor = character.executing_ranged_plan
         targets = ranged_advisor.targets(run_state.neighborhood, character)
         if targets is None:
             character.executing_ranged_plan = False

@@ -18,14 +18,13 @@ class RangedAttackPreference(enum.Flag):
     sleep = enum.auto()
     setup = enum.auto()
     strong = enum.auto()
-    adjacent = enum.auto()
 
     def includes(self, flag):
         return self & flag == flag
 
-ranged_default = ~RangedAttackPreference.wand & ~RangedAttackPreference.adjacent
+ranged_default = ~RangedAttackPreference.wand
 #ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
-ranged_powerful = ~RangedAttackPreference.death & ~RangedAttackPreference.adjacent
+ranged_powerful = ~RangedAttackPreference.death
 
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
