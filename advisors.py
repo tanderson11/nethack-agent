@@ -408,7 +408,7 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         lowest_search_count = search_count.min()
 
-        if (lowest_search_count > 30):
+        if (lowest_search_count > 36):
             return None
 
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
@@ -1003,7 +1003,7 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         return targets
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
-    preference = constants.ranged_powerful # main advisor knows not to do striking
+    preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
     def advice(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
