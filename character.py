@@ -355,7 +355,7 @@ class Character():
     }
 
     tier_to_max_mazes_lvl = {
-        10: 2,
+        10: 1,
         9: 2,
         8: 2,
         7: 4,
