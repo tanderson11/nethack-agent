@@ -873,7 +873,7 @@ class CustomAgent(BatchedAgent):
 
         if message.feedback.solid_stone:
             target_location = physics.Square(*physics.action_to_delta[run_state.last_non_menu_action]) + player_location
-            if not gd.ObjectGlyph.class_mask(observation['glyphs'][target_location]):
+            if environment.env.debug and not gd.ObjectGlyph.class_mask(observation['glyphs'][target_location]):
                 import pdb; pdb.set_trace()
             level_map.embedded_object_map[target_location] = True
 
