@@ -550,6 +550,20 @@ class Gem(Item):
     try_to_price_id = False
     glyph_class = gd.GemGlyph
 
+    def desirable(self, character, consider_funds=True):
+        if not self.can_afford(character): return False
+        sling = character.inventory.get_item(
+            Weapon,
+            instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed) and i.uses_relevant_ranged_skill(character),
+            identity_selector=lambda i: i.ranged
+        )
+        if sling is not None:
+            rocks = character.inventory.get_item(Gem, name='rock')
+            if rocks is None or rocks.quantity < 25:
+                #import pdb; pdb.set_trace()
+                return True
+        return super().desirable(character, consider_funds=consider_funds)
+
 class Rock(Item):
     glyph_class = gd.RockGlyph
 
