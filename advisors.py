@@ -950,16 +950,18 @@ class RangedAttackAdvisor(Attack):
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):
-        targets = self.targets(run_state.neighborhood, character)
-        if targets is None:
-            return None
-        target = self.prioritize(run_state, targets, character)
-        attack_direction = target.direction
-        if attack_direction is None:
-            return None
         preference = self.preference
         if run_state.neighborhood.level_map.dcoord.branch == map.Branches.Sokoban:
             preference = self.preference & ~constants.RangedAttackPreference.striking
+        include_adjacent = preference.includes(constants.RangedAttackPreference.adjacent)
+        targets = self.targets(run_state.neighborhood, character, include_adjacent=include_adjacent)
+        if targets is None:
+            return None
+        target = self.prioritize(run_state, targets, character)
+        #print(target)
+        attack_direction = target.direction
+        if attack_direction is None:
+            return None
         ranged_preparation = self.prepare_for_ranged(character, preference)
         if ranged_preparation is not None:
             return ranged_preparation
@@ -991,9 +993,10 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
             pass
             #import pdb; pdb.set_trace()
         return advice
-    def targets(self, neighborhood, character):
+    def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
-        targets = neighborhood.target_monsters(lambda m: character.scared_by(m), attack_range=range)
+        #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
+        targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
             #print(f"Annoying monster at range: {targets.monsters[0]}")
             pass
@@ -1007,17 +1010,17 @@ class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         return super().advice(rng, run_state, character, oracle)
-    def targets(self, neighborhood, character):
+    def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
-        targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range)
+        targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range, **kwargs)
         if targets is not None:
             print(f"Invisible monster: {targets.monsters[0]}")
         return targets
 
 class TameCarnivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character):
+    def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 3)
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         targets = self.targets(run_state.neighborhood, character)
@@ -1036,9 +1039,9 @@ class TameCarnivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class TameHerbivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character):
+    def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 3)
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         targets = self.targets(run_state.neighborhood, character)
@@ -1056,32 +1059,11 @@ class TameHerbivores(RangedAttackAdvisor):
         menu_plan = self.make_throw_plan(food, attack_direction)
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
-class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
-    unsafe_hp_loss_fraction = 0.5
-    def advice(self, rng, run_state, character, oracle):
-        advice = super().advice(rng, run_state, character, oracle)
-        if advice is not None:
-            print("Attacking highly threatening monster at range")
-            #import pdb; pdb.set_trace()
-        return advice
-    def targets(self, neighborhood, character):
-        range = physics.AttackRange('line', 4)
-        def target_p(monster):
-            if not isinstance(monster, gd.MonsterGlyph):
-                return False
-            spoiler = monster.monster_spoiler
-            damage_from_attacks, trajectory = spoiler.fight_outcome(character)
-            if damage_from_attacks + spoiler.passive_damage_over_encounter(character, trajectory) + spoiler.death_damage_over_encounter(character) > self.unsafe_hp_loss_fraction * character.current_hp:
-                #print(f"Highly threatening monster at range: {monster}")
-                return True
-            return False
-        return neighborhood.target_monsters(lambda m: target_p(m), attack_range=range)
-
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent
-    def targets(self, neighborhood, character):
+    def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
 
     def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
@@ -1099,8 +1081,8 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful
-    def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2)
+    def targets(self, neighborhood, character, **kwargs):
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         if not character.prefer_ranged():
