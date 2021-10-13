@@ -558,10 +558,11 @@ class Gem(Item):
             identity_selector=lambda i: i.ranged
         )
         if sling is not None:
-            rocks = character.inventory.get_item(Gem, name='rock')
-            if rocks is None or rocks.quantity < 20:
-                #import pdb; pdb.set_trace()
+            if not self.identity.name() == 'rock':
                 return True
+            non_rock = character.inventory.get_item(Gem, identity_selector=lambda i: i.name() != 'rock')
+            if non_rock is not None:
+                return False
         return super().desirable(character, consider_funds=consider_funds)
 
 class Rock(Item):
