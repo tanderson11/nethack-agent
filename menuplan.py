@@ -454,7 +454,7 @@ class InteractiveZapSpellMenu(InteractiveMenu):
     trigger_phrase = 'Choose which spell to cast'
 
     class MenuItem:
-        spell_pattern = re.compile('([a-zA-Z ]+?) +[0-9].+([0-9]+)\% +(\(gone\)|([0-9]+)\%\-?([0-9]+)\%)')
+        spell_pattern = re.compile('([a-zA-Z ]+?) +[0-9].+?([0-9]+)\% +(\(gone\)|([0-9]+)\%\-?([0-9]+)\%)')
         def __init__(self, ambient_menu, category, character, selected, item_text):
             self.selected = selected
             self.character = character
@@ -474,7 +474,7 @@ class InteractiveZapSpellMenu(InteractiveMenu):
         def item_selector(menu_item):
             if not self.spell_name in menu_item.spell_name:
                 return False
-            if menu_item.fail_chance > 8 or menu_item.gone:
+            if menu_item.fail_chance > 11 or menu_item.gone:
                 self.player_character.spells.remove(self.spell_name)
                 return False
             #import pdb; pdb.set_trace()
