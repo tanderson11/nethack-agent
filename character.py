@@ -356,8 +356,17 @@ class Character():
         7: 6,
     }
 
+    tier_to_max_mazes_lvl = {
+        10: 2,
+        9: 2,
+        8: 2,
+        7: 4,
+        6: 9,
+        5: 20,
+    }
+
     def comfortable_depth(self):
-        return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
+        return self.tier_to_max_mazes_lvl.get(self.tier, 60)
 
     def desperate_for_food(self):
         if self.hunger_state == 0:
