@@ -1225,7 +1225,7 @@ class TravelToFountainAdvisorForExcalibur(ExcaliburAdvisor):
             target_square = physics.Square(*fountains[nearest_square_idx])
             menu_plan = menuplan.MenuPlan(
                 "travel to fountain", self, [
-                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, target_square),
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state, target_square),
                 ],
                 fallback=ord('.')
             )
@@ -1246,7 +1246,7 @@ class TravelToDesiredEgress(Advisor):
             if staircase.matches_heading(heading):
                 menu_plan = menuplan.MenuPlan(
                     "travel to unexplored", self, [
-                        menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, neighborhood.Square(*location)),
+                        menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state, neighborhood.Square(*location)),
                     ],
                     fallback=ord('.'))
 
@@ -1284,7 +1284,7 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
             self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to unexplored", self, [
-                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state.tty_cursor, self.target_square), # offset because cursor row 0 = top line
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state, self.target_square), # offset because cursor row 0 = top line
                 ],
                 fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
 
