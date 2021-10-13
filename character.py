@@ -364,8 +364,8 @@ class Character():
     }
     tier_to_mazes_whitelist = [
         constants.BaseRole.Caveperson,
-        constants.BaseRole.Barbarian,
-        constants.BaseRole.Tourist,
+        #constants.BaseRole.Barbarian,
+        #constants.BaseRole.Tourist,
         constants.BaseRole.Priest,
         constants.BaseRole.Valkyrie
     ]
