@@ -1,5 +1,5 @@
 from agents.custom_agent import CustomAgent
-from agents.torchbeast_agent import TorchBeastAgent
+#from agents.torchbeast_agent import TorchBeastAgent
 
 from envs.wrappers import addtimelimitwrapper_fn
 
