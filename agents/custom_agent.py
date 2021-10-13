@@ -844,6 +844,7 @@ class CustomAgent(BatchedAgent):
                 #import pdb; pdb.set_trace()
                 pass
             if len(run_state.message_log) > 1:
+                direction = None
                 collected_message = run_state.messages_since_last_input()
                 if ("You descend the" in collected_message or "You fall down the stairs" in collected_message or "You climb" in collected_message):
                     print(run_state.message_log[-2])
@@ -856,13 +857,17 @@ class CustomAgent(BatchedAgent):
                     if dcoord.branch != previous_square.dcoord.branch:
                         run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
 
-                    # staircase we just took
-                    previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
-                    previous_level_map.add_traversed_staircase(
-                        previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
-                    # staircase it's implied we've arrived on (probably breaks in the Valley)
-                    level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
-                    print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
+                    if direction is None and environment.env.debug:
+                        import pdb; pdb.set_trace()
+
+                    if direction is not None:
+                        # staircase we just took
+                        previous_level_map = run_state.dmap.dlevels[previous_square.dcoord]
+                        previous_level_map.add_traversed_staircase(
+                            previous_square.location, to_dcoord=dcoord, to_location=player_location, direction=direction[0])
+                        # staircase it's implied we've arrived on (probably breaks in the Valley)
+                        level_map.add_traversed_staircase(player_location, to_dcoord=previous_square.dcoord, to_location=previous_square.location, direction=direction[1])
+                        print("OLD DCOORD: {} NEW DCOORD: {}".format(previous_square.dcoord, dcoord))
                 elif environment.env.debug and not "A trap door opens up under you!" in collected_message:
                     import pdb; pdb.set_trace()
 
