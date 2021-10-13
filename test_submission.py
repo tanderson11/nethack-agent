@@ -5,7 +5,7 @@
 # * The run might be slower than your local run
 # * Resources might vary from your local machine
 
-from typing import NamedTuple
+from typing import NamedTuple, List
 import numpy as np
 import pandas as pd
 import os
@@ -20,7 +20,7 @@ import parse_ttyrec
 
 class RolloutResults(NamedTuple):
     ascensions: int
-    scores: list[int]
+    scores: List[int]
     median_score: int
     mean_score: int
     log_path: str
