@@ -10,3 +10,4 @@ nle
 tqdm
 wandb
 pandas
+astar
