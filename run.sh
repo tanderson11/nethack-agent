@@ -1,4 +1,4 @@
 #!/bin/bash
 
-python rollout.py
+python test_submission.py
 

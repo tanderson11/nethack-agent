@@ -27,7 +27,7 @@ def parse_target_roles(raw_str):
 def make_environment(**kwargs):
     default_environment = {
         'num_environments': 1,
-        'num_episodes':512,
+        'num_episodes':4096, # AIcrowd will cut the assessment early duing the dev phase
         'debug': False,
         'log_runs': False,
         'print_seed': False,
