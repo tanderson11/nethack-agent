@@ -6,6 +6,7 @@ import glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 
+from typing import NamedTuple
 import functools
 
 import map
