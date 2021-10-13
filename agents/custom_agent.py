@@ -11,7 +11,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
+from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
 import advisor_sets
 
 import menuplan
@@ -360,6 +360,7 @@ class RunState():
         self.tty_cursor_log = []
         self.actions_without_consequence = set()
 
+        self.last_non_menu_advice = None
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
         self.last_non_menu_action_failed_advancement = None
@@ -661,7 +662,7 @@ class RunState():
             return
 
         self.action_log.append(advice.action)
-
+        self.last_non_menu_advice = advice
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
         self.last_non_menu_action_failed_advancement = False
@@ -836,15 +837,12 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.CAST, nethack.actions.Command.THROW, nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
-                if run_state.character.held_by is not None:
-                    run_state.character.held_by = None
-
-                delta = physics.action_to_delta[run_state.last_non_menu_action]
-
+            if run_state.character.held_by is not None:
+                run_state.character.held_by = None
+            if isinstance(run_state.last_non_menu_advice, AttackAdvice):
                 try:
                     recorded_death = monster_messages.RecordedMonsterDeath(
-                        (player_location[0] + delta[0], player_location[1] + delta[1]),
+                        run_state.last_non_menu_advice.target.absolute_position,
                         time,
                         killed_monster_name
                     )

@@ -247,6 +247,10 @@ class ActionAdvice(Advice):
             self.action = utilities.INT_TO_ACTION[self.action]
 
 @dataclass
+class AttackAdvice(ActionAdvice):
+    target: tuple = ()
+
+@dataclass
 class SokobanAdvice(ActionAdvice):
     sokoban_move: tuple = None
 
@@ -865,23 +869,30 @@ class PrayForLesserMajorTroubleAdvisor(PrayerAdvisor):
 # ATTACK ADVISORS #
 ###################
 
+class Target(NamedTuple):
+    monster: gd.MonsterGlyph
+    direction: int
+    absolute_position: physics.Square
+
 class Attack(Advisor):
     def advice(self, rng, run_state, character, oracle):
         targets = self.targets(run_state.neighborhood, character)
         if targets is None:
             return None
 
-        attack_direction = self.prioritize(run_state, targets, character)
+        target = self.prioritize(run_state, targets, character)
+        #print(target)
+        attack_direction = target.direction
 
         if attack_direction is None:
             return None
-        return ActionAdvice(from_advisor=self, action=attack_direction)
+        return AttackAdvice(from_advisor=self, action=attack_direction, target=target)
 
     def targets(self, neighborhood, character):
         return neighborhood.target_monsters(lambda m: True)
 
     def prioritize(self, run_state, targets, character):
-        return targets.directions[0]
+        return Target(targets.monsters[0], targets.directions[0], targets.absolute_positions[0])
 
 class RangedPlanInMotion(NamedTuple):
     advisor: Advisor
@@ -942,7 +953,8 @@ class RangedAttackAdvisor(Attack):
         targets = self.targets(run_state.neighborhood, character)
         if targets is None:
             return None
-        attack_direction = self.prioritize(run_state, targets, character)
+        target = self.prioritize(run_state, targets, character)
+        attack_direction = target.direction
         if attack_direction is None:
             return None
         preference = self.preference
@@ -969,7 +981,7 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
         else:
             assert False
-        return ActionAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan)
+        return AttackAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan, target=target)
 
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
@@ -1012,7 +1024,8 @@ class TameCarnivores(RangedAttackAdvisor):
         if targets is None:
             return None
         #import pdb; pdb.set_trace()
-        attack_direction = self.prioritize(run_state, targets, character)
+        target = self.prioritize(run_state, targets, character)
+        attack_direction = target.direction
         if attack_direction is None:
             return None
         food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'meat')
@@ -1020,7 +1033,7 @@ class TameCarnivores(RangedAttackAdvisor):
             return None
 
         menu_plan = self.make_throw_plan(food, attack_direction)
-        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan)
+        return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class TameHerbivores(RangedAttackAdvisor):
     def targets(self, neighborhood, character):
@@ -1032,7 +1045,8 @@ class TameHerbivores(RangedAttackAdvisor):
         if targets is None:
             return None
         #import pdb; pdb.set_trace()
-        attack_direction = self.prioritize(run_state, targets, character)
+        target = self.prioritize(run_state, targets, character)
+        attack_direction = target.direction
         if attack_direction is None:
             return None
         food = character.inventory.get_item(inv.Food, identity_selector=lambda i: i.taming_food_type == 'veg')
@@ -1040,7 +1054,7 @@ class TameHerbivores(RangedAttackAdvisor):
             return None
 
         menu_plan = self.make_throw_plan(food, attack_direction)
-        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan)
+        return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class RangedAttackHighlyThreateningMonsters(RangedAttackAdvisor):
     unsafe_hp_loss_fraction = 0.5
@@ -1081,7 +1095,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
                 target_index = i
                 max_damage = damage
 
-        return targets.directions[target_index]
+        return Target(targets.monsters[target_index], targets.directions[target_index], targets.absolute_positions[target_index])
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful
@@ -1114,9 +1128,6 @@ class AdjustRangedPlanDummy(Advisor):
         return None
 
 class MeleeHoldingMonster(Attack):
-    def prioritize(self, run_state, targets, character):
-        return targets.directions[0]
-
     def targets(self, neighborhood, character):
         if character.held_by is None:
             return None
@@ -1131,7 +1142,7 @@ class BlindWithCamera(Attack):
     def prioritize(self, run_state, targets, character):
         monster = targets.monsters[0]
         character.attempted_to_blind(monster, run_state.time)
-        return targets.directions[0]
+        return Target(monster, targets.directions[0], targets.absolute_positions[0])
 
     def advice(self, rng, run_state, character, oracle):
         camera = run_state.character.inventory.get_item(inv.Tool, name='expensive camera', instance_selector=lambda i: i.charges and i.charges > 0)
@@ -1140,13 +1151,13 @@ class BlindWithCamera(Attack):
         melee_advice = super().advice(rng, run_state, character, oracle)
         if melee_advice is None:
             return None
-        menu_plan = menuplan.MenuPlan("search with stethoscope", self, [
+        menu_plan = menuplan.MenuPlan("blind with camera", self, [
             menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(camera.inventory_letter)),
             menuplan.DirectionMenuResponse("In what direction?", melee_advice.action),
         ], listening_item=camera)
         #import pdb; pdb.set_trace()
         apply = nethack.actions.Command.APPLY
-        return ActionAdvice(self, apply, menu_plan)
+        return Advice(self, apply, menu_plan)
 
 class BlindFearfulWithCamera(BlindWithCamera):
     def targets(self, neighborhood, character):
@@ -1158,7 +1169,7 @@ class ScariestAttack(Attack):
     def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
         if len(monsters) == 1:
-            return targets.directions[0]
+            return Target(targets.monsters[0], targets.directions[0], targets.absolute_positions[0])
         target_index = None
         scariest_tier = None
         for i, m in enumerate(monsters):
@@ -1171,7 +1182,7 @@ class ScariestAttack(Attack):
                 target_index = i
                 scariest_tier = monster_tier
 
-        return targets.directions[target_index]
+        return Target(targets.monsters[target_index], targets.directions[target_index], targets.absolute_positions[target_index])
 
 class MeleePriorityTargets(ScariestAttack):
     def targets(self, neighborhood, character):
@@ -1181,7 +1192,7 @@ class UnsafeMeleeAttackAdvisor(Attack):
     def prioritize(self, run_state, targets, character):
         monsters = targets.monsters
         if len(monsters) == 1:
-            return targets.directions[0]
+            return Target(targets.monsters[0], targets.directions[0], targets.absolute_positions[0])
         target_index = None
         least_scary_tier = None
         for i, m in enumerate(monsters):
@@ -1194,7 +1205,7 @@ class UnsafeMeleeAttackAdvisor(Attack):
                 target_index = i
                 least_scary_tier = monster_tier
 
-        return targets.directions[target_index]
+        return Target(targets.monsters[target_index], targets.directions[target_index], targets.absolute_positions[target_index])
 
 class SafeMeleeAttackAdvisor(ScariestAttack):
     def targets(self, neighborhood, character):

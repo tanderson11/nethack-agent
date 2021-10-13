@@ -23,6 +23,7 @@ import inventory
 class Targets(NamedTuple):
     monsters: list
     directions: list
+    absolute_positions: list
 
 @dataclass
 class CurrentSquare:
@@ -433,6 +434,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         if attack_range.type == 'melee':
             satisfying_monsters = []
             satisfying_directions = []
+            absolute_positions = []
             for i, monster in enumerate(self.adjacent_monsters):
                 monster_square = physics.Square(self.adjacent_monsters_idx[0][i], self.adjacent_monsters_idx[1][i])
                 #if monster_selector(monster): import pdb; pdb.set_trace()
@@ -440,13 +442,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                     satisfying_monsters.append(monster)
                     direction = self.action_grid[monster_square]
                     satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.local_player_location)
 
             if len(satisfying_directions) == 0: return None
             #import pdb; pdb.set_trace()
-            return Targets(satisfying_monsters, satisfying_directions)
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
         else:
             satisfying_monsters = []
             satisfying_directions = []
+            absolute_positions = []
             player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
             player_mask[self.player_location_in_extended] = True
             can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
@@ -457,10 +461,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                     offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
                     direction = physics.delta_to_action[offset]
                     satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.player_location_in_extended)
 
             if len(satisfying_directions) == 0: return None
             #import pdb; pdb.set_trace()
-            return Targets(satisfying_monsters, satisfying_directions)
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors, diagonal=True):
