@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass
 import enum
-from typing import NamedTuple
+from typing import NamedTuple, List
 import json
 import os
 
@@ -817,7 +817,7 @@ class SpecialLevelMap():
         return absolute - self.initial_offset
 
 class SpecialLevelSearcher():
-    def __init__(self, all_special_levels: list[SpecialLevelMap]):
+    def __init__(self, all_special_levels: List[SpecialLevelMap]):
         self.lookup = defaultdict(lambda: defaultdict(lambda: []))
         self.level_found = {}
         self.ruled_out_for_dcoord = defaultdict(lambda: set())

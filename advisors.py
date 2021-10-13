@@ -28,20 +28,20 @@ class Oracle():
         self.message = message
         self.blstats = blstats
 
-    @functools.cached_property
+    @utilities.cached_property
     def can_move(self):
         # TK Held, overburdened, etc.
         return True
 
-    @functools.cached_property
+    @utilities.cached_property
     def weak_with_hunger(self):
         return self.blstats.get('hunger_state') > 2
 
-    @functools.cached_property
+    @utilities.cached_property
     def am_satiated(self):
         return self.blstats.get('hunger_state') == 0
 
-    @functools.cached_property
+    @utilities.cached_property
     def can_pray_for_hp(self):
         level = self.character.experience_level
         current_hp = self.character.current_hp
@@ -54,7 +54,7 @@ class Oracle():
         elif level == 30 and current_hp < max_hp * 1/9: return True
         else: return False
 
-    @functools.cached_property
+    @utilities.cached_property
     def critically_injured(self):
         current_hp = self.character.current_hp
         max_hp = self.character.max_hp
@@ -62,7 +62,7 @@ class Oracle():
         if current_hp == max_hp: return False
         else: return self.can_pray_for_hp
 
-    @functools.cached_property
+    @utilities.cached_property
     def low_hp(self):
         current_hp = self.character.current_hp
         max_hp = self.character.max_hp
@@ -86,7 +86,7 @@ class Oracle():
     mn.attr("BL_MASK_BITS") = py::int_(static_cast<int>(BL_MASK_BITS));"""
 
 
-    @functools.cached_property
+    @utilities.cached_property
     def deadly_condition(self):
         return (
             #self.blstats.check_condition(nethack.BL_MASK_TERMILL) or
@@ -95,14 +95,14 @@ class Oracle():
             # self.blstats.check_condition(nethack.BL_MASK_TERMILL)
         )
 
-    @functools.cached_property
+    @utilities.cached_property
     def minor_unicorn_condition(self):
         return (
             self.nuisance_condition or
             self.blind
         )
 
-    @functools.cached_property
+    @utilities.cached_property
     def nuisance_condition(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_HALLU) or
@@ -110,56 +110,56 @@ class Oracle():
             self.blstats.check_condition(nethack.BL_MASK_CONF)
         )
 
-    @functools.cached_property
+    @utilities.cached_property
     def blind(self):
         return self.blstats.check_condition(nethack.BL_MASK_BLIND)
 
-    @functools.cached_property
+    @utilities.cached_property
     def have_stethoscope(self):
         return self.character.inventory.have_stethoscope()
 
-    @functools.cached_property
+    @utilities.cached_property
     def have_free_stethoscope_action(self):
         return not self.run_state.used_free_stethoscope_move
 
-    @functools.cached_property
+    @utilities.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0.
 
-    @functools.cached_property
+    @utilities.cached_property
     def recently_damaged(self):
         return self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 10)
 
-    @functools.cached_property
+    @utilities.cached_property
     def am_safe(self):
         return not self.weak_with_hunger and not self.am_threatened and self.character.current_hp > self.character.max_hp * 2/3 and not self.recently_damaged
 
-    @functools.cached_property
+    @utilities.cached_property
     def life_threatened(self):
         return self.neighborhood.threat_on_player > self.character.current_hp
 
-    @functools.cached_property
+    @utilities.cached_property
     def on_warning_engraving(self):
         return self.neighborhood.level_map.warning_engravings.get(self.neighborhood.absolute_player_location, False)
 
-    @functools.cached_property
+    @utilities.cached_property
     def desirable_object_on_space(self):
         return self.neighborhood.desirable_object_on_space(self.character)
 
-    @functools.cached_property
+    @utilities.cached_property
     def have_moves(self):
         have_moves = self.neighborhood.walkable.any() # at least one square is walkable
         return have_moves
 
-    @functools.cached_property
+    @utilities.cached_property
     def adjacent_monsters(self):
         return np.count_nonzero(self.neighborhood.is_monster)
 
-    @functools.cached_property
+    @utilities.cached_property
     def in_shop(self):
         return self.neighborhood.in_shop
 
-    @functools.cached_property
+    @utilities.cached_property
     def urgent_major_trouble(self):
         return (
             self.blstats.check_condition(nethack.BL_MASK_STONE) or
@@ -167,24 +167,24 @@ class Oracle():
             self.deadly_condition
         )
 
-    @functools.cached_property
+    @utilities.cached_property
     def major_trouble(self):
         return self.character.afflicted_with_lycanthropy
 
-    @functools.cached_property
+    @utilities.cached_property
     def in_gnomish_mines(self):
         in_gnomish_mines = self.blstats.get('dungeon_number') == 2
         return in_gnomish_mines
 
-    @functools.cached_property
+    @utilities.cached_property
     def on_downstairs(self):
         return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_downstairs
 
-    @functools.cached_property
+    @utilities.cached_property
     def on_upstairs(self):
         return self.neighborhood.dungeon_glyph_on_player and self.neighborhood.dungeon_glyph_on_player.is_upstairs
 
-    @functools.cached_property
+    @utilities.cached_property
     def on_stairs(self):
         return self.on_downstairs or self.on_upstairs
 

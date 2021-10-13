@@ -1,4 +1,4 @@
-from typing import NamedTuple
+from typing import NamedTuple, Set
 import os
 import constants
 
@@ -8,7 +8,7 @@ class EnvironmentVariable(NamedTuple):
     debug: bool
     print_seed: bool
     log_runs: bool
-    target_roles: set[str]
+    target_roles: Set[str]
     wizard: bool
     use_seed_whitelist: bool
     max_score: int

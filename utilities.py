@@ -1,5 +1,14 @@
+import sys
+
 import nle.nethack as nethack
 import numpy as np
+
+if sys.version_info.major != 3:
+    raise Exception(f"Requires Python 3 not {sys.version_info.major}")
+if sys.version_info.minor >= 8:
+    from functools import cached_property
+else:
+    from backports.cached_property import cached_property
 
 class ActiveRunState():
     def __init__(self):
