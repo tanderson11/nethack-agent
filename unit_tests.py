@@ -4,6 +4,7 @@ from unittest.mock import MagicMock
 import enum
 from typing import NamedTuple
 import numpy as np
+import pandas as pd
 
 from nle import nethack
 
@@ -1495,6 +1496,54 @@ class TestSpecialLevelLoader(unittest.TestCase):
             direction=map.DirectionThroughDungeon.down
         )
         self.assertIsNotNone(searcher.match_level(observed_level_map, player_location))
+
+class TestObjectIdentityDetails(unittest.TestCase):
+    global_identity_map = gd.GlobalIdentityMap()
+    def test_get_values_scroll(self):
+        identity = self.global_identity_map.identity_by_numeral[2219]
+        vals = identity.find_values('NAME', dropna=True)
+        self.assertEqual(len(vals), 21) # All potential scroll names
+        message_obj = MagicMock(message="Your hands begin to glow red.")
+        identity.process_message(message_obj, nethack.actions.Command.READ)
+        vals = identity.find_values('NAME', dropna=True)
+        self.assertEqual(vals, 'confuse monster')
+
+    def test_get_values_wand(self):
+        identity = self.global_identity_map.identity_by_numeral[2289]
+        vals = identity.find_values('NAME', dropna=True)
+        self.assertEqual(len(vals), 24) # All potential scroll names
+        message_obj = MagicMock(message="The engraving on the floor vanishes!")
+        identity.process_message(message_obj, nethack.actions.Command.ENGRAVE)
+        vals = identity.find_values('NAME', dropna=True)
+        self.assertEqual(len(vals), 3)
+
+    def test_get_values_weapon_1(self):
+        identity = gd.WeaponIdentity.identity_from_name('arrow')
+        stacked_name = identity.find_values('STACKED_NAME')
+        self.assertEqual(stacked_name, 'arrows')
+        self.assertEqual(identity.stackable, True)
+        self.assertEqual(identity.slot, 'quiver')
+        self.assertEqual(identity.is_ammo, True)
+        self.assertEqual(identity.thrown, False)
+        self.assertTrue(pd.isna(identity.thrown_from))
+        self.assertEqual(identity.ammo_type, 'arrow')
+        self.assertTrue(pd.isna(identity.ammo_type_used))
+        self.assertEqual(identity.ranged, False)
+        self.assertTrue(pd.isna(identity.skill))
+
+    def test_get_values_weapon_2(self):
+        identity = gd.WeaponIdentity.identity_from_name('long sword')
+        stacked_name = identity.find_values('STACKED_NAME')
+        self.assertTrue(pd.isna(stacked_name))
+        self.assertEqual(identity.stackable, False)
+        self.assertEqual(identity.slot, 'hand')
+        self.assertEqual(identity.is_ammo, False)
+        self.assertEqual(identity.thrown, False)
+        self.assertTrue(pd.isna(identity.thrown_from))
+        self.assertTrue(pd.isna(identity.ammo_type))
+        self.assertTrue(pd.isna(identity.ammo_type_used))
+        self.assertEqual(identity.ranged, False)
+        self.assertEqual(identity.skill, 'long sword')
 
 if __name__ == '__main__':
     unittest.main()
