@@ -428,34 +428,34 @@ class HealerHealingPotionRollout(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if character.base_class != constants.BaseRole.Healer:
             return None
+        
+        if run_state.time > 50:
+            return None
 
         if character.max_hp > 15:
             return None
 
         quaff = nethack.actions.Command.QUAFF
         extra_healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'extra healing')
-
+        if extra_healing is None:
+            return None
         menu_plan = self.make_menu_plan(extra_healing.inventory_letter)
         return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
 
 class DrinkHealingPotionWhenLow(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
-        if (character.current_hp > character.max_hp * 2/5) and character.current_hp > 10:
+        if (character.current_hp > character.max_hp * 1/2) and character.current_hp > 10:
             return None
         quaff = nethack.actions.Command.QUAFF
-        healing_potions = character.inventory.get_items(inv.Potion, instance_selector=lambda i: i.BUC != constants.BUC.cursed, identity_selector=lambda i: i.name() is not None and 'healing' in i.name())
-        best_potion = None
-        most_healing = None
-        for potion in healing_potions:
-            expected_healing = potion.expected_healing(character)
-            if expected_healing < (character.max_hp / 2):
-                if most_healing is None or expected_healing > most_healing:
-                    most_healing = expected_healing
-                    best_potion = potion
-        if best_potion is None:
-            return None
-        menu_plan = self.make_menu_plan(potion.inventory_letter)
-        return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+        extra_healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'extra healing')
+        if extra_healing is not None:
+            menu_plan = self.make_menu_plan(extra_healing.inventory_letter)
+            return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+        healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'healing')
+        if healing is not None:
+            menu_plan = self.make_menu_plan(healing.inventory_letter)
+            return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
 
 class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
