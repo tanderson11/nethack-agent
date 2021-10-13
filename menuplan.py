@@ -474,7 +474,7 @@ class InteractiveZapSpellMenu(InteractiveMenu):
         def item_selector(menu_item):
             if not self.spell_name in menu_item.spell_name:
                 return False
-            if menu_item.fail_chance > 11 or menu_item.gone:
+            if menu_item.fail_chance > 75 or menu_item.gone:
                 self.player_character.spells.remove(self.spell_name)
                 return False
             #import pdb; pdb.set_trace()
