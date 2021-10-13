@@ -1580,6 +1580,7 @@ class DropUndesirableAdvisor(Advisor):
                 menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
             ]
         )
+        print("UNDESIRABLE: ", undesirable_items)
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
 class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
@@ -1600,6 +1601,12 @@ class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
 
         #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
+
+class DropUndesirableCursedQuivered(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.quivered is not None and character.quivered.BUC == constants.BUC.cursed:
+            return None
+        return super().advice(rng, run_state, character, oracle)
 
 class BuyDesirableAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

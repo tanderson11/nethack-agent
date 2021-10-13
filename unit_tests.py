@@ -1091,6 +1091,25 @@ class TestWeaponWielding(unittest.TestCase):
         proposal = character.inventory.proposed_weapon_changes(character)
         assert proposal is None
 
+    def test_complex2(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(1916, inv.Weapon, "a spear (weapon in hand)", ord("a")),
+            ItemTestInputs(1924, inv.Weapon, "a runed dagger", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_weapon_changes(character)
+        assert proposal is None
+
 class TestArmorWearing(unittest.TestCase):
     def test_good_armor_vs_bad(self):
         character = agents.custom_agent.Character(
@@ -1335,6 +1354,7 @@ class TestDrop(unittest.TestCase):
         ItemTestInputs(1974, inv.Weapon, "a +0 yumi"): False,
         ItemTestInputs(1911, inv.Weapon, "38 +0 ya"): True,
         ItemTestInputs(2174, inv.Food, "6 food rations"): False,
+        ItemTestInputs(1914, inv.Weapon, "10 shuriken"): False
     }
 
     def test_single_items(self):

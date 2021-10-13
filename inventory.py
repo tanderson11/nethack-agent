@@ -385,9 +385,6 @@ class Weapon(Item):
             if relevant_skill == False:
                 return -1
 
-            #if self.BUC == constants.BUC.uncursed:
-            #    return -1
-
         if desperate:
             # restricted weapons not worth it even if desperate
             skill_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[self.identity.skill]]
@@ -1142,7 +1139,8 @@ class PlayerInventory():
         #import pdb; pdb.set_trace()
 
         extra_weapons = self.get_items(Weapon, instance_selector=lambda i: i.equipped_status is None or i.equipped_status.status != 'wielded')
-        extra_weapons.append(BareHands())
+        if desperate:
+            extra_weapons.append(BareHands())
         if len(extra_weapons) == 0:
             return None
 

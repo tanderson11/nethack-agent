@@ -724,8 +724,16 @@ class CustomAgent(BatchedAgent):
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         if run_state.character:
+            #old_wielded_weapon = inv.BareHands()
+            #if run_state.character.inventory is not None:
+            #    old_wielded_weapon = run_state.character.inventory.wielded_weapon
             run_state.character.update_inventory_from_observation(
-                run_state.character, blstats.am_hallu(), observation)
+                run_state.character, blstats.am_hallu(), observation
+            )
+            #new_wielded_weapon = run_state.character.inventory.wielded_weapon
+            #if isinstance(new_wielded_weapon, inv.BareHands) and not isinstance(old_wielded_weapon, inv.BareHands):
+            #    import pdb; pdb.set_trace()
+            #    pass
 
         dungeon_number = blstats.get("dungeon_number")
         level_number = blstats.get("level_number")
