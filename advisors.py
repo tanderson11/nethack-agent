@@ -1145,7 +1145,7 @@ class BlindWithCamera(Attack):
         ], listening_item=camera)
         #import pdb; pdb.set_trace()
         apply = nethack.actions.Command.APPLY
-        return Advice(self, apply, menu_plan)
+        return ActionAdvice(self, apply, menu_plan)
 
 class BlindFearfulWithCamera(BlindWithCamera):
     def targets(self, neighborhood, character):
