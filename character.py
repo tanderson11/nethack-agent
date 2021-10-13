@@ -362,9 +362,19 @@ class Character():
         6: 9,
         5: 20,
     }
+    tier_to_mazes_whitelist = [
+        constants.BaseRole.Caveperson,
+        constants.BaseRole.Barbarian,
+        constants.BaseRole.Tourist,
+        constants.BaseRole.Priest,
+        constants.BaseRole.Valkyrie
+    ]
 
     def comfortable_depth(self):
-        return self.tier_to_max_mazes_lvl.get(self.tier, 60)
+        if self.base_class in self.tier_to_mazes_whitelist:
+            return self.tier_to_max_mazes_lvl.get(self.tier, 60)
+        else:
+            return self.exp_lvl_to_max_mazes_lvl.get(self.tier, 60)
 
     def desperate_for_food(self):
         if self.hunger_state == 0:
