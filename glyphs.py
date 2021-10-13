@@ -970,8 +970,11 @@ class GemIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.thrown = False
-        self.is_ammo = True
-        self.ammo_type = "flint stone"
+        self.ammo_type = None
+        self.is_ammo = False
+        if not self.name() == 'luckstone' and not self.name() == 'loadstone':
+            self.is_ammo = True
+            self.ammo_type = "flint stone"
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]

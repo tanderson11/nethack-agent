@@ -1214,12 +1214,17 @@ class PlayerInventory():
         # shoot from your bow
         if not isinstance(self.wielded_weapon, BareHands): 
             if self.wielded_weapon.identity.ranged:
+                #print(self.quivered)
                 if self.quivered is not None and self.quivered.identity.is_ammo and self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type:
                     plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
                     return RangedPreparednessProposal(attack_plan=plan)
 
                 # quiver your arrows
-                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
+                if self.wielded_weapon.identity.name() == 'sling':
+                    matching_ammo = self.get_items(Gem, identity_selector=lambda i: i.is_ammo)
+                    #import pdb; pdb.set_trace()
+                else:
+                    matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
                 if len(matching_ammo) > 0:
                     return RangedPreparednessProposal(quiver_item=matching_ammo[0])
 
@@ -1394,7 +1399,7 @@ class PlayerInventory():
 
     @utilities.cached_property
     def quivered(self):
-        quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
+        quivered_item = self.get_item([Weapon, Gem], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
         return quivered_item
 
     def to_hit_modifiers(self, character, monster):
