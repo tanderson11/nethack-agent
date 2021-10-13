@@ -558,6 +558,8 @@ class Gem(Item):
             identity_selector=lambda i: i.ranged
         )
         if sling is not None:
+            if self.identity.name() == 'loadstone':
+                return False
             if not self.identity.name() == 'rock':
                 return True
             non_rock = character.inventory.get_item(Gem, identity_selector=lambda i: i.name() != 'rock')
