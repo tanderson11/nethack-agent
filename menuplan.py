@@ -111,34 +111,33 @@ class EndOfSequence(Exception):
     pass
 
 class TravelNavigationMenuResponse(MenuResponse):
-    @staticmethod
-    def action_generator(tty_cursor, target_square):
-        while True:
-            current_square = physics.Square(*tty_cursor) + physics.Square(-1, 0) # offset because cursor row 0 = top line
+    def generate_action(self, tty_cursor, target_square):
+        if self.exhausted:
+            return None
+        current_square = physics.Square(*tty_cursor) + physics.Square(-1, 0) # offset because cursor row 0 = top line
 
-            if current_square != target_square:
-                offset = physics.Square(*np.sign(np.array(target_square - current_square)))
-                yield physics.delta_to_action[offset]
-            else:
-                return
+        if current_square != target_square:
+            offset = physics.Square(*np.sign(np.array(target_square - current_square)))
+            return physics.delta_to_action[offset]
+        else:
+            self.exhausted = True
+            return
 
-    def __init__(self, match_str, tty_cursor, target_square):
+    def __init__(self, match_str, run_state, target_square):
+        self.run_state = run_state
+        self.target_square = target_square
+        self.exhausted = False
         super().__init__(match_str)
 
-        self.target_square = target_square
-        self.action_generator = self.action_generator(tty_cursor, target_square)
-
     def value(self, message_obj):
-        try:
-            next_action = next(self.action_generator)
-            #import pdb; pdb.set_trace()
+        next_action = self.generate_action(self.run_state.tty_cursor, self.target_square)
+        if next_action is not None:
             return next_action
-        except StopIteration:
-            if "(no travel path)" in message_obj.message or "a boulder" in message_obj.message:
-                #import pdb; pdb.set_trace()
-                return nethack.actions.Command.ESC
-            else:
-                raise EndOfSequence()
+        if "(no travel path)" in message_obj.message or "a boulder" in message_obj.message:
+            #import pdb; pdb.set_trace()
+            return nethack.actions.Command.ESC
+        else:
+            raise EndOfSequence()
 
 class ConnectedSequenceMenuResponse(MenuResponse):
     def __init__(self, match_str, sequence):
