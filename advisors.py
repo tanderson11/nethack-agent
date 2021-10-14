@@ -846,6 +846,13 @@ class EatCorpseAdvisor(Advisor):
         if oracle.am_satiated:
             return None
 
+        if run_state.neighborhood.count_monsters(
+            lambda m: character.scared_by(m) and (isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.has_active_attacks),
+            adjacent=False
+            ) > 0:
+            #import pdb; pdb.set_trace()
+            return None
+
         eat = nethack.actions.Command.EAT
 
         menu_plan = menuplan.MenuPlan(
