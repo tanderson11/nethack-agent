@@ -1,5 +1,6 @@
 import base64
 import csv
+import copy
 from dataclasses import astuple
 import os
 import re
@@ -1131,6 +1132,9 @@ class CustomAgent(BatchedAgent):
         return advice
 
     def step(self, run_state, observation, reward, done, info):
+        if environment.env.debug:
+            # Catch any bugs that depend on pointers to the observation
+            observation = copy.deepcopy(observation)
         ARS.set_active(run_state)
         if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
             raise Exception("Bad glyphs shape")
