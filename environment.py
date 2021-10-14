@@ -51,11 +51,7 @@ def make_environment(**kwargs):
         'use_seed_whitelist':(os.getenv("NLE_USE_SEED_WHITELIST") == "true"),
         'max_score':try_cast(int, os.getenv("NLE_DEV_MAX_SCORE")),
     }
-<<<<<<< HEAD
     default_environment.update({k:v for k,v in environment.items() if v is not None})
-=======
-    default_environment.update(environment)
->>>>>>> 69c7310 (Default environment.)
     default_environment.update(kwargs)
 
     return EnvironmentVariable(**default_environment)
