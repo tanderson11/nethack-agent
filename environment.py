@@ -4,6 +4,7 @@ import constants
 
 class EnvironmentVariable(NamedTuple):
     num_environments: int
+    num_runners: int
     num_episodes: int
     debug: bool
     print_seed: bool
@@ -27,6 +28,7 @@ def parse_target_roles(raw_str):
 def make_environment(**kwargs):
     default_environment = {
         'num_environments': 1,
+        'num_runners': 3,
         'num_episodes':4096, # AIcrowd will cut the assessment early duing the dev phase
         'debug': False,
         'log_runs': False,
@@ -39,6 +41,7 @@ def make_environment(**kwargs):
 
     environment = {
         'num_environments':try_cast(int, os.getenv("NLE_DEV_NUM_ENVIRONMENTS")),
+        'num_runners': try_cast(int, os.getenv("NLE_DEV_NUM_RUNNERS")),
         'num_episodes':try_cast(int, os.getenv("NLE_DEV_NUM_EPISODES")),
         'debug':(os.getenv("NLE_DEV_DEBUG") == "true"),
         'print_seed':(os.getenv("NLE_DEV_PRINT_SEED") == "true"),
