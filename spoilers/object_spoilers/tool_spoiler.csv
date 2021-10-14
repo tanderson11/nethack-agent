@@ -27,7 +27,7 @@ brass lantern,,none,2107,brass lantern,FALSE,12,30,30,1499,FALSE,,light source
 oil lamp,,none,2108,lamp,FALSE,10,20,45,1499,FALSE,,light source
 magic lamp,,desire all,2109,lamp,FALSE,50,20,15,,TRUE,,light source
 Candelabrum of Invocation,,desire all,2143,candelabrum,FALSE,5000,10,0,,TRUE,,light source
-expensive camera,,none,2110,expensive camera,FALSE,200,12,15,99,FALSE,,misc
+expensive camera,,desire all,2110,expensive camera,FALSE,200,12,15,99,FALSE,,misc
 mirror,,none,2111,looking glass,FALSE,10,13,45,,FALSE,,misc
 crystal ball,,none,2112,glass orb,FALSE,60,150,15,5,TRUE,,misc
 pair of lenses,,none,2113,pair of lenses,FALSE,80,3,5,,FALSE,,misc

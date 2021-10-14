@@ -11,7 +11,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
+from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
 import advisor_sets
 
 import menuplan
@@ -135,7 +135,7 @@ class Message():
         "An arrow shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'arrow_trap'),
         "A little dart shoots out at you!": gd.get_by_name(gd.CMapGlyph, 'dart_trap'),
         "A tower of flame erupts from the floor!": gd.get_by_name(gd.CMapGlyph, 'fire_trap'),
-        "A trapdoor in the ceiling opens and a rock falls on your head!": gd.get_by_name(gd.CMapGlyph, 'falling_rock_trap'),
+        "A trap door in the ceiling opens and a rock falls on your head!": gd.get_by_name(gd.CMapGlyph, 'falling_rock_trap'),
         "Click! You trigger a rolling boulder trap!": gd.get_by_name(gd.CMapGlyph, 'rolling_boulder_trap'),
         "A gush of water hits you": gd.get_by_name(gd.CMapGlyph, 'rust_trap'),
         "A pit opens up under you": gd.get_by_name(gd.CMapGlyph, 'pit'),
@@ -360,6 +360,7 @@ class RunState():
         self.tty_cursor_log = []
         self.actions_without_consequence = set()
 
+        self.last_non_menu_advice = None
         self.last_non_menu_action = None
         self.last_non_menu_action_timestamp = None
         self.last_non_menu_action_failed_advancement = None
@@ -415,7 +416,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'TVeT0g=='
+        #seed = b'vYIDlQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -472,6 +473,7 @@ class RunState():
         )
         self.character.set_innate_intrinsics()
         self.character.set_class_skills()
+        self.character.set_base_spells()
         self.character.make_global_identity_map()
         self.background_menu_plan.add_responses([
             menuplan.WishMenuResponse("For what do you wish?", self.character),
@@ -548,6 +550,14 @@ class RunState():
         self.neighborhood = neighborhood
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
+    
+    def report_special_fact_handled(self, fact):
+        print(f"Reporting special fact handled! {fact.name}")
+        if environment.env.debug: import pdb; pdb.set_trace()
+        player_location = self.current_square.location
+        self.neighborhood.level_map.report_special_fact_handled(player_location, fact)
+        self.current_square.special_facts = self.neighborhood.level_map.special_facts[player_location]
+        self.dmap.report_special_fact_handled(fact)
 
     def messages_since_last_input(self):
         messages = []
@@ -590,8 +600,15 @@ class RunState():
             inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
 
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
-            if self.advice_log[-1].sokoban_move.end_square == self.neighborhood.level_map.special_level.offset_in_level(physics.Square(*self.current_square.location)):
+            absolute_player_end = self.advice_log[-1].sokoban_move.end_square + self.neighborhood.level_map.special_level.initial_offset
+            absolute_boulder_end = self.advice_log[-1].sokoban_move.boulder_end + self.neighborhood.level_map.special_level.initial_offset
+            if absolute_player_end == physics.Square(*self.current_square.location):
                 self.neighborhood.level_map.sokoban_move_index += 1
+                #import pdb;pdb.set_trace()
+                self.neighborhood.level_map.sokoban_boulders[absolute_player_end] = False
+                if not self.advice_log[-1].sokoban_move.expect_plug:
+                    self.neighborhood.level_map.sokoban_boulders[absolute_boulder_end] = True
+
                 if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message) and environment.env.debug:
                     import pdb; pdb.set_trace()
                 if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
@@ -645,7 +662,7 @@ class RunState():
             return
 
         self.action_log.append(advice.action)
-
+        self.last_non_menu_advice = advice
         self.last_non_menu_action = advice.action
         self.last_non_menu_action_timestamp = self.time
         self.last_non_menu_action_failed_advancement = False
@@ -744,10 +761,13 @@ class CustomAgent(BatchedAgent):
             if run_state.character and run_state.character.held_by is not None:
                 run_state.character.held_by = None
 
+            square_facts = level_map.special_facts.get(player_location, None)
+
             new_square = CurrentSquare(
                 arrival_time=time,
                 dcoord=dcoord,
                 location=player_location,
+                special_facts=square_facts,
             )
             # If still on the same level, know what's under us
             if run_state.last_non_menu_action != nethack.actions.Command.TRAVEL and run_state.neighborhood and run_state.neighborhood.dcoord == dcoord:
@@ -771,6 +791,12 @@ class CustomAgent(BatchedAgent):
 
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
+
+        #if run_state.time % 1000 == 0:
+        #    ARS.rs.debug_env.render()
+        #    print(ARS.rs.character.inventory.wielded_weapon)
+        #    print(ARS.rs.character.tier)
+            #import pdb; pdb.set_trace()
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
@@ -811,15 +837,12 @@ class CustomAgent(BatchedAgent):
         if killed_monster_name:
             # TODO need to get better at knowing the square where the monster dies
             # currently bad at ranged attacks, confusion, and more
-            if run_state.last_non_menu_action not in [nethack.actions.Command.THROW, nethack.actions.Command.FIRE, nethack.actions.Command.ZAP, nethack.actions.Command.READ, nethack.actions.Command.TRAVEL]:
-                if run_state.character.held_by is not None:
-                    run_state.character.held_by = None
-
-                delta = physics.action_to_delta[run_state.last_non_menu_action]
-
+            if run_state.character.held_by is not None:
+                run_state.character.held_by = None
+            if isinstance(run_state.last_non_menu_advice, AttackAdvice):
                 try:
                     recorded_death = monster_messages.RecordedMonsterDeath(
-                        (player_location[0] + delta[0], player_location[1] + delta[1]),
+                        run_state.last_non_menu_advice.target.absolute_position,
                         time,
                         killed_monster_name
                     )
@@ -877,9 +900,14 @@ class CustomAgent(BatchedAgent):
                 import pdb; pdb.set_trace()
             level_map.embedded_object_map[target_location] = True
 
-        update_visits = len(run_state.advice_log) == 0 or not isinstance(run_state.advice_log[-1], advs.MenuAdvice)
-        level_map.update(changed_level, time, player_location, observation['glyphs'], update_visits=update_visits)
-        level_map.listen_for_special_engraving(player_location, message.message)
+        #if "Some text has been burned into the floor here" in message.message:
+        #    import pdb; pdb.set_trace()
+
+        last_action_menu = len(run_state.advice_log) != 0 and isinstance(run_state.advice_log[-1], advs.MenuAdvice)
+        level_map.update(changed_level, time, player_location, observation['glyphs'], last_action_menu=last_action_menu)
+        special_facts = level_map.listen_for_special_engraving(player_location, message.message)
+        if special_facts is not None:
+            run_state.current_square.special_facts = special_facts
 
         if "Something is written here in the dust" in message.message:
             if level_map.visits_count_map[player_location] == 1:
@@ -890,6 +918,9 @@ class CustomAgent(BatchedAgent):
 
         if " tastes " in message.message or "finish eating" in message.message:
             print(message.message)
+
+        #if "frozen by" in message.message:
+        #    import pdb; pdb.set_trace()
 
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)

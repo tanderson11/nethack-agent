@@ -23,6 +23,7 @@ import inventory
 class Targets(NamedTuple):
     monsters: list
     directions: list
+    absolute_positions: list
 
 @dataclass
 class CurrentSquare:
@@ -33,6 +34,7 @@ class CurrentSquare:
     stack_on_square: bool = False
     item_on_square: inventory.Item = None
     failed_moves_on_square: List[int] = field(default_factory=list)
+    special_facts: list = None
 
 class ViewField(enum.Enum):
     Local = enum.auto()
@@ -117,8 +119,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             level_map.embedded_object_map,
             ViewField.Extended
         )
-
-        extended_walkable_tile = gd.walkable(extended_visible_raw_glyphs)
+        dungeon_features = self.zoom_glyph_alike(self.level_map.dungeon_feature_map, ViewField.Extended)
+        extended_walkable_tile = np.where(
+            dungeon_features != 0,
+            gd.walkable(dungeon_features),
+            False
+        )
         extended_walkable_tile &= ~self.extended_embeds
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
 
@@ -126,23 +132,35 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             level_map.boulder_map,
             ViewField.Extended
         )
+        self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
-        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value)
+
+        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
+        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
+        if self.level_map.dcoord.branch == map.Branches.Sokoban:
+            extended_is_monster[self.obvious_mimics] = True
+
+        imprudent = extended_nasty_traps | (extended_special_rooms == constants.SpecialRoomTypes.vault_closet.value) | self.obvious_mimics | extended_is_monster
         if level_map.dcoord.branch == map.Branches.Sokoban:
             imprudent |= self.extended_boulders
         prudent_walkable = extended_walkable_tile & ~imprudent
         if extended_nasty_traps.any():
             #import pdb; pdb.set_trace()
             pass
-
-        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
-        extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
-
-        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
+        self.extended_walkable = extended_walkable_tile
+        self.imprudent = imprudent
 
         self.extended_is_monster = extended_is_monster
-        extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), monsters)
-        extended_is_dangerous_monster[player_location_in_extended] = False
+        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
+
+        #extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), monsters)
+        extended_is_dangerous_monster = utilities.vectorized_map(
+            lambda g: isinstance(g, gd.MonsterGlyph) and character.fearful_tier(g.monster_spoiler.tier),
+            monsters
+        )
+        #if extended_is_dangerous_monster.any():
+            #import pdb; pdb.set_trace()
+        #    pass
         self.extended_is_dangerous_monster = extended_is_dangerous_monster
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
         self.extended_possible_secret_mask = self.zoom_glyph_alike(self.level_map.possible_secrets, ViewField.Extended)
@@ -183,31 +201,26 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.is_monster = (self.extended_is_hostile_monster)[neighborhood_view]
         self.n_adjacent_monsters = np.count_nonzero(self.is_monster)
 
+        #floating_eyes = gd.MonsterGlyph.floating_eye_mask(self.raw_glyphs)
+        #if floating_eyes.any():
+        #    import pdb; pdb.set_trace()
+
         self.local_possible_secret_mask = self.extended_possible_secret_mask[neighborhood_view]
-
-        walkable_tile = prudent_walkable[neighborhood_view].copy()
-
-        # in the narrow sense
-        self.walkable = walkable_tile
-        self.walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
+        self.local_walkable_feature = self.extended_walkable[neighborhood_view]
+        self.local_prudent_walkable = prudent_walkable[neighborhood_view].copy()
+        self.local_prudent_walkable &= ~(self.diagonal_moves & is_open_door) & ~(self.diagonal_moves & on_doorway) # don't move diagonally into open doors
 
         if level_map.dcoord.branch == map.Branches.Sokoban:
             # Corrections to what is moveable in Sokoban
-            self.walkable &= ~(self.diagonal_moves)
+            self.local_prudent_walkable &= ~(self.diagonal_moves)
 
         for f in current_square.failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f)
             try:
-                self.walkable[failed_target] = False
+                self.local_prudent_walkable[failed_target] = False
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
-
-        # we're not calculating the true walkable mesh in extended vision, but we can at least add our local calculation
-        # to help with pathfinding (which depends on an extended walkable mesh)
-        #extended_walkable_tile[neighborhood_view] = self.walkable
-        self.extended_walkable = extended_walkable_tile
-        self.imprudent = imprudent
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
@@ -315,6 +328,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def path_invisible_monster(self):
         invisible_monsters = gd.InvisibleGlyph.class_mask(self.vision_glyphs)
         return self.path_to_targets(invisible_monsters, target_monsters=True)
+    
+    def path_obvious_mimics(self):
+        return self.path_to_targets(self.obvious_mimics, target_monsters=True)
 
     def path_next_sokoban_square(self):
         sokoban_square = self.level_map.special_level.sokoban_solution[self.level_map.sokoban_move_index].start_square
@@ -370,15 +386,15 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # Consider the 8-location square surrounding the player
         # We define a dead end as a situation where a single edge holds all
         # the walkable locations
-        walkable_count = np.count_nonzero(self.walkable)
+        walkable_count = np.count_nonzero(self.local_walkable_feature)
         if walkable_count > 3:
             return False
         elif walkable_count > 1:
             edge_counts = [
-                np.count_nonzero(self.walkable[0,:]),
-                np.count_nonzero(self.walkable[-1,:]),
-                np.count_nonzero(self.walkable[:,0]),
-                np.count_nonzero(self.walkable[:,-1]),
+                np.count_nonzero(self.local_walkable_feature[0,:]),
+                np.count_nonzero(self.local_walkable_feature[-1,:]),
+                np.count_nonzero(self.local_walkable_feature[:,0]),
+                np.count_nonzero(self.local_walkable_feature[:,-1]),
             ]
             if not walkable_count in edge_counts: # i.e. if no edge holds all of them
                 return False
@@ -394,13 +410,16 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return True
         return False
 
-    def safe_detonation(self, monster, monster_square):
+    def safe_detonation(self, monster, monster_square, source_type="local"):
         if not isinstance(monster, gd.MonsterGlyph):
             return True
         if not monster.has_death_throes:
             return True
-
-        source_square = monster_square + self.player_location_in_extended - self.local_player_location
+        #import pdb; pdb.set_trace()
+        if source_type == 'local':
+            source_square = monster_square + self.player_location_in_extended - self.local_player_location
+        elif source_type == 'extended':
+            source_square = monster_square
         adjacent_to_mon_rows, adjacent_to_mon_cols = utilities.rectangle_defined_by_corners(source_square+physics.Square(-1, -1),source_square+physics.Square(1, 1))
         adjacent_to_mon_glyphs = self.vision_glyphs[adjacent_to_mon_rows, adjacent_to_mon_cols]
         if np.count_nonzero(gd.PetGlyph.class_mask(adjacent_to_mon_glyphs) | gd.MonsterGlyph.always_peaceful_mask(adjacent_to_mon_glyphs)) > 0:
@@ -411,10 +430,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         
         return True
 
-    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False):
+    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True):
         if attack_range.type == 'melee':
             satisfying_monsters = []
             satisfying_directions = []
+            absolute_positions = []
             for i, monster in enumerate(self.adjacent_monsters):
                 monster_square = physics.Square(self.adjacent_monsters_idx[0][i], self.adjacent_monsters_idx[1][i])
                 #if monster_selector(monster): import pdb; pdb.set_trace()
@@ -422,27 +442,30 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                     satisfying_monsters.append(monster)
                     direction = self.action_grid[monster_square]
                     satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.local_player_location)
 
             if len(satisfying_directions) == 0: return None
             #import pdb; pdb.set_trace()
-            return Targets(satisfying_monsters, satisfying_directions)
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
         else:
             satisfying_monsters = []
             satisfying_directions = []
+            absolute_positions = []
             player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
             player_mask[self.player_location_in_extended] = True
-            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=True, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
+            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=include_adjacent, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
             for i, monster in enumerate(self.monsters):
                 monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
-                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
+                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square, source_type='extended')):
                     satisfying_monsters.append(monster)
                     offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
                     direction = physics.delta_to_action[offset]
                     satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.player_location_in_extended)
 
             if len(satisfying_directions) == 0: return None
             #import pdb; pdb.set_trace()
-            return Targets(satisfying_monsters, satisfying_directions)
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
 class Pathfinder(AStar):
     def __init__(self, walkable_mesh, doors, diagonal=True):

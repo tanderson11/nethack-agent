@@ -3,7 +3,9 @@ from typing import NamedTuple, Tuple
 
 import pandas as pd
 import numpy as np
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+
+import nle.nethack as nethack
 
 import constants
 import environment
@@ -27,11 +29,14 @@ class Character():
     AC: int = None
     current_hp: int = None
     max_hp: int = None
+    current_energy: int = None
     inventory: inv.PlayerInventory = None
     attributes: constants.Attributes = None
     last_pray_time: Optional[int] = None
     last_pray_reason: Optional[str] = None
     experience_level: int = 1
+    tier: int = 9
+    role_tier_mod: int = 0
     class_skills: pd.Series = None
     relevant_skills: pd.Series = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
@@ -44,13 +49,21 @@ class Character():
     executing_ranged_plan: bool = False
     gold: int = 0
     hunger_state: int = 1
+    encumberance: int = 0
     global_identity_map: gd.GlobalIdentityMap = None
     queued_wish_name: tuple = None
     wish_in_progress: tuple = None
+    blinding_attempts: dict = field(default_factory=dict)
+    spells: list =  field(default_factory=list)
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
+        self.set_role_tier_mod()
+
+    def set_base_spells(self):
+        if self.base_class == constants.BaseRole.Wizard:
+            self.spells = ['force bolt']
 
     def make_global_identity_map(self):
         self.global_identity_map = gd.GlobalIdentityMap(self.base_class == constants.BaseRole.Priest)
@@ -104,6 +117,37 @@ class Character():
         long_sword = self.inventory.get_item(inv.Weapon, name='long sword', instance_selector=lambda i: not i.identity.is_artifact)
         return long_sword is not None
 
+    def set_role_tier_mod(self):
+        if self.base_class == constants.BaseRole.Tourist or self.base_class == constants.BaseRole.Healer: self.role_tier_mod = 2
+        elif self.base_class == constants.BaseRole.Wizard or self.base_class == constants.BaseRole.Rogue or self.base_class == constants.BaseRole.Archeologist: self.role_tier_mod = 1
+        elif self.base_class == constants.BaseRole.Valkyrie or self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai or self.base_class == constants.BaseRole.Barbarian: self.role_tier_mod = -1
+
+    def calculate_tier(self):
+        AC_mod = min(((10 - self.AC) // 5)/2, 5)
+        HP_mod = min((self.max_hp // 18)/2, 2.5)
+        if self.attributes.strength < 18: strength_mod = 0
+        elif self.attributes.strength == 18 and self.attributes.strength_pct < 51: strength_mod = 0.5
+        else: strength_mod = 1.0
+
+        if self.attributes.dexterity_to_hit(self.attributes.dexterity) < 0: dex_mod = -0.5
+        elif self.attributes.dexterity_to_hit(self.attributes.dexterity) >= 2: dex_mod = 0.5
+        else: dex_mod = 0.0
+
+        weapon_mod = 0
+        if self.inventory is not None:
+            if self.inventory.wielded_weapon.melee_damage(self, None) > 5: weapon_mod += 0.5
+            if self.inventory.wielded_weapon.melee_damage(self, None) > 10: weapon_mod += 0.5
+            if not self.inventory.wielded_weapon.uses_relevant_skill(self): weapon_mod -= 0.5
+
+        speed_mod = 0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
+        #import pdb; pdb.set_trace()
+        return min(10, np.ceil(10 - AC_mod - HP_mod - speed_mod - strength_mod - weapon_mod - dex_mod))
+
+    def fearful_tier(self, tier):
+        if tier < 0: return False
+        #import pdb; pdb.set_trace()
+        return tier < self.tier
+
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
         self.experience_level = blstats.get('experience_level')
@@ -137,11 +181,20 @@ class Character():
         if old_hunger_state != blstats.get('hunger_state'):
             self.hunger_state = blstats.get('hunger_state')
 
+        old_encumberance = self.encumberance
+        if old_encumberance != blstats.get('encumberance'):
+            self.encumberance = blstats.get('encumberance')
+
+        old_energy = self.current_energy
+        if old_energy != blstats.get('energy'):
+            self.current_energy = blstats.get('energy')
+
+        self.tier = self.calculate_tier()
+
     def want_less_weight(self):
         if self.near_burdened or self.carrying_too_much_for_diagonal:
             return True
-
-        return False
+        return self.encumberance > 0
 
     def clear_weight_knowledge(self):
         self.near_burdened = False
@@ -158,6 +211,8 @@ class Character():
             self.update_held_by_from_message(message_text, time)
         except Exception as e:
             print(f"Exception while finding holding monster. Are we hallu? {e}")
+
+        self.garbage_collect_camera_shots(time)
 
     def update_held_by_from_message(self, message_text, time):
         monster_name = None
@@ -265,15 +320,29 @@ class Character():
 
         return False
 
+    def attempted_to_blind(self, monster, time):
+        self.blinding_attempts[monster] = time
+        print(self.blinding_attempts)
+
+    def garbage_collect_camera_shots(self, time):
+        self.blinding_attempts = {k:v for k,v in self.blinding_attempts.items() if v >= time - 10}
+
     def scared_by(self, monster):
         if not isinstance(monster, gd.MonsterGlyph):
             return False
 
         spoiler = monster.monster_spoiler
-        if self.melee_prioritize_monster_beyond_damage(spoiler):
-            return True
+        return self.fearful_tier(spoiler.tier)
+    
+    unsafe_hp_loss = 0.5
+    def death_by_passive(self, spoiler):
+        trajectory = self.average_time_to_kill_monster_in_melee(spoiler)
+        return spoiler.passive_damage_over_encounter(spoiler, trajectory) + spoiler.death_damage_over_encounter(spoiler) > self.unsafe_hp_loss * self.current_hp
 
-        return False
+    #def threatened_by(self, monster):
+    #    if not isinstance(monster, gd.MonsterGlyph):
+    #        return False
+    #    return monster.monster_spoiler()
 
     exp_lvl_to_max_mazes_lvl = {
         1: 1,
@@ -428,3 +497,30 @@ class Character():
             #pdb.set_trace()
 
         return pd.DataFrame(danger_rows, columns=columns)
+
+    def get_ranged_attack(self, preference):
+        if preference.includes(constants.RangedAttackPreference.wand):
+            wand_attack = self.inventory.get_wand_attack(preference)
+            if wand_attack is not None:
+                return wand_attack
+        if preference.includes(constants.RangedAttackPreference.spell):
+            spell_attack = self.get_spell_attack(preference)
+            if spell_attack is not None:
+                return spell_attack
+        return self.inventory.get_ranged_weapon_attack(preference)
+    
+    def get_spell_attack(self, preference):
+        if self.current_energy is None or self.current_energy < 5:
+                return None
+        if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
+            attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
+            proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
+            return proposal
+        return None
+
+    def prefer_ranged(self):
+        if not self.inventory.wielded_weapon.uses_relevant_skill(self):
+            return True
+        if self.base_class == constants.BaseRole.Tourist and self.current_hp < 30:
+            return True
+        return False

@@ -68,6 +68,13 @@ class DMap():
         self.branch_connections = {}
         self.oracle_level = None
         self.special_level_searcher = SpecialLevelSearcher(ALL_SPECIAL_LEVELS)
+        self.handled_facts = {}
+
+    def report_special_fact_handled(self, fact):
+        self.handled_facts[fact.name] = True
+        if fact.name == 'sokoban_prize':
+            #import pdb; pdb.set_trace()
+            self.target_dcoords.pop(Branches.Sokoban)
 
     def update_target_dcoords(self, character):
         new_targets = {}
@@ -258,7 +265,9 @@ class DLevelMap():
         self.edible_corpse_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.lootable_squares_map = np.full(constants.GLYPHS_SHAPE, True, dtype='bool')
         self.boulder_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.obvious_mimics = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.fountain_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
+        self.altar_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.travel_attempt_count_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
         self.exhausted_travel_map = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
         self.traps_to_avoid = np.full(constants.GLYPHS_SHAPE, False, dtype='bool')
@@ -267,6 +276,7 @@ class DLevelMap():
         self.staircases = {}
         self.edible_corpse_dict = defaultdict(list)
         self.warning_engravings = {}
+        self.special_facts = {}
 
     def record_edible_corpse(self, square, time, monster_glyph):
         self.edible_corpse_dict[square].append(TimedCorpse(time=time, monster_glyph=monster_glyph))
@@ -315,14 +325,17 @@ class DLevelMap():
             print(f"Found a branch at {self.dcoord}")
             self.downstairs_target = self.downstairs_count
     
-    def update(self, changed_level, time, player_location, glyphs, update_visits=True):
-        self.recent_glyphs = glyphs
+    def update(self, changed_level, time, player_location, glyphs, last_action_menu=False):
+
         if changed_level:
             self.time_of_recent_arrival = time
 
         self.dungeon_feature_map = self.glyphs_to_dungeon_features(glyphs, self.dungeon_feature_map)
 
         self.boulder_map = (glyphs == gd.RockGlyph.OFFSET)
+        self.obvious_mimics = gd.RandomClassGlyph.class_mask(glyphs)
+        if self.dcoord.branch == Branches.Sokoban and self.special_level is not None:
+            self.obvious_mimics |= ~self.sokoban_boulders & self.boulder_map
 
         # Basic terrain types
 
@@ -341,6 +354,7 @@ class DLevelMap():
         if self.special_level:
             self.traps_to_avoid |= self.special_level.traps_to_avoid
         self.fountain_map = (offsets == 31)
+        self.altar_map = (offsets == 27)
 
         # Solid stone and fog of war both show up here
         self.fog_of_war = (offsets == 0)
@@ -363,8 +377,11 @@ class DLevelMap():
             self.time_of_new_square = time
         if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
             import pdb; pdb.set_trace()
-        if update_visits:
+        if self.visits_count_map[self.player_location] == 0:
             self.visits_count_map[self.player_location] += 1
+        else:
+            if last_action_menu is False:
+                self.visits_count_map[self.player_location] += 1
         self.player_location_mask[old_player_location] = False
         self.player_location_mask[player_location] = True
 
@@ -399,6 +416,7 @@ class DLevelMap():
                 self.diggable_floor = self.special_level.diggable_floor
                 self.teleportable = self.special_level.teleportable
                 if self.special_level.branch == Branches.Sokoban:
+                    self.sokoban_boulders = self.special_level.initial_boulders
                     self.sokoban_move_index = 0
                     self.solved = False
 
@@ -509,9 +527,25 @@ class DLevelMap():
     def listen_for_special_engraving(self, player_location, message):
         if self.special_level is None:
             return None
-        if self.visits_count_map[player_location] == 1 and "Some text has been burned into the floor here." in message:
-            import pdb; pdb.set_trace()
-            pass
+        if self.special_level.special_engravings is None:
+            return None
+        if self.visits_count_map[player_location] != 1:
+            return None
+        for engraving,fact_name in self.special_level.special_engravings.items():
+            if engraving not in message:
+                continue
+            #import pdb; pdb.set_trace()
+            facts = SPECIAL_FACTS[fact_name]
+            self.add_special_facts(player_location, facts)
+            return facts
+
+    def report_special_fact_handled(self, player_location, fact):
+        self.special_facts[player_location].remove(fact)
+        if len(self.special_facts[player_location]) == 0:
+            self.special_facts[player_location] = None
+
+    def add_special_facts(self, location, facts):
+        self.special_facts[location] = facts
 
 class FloodMap():
     @staticmethod
@@ -592,7 +626,7 @@ class ThreatMap(FloodMap):
 
                 is_invis = isinstance(glyph, gd.InvisibleGlyph)
                 if isinstance(glyph, gd.MonsterGlyph) or is_invis:
-                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.always_peaceful): # always peaceful monsters don't need to threaten
+                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.single_always_peaceful()): # always peaceful monsters don't need to threaten
                         ### SHARED ###
                         can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.raw_glyph_grid)
                         ###
@@ -776,6 +810,7 @@ class SpecialLevelMap():
     potential_wall_decoder = PotentialWallDecoder()
     potential_secret_door_decoder = PotentialSecretDoorDecoder()
     traps_to_avoid_decoder = TrapsToAvoidDecoder()
+    boulder_decoder = BoulderDecoder()
     unobserved_decoder = UnobservedDecoder()
 
     def __repr__(self) -> str:
@@ -790,6 +825,11 @@ class SpecialLevelMap():
         self.max_branch_level = config_data['max_branch_level']
         self.teleportable = config_data['properties']['teleportable']
         self.diggable_floor = config_data['properties']['diggable_floor']
+        try:
+            self.special_engravings = config_data['special_engravings']
+            print(self.special_engravings)
+        except KeyError:
+            self.special_engravings = None
         self.initial_offset = physics.Square(*initial_offset)
 
         self.nethack_wiki_encoding = nethack_wiki_encoding
@@ -812,6 +852,7 @@ class SpecialLevelMap():
         if self.branch == Branches.Sokoban:
             self.sokoban_solution = SOKOBAN_SOLUTIONS[(self.level_name, self.level_variant)]
             self.traps_to_avoid = np.full_like(self.traps_to_avoid, False, dtype=bool)
+            self.initial_boulders = self.boulder_decoder.decode(nethack_wiki_encoding)
 
     def offset_in_level(self, absolute):
         return absolute - self.initial_offset
@@ -854,6 +895,7 @@ class SpecialLevelSearcher():
 
             if np.count_nonzero(wall_hits) > 8:
                 print(f"{verbose_message} -- HIT")
+                #import pdb; pdb.set_trace()
                 self.level_found[possible_match.level_name] = True
                 return possible_match
             else:
@@ -945,6 +987,23 @@ class SpecialLevelLoader():
             offset_y += 1
 
         return retval
+
+class SpecialFact():
+    def __init__(self, name) -> None:
+        self.name = name
+
+class SingleItemFact(NamedTuple):
+    item_class: type
+    item_name: str
+
+class StackFact(SpecialFact):
+    def __init__(self, name, items) -> None:
+        super().__init__(name)
+        self.items = items
+
+SPECIAL_FACTS = {
+    "sokoban_prize": [StackFact("sokoban_prize", [SingleItemFact(inventory.Tool, "bag of holding"), SingleItemFact(inventory.Amulet, "amulet of reflection")])],
+}
 
 ALL_SPECIAL_LEVELS = [
     SpecialLevelLoader.load('sokoban_1a'),

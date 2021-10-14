@@ -10,6 +10,23 @@ class SpecialRoomTypes(enum.Enum):
     shop = 1
     vault_closet = 2
 
+class RangedAttackPreference(enum.Flag):
+    wand = enum.auto()
+    spell = enum.auto()
+    death = enum.auto()
+    striking = enum.auto()
+    sleep = enum.auto()
+    setup = enum.auto()
+    strong = enum.auto()
+    adjacent = enum.auto()
+
+    def includes(self, flag):
+        return self & flag == flag
+
+ranged_default = ~RangedAttackPreference.wand & ~RangedAttackPreference.adjacent
+#ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
+ranged_powerful = ~RangedAttackPreference.death & ~RangedAttackPreference.adjacent
+
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
     desire_all_uncursed = "desire all uncursed"
@@ -61,7 +78,7 @@ CLASS_SKILLS = pd.read_csv(os.path.join(os.path.dirname(__file__), "spoilers", "
 CLASS_SKILLS = CLASS_SKILLS.set_index("SKILL")
 
 best_skills_by_class = {
-    BaseRole.Archeologist: 'pick-axe',
+    BaseRole.Archeologist: 'saber',
     BaseRole.Barbarian: 'axe',
     BaseRole.Caveperson: 'spear',
     BaseRole.Healer: 'quarterstaff',

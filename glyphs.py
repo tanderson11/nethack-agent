@@ -160,19 +160,25 @@ class MonsterGlyph(MonsterAlikeGlyph):
             self.has_death_throes = self.monster_spoiler.death_attack_bundle.num_attacks > 0
 
         self.is_shopkeeper = self.offset == 267
-        
-        self.always_peaceful = False
-        if self.is_shopkeeper or self.offset in [270, 278, 279]: # oracle shopkeeper and watch people
-            self.always_peaceful = True
 
+    @staticmethod
     def shopkeeper_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 267)
 
+    @staticmethod
     def gas_spore_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 27)
 
+    @staticmethod
+    def floating_eye_mask(numerals):
+        return (numerals == nethack.GLYPH_MON_OFF + 28)
+
+    @staticmethod
     def always_peaceful_mask(numerals):
         return (numerals == nethack.GLYPH_MON_OFF + 267) | (numerals  == nethack.GLYPH_MON_OFF + 270) | ((numerals > (nethack.GLYPH_MON_OFF + 277)) & (numerals < (280 + nethack.GLYPH_MON_OFF)))
+
+    def single_always_peaceful(self):
+        return self.always_peaceful_mask(np.array([self.numeral])).all()
 
 class ObjectGlyph(Glyph):
     OFFSET = nethack.GLYPH_OBJ_OFF # kept around so that ObjectGlyph.numerals() gives all object glyphs
@@ -1333,7 +1339,7 @@ class GlobalIdentityMap():
                     if isinstance(other_identity.idx, pd.Index):
                         other_identity.idx = other_identity.idx.drop(data_idx)
                         #import pdb; pdb.set_trace()
-                        if len(other_identity.idx) == 0:
+                        if len(other_identity.idx) == 0 and environment.env.debug:
                             import pdb; pdb.set_trace()
 
 #####################

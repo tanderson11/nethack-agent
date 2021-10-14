@@ -1054,7 +1054,7 @@ def make_inventory(global_identity_map, inventory_inputs):
     return inventory
 
 class TestWeaponWielding(unittest.TestCase):
-    def test_good_armor_vs_bad(self):
+    def test_tin_opener(self):
         character = agents.custom_agent.Character(
             base_class=constants.BaseRole.Tourist,
             base_race=constants.BaseRace.human,
@@ -1064,13 +1064,33 @@ class TestWeaponWielding(unittest.TestCase):
         character.set_class_skills()
 
         inventory = [
-            ItemTestInputs(2120, inv.Armor, "an uncursed tin opener (weapon in hand)", ord("a")),
+            ItemTestInputs(2120, inv.Tool, "an uncursed tin opener (weapon in hand)", ord("a")),
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
 
         proposal = character.inventory.proposed_weapon_changes(character)
         self.assertEqual(chr(proposal.inventory_letter), '-')
+
+    def test_complex(self):
+        return True
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Archeologist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(1939, inv.Weapon, "a curved sword (weapon in hand)", ord("a")),
+            ItemTestInputs(1923, inv.Weapon, "a dagger (at the ready)", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_weapon_changes(character)
+        assert proposal is None
 
 class TestArmorWearing(unittest.TestCase):
     def test_good_armor_vs_bad(self):
@@ -1085,6 +1105,27 @@ class TestArmorWearing(unittest.TestCase):
         inventory = [
             ItemTestInputs(2020, inv.Armor, "an uncursed +0 leather jacket (being worn)", ord("a")),
             ItemTestInputs(2012, inv.Armor, "an elven mithril-coat", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+
+        proposal = character.inventory.proposed_attire_changes(character)
+        self.assertEqual(len(proposal.proposed_items), 1)
+        self.assertEqual(len(proposal.proposal_blockers[0]), 1)
+
+    def test_medium_unoccupied_armor(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Wizard,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2033, inv.Armor, "a blessed +0 cloak of magic resistance (being worn)", ord("a")),
+            ItemTestInputs(1978, inv.Armor, "a blessed +0 orcish helm (being worn)", ord("b")),
+            ItemTestInputs(2015, inv.Armor, "a scale mail", ord("c")),
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
@@ -1134,8 +1175,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
-
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "a")
 
         inventory = [
@@ -1145,7 +1186,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "b")
 
         inventory = [
@@ -1156,7 +1198,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
     def test_throw(self):
@@ -1176,7 +1219,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "c")
 
         inventory = [
@@ -1188,7 +1232,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
     def test_many(self):
@@ -1210,7 +1255,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "b")
 
     def test_dont_throw_wielded(self):
@@ -1228,7 +1274,8 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal, None)
 
         inventory = [
@@ -1240,7 +1287,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
 
@@ -1264,7 +1312,8 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        ranged_proposal = character.inventory.get_ordinary_ranged_attack(character)
+        preference = constants.ranged_default
+        ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.THROW)
 
 class TestDrop(unittest.TestCase):

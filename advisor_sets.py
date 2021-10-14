@@ -6,6 +6,8 @@ new_advisors = [
     NameItemAdvisor(),
     NameWishItemAdvisor(),
     EnhanceSkillsAdvisor(),
+    # SPECIAL TIME SENSITIVE OPERATIONS
+    SpecialItemFactAdvisor(),
     # STONING ILL ETC
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.deadly_condition),
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
@@ -35,6 +37,8 @@ new_advisors = [
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
+        BlindFearfulWithCamera(),
+        MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
     ]),
@@ -44,7 +48,7 @@ new_advisors = [
         #RandomMoveAdvisor(),
     }),
     PassiveMonsterRangedAttackAdvisor(),
-    RangedAttackNuisanceMonsters(),
+    RangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
@@ -95,10 +99,11 @@ new_advisors = [
         UnblockedWardrobeChangesAdvisor(),
         EngraveTestWandsAdvisor(),
         ]),
-    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.low_hp and not (o.am_threatened or o.recently_damaged), advisors=[
+    SequentialCompositeAdvisor(oracle_consultation=lambda o: o.low_hp and not (o.am_threatened), advisors=[
         PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop and o.character.desperate_for_food()),
-        WaitAdvisor(),
+        WaitForHPAdvisor(),
     ]),
+    PathfindObivousMimicsSokoban(),
     PathfindInvisibleMonstersSokoban(),
     RangedAttackInvisibleInSokoban(),
     SolveSokoban(),

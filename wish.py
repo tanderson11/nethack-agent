@@ -59,7 +59,7 @@ def get_wish(character, wand=None):
             continue
         
         if wishlist_line.alternate is not None:
-            alternate_item_in_inventory = character.inventory.get_item(wishlist_line.alternate.type, wishlist_line.alternate.name)
+            alternate_item_in_inventory = character.inventory.get_item(wishlist_line.alternate.type, name=wishlist_line.alternate.name)
             if alternate_item_in_inventory is not None:
                 continue
 

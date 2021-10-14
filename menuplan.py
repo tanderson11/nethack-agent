@@ -190,6 +190,31 @@ class WishMenuResponse(MenuResponse):
             self.last_wish = None
             return ord('\r')
 
+class SpecialItemPickupResponse(MenuResponse):
+    def __init__(self, character, items):
+        self.character = character
+        self.items = items
+
+    def value(self, message_obj, expect_getline=True):
+        return ord(' ')
+
+    def action_message(self, message_obj):
+        try:
+            item = inv.ItemParser.make_item_with_string(self.character.global_identity_map, message_obj.message[4:-1])
+        except:
+            item = None
+        if item is not None:
+            self.character.inventory.all_items()
+            real_version = self.character.inventory.items_by_letter[ord(message_obj.message[0])]
+            for i in self.items:
+                if isinstance(real_version, i.item_class):
+                    name = i.item_name
+                    break
+            #import pdb; pdb.set_trace()
+            real_version.identity.give_name(name)
+        val = self.value(message_obj)
+        return val
+
 class WishMoreMenuResponse(MenuResponse):
     def __init__(self, character):
         self.character = character
@@ -422,6 +447,39 @@ class InteractiveMenu():
 class InteractiveLocationPickerMenu(InteractiveMenu):
     pass
 
+class InteractiveZapSpellMenu(InteractiveMenu):
+    header_rows = 3
+    trigger_action = None
+    trigger_phrase = 'Choose which spell to cast'
+
+    class MenuItem:
+        spell_pattern = re.compile('([a-zA-Z ]+?) +[0-9].+?([0-9]+)\% +(\(gone\)|([0-9]+)\%\-?([0-9]+)\%)')
+        def __init__(self, ambient_menu, category, character, selected, item_text):
+            self.selected = selected
+            self.character = character
+            self.item_text = item_text
+            spell_match = re.match(self.spell_pattern, item_text)
+            self.spell_name = ''
+            if spell_match is not None:
+                self.spell_name = spell_match[1]
+                self.fail_chance = int(spell_match[2])
+                self.gone = 'gone' in spell_match[3]
+
+            #import pdb; pdb.set_trace()
+
+    def __init__(self, player_character, spell_name):
+        self.player_character = player_character
+        self.spell_name = spell_name
+        def item_selector(menu_item):
+            if not self.spell_name in menu_item.spell_name:
+                return False
+            if menu_item.fail_chance > 75 or menu_item.gone:
+                self.player_character.spells.remove(self.spell_name)
+                return False
+            #import pdb; pdb.set_trace()
+            return True
+        super().__init__(selector_name=None)
+
 class InteractiveValidPlacementMenu(InteractiveLocationPickerMenu):
     header_rows = 2
     trigger_action = None
@@ -511,6 +569,24 @@ class InteractivePickupMenu(ParsingInventoryMenu):
     trigger_action = None
     trigger_phrase = "Pick up what?"
     multi_select = True
+
+class SpecialItemPickupMenu(ParsingInventoryMenu):
+    first_page_header_rows = 2
+    trigger_action = None
+    trigger_phrase = "Pick up what?"
+    multi_select = True
+
+    def __init__(self, player_character, items):
+        super().__init__(player_character)
+        def selector(menu_item):
+            #import pdb; pdb.set_trace()
+            if menu_item.item is None:
+                return False
+            for i in items:
+                if isinstance(menu_item.item, i.item_class):
+                    return True
+            return False
+        self.item_selector = selector
 
 class InteractivePlayerInventoryMenu(ParsingInventoryMenu):
     def __init__(self, player_character, inventory, selector_name=None, desired_letter=None):
