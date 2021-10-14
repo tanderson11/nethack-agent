@@ -25,9 +25,7 @@ import parse_ttyrec
 class RolloutResults(NamedTuple):
     ascensions: int
     scores: List[int]
-    median_score: int
-    mean_score: int
-    log_path: str
+    log_paths: str
 
 def evaluate(id, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=None):
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
