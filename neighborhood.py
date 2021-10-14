@@ -309,6 +309,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return self.path_to_targets(weak_monsters, target_monsters=True)
 
+    def path_to_tactical_square(self):
+        tactical_squares = gd.CMapGlyph.tactical_square_mask(self.vision_glyphs)
+        return self.path_to_targets(tactical_squares)
+
     def desirable_object_on_space(self, character):
         item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
 
@@ -381,6 +385,19 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.adjacent_monsters = self.glyphs[self.is_monster]
         
         #import pdb; pdb.set_trace()
+    
+    def count_monsters(self, selector, adjacent=True):
+        if adjacent:
+            count = 0
+            for m in self.adjacent_monsters:
+                if selector(m):
+                    count += 1
+            return count
+        count = 0
+        for m in self.monsters:
+            if selector(m):
+                count += 1
+        return count
 
     def at_dead_end(self):
         # Consider the 8-location square surrounding the player

@@ -31,6 +31,7 @@ new_advisors = [
     #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
     # IN GNOMISH MINES
     TakeStaircaseAdvisor(),
+    PathfindTactical(),
     # COMBAT
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
@@ -43,12 +44,8 @@ new_advisors = [
         MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
+        SafeMeleeAttackAdvisor(),
     ]),
-    RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
-        ReduceThreatFromManyEnemiesWithMove(): 95,
-        SafeMeleeAttackAdvisor(): 5,
-        #RandomMoveAdvisor(),
-    }),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),

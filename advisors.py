@@ -28,6 +28,10 @@ class Oracle():
         self.neighborhood = neighborhood
         self.message = message
         self.blstats = blstats
+        self.move_lock = False
+
+    def set_move_lock(self):
+        self.move_lock = True
 
     @utilities.cached_property
     def can_move(self):
@@ -126,6 +130,11 @@ class Oracle():
     @utilities.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0. or self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 2)
+
+    @utilities.cached_property
+    def turns_since_damage(self):
+        if self.run_state.last_damage_timestamp is None: return 0
+        return (self.run_state.time - self.run_state.last_damage_timestamp)
 
     @utilities.cached_property
     def recently_damaged(self):
@@ -1261,6 +1270,8 @@ class MoveAdvisor(Advisor):
         return move_mask
 
     def advice(self, rng, run_state, character, oracle):
+        if oracle.move_lock:
+            return None
         move_mask = self.would_move_squares(rng, run_state, character, oracle)
         move_action = self.get_move(move_mask, rng, run_state, character, oracle)
 
@@ -1342,6 +1353,9 @@ class PathAdvisor(Advisor):
         pass
 
     def advice(self, rng, run_state, character, oracle):
+        if oracle.move_lock:
+            return None
+
         path = self.find_path(rng, run_state, character, oracle)
 
         if path is not None:
@@ -1349,6 +1363,32 @@ class PathAdvisor(Advisor):
                 return None
 
             return ActionAdvice(from_advisor=self, action=path.path_action)
+
+class PathfindTactical(PathAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.current_hp < character.max_hp:
+            return None
+        if not run_state.neighborhood.count_monsters(
+            lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.has_active_attacks,
+            adjacent=False) > 1:
+            return None
+        current_dungeon_feature = run_state.neighborhood.level_map.dungeon_feature_map[run_state.neighborhood.absolute_player_location]
+        if gd.CMapGlyph.tactical_square_mask(np.array([current_dungeon_feature])).any():
+            if np.count_nonzero(run_state.neighborhood.adjacent_monsters) > 0:
+                return None
+            if oracle.turns_since_damage == 0:
+                return None
+            #import pdb; pdb.set_trace()
+            oracle.set_move_lock()
+            return None
+            #return ActionAdvice(self, nethack.actions.MiscDirection.WAIT)
+        return super().advice(rng, run_state, character, oracle)
+    
+    def find_path(self, rng, run_state, character, oracle):
+        tactical_path = run_state.neighborhood.path_to_tactical_square()
+        #if tactical_path is not None:
+        #    import pdb; pdb.set_trace()
+        return tactical_path
 
 class ExcaliburAdvisor(Advisor):
     pass
