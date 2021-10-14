@@ -413,6 +413,20 @@ class SearchDeadEndAdvisor(Advisor):
 
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
 
+class CastHealing(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if (character.current_hp > character.max_hp * 1/2) and character.current_hp > 10:
+            return None
+        if 'healing' not in character.spells:
+            return None
+        if character.current_energy < 5:
+            return None
+        menu_plan = menuplan.MenuPlan("cast healing on self", self, [
+            menuplan.CharacterMenuResponse("In what direction?", '.'),
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, 'healing', max_fail=5))
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(self, nethack.actions.Command.CAST, menu_plan)
+
 class PotionAdvisor(Advisor):
     def make_menu_plan(self, letter):
         menu_plan = menuplan.MenuPlan(
@@ -424,6 +438,39 @@ class PotionAdvisor(Advisor):
         
         return menu_plan
 
+class HealerHealingPotionRollout(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.base_class != constants.BaseRole.Healer:
+            return None
+        
+        if run_state.time > 50:
+            return None
+
+        if character.max_hp > 15:
+            return None
+
+        quaff = nethack.actions.Command.QUAFF
+        extra_healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'extra healing')
+        if extra_healing is None:
+            return None
+        menu_plan = self.make_menu_plan(extra_healing.inventory_letter)
+        return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+class DrinkHealingPotionWhenLow(PotionAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if (character.current_hp > character.max_hp * 1/2) and character.current_hp > 10:
+            return None
+        quaff = nethack.actions.Command.QUAFF
+        extra_healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'extra healing')
+        if extra_healing is not None:
+            menu_plan = self.make_menu_plan(extra_healing.inventory_letter)
+            return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
+        healing = character.inventory.get_item(inv.Potion, identity_selector=lambda i: i.name() == 'healing')
+        if healing is not None:
+            menu_plan = self.make_menu_plan(healing.inventory_letter)
+            return ActionAdvice(from_advisor=self, action=quaff, new_menu_plan=menu_plan)
+
 class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
     def advice(self, rng, run_state, character, oracle):
         quaff = nethack.actions.Command.QUAFF
@@ -432,7 +479,7 @@ class DrinkHealingForMaxHPAdvisor(PotionAdvisor):
         most_healing = None
         for potion in healing_potions:
             expected_healing = potion.expected_healing(character)
-            if expected_healing < (character.max_hp / 2) or character.max_hp < 19:
+            if expected_healing < (character.max_hp / 2):
                 if most_healing is None or expected_healing > most_healing:
                     most_healing = expected_healing
                     best_potion = potion
@@ -946,7 +993,7 @@ class RangedAttackAdvisor(Attack):
     def make_spell_zap_plan(self, character, spell, direction):
         menu_plan = menuplan.MenuPlan("zap ranged attack spell", self, [
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell))
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=75))
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):

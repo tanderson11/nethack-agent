@@ -467,18 +467,24 @@ class InteractiveZapSpellMenu(InteractiveMenu):
 
             #import pdb; pdb.set_trace()
 
-    def __init__(self, player_character, spell_name):
+    def __init__(self, player_character, spell_name, max_fail=0):
         self.player_character = player_character
         self.spell_name = spell_name
         def item_selector(menu_item):
             if not self.spell_name in menu_item.spell_name:
                 return False
-            if menu_item.fail_chance > 75 or menu_item.gone:
-                self.player_character.spells.remove(self.spell_name)
+            #import pdb; pdb.set_trace()
+            if menu_item.fail_chance > max_fail or menu_item.gone:
+                #import pdb; pdb.set_trace()
+                try:
+                    self.player_character.spells.remove(self.spell_name)
+                except ValueError:
+                    pass
                 return False
             #import pdb; pdb.set_trace()
             return True
         super().__init__(selector_name=None)
+        self.item_selector = item_selector
 
 class InteractiveValidPlacementMenu(InteractiveLocationPickerMenu):
     header_rows = 2

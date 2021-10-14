@@ -34,6 +34,8 @@ new_advisors = [
     # COMBAT
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
+    DrinkHealingPotionWhenLow(),
+    CastHealing(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
@@ -109,6 +111,7 @@ new_advisors = [
     SolveSokoban(),
     PathfindSokobanSquare(),
     TravelToSokobanSquare(),
+    HealerHealingPotionRollout(),
     # OPEN PATHS
     SequentialCompositeAdvisor(advisors=[
         KickLockedDoorAdvisor(oracle_consultation=lambda o: not o.in_shop),
