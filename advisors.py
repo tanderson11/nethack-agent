@@ -408,7 +408,7 @@ class SearchDeadEndAdvisor(Advisor):
             return None
         lowest_search_count = search_count.min()
 
-        if (lowest_search_count > 30):
+        if (lowest_search_count > 36):
             return None
 
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.SEARCH)
@@ -1003,7 +1003,7 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         return targets
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
-    preference = constants.ranged_powerful # main advisor knows not to do striking
+    preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
     def advice(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
@@ -1060,7 +1060,7 @@ class TameHerbivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent
+    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)

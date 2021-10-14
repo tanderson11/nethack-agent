@@ -387,6 +387,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         # We define a dead end as a situation where a single edge holds all
         # the walkable locations
         walkable_count = np.count_nonzero(self.local_walkable_feature)
+
         if walkable_count > 3:
             return False
         elif walkable_count > 1:

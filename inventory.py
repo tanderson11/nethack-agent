@@ -550,6 +550,23 @@ class Gem(Item):
     try_to_price_id = False
     glyph_class = gd.GemGlyph
 
+    def desirable(self, character, consider_funds=True):
+        if not self.can_afford(character): return False
+        sling = character.inventory.get_item(
+            Weapon,
+            instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed) and i.uses_relevant_skill(character),
+            identity_selector=lambda i: i.ranged
+        )
+        if sling is not None:
+            if self.identity.name() == 'loadstone':
+                return False
+            if not self.identity.name() == 'rock':
+                return True
+            non_rock = character.inventory.get_item(Gem, identity_selector=lambda i: i.name() != 'rock')
+            if non_rock is not None:
+                return False
+        return super().desirable(character, consider_funds=consider_funds)
+
 class Rock(Item):
     glyph_class = gd.RockGlyph
 
@@ -1200,12 +1217,17 @@ class PlayerInventory():
         # shoot from your bow
         if not isinstance(self.wielded_weapon, BareHands): 
             if self.wielded_weapon.identity.ranged:
+                #print(self.quivered)
                 if self.quivered is not None and self.quivered.identity.is_ammo and self.wielded_weapon.identity.ammo_type_used == self.quivered.identity.ammo_type:
                     plan = RangedAttackPlan(attack_action=nethack.actions.Command.FIRE)
                     return RangedPreparednessProposal(attack_plan=plan)
 
                 # quiver your arrows
-                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
+                if self.wielded_weapon.identity.name() == 'sling':
+                    matching_ammo = self.get_items(Gem, identity_selector=lambda i: i.is_ammo)
+                    #import pdb; pdb.set_trace()
+                else:
+                    matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == self.wielded_weapon.identity.ammo_type_used)
                 if len(matching_ammo) > 0:
                     return RangedPreparednessProposal(quiver_item=matching_ammo[0])
 
@@ -1228,7 +1250,14 @@ class PlayerInventory():
         if preference.includes(constants.RangedAttackPreference.setup):
             bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
             for bow in bows:
-                matching_ammo = self.get_items(Weapon, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
+                if bow.identity.name() == 'sling':
+                    if not preference.includes(constants.RangedAttackPreference.weak):
+                        continue
+                    #import pdb; pdb.set_trace()
+                    klasses = [Weapon, Gem]
+                else:
+                    klasses = Weapon
+                matching_ammo = self.get_items(klasses, identity_selector=lambda i: i.ammo_type == bow.identity.ammo_type_used)
                 if len(matching_ammo) > 0:
                     return RangedPreparednessProposal(wield_item=bow)
 
@@ -1376,7 +1405,7 @@ class PlayerInventory():
 
     @utilities.cached_property
     def quivered(self):
-        quivered_item = self.get_item([Weapon, Gem, Rock], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
+        quivered_item = self.get_item([Weapon, Gem], instance_selector=lambda i: i.equipped_status is not None and i.equipped_status.status == 'quivered')
         return quivered_item
 
     def to_hit_modifiers(self, character, monster):

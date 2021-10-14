@@ -107,6 +107,8 @@ class DMap():
                 new_targets[Branches.Sokoban] = current_dcoord
 
         # Mines
+        if character.eager_for_mines1():
+            new_targets[Branches.GnomishMines] = DCoord(Branches.GnomishMines, 1)
         if character.ready_for_mines() and character.inventory.get_item(inventory.Gem, identity_selector=lambda i: i.name() == 'luckstone') is None:
             new_targets[Branches.GnomishMines] = DCoord(Branches.GnomishMines, 20)
 
