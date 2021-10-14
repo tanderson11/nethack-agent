@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from multiprocessing import Process, Queue
 import os
 import queue
+import time
 
 import numpy as np
 import pandas as pd
@@ -90,6 +91,7 @@ if __name__ == "__main__":
     done_runners = 0
 
     while done_runners < environment.env.num_runners:
+        time.sleep(30)
         for runner in runners:
             if runner.done:
                 continue
