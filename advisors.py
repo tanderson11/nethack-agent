@@ -1009,7 +1009,7 @@ class RangedAttackAdvisor(Attack):
     def make_spell_zap_plan(self, character, spell, direction):
         menu_plan = menuplan.MenuPlan("zap ranged attack spell", self, [
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=75))
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=35))
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):
