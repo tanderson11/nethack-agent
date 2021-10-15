@@ -36,7 +36,7 @@ def make_environment(**kwargs):
         'target_roles': set(),
         'wizard': False,
         'use_seed_whitelist': False,
-        'max_score': 3000,
+        'max_score': 3100,
     }
 
     environment = {
@@ -53,7 +53,6 @@ def make_environment(**kwargs):
     }
     default_environment.update({k:v for k,v in environment.items() if v is not None})
     default_environment.update(kwargs)
-
     return EnvironmentVariable(**default_environment)
 
 env = make_environment()
