@@ -119,7 +119,6 @@ if __name__ == "__main__":
             with open(os.path.join(path, "joint_log.csv"), 'w') as f:
                 df.to_csv(f)
 
-            import pdb; pdb.set_trace()
             df = df[~pd.isna(df['scummed'])]
             df = df[~df['scummed'].astype(bool)]
 

@@ -151,10 +151,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_is_monster = extended_is_monster
         #import pdb; pdb.set_trace()
         monsters = np.where(extended_is_monster, extended_visible_raw_glyphs, False)
-
-        extended_is_dangerous_monster = utilities.vectorized_map(
+        extended_is_dangerous_monster = np.full_like(monsters, False, dtype=bool)
+        extended_is_dangerous_monster[self.extended_is_monster] = utilities.vectorized_map(
             lambda g: isinstance(gd.GLYPH_NUMERAL_LOOKUP[g], gd.MonsterGlyph) and character.fearful_tier(gd.GLYPH_NUMERAL_LOOKUP[g].monster_spoiler.tier),
-            monsters
+            monsters[self.extended_is_monster]
         )
         #if extended_is_dangerous_monster.any():
             #import pdb; pdb.set_trace()
