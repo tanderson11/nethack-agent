@@ -104,29 +104,34 @@ if __name__ == "__main__":
                 done_runners += 1
 
     for path in overall_results.log_paths:
-        files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
-        for f in files:
-            if f.endswith('{}.ttyrec.bz2'.format(environment.env.num_episodes)): # rm this junk file
-                print("Removing {}".format(f))
-                os.remove(f)
-        outpath = os.path.join(path, "deaths.csv")
-        score_df = parse_ttyrec.parse_dir(path, outpath=outpath)
+        try:
+            files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
+            for f in files:
+                if f.endswith('{}.ttyrec.bz2'.format(environment.env.num_episodes)): # rm this junk file
+                    print("Removing {}".format(f))
+                    os.remove(f)
+            outpath = os.path.join(path, "deaths.csv")
+            score_df = parse_ttyrec.parse_dir(path, outpath=outpath)
 
-        log_df = pd.read_csv(os.path.join(path, "log.csv"))
-        df = score_df.join(log_df, rsuffix='_log')
+            log_df = pd.read_csv(os.path.join(path, "log.csv"))
+            df = score_df.join(log_df, rsuffix='_log')
 
-        with open(os.path.join(path, "joint_log.csv"), 'w') as f:
-            df.to_csv(f)
+            with open(os.path.join(path, "joint_log.csv"), 'w') as f:
+                df.to_csv(f)
 
-        df = df[~df['scummed']]
+            import pdb; pdb.set_trace()
+            df = df[~pd.isna(df['scummed'])]
+            df = df[~df['scummed'].astype(bool)]
 
-        print(
-            f"Runs: {len(df.index)}, "
-            f"Ascensions: {df['ascended'].sum()}, "
-            f"Median Score: {df['score_log'].median()}, "
-            f"Mean Score: {df['score_log'].mean()}, "
-            f"Min Score: {df['score_log'].min()}, "
-            f"Max Score: {df['score_log'].max()}, "
-            f"Max depth: {df['depth_log'].max()}, "
-            f"Max experience: {df['explevel'].max()}, "
-        )
+            print(
+                f"Runs: {len(df.index)}, "
+                f"Ascensions: {df['ascended'].sum()}, "
+                f"Median Score: {df['score_log'].median()}, "
+                f"Mean Score: {df['score_log'].mean()}, "
+                f"Min Score: {df['score_log'].min()}, "
+                f"Max Score: {df['score_log'].max()}, "
+                f"Max depth: {df['depth_log'].max()}, "
+                f"Max experience: {df['explevel'].max()}, "
+            )
+        except Exception as e:
+            print(f"TTYREC parse failed with {e}. Failing gracefully")
