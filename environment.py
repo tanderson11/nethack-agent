@@ -36,7 +36,7 @@ def make_environment(**kwargs):
         'target_roles': set(),
         'wizard': False,
         'use_seed_whitelist': False,
-        'max_score': 3050,
+        'max_score': 2900,
     }
 
     environment = {
