@@ -224,7 +224,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
-        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.make_monsters(character)
+        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
 
         #########################################
@@ -232,12 +233,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         self.threat = self.extended_threat[neighborhood_view]
         self.threat_on_player = self.threat[self.local_player_location]
+
         ####################
         ### CORPSE STUFF ###
         ####################
         self.fresh_corpse_on_square_glyph = level_map.next_corpse(self.absolute_player_location)
-
-        self.make_monsters(character)
 
     def count_adjacent_searches(self, search_threshold):
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold

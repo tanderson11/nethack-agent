@@ -1390,3 +1390,6 @@ def stackable_glyph(glyph):
     if isinstance(glyph, CorpseGlyph): return True
     if isinstance(glyph, StatueGlyph): return True
     return False
+
+def monster_like_mask(numerals):
+    return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals)

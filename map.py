@@ -562,10 +562,11 @@ class FloodMap():
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
 
-    def __init__(self, raw_visible_glyphs, visible_glyphs, player_location_in_vision):
+    def __init__(self, raw_visible_glyphs, monsters, monster_squares, player_location_in_vision):
         # take the section of the observed glyphs that is relevant
-        self.glyph_grid = visible_glyphs
         self.raw_glyph_grid = raw_visible_glyphs
+        self.monsters = monsters
+        self.monster_squares = monster_squares
         self.player_location_in_glyph_grid = player_location_in_vision
 
         self.calculate_threat()
@@ -607,54 +608,47 @@ class ThreatMap(FloodMap):
         return can_hit_mask
 
     def calculate_threat(self):
-        melee_n_threat = np.zeros_like(self.glyph_grid)
-        melee_damage_threat = np.zeros_like(self.glyph_grid)
+        melee_n_threat = np.zeros_like(self.raw_glyph_grid)
+        melee_damage_threat = np.zeros_like(self.raw_glyph_grid)
 
-        ranged_n_threat = np.zeros_like(self.glyph_grid)
-        ranged_damage_threat = np.zeros_like(self.glyph_grid)
+        ranged_n_threat = np.zeros_like(self.raw_glyph_grid)
+        ranged_damage_threat = np.zeros_like(self.raw_glyph_grid)
 
-        it = np.nditer(self.raw_glyph_grid, flags=['multi_index'])
-        for g in it: # iterate over glyph grid
-            glyph = self.glyph_grid[it.multi_index]
-            if it.multi_index != self.player_location_in_glyph_grid:
-                try:
-                    isinstance(glyph, gd.MonsterGlyph) and glyph.has_melee
-                except AttributeError:
-                    if environment.env.debug: import pdb; pdb.set_trace() # probably a long worm tail lol
+        for i, monster in enumerate(self.monsters):
+            monster_square = physics.Square(self.monster_squares[0][i], self.monster_squares[1][i])
+            if isinstance(monster, gd.SwallowGlyph):
+                melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[monster.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
+                melee_n_threat.fill(1) # we're only ever threatened once while swallowed
 
-                if isinstance(glyph, gd.SwallowGlyph):
-                    melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[glyph.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
-                    melee_n_threat.fill(1) # we're only ever threatened once while swallowed
+            is_invis = isinstance(monster, gd.InvisibleGlyph)
+            if isinstance(monster, gd.MonsterGlyph) or is_invis:
+                if not (isinstance(monster, gd.MonsterGlyph) and monster.single_always_peaceful()): # always peaceful monsters don't need to threaten
+                    ### SHARED ###
+                    can_occupy_mask = self.__class__.calculate_can_occupy(monster, monster_square, self.raw_glyph_grid)
+                    ###
 
-                is_invis = isinstance(glyph, gd.InvisibleGlyph)
-                if isinstance(glyph, gd.MonsterGlyph) or is_invis:
-                    if not (isinstance(glyph, gd.MonsterGlyph) and glyph.single_always_peaceful()): # always peaceful monsters don't need to threaten
-                        ### SHARED ###
-                        can_occupy_mask = self.__class__.calculate_can_occupy(glyph, it.multi_index, self.raw_glyph_grid)
-                        ###
+                    ### MELEE ###
+                    if is_invis or monster.has_melee:
+                        can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
 
-                        ### MELEE ###
-                        if is_invis or glyph.has_melee:
-                            can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
+                        melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
 
-                            melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
-                        
-                            if isinstance(glyph, gd.MonsterGlyph):
-                                melee_damage_threat[can_hit_mask] += glyph.monster_spoiler.melee_attack_bundle.max_damage
+                        if isinstance(monster, gd.MonsterGlyph):
+                            melee_damage_threat[can_hit_mask] += monster.monster_spoiler.melee_attack_bundle.max_damage
 
-                            if is_invis:
-                                melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
-                        ###
+                        if is_invis:
+                            melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
+                    ###
 
-                        ### RANGED ###
-                        if is_invis or glyph.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
-                            can_hit_mask = self.calculate_ranged_can_hit_mask(can_occupy_mask, self.raw_glyph_grid)
-                            ranged_n_threat[can_hit_mask] += 1
-                            if is_invis:
-                                ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
-                            else:
-                                ranged_damage_threat[can_hit_mask] += glyph.monster_spoiler.ranged_attack_bundle.max_damage
-                        ###
+                    ### RANGED ###
+                    if is_invis or monster.has_ranged: # let's let invisible monsters threaten at range so we rush them down someday
+                        can_hit_mask = self.calculate_ranged_can_hit_mask(can_occupy_mask, self.raw_glyph_grid)
+                        ranged_n_threat[can_hit_mask] += 1
+                        if is_invis:
+                            ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
+                        else:
+                            ranged_damage_threat[can_hit_mask] += monster.monster_spoiler.ranged_attack_bundle.max_damage
+                    ###
 
         self.melee_n_threat = melee_n_threat
         self.melee_damage_threat = melee_damage_threat
