@@ -85,8 +85,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         extended_visible_raw_glyphs = glyphs[self.vision]
         self.vision_glyphs = extended_visible_raw_glyphs
-        extended_visible_glyphs = utilities.vectorized_map(lambda n: gd.GLYPH_NUMERAL_LOOKUP[n], extended_visible_raw_glyphs)
-        self.vision_glyph_objs = extended_visible_glyphs
         # index of player in the full vision
         player_location_in_extended = absolute_player_location - vision_start
         self.player_location_in_extended = player_location_in_extended
@@ -135,7 +133,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.obvious_mimics = self.zoom_glyph_alike(self.level_map.obvious_mimics, ViewField.Extended)
         extended_nasty_traps = self.zoom_glyph_alike(self.level_map.traps_to_avoid, ViewField.Extended)
 
-        extended_is_monster = gd.MonsterGlyph.class_mask(extended_visible_raw_glyphs) | gd.SwallowGlyph.class_mask(extended_visible_raw_glyphs) | gd.InvisibleGlyph.class_mask(extended_visible_raw_glyphs) | gd.WarningGlyph.class_mask(extended_visible_raw_glyphs)
+        extended_is_monster = gd.monster_like_mask(extended_visible_raw_glyphs)
         extended_is_monster[player_location_in_extended] = False # player does not count as a monster anymore
         if self.level_map.dcoord.branch == map.Branches.Sokoban:
             extended_is_monster[self.obvious_mimics] = True
@@ -151,12 +149,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.imprudent = imprudent
 
         self.extended_is_monster = extended_is_monster
-        monsters = np.where(extended_is_monster, extended_visible_glyphs, False)
-
-        #extended_is_dangerous_monster = utilities.vectorized_map(lambda g: isinstance(g, gd.MonsterGlyph) and g.monster_spoiler.dangerous_to_player(character, time, latest_monster_flight), monsters)
-        extended_is_dangerous_monster = utilities.vectorized_map(
-            lambda g: isinstance(g, gd.MonsterGlyph) and character.fearful_tier(g.monster_spoiler.tier),
-            monsters
+        #import pdb; pdb.set_trace()
+        monsters = np.where(extended_is_monster, extended_visible_raw_glyphs, False)
+        extended_is_dangerous_monster = np.full_like(monsters, False, dtype=bool)
+        extended_is_dangerous_monster[self.extended_is_monster] = utilities.vectorized_map(
+            lambda g: isinstance(gd.GLYPH_NUMERAL_LOOKUP[g], gd.MonsterGlyph) and character.fearful_tier(gd.GLYPH_NUMERAL_LOOKUP[g].monster_spoiler.tier),
+            monsters[self.extended_is_monster]
         )
         #if extended_is_dangerous_monster.any():
             #import pdb; pdb.set_trace()
@@ -169,7 +167,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_is_hostile_monster = self.extended_is_monster & ~self.extended_is_peaceful_monster
 
         # radius 1 box around player in vision glyphs
-        neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_glyphs)
+        neighborhood_view = utilities.centered_slices_bounded_on_array(player_location_in_extended, (1, 1), extended_visible_raw_glyphs)
         self.neighborhood_view = neighborhood_view
 
         ##############################
@@ -194,8 +192,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### THE LOCAL STUFF ###
         #######################
 
-        self.raw_glyphs = extended_visible_raw_glyphs[neighborhood_view]
-        self.glyphs = extended_visible_glyphs[neighborhood_view]
+        self.glyphs = extended_visible_raw_glyphs[neighborhood_view]
         self.visits = extended_visits[neighborhood_view]
         is_open_door = extended_open_door[neighborhood_view]
         self.is_monster = (self.extended_is_hostile_monster)[neighborhood_view]
@@ -224,7 +221,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
-        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, extended_visible_glyphs, player_location_in_extended)
+        self.make_monsters(character)
+        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
 
         #########################################
@@ -232,12 +230,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         #########################################
         self.threat = self.extended_threat[neighborhood_view]
         self.threat_on_player = self.threat[self.local_player_location]
+
         ####################
         ### CORPSE STUFF ###
         ####################
         self.fresh_corpse_on_square_glyph = level_map.next_corpse(self.absolute_player_location)
-
-        self.make_monsters(character)
 
     def count_adjacent_searches(self, search_threshold):
         below_threshold_mask = self.level_map.searches_count_map[self.vision] < search_threshold
@@ -309,6 +306,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
         return self.path_to_targets(weak_monsters, target_monsters=True)
 
+    def path_to_tactical_square(self):
+        tactical_squares = gd.CMapGlyph.tactical_square_mask(self.vision_glyphs)
+        return self.path_to_targets(tactical_squares)
+
     def desirable_object_on_space(self, character):
         item_recognized = self.item_on_player is not None and self.item_on_player.identity is not None
 
@@ -375,12 +376,27 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def make_monsters(self, character):
         # all the monsters in vision
         self.monsters_idx = np.where(self.extended_is_hostile_monster)
-        self.monsters = self.vision_glyph_objs[self.extended_is_hostile_monster]
+        monsters = self.vision_glyphs[self.monsters_idx]
+        self.monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in monsters])
         # just the adjacent monsters
         self.adjacent_monsters_idx = np.where(self.is_monster)
-        self.adjacent_monsters = self.glyphs[self.is_monster]
+        adjacent_monsters = self.glyphs[self.adjacent_monsters_idx]
+        self.adjacent_monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in adjacent_monsters])
         
         #import pdb; pdb.set_trace()
+    
+    def count_monsters(self, selector, adjacent=True):
+        if adjacent:
+            count = 0
+            for m in self.adjacent_monsters:
+                if selector(m):
+                    count += 1
+            return count
+        count = 0
+        for m in self.monsters:
+            if selector(m):
+                count += 1
+        return count
 
     def at_dead_end(self):
         # Consider the 8-location square surrounding the player

@@ -1082,7 +1082,7 @@ class CustomAgent(BatchedAgent):
             new_count = np.count_nonzero(neighborhood.extended_possible_secret_mask[neighborhood.neighborhood_view])
             if new_count < old_count:
                 search_succeeded = True
-            run_state.search_log.append((np.ravel(run_state.neighborhood.raw_glyphs), search_succeeded))
+            run_state.search_log.append((np.ravel(run_state.neighborhood.glyphs), search_succeeded))
 
         if not run_state.current_square.stack_on_square and not neighborhood.desirable_object_on_space(run_state.character):
             #import pdb; pdb.set_trace()

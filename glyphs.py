@@ -515,6 +515,10 @@ class CMapGlyph(Glyph):
     def closed_door_mask(numerals):
         return (numerals >= 15 + nethack.GLYPH_CMAP_OFF) & (numerals < 17 + nethack.GLYPH_CMAP_OFF)
 
+    @staticmethod
+    def tactical_square_mask(numerals):
+        return (numerals >= 21 + nethack.GLYPH_CMAP_OFF) & (numerals <= 26 + nethack.GLYPH_CMAP_OFF)
+
     def __init__(self, numeral):
         self.numeral = numeral
         self.offset = self.numeral - self.OFFSET
@@ -1386,3 +1390,6 @@ def stackable_glyph(glyph):
     if isinstance(glyph, CorpseGlyph): return True
     if isinstance(glyph, StatueGlyph): return True
     return False
+
+def monster_like_mask(numerals):
+    return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals) | WarningGlyph.class_mask(numerals)

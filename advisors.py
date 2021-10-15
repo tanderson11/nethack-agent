@@ -28,6 +28,10 @@ class Oracle():
         self.neighborhood = neighborhood
         self.message = message
         self.blstats = blstats
+        self.move_lock = False
+
+    def set_move_lock(self):
+        self.move_lock = True
 
     @utilities.cached_property
     def can_move(self):
@@ -126,6 +130,11 @@ class Oracle():
     @utilities.cached_property
     def am_threatened(self):
         return self.neighborhood.threat_on_player > 0. or self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 2)
+
+    @utilities.cached_property
+    def turns_since_damage(self):
+        if self.run_state.last_damage_timestamp is None: return 0
+        return (self.run_state.time - self.run_state.last_damage_timestamp)
 
     @utilities.cached_property
     def recently_damaged(self):
@@ -837,6 +846,13 @@ class EatCorpseAdvisor(Advisor):
         if oracle.am_satiated:
             return None
 
+        if run_state.neighborhood.count_monsters(
+            lambda m: character.scared_by(m) and (isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.has_active_attacks),
+            adjacent=False
+            ) > 0:
+            #import pdb; pdb.set_trace()
+            return None
+
         eat = nethack.actions.Command.EAT
 
         menu_plan = menuplan.MenuPlan(
@@ -993,7 +1009,7 @@ class RangedAttackAdvisor(Attack):
     def make_spell_zap_plan(self, character, spell, direction):
         menu_plan = menuplan.MenuPlan("zap ranged attack spell", self, [
             menuplan.DirectionMenuResponse("In what direction?", direction),
-        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=75))
+        ], interactive_menu=menuplan.InteractiveZapSpellMenu(character, spell, max_fail=35))
         return menu_plan
 
     def advice(self, rng, run_state, character, oracle):
@@ -1261,6 +1277,8 @@ class MoveAdvisor(Advisor):
         return move_mask
 
     def advice(self, rng, run_state, character, oracle):
+        if oracle.move_lock:
+            return None
         move_mask = self.would_move_squares(rng, run_state, character, oracle)
         move_action = self.get_move(move_mask, rng, run_state, character, oracle)
 
@@ -1342,6 +1360,9 @@ class PathAdvisor(Advisor):
         pass
 
     def advice(self, rng, run_state, character, oracle):
+        if oracle.move_lock:
+            return None
+
         path = self.find_path(rng, run_state, character, oracle)
 
         if path is not None:
@@ -1349,6 +1370,32 @@ class PathAdvisor(Advisor):
                 return None
 
             return ActionAdvice(from_advisor=self, action=path.path_action)
+
+class PathfindTactical(PathAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.current_hp < character.max_hp:
+            return None
+        if not run_state.neighborhood.count_monsters(
+            lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.has_active_attacks,
+            adjacent=False) > 1:
+            return None
+        current_dungeon_feature = run_state.neighborhood.level_map.dungeon_feature_map[run_state.neighborhood.absolute_player_location]
+        if gd.CMapGlyph.tactical_square_mask(np.array([current_dungeon_feature])).any():
+            if np.count_nonzero(run_state.neighborhood.adjacent_monsters) > 0:
+                return None
+            if oracle.turns_since_damage == 0:
+                return None
+            #import pdb; pdb.set_trace()
+            oracle.set_move_lock()
+            return None
+            #return ActionAdvice(self, nethack.actions.MiscDirection.WAIT)
+        return super().advice(rng, run_state, character, oracle)
+    
+    def find_path(self, rng, run_state, character, oracle):
+        tactical_path = run_state.neighborhood.path_to_tactical_square()
+        #if tactical_path is not None:
+        #    import pdb; pdb.set_trace()
+        return tactical_path
 
 class ExcaliburAdvisor(Advisor):
     pass
@@ -1542,7 +1589,7 @@ class TakeStaircaseAdvisor(Advisor):
 class OpenClosedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         # don't open diagonally so we can be better about warning engravings
-        door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
+        door_mask = ~run_state.neighborhood.diagonal_moves & gd.CMapGlyph.closed_door_mask(run_state.neighborhood.glyphs)
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions > 0):
             a = rng.choice(door_directions)
@@ -1636,7 +1683,7 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not oracle.in_shop:
             return None
-        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
         if np.count_nonzero(doors) > 0:
             # don't drop if on the first square of the shop next to the door
             return None

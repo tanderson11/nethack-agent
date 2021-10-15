@@ -362,7 +362,7 @@ class Weapon(Item):
         return weapon_damage
 
     def uses_relevant_skill(self, character):
-        return character.relevant_skills.loc[self.identity.skill]
+        return character.relevant_skills[self.identity.skill]
 
     def melee_desirability(self, character, desperate=False, optimistic_to_unknown=False):
         if self.quantity > 1:
@@ -389,7 +389,7 @@ class Weapon(Item):
 
         if desperate:
             # restricted weapons not worth it even if desperate
-            skill_rank = constants.skill_abbrev_to_rank[character.class_skills.loc[self.identity.skill]]
+            skill_rank = constants.skill_abbrev_to_rank[character.class_skills[self.identity.skill]]
             if pd.isna(constants.SkillRank(skill_rank)):
                 return -1
 
@@ -448,8 +448,8 @@ class BareHands(Weapon):
         return "bare hands dummy weapon"
 
     def which_skill(self, character):
-        bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['bare hands']]
-        martial_arts_rank = constants.skill_abbrev_to_rank[character.class_skills.loc['martial arts']]
+        bare_hands_rank = constants.skill_abbrev_to_rank[character.class_skills['bare hands']]
+        martial_arts_rank = constants.skill_abbrev_to_rank[character.class_skills['martial arts']]
 
         if bare_hands_rank > martial_arts_rank:
             bare_hands_skill = 'bare hands'
@@ -459,7 +459,7 @@ class BareHands(Weapon):
         return bare_hands_skill
 
     def uses_relevant_skill(self, character):
-        return character.relevant_skills.loc[self.which_skill(character)]
+        return character.relevant_skills[self.which_skill(character)]
 
     def melee_desirability(self, character, desperate=None):
         return self.melee_damage(character, None)
