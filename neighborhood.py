@@ -376,11 +376,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
     def make_monsters(self, character):
         # all the monsters in vision
         self.monsters_idx = np.where(self.extended_is_hostile_monster)
-        monsters = self.vision_glyphs[self.extended_is_hostile_monster]
+        monsters = self.vision_glyphs[self.monsters_idx]
         self.monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in monsters])
         # just the adjacent monsters
         self.adjacent_monsters_idx = np.where(self.is_monster)
-        self.adjacent_monsters = self.glyphs[self.is_monster]
+        adjacent_monsters = self.glyphs[self.adjacent_monsters_idx]
+        self.adjacent_monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in adjacent_monsters])
         
         #import pdb; pdb.set_trace()
     
