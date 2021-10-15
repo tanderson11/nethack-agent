@@ -392,6 +392,8 @@ class DLevelMap():
         for special_room_type in constants.SpecialRoomTypes:
             if special_room_type != constants.SpecialRoomTypes.NONE:
                 room_mask = self.special_room_map == special_room_type.value
+                if not room_mask.any():
+                    continue
                 expanded_mask = self.expand_mask_along_room_floor(room_mask)
                 self.add_room(expanded_mask, special_room_type)
 
