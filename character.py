@@ -37,8 +37,8 @@ class Character():
     experience_level: int = 1
     tier: int = 9
     role_tier_mod: int = 0
-    class_skills: pd.Series = None
-    relevant_skills: pd.Series = None
+    class_skills: dict = None
+    relevant_skills: dict = None
     innate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     noninnate_intrinsics: constants.Intrinsics = constants.Intrinsics.NONE
     afflicted_with_lycanthropy: bool = False
@@ -57,8 +57,8 @@ class Character():
     spells: list =  field(default_factory=list)
 
     def set_class_skills(self):
-        self.class_skills = constants.CLASS_SKILLS[self.base_class.value]
-        self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"]
+        self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
+        self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"].to_dict()
         self.set_role_tier_mod()
 
     def set_base_spells(self):
@@ -104,7 +104,7 @@ class Character():
 
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
-        return self.relevant_skills.loc['long sword'] == True
+        return self.relevant_skills['long sword'] == True
 
     def hankering_for_excalibur(self):
         if self.global_identity_map.generated_artifacts['Excalibur'] == True:
