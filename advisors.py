@@ -1589,7 +1589,7 @@ class TakeStaircaseAdvisor(Advisor):
 class OpenClosedDoorAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         # don't open diagonally so we can be better about warning engravings
-        door_mask = ~run_state.neighborhood.diagonal_moves & utilities.vectorized_map(lambda g: isinstance(g, gd.CMapGlyph) and g.is_closed_door, run_state.neighborhood.glyphs)
+        door_mask = ~run_state.neighborhood.diagonal_moves & gd.CMapGlyph.closed_door_mask(run_state.neighborhood.glyphs)
         door_directions = run_state.neighborhood.action_grid[door_mask]
         if len(door_directions > 0):
             a = rng.choice(door_directions)
@@ -1683,7 +1683,7 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not oracle.in_shop:
             return None
-        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.raw_glyphs - gd.CMapGlyph.OFFSET)
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
         if np.count_nonzero(doors) > 0:
             # don't drop if on the first square of the shop next to the door
             return None

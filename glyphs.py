@@ -1392,4 +1392,4 @@ def stackable_glyph(glyph):
     return False
 
 def monster_like_mask(numerals):
-    return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals)
+    return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals) | WarningGlyph.class_mask(numerals)
