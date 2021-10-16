@@ -252,8 +252,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             target_mask = target_mask & ~self.imprudent
         if not target_mask.any():
             return None
+        if be_prudent:
+            walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster & ~self.imprudent
+        else:
+            walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
 
-        walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
         if target_monsters:
             # we only need to be adjacent to monsters to attack them
             target_mask = map.FloodMap.flood_one_level_from_mask(target_mask)

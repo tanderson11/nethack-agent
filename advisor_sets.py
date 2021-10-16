@@ -26,7 +26,7 @@ new_advisors = [
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
-    CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, threat_tolerance=0.05),
+    CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger),
     # HIGHLY THREATENED
     #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
     # IN GNOMISH MINES
@@ -44,14 +44,18 @@ new_advisors = [
         MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
-        SafeMeleeAttackAdvisor(),
     ]),
+    RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
+        ReduceThreatFromManyEnemiesWithMove(): 95,
+        SafeMeleeAttackAdvisor(): 5,
+        #RandomMoveAdvisor(),
+    }),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
-        InventoryEatAdvisor(threat_tolerance=0.05),
+        InventoryEatAdvisor(),
         PrayForNutritionAdvisor(),
         ]),
     # LYCANTHROPY PUNISHED ETC
@@ -59,7 +63,7 @@ new_advisors = [
     # Stuck and gotta bust out
     UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
-    HuntNearestWeakEnemyAdvisor(path_threat_tolerance=0.5),
+    HuntNearestWeakEnemyAdvisor(),
     # DISTANT THREAT
     RandomCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors={
         RandomMoveAdvisor(square_threat_tolerance=0.): 95,
@@ -121,10 +125,10 @@ new_advisors = [
     SearchWithStethoscope(oracle_consultation=lambda o:o.have_free_stethoscope_action),
     SearchDeadEndsWithStethoscope(),
     SearchDeadEndAdvisor(oracle_consultation=lambda o: not o.have_stethoscope),
-    UnvisitedSquareMoveAdvisor(square_threat_tolerance=0.),
+    UnvisitedSquareMoveAdvisor(),
     RandomCompositeAdvisor(advisors={
-        MostNovelMoveAdvisor(square_threat_tolerance=0.): 10,
-        RandomMoveAdvisor(square_threat_tolerance=0.): 1,
+        MostNovelMoveAdvisor(): 10,
+        RandomMoveAdvisor(): 1,
         SearchForSecretDoorAdvisor(oracle_consultation=lambda o: not o.on_warning_engraving and not o.have_stethoscope): 4,
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
