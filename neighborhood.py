@@ -63,6 +63,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### COPY FIELDS ###
         ###################
 
+        self.current_player_square = current_square
         absolute_player_location = Square(*current_square.location)
 
         self.previous_glyph_on_player = current_square.glyph_under_player
@@ -260,7 +261,8 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
             doors=self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended),
-            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban
+            current_square = self.current_player_square,
+            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban,
         )
         it = np.nditer(target_mask, flags=['multi_index'])
 
@@ -485,10 +487,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
 class Pathfinder(AStar):
-    def __init__(self, walkable_mesh, doors, diagonal=True):
+    def __init__(self, walkable_mesh, doors, current_square, diagonal=True):
         self.walkable_mesh = walkable_mesh
         self.doors = doors
         self.diagonal = diagonal
+        self.player_square = current_square
 
     def neighbors(self, node):
         box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
@@ -505,6 +508,15 @@ class Pathfinder(AStar):
             is_orthogonal = np.sum(np.abs(square-current_square)) == 1
             if walkable and (self.diagonal or is_orthogonal) and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
                 neighboring_walkable_squares.append(square + upper_left)
+
+        if current_square == self.player_square.location:
+            for f in self.player_square.failed_moves_on_square:
+                failed_target = physics.offset_location_by_action(current_square, f)
+                try:
+                    #import pdb; pdb.set_trace()
+                    neighboring_walkable_squares.remove(failed_target)
+                except ValueError:
+                    pass
 
         return neighboring_walkable_squares
 
