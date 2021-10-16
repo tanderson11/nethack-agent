@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
+from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice
 import advisor_sets
 
 import menuplan
@@ -243,6 +243,7 @@ wizard_background_menu_plan_options = [
 background_advisor = advs.BackgroundActionsAdvisor()
 
 class RunState():
+    position_log_len = 80
     def __init__(self, debug_env=None):
         self.debug_env = debug_env
         self.reset()
@@ -357,6 +358,9 @@ class RunState():
         self.action_log = []
         self.advice_log = []
         self.search_log = []
+        self.position_log = []
+        self.recent_position_start = 0
+        self.recent_position_counter = Counter()
         self.hp_log = []
         self.tty_cursor_log = []
         self.actions_without_consequence = set()
@@ -551,6 +555,47 @@ class RunState():
         self.neighborhood = neighborhood
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
+
+    def log_position(self):
+        if self.neighborhood is None:
+            self.position_log.append(None)
+            return
+        self.position_log.append((self.neighborhood.level_map.dcoord, self.current_square.location))
+        if isinstance(self.advice_log[-1], MenuAdvice) or isinstance(self.advice_log[-1].from_advisor, SearchDeadEndAdvisor):
+            return
+        self.recent_position_counter[self.position_log[-1]] += 1
+        #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
+        if sum(self.recent_position_counter.values()) > self.position_log_len:
+            #import pdb; pdb.set_trace()
+            for i in range(self.recent_position_start, len(self.position_log)):
+                position = self.position_log[i]
+                advice = self.advice_log[i]
+                if position is None:
+                    continue
+                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor):
+                    continue
+                if self.recent_position_counter[position] == 0:
+                    import pdb; pdb.set_trace()
+                self.recent_position_counter[position] -= 1
+                #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
+                if self.recent_position_counter[position] == 0:
+                    #import pdb; pdb.set_trace()
+                    del self.recent_position_counter[position]
+                    #print(f"Deleting {position}")
+                break
+            self.recent_position_start = i+1
+        if len(self.recent_position_counter) > self.position_log_len:
+            #import pdb; pdb.set_trace()
+            pass
+        #print("RET")
+
+    def check_stuck(self):
+        if not environment.env.debug:
+            return None
+        if len(self.recent_position_counter) < 5:
+            if sum(self.recent_position_counter.values()) == self.position_log_len:
+                import pdb; pdb.set_trace()
+                pass
     
     def report_special_fact_handled(self, fact):
         print(f"Reporting special fact handled! {fact.name}")
@@ -1094,6 +1139,8 @@ class CustomAgent(BatchedAgent):
         run_state.update_neighborhood(neighborhood)
 
         run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
+
+        run_state.check_stuck()
         ############################
 
         if blstats.get('depth') == 1:
@@ -1154,6 +1201,7 @@ class CustomAgent(BatchedAgent):
             run_state.set_menu_plan(advice.new_menu_plan)
 
         run_state.log_action(advice)
+        run_state.log_position()
 
         if isinstance(advice, ActionAdvice) or isinstance(advice, StethoscopeAdvice):
             if advice.from_advisor:
