@@ -48,7 +48,7 @@ def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runne
 
     seeds = seed_whitelist[(runner_index * num_episodes):((runner_index + 1) * num_episodes)]
     # If you want to manually try a single seed
-    # seeds = [(3781606510239413095, 8286170024939907219)]
+    seeds = [(2157739802019135175, 3940587147519225799)]
 
     batched_env = BatchedEnv(env_make_fn=env_make_fn, seeds=seeds, num_envs=num_envs)
 

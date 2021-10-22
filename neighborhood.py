@@ -516,6 +516,7 @@ class Pathfinder(AStar):
 
         if node == self.player_location:
             for f in self.failed_moves:
+                import pdb; pdb.set_trace()
                 failed_target = physics.offset_location_by_action(node, f)
                 try:
                     neighboring_walkable_squares.remove(failed_target)

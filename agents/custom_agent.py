@@ -421,7 +421,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'vYIDlQ=='
+        seed = b'nVbYEQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -590,8 +590,8 @@ class RunState():
         #print("RET")
 
     def check_stuck(self):
-        if not environment.env.debug:
-            return None
+        #if not environment.env.debug:
+        #    return None
         if len(self.recent_position_counter) < 5:
             if sum(self.recent_position_counter.values()) == self.position_log_len:
                 import pdb; pdb.set_trace()
