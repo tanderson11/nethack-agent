@@ -16,7 +16,7 @@ from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvic
 import advisor_sets
 
 import menuplan
-from neighborhood import Neighborhood, CurrentSquare
+from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords
 import utilities
 import physics
 import inventory as inv
@@ -386,6 +386,7 @@ class RunState():
 
         self.neighborhood = None
         self.current_square = None
+        self.failed_move_record = FailedMoveRecords()
 
         self.latest_monster_flight = None
 
@@ -668,7 +669,8 @@ class RunState():
             if message.feedback.carrying_too_much_message:
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
-                self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
+                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action)
+                #self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -971,32 +973,29 @@ class CustomAgent(BatchedAgent):
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)
 
-        if "It's a wall" in message.message and environment.env.debug:
-            if environment.env.debug:
-                pass
-                #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
-                # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
+        if environment.env.debug and  "It's a wall" in message.message and environment.env.debug:
+            pass
+            #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+            # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
-        if "enough tries" in message.message and environment.env.debug:
+        if environment.env.debug and "enough tries" in message.message and environment.env.debug:
             #import pdb; pdb.set_trace()
             pass
 
-        if "You bite that, you pay for it!" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "You bite that, you pay for it!" in message.message:
+            import pdb; pdb.set_trace()
 
-        if "You bought" in message.message:
+        if environment.env.debug and "You bought" in message.message:
             print(message.message)
 
-        if "cannibal" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "cannibal" in message.message:
+            import pdb; pdb.set_trace()
 
-        if "Yak" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "Yak" in message.message:
+            import pdb; pdb.set_trace()
 
         if "From the murky depths, a hand reaches up to bless the sword" in message.message:
+            import pdb; pdb.set_trace()
             print(message.message)
 
         if run_state.debugger_on:
@@ -1014,7 +1013,7 @@ class CustomAgent(BatchedAgent):
         if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
             run_state.dmap.oracle_level = dcoord.level
             print(message.message)
- 
+
         if " stole " in message.message:
             print(message.message)
 
@@ -1108,10 +1107,12 @@ class CustomAgent(BatchedAgent):
             return advice
 
         level_map.garbage_collect_corpses(time)
+        run_state.failed_move_record.garbage_collect(time)
 
         neighborhood = Neighborhood(
             time,
             run_state.current_square,
+            run_state.failed_move_record,
             observation['glyphs'],
             level_map,
             run_state.character,
