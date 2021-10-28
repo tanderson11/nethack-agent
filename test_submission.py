@@ -24,6 +24,7 @@ import environment
 import parse_ttyrec
 
 class RolloutResults(NamedTuple):
+    runners: int
     ascensions: int
     scores: List[int]
     log_paths: str
@@ -44,6 +45,7 @@ def evaluate(id, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=No
         log_paths.append(batched_env.envs[0].savedir)
 
     results = RolloutResults(
+        runners=1,
         ascensions=ascensions,
         scores=scores,
         log_paths=log_paths,
@@ -63,20 +65,22 @@ class Runner:
 
 def merge_results(results_1: RolloutResults, results_2: RolloutResults):
     return RolloutResults(
+        runners=results_1.runners + results_2.runners,
         ascensions=results_1.ascensions + results_2.ascensions,
         scores=results_1.scores + results_2.scores,
         log_paths=results_1.log_paths + results_2.log_paths,
     )
 
-if __name__ == "__main__":
+def run_multiple(num_runners):
     overall_results = RolloutResults(
+        runners=0,
         ascensions=0,
         scores=[],
         log_paths=[],
     )
     runners : List[Runner] = []
-    episodes_per_runner = TestEvaluationConfig.NUM_EPISODES // environment.env.num_runners + 1
-    for i in range(0, environment.env.num_runners):
+    episodes_per_runner = TestEvaluationConfig.NUM_EPISODES // num_runners + 1
+    for i in range(0, num_runners):
         runner_queue = Queue()
         runner = Runner(
             id=i,
@@ -89,21 +93,44 @@ if __name__ == "__main__":
         runner.process.start()
 
     done_runners = 0
+    crashed_runners = 0
 
-    while done_runners < environment.env.num_runners:
+    while done_runners < num_runners:
         time.sleep(30)
         for runner in runners:
             if runner.done:
                 continue
-            try:
-                new_results = runner.queue.get(timeout=1)
-                overall_results = merge_results(overall_results, new_results)
-            except queue.Empty:
-                pass
             runner.process.join(timeout=1)
             if runner.process.exitcode is not None:
+                try:
+                    new_results = runner.queue.get(timeout=1)
+                    overall_results = merge_results(overall_results, new_results)
+                except queue.Empty:
+                    crashed_runners += 1
+                    pass
                 runner.done = True
                 done_runners += 1
+
+    return overall_results, crashed_runners
+
+
+if __name__ == "__main__":
+    if environment.env.num_runners > 1:
+        overall_results, crashed_runners = run_multiple(environment.env.num_runners)
+    else:
+        overall_results = evaluate(0, TestEvaluationConfig.NUM_EPISODES)
+        crashed_runners = 0
+
+    print(
+        f"Runners: {overall_results.runners}, "
+        f"Crashed runners: {crashed_runners}, "
+        f"Runs: {len(overall_results.scores)}, "
+        f"Ascensions: {overall_results.ascensions}, "
+        f"Median Score: {np.median(overall_results.scores)}, "
+        f"Mean Score: {np.mean(overall_results.scores)}, "
+        f"Min Score: {min(overall_results.scores)}, "
+        f"Max Score: {max(overall_results.scores)}, "
+    )
 
     for path in overall_results.log_paths:
         try:
