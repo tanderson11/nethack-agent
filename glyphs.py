@@ -534,6 +534,8 @@ class CMapGlyph(Glyph):
 
         self.is_fountain = self.offset == 31
         self.is_altar = self.offset == 27
+
+        self.engraveable = True # TODO
         
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):
@@ -1019,13 +1021,13 @@ class WandIdentity(ObjectIdentity):
         if action == nethack.actions.Command.READ:
             if 'glows blue' in message_obj.message:
                 return "R_1"
-        if action == nethack.actions.Command.ZAP:
+        elif action == nethack.actions.Command.ZAP:
             if "Nothing happens." in message_obj.message and self.name() is not None:
                 return "C_0"
-
-
         # engrave testing
-        if action == nethack.actions.Command.ENGRAVE:
+        elif action == nethack.actions.Command.ENGRAVE:
+            if "too worn out to engrave." in message_obj.message and self.name() is not None:
+                return "C_0"
             # if there is an engrave message and it is in fact contained in the overheard message
             #pdb.set_trace()
             message_matches = ~self.data.loc[self.idx].ENGRAVE_MESSAGE.isna() & self.data.loc[self.idx].ENGRAVE_MESSAGE.apply(lambda v: pd.isnull(v) or v in message_obj.message)

@@ -1921,19 +1921,22 @@ class EngraveTestWandsAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("engrave test wand", self, [
             menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
             menuplan.MoreMenuResponse("You write in the dust with"),
-            menuplan.MoreMenuResponse("A lit field surrounds you!"),
             menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
             menuplan.MoreMenuResponse("is a wand of digging!"),
             menuplan.MoreMenuResponse("is a wand of fire!"),
             menuplan.MoreMenuResponse("You engrave in the"),
-            menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the"),
-            menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("You will overwrite the current message."),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+            menuplan.MoreMenuResponse("A lit field surrounds you!"),
+            menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Wizard the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
-            menuplan.MoreMenuResponse("You wipe out the message that was written"),
             menuplan.MoreMenuResponse("usage fee"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
@@ -1941,13 +1944,93 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
             menuplan.WishMoreMenuResponse(character),
-            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
-            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
-            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
             menuplan.EscapeMenuResponse("Create what kind of monster?"),
         ], listening_item=w)
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
+
+class EngraveElberethAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.current_square.elbereth is not None and run_state.current_square.elbereth.confirm_time == run_state.time:
+            return None
+
+        if oracle.blind:
+            return None
+
+        self.current_square = run_state.current_square
+        self.usable_wand = None
+        self.engraving = neighborhood.ElberethEngraving(
+            engrave_time=run_state.time,
+            confirm_time=None,
+            engraving_type=neighborhood.EngravingType.Temporary
+        )
+        letter = ord('-')
+        
+        wand_of_fire = character.inventory.get_usable_wand('fire')
+        if wand_of_fire:
+            self.usable_wand = wand_of_fire
+            self.engraving.engraving_type = neighborhood.EngravingType.Permanent
+            self.engraving.confirm_time = self.engraving.engrave_time
+
+        if self.usable_wand is None:
+            wand_of_lightning = character.inventory.get_usable_wand('lightning')
+            wand_of_digging = character.inventory.get_usable_wand('digging')
+            unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
+            if wand_of_lightning and (unicorn_horn or not wand_of_digging):
+                self.usable_wand = wand_of_lightning
+                self.engraving.engraving_type = neighborhood.EngravingType.Permanent
+                self.engraving.confirm_time = self.engraving.engrave_time
+            elif wand_of_digging:
+                self.usable_wand = wand_of_digging
+                self.engraving.engraving_type = neighborhood.EngravingType.Semipermanent
+                self.engraving.confirm_time = self.engraving.engrave_time
+
+        if self.usable_wand is not None:
+            letter = self.usable_wand.inventory_letter
+
+        menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
+            menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
+            menuplan.MoreMenuResponse("You write in the dust with"),
+            menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
+            menuplan.MoreMenuResponse("is a wand of digging!"),
+            menuplan.MoreMenuResponse("is a wand of fire!"),
+            menuplan.MoreMenuResponse("You engrave in the"),
+            menuplan.MoreMenuResponse("You burn into the"),
+            menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("You will overwrite the current message."),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+        ], listening_item=self.usable_wand)
+
+        import pdb; pdb.set_trace()
+
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.ENGRAVE, new_menu_plan=menu_plan)
+
+    def advice_selected(self):
+        if self.usable_wand and self.usable_wand.charges == 0:
+            # We now know that it has 0 charges, which must mean it failed to engrave
+            return
+
+        self.current_square.elbereth = self.engraving
+
+class NearLook(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if oracle.blind:
+            return None
+
+        if run_state.current_square.elbereth is None or run_state.current_square.elbereth.confirm_time == run_state.time:
+            # Currently our only use case for NearLook is confirming Elbereth
+            return None
+
+        self.engraving = run_state.current_square.elbereth
+
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.LOOK)
+
+    def advice_selected(self):
+        self.engraving.looked_for_it = True
+
 
 class NameWishItemAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

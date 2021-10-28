@@ -2,6 +2,8 @@
 from  advisors import *
 
 new_advisors = [
+    # No-time recon
+    NearLook(),
     # FREE IMPROVEMENT
     NameItemAdvisor(),
     NameWishItemAdvisor(),
@@ -11,14 +13,16 @@ new_advisors = [
     # STONING ILL ETC
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.deadly_condition),
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
+    EngraveElberethAdvisor(),
     # CRITICALLY INJURED
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[
+        EngraveElberethAdvisor(),
         WaitAdvisor(threat_tolerance=0.),
         #UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
-        #EngraveElberethAdvisor(),
+        # EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
     # FAST IMPROVEMENT

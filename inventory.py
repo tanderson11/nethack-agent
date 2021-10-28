@@ -1310,6 +1310,13 @@ class PlayerInventory():
         else:
             return None
 
+    def get_usable_wand(self, name):
+        return self.get_item(
+            Wand,
+            identity_selector=lambda i: i.name() == name,
+            instance_selector=lambda i: i.charges is None or i.charges > 0
+        )
+
     def get_nutrition(self, character):
         food = self.get_items(oclass=Food, identity_selector=lambda i: i.safe_non_perishable(character))
         return sum(map(lambda x: x.quantity * x.identity.nutrition, food))
