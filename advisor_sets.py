@@ -45,11 +45,7 @@ new_advisors = [
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
     ]),
-    RandomCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors={
-        ReduceThreatFromManyEnemiesWithMove(): 95,
-        SafeMeleeAttackAdvisor(): 5,
-        #RandomMoveAdvisor(),
-    }),
+    SafeMeleeAttackAdvisor(),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
