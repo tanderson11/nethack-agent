@@ -535,7 +535,8 @@ class CMapGlyph(Glyph):
         self.is_fountain = self.offset == 31
         self.is_altar = self.offset == 27
 
-        self.engraveable = True # TODO
+        # not {altar, fountain, grave}
+        self.engraveable = not self.is_altar and not self.is_fountain and not (self.offset == 28)
         
 def make_glyph_class(base_klass, offset, count):
     class Klass(base_klass):

@@ -198,6 +198,10 @@ class Oracle():
     def on_stairs(self):
         return self.on_downstairs or self.on_upstairs
 
+    @utilities.cached_property
+    def on_elbereth(self):
+        return self.run_state.current_square.elbereth is not None and self.run_state.current_square.elbereth.confirm_time == self.run_state.time
+
 class Advisor(abc.ABC):
     def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
         self.consult = oracle_consultation
@@ -1951,7 +1955,10 @@ class EngraveTestWandsAdvisor(Advisor):
 
 class EngraveElberethAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if run_state.current_square.elbereth is not None and run_state.current_square.elbereth.confirm_time == run_state.time:
+        if not run_state.neighborhood.dungeon_glyph_on_player.engraveable:
+            return None
+
+        if oracle.on_elbereth:
             return None
 
         if oracle.blind:
@@ -2020,8 +2027,9 @@ class NearLook(Advisor):
         if oracle.blind:
             return None
 
-        if run_state.current_square.elbereth is None or run_state.current_square.elbereth.confirm_time == run_state.time:
+        if run_state.current_square.elbereth is None or oracle.on_elbereth:
             # Currently our only use case for NearLook is confirming Elbereth
+            # We only want to confirm if we have an unconfirmed Elbereth engraving on this square
             return None
 
         self.engraving = run_state.current_square.elbereth
