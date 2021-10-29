@@ -107,6 +107,7 @@ class Character():
         return self.relevant_skills['long sword'] == True
 
     def hankering_for_excalibur(self):
+        return False
         if self.global_identity_map.generated_artifacts['Excalibur'] == True:
             return False
         if self.wants_excalibur() == False:
