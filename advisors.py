@@ -1536,7 +1536,8 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
             nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
             self.target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
             if lmap.visits_count_map[self.target_square] != 0:
-                import pdb; pdb.set_trace()
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
             self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to unexplored", self, [
@@ -1591,7 +1592,8 @@ class TakeStaircaseAdvisor(Advisor):
             elif oracle.on_downstairs:
                 action = nethack.actions.MiscDirection.DOWN
             else:
-                import pdb; pdb.set_trace()
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
                 assert False, "on stairs but not on up or downstairs"
 
         return ActionAdvice(from_advisor=self, action=action)
@@ -1824,7 +1826,7 @@ class PathfindObivousMimicsSokoban(PathAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         mimic_path = run_state.neighborhood.path_obvious_mimics()
-        if mimic_path is not None:
+        if mimic_path is not None and environment.env.debug:
             import pdb; pdb.set_trace()
         return mimic_path
 
@@ -2016,8 +2018,6 @@ class EngraveElberethAdvisor(Advisor):
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
         ], listening_item=self.usable_wand)
-
-        import pdb; pdb.set_trace()
 
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.ENGRAVE, new_menu_plan=menu_plan)
 
