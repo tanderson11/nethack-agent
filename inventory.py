@@ -628,6 +628,9 @@ class EquippedStatus():
 class BadStringOnWhitelist(Exception):
     pass
 
+class BadString(Exception):
+    pass
+
 class ItemParser():
     item_pattern = re.compile("^(the|a|an|your|[0-9]+) (blessed|uncursed|cursed)? ?( ?(very|thoroughly)? ?(burnt|rusty|corroded|rustproof|rotted|poisoned|fireproof))* ?((\+|\-)[0-9]+)? ?([a-zA-Z9 -]+?[a-zA-Z9])( containing [0-9]+ items?)?( named ([a-zA-Z0-9!'@ _]*[a-zA-Z0-9!']))? ?(\(.+\))?$")
 
@@ -768,6 +771,9 @@ class ItemParser():
             match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
         except BadStringOnWhitelist:
             return None
+        except BadString:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
         if match_components.instance_name is not None:
@@ -807,6 +813,9 @@ class ItemParser():
         try:
             match_components = cls.parse_inventory_item_string(global_identity_map, item_str)
         except BadStringOnWhitelist:
+            return None
+        except BadString:
+            if environment.env.debug: import pdb; pdb.set_trace()
             return None
         description = match_components.description
 
@@ -938,7 +947,7 @@ class ItemParser():
             for substring in cls.bad_string_whitelist:
                 if substring in item_string:
                     raise BadStringOnWhitelist()
-            raise Exception(f"couldn't match item string {item_string}")
+            raise BadString() #Exception(f"couldn't match item string {item_string}")
 
     item_on_square_pattern = re.compile("You see here (.+?)\.")
     @classmethod
