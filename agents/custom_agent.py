@@ -603,7 +603,7 @@ class RunState():
             return
         if len(self.recent_position_counter) < 5:
             if sum(self.recent_position_counter.values()) == self.position_log_len:
-                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
                 self.stuck_flag = True
                 pass
     
