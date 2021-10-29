@@ -39,6 +39,10 @@ class Oracle():
         return True
 
     @utilities.cached_property
+    def am_stuck(self):
+        return self.run_state.stuck_flag
+
+    @utilities.cached_property
     def weak_with_hunger(self):
         return self.blstats.get('hunger_state') > 2
 
@@ -565,7 +569,7 @@ class ChargeWandOfWishing(Advisor):
         #import pdb; pdb.set_trace()
 
         read = nethack.actions.Command.READ
-        menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
+        menu_plan = menuplan.MenuPlan("read charging scroll", self, [
             menuplan.CharacterMenuResponse("What do you want to read?", chr(charging.inventory_letter)),
             menuplan.MoreMenuResponse("This is a charging scroll"),
             menuplan.CharacterMenuResponse("What do you want to charge?", chr(wand_of_wishing.inventory_letter))
@@ -604,6 +608,15 @@ class GainSpeedFromWand(Advisor):
             return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
 
 class ZapDiggingDownAdvisor(Advisor):
+    @staticmethod
+    def make_advice(advisor, wand_of_digging):
+        zap = nethack.actions.Command.ZAP
+        menu_plan = menuplan.MenuPlan("zap digging wand", advisor, [
+            menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
+            menuplan.CharacterMenuResponse("In what direction?", '>'),
+        ], listening_item=wand_of_digging)
+        return ActionAdvice(from_advisor=advisor, action=zap, new_menu_plan=menu_plan)
+
     def advice(self, rng, run_state, character, oracle):
         if character.held_by is not None:
             return None
@@ -611,48 +624,53 @@ class ZapDiggingDownAdvisor(Advisor):
         if not run_state.neighborhood.level_map.diggable_floor:
             return None
 
-        zap = nethack.actions.Command.ZAP
         wand_of_digging = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'digging', instance_selector=lambda i: i.charges is None or i.charges > 0)
 
         if wand_of_digging is not None:
-            menu_plan = menuplan.MenuPlan("zap digging wand", self, [
-                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_digging.inventory_letter)),
-                menuplan.CharacterMenuResponse("In what direction?", '>'),
-            ], listening_item=wand_of_digging)
-            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+            advice = self.make_advice(self, wand_of_digging)
+            return advice
 
 class ZapTeleportOnSelfAdvisor(Advisor):
+    @staticmethod
+    def make_advice(advisor, wand_of_teleport):
+        zap = nethack.actions.Command.ZAP
+        menu_plan = menuplan.MenuPlan("zap teleportation wand", advisor, [
+            menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
+            menuplan.CharacterMenuResponse("In what direction?", '.'),
+        ], listening_item=wand_of_teleport)
+        return ActionAdvice(from_advisor=advisor, action=zap, new_menu_plan=menu_plan)
+
     def advice(self, rng, run_state, character, oracle):
         if not run_state.neighborhood.level_map.teleportable:
             return None
 
-        zap = nethack.actions.Command.ZAP
         wand_of_teleport = character.inventory.get_item(inv.Wand, identity_selector=lambda i: i.name() == 'teleportation', instance_selector=lambda i: i.charges is None or i.charges > 0)
 
         if wand_of_teleport is not None:
-            menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
-                menuplan.CharacterMenuResponse("What do you want to zap?", chr(wand_of_teleport.inventory_letter)),
-                menuplan.DirectionMenuResponse("In what direction?", run_state.neighborhood.action_grid[run_state.neighborhood.local_player_location]),
-            ], listening_item=wand_of_teleport)
-            return ActionAdvice(from_advisor=self, action=zap, new_menu_plan=menu_plan)
+            advice = self.make_advice(self, wand_of_teleport)
+            return advice
 
 class ReadTeleportAdvisor(Advisor):
+    @staticmethod
+    def make_advice(advisor, scroll_of_teleport):
+        read = nethack.actions.Command.READ
+        letter = scroll_of_teleport.inventory_letter
+        menu_plan = menuplan.MenuPlan("read teleport scroll", advisor, [
+            menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
+            menuplan.YesMenuResponse("Do you wish to teleport?"),
+        ])
+        return ActionAdvice(from_advisor=advisor, action=read, new_menu_plan=menu_plan)
+
     def advice(self, rng, run_state, character, oracle):
         if not run_state.neighborhood.level_map.teleportable:
             return None
 
-        read = nethack.actions.Command.READ
-        scrolls = character.inventory.get_oclass(inv.Scroll)
+        teleport_scroll = character.inventory.get_item(inv.Scroll, name='teleportation')
+        if teleport_scroll is None:
+            return None
 
-        for scroll in scrolls:
-            if scroll and scroll.identity and scroll.identity.name() == 'teleport':
-                letter = scroll.inventory_letter
-                menu_plan = menuplan.MenuPlan("read teleport scroll", self, [
-                    menuplan.CharacterMenuResponse("What do you want to read?", chr(letter)),
-                    menuplan.YesMenuResponse("Do you wish to teleport?"),
-                ])
-                return ActionAdvice(from_advisor=self, action=read, new_menu_plan=menu_plan)
-        return None
+        advice = self.make_advice(self, teleport_scroll)
+        return advice
 
 class UseEscapeItemAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [ZapDiggingDownAdvisor, ZapTeleportOnSelfAdvisor, ReadTeleportAdvisor]
@@ -956,6 +974,86 @@ class Attack(Advisor):
 
     def prioritize(self, run_state, targets, character):
         return Target(targets.monsters[0], targets.directions[0], targets.absolute_positions[0])
+
+class StuckPlanInMotion(NamedTuple):
+    advisor: Advisor
+    preference: constants.ChangeSquarePreference
+
+class ChangeOfSquare(Advisor):
+    preference = constants.escape_default
+    def prepare(self, character, preference):
+        stuck_preparedness_plan = character.inventory.get_square_change_plan(preference)
+        if stuck_preparedness_plan is None:
+            return None
+        if stuck_preparedness_plan.escape_plan is not None:
+            return stuck_preparedness_plan.escape_plan
+
+        if stuck_preparedness_plan.wield_item is not None:
+            action = nethack.actions.Command.WIELD
+            character.executing_stuck_plan = StuckPlanInMotion(self, preference)
+            menu_plan = menuplan.MenuPlan("wield weapon for digging", self, [
+                menuplan.CharacterMenuResponse("What do you want to wield?", chr(stuck_preparedness_plan.wield_item.inventory_letter)),
+                ],
+            )
+        return ActionAdvice(from_advisor=self, action=action, new_menu_plan=menu_plan)
+
+    def make_apply_advice(self, item):
+        if item.identity.name() == 'pick-axe':
+            menu_plan = menuplan.MenuPlan("dig down with pick-axe", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", item.inventory_letter),
+                menuplan.CharacterMenuResponse("In what direction?", '<'),
+            ])
+            #import pdb; pdb.set_trace()
+            apply = nethack.actions.Command.APPLY
+            return ActionAdvice(self, apply, menu_plan)
+
+    def make_zap_advice(self, item):
+        if item.identity.name() == 'digging':
+            advice = ZapDiggingDownAdvisor.make_advice(self, item)
+            return advice
+        elif item.identity.name() == 'teleportation':
+            advice = ZapTeleportOnSelfAdvisor.make_advice(self, item)
+            return advice
+
+    def make_read_advice(self, item):
+        if item.identity.name() == 'teleportation':
+            advice = ReadTeleportAdvisor.make_advice(self, item)
+            return advice
+
+    def advice(self, rng, run_state, character, oracle):
+        preference = self.preference
+        if not oracle.am_stuck:
+            return None
+        if not run_state.neighborhood.level_map.teleportable:
+            preference &= ~constants.ChangeSquarePreference.teleport
+        if not run_state.neighborhood.level_map.diggable_floor:
+            preference &= ~constants.ChangeSquarePreference.digging
+
+        prep = self.prepare(character, preference)
+        if prep is None:
+            return None
+        if isinstance(prep, Advice):
+            return prep
+        if not isinstance(prep, inv.EscapePlan):
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
+
+        escape_plan = prep
+        if escape_plan.escape_action == nethack.actions.Command.APPLY:
+            advice = self.make_apply_advice(escape_plan.escape_item)
+        elif escape_plan.escape_action == nethack.actions.Command.ZAP:
+            advice = self.make_zap_advice(escape_plan.escape_item)
+        elif escape_plan.escape_action == nethack.actions.Command.READ:
+            advice = self.make_read_advice(escape_plan.escape_item)
+        else:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
+
+        return advice
+
+class StuckChangeOfSquare(ChangeOfSquare):
+    preference = constants.escape_default
+
 
 class RangedPlanInMotion(NamedTuple):
     advisor: Advisor

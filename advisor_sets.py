@@ -21,15 +21,14 @@ new_advisors = [
         #EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
-    # FAST IMPROVEMENT
+    # ADJUST/ABORT SUBROUTINES
     AdjustRangedPlanDummy(),
+    # FAST IMPROVEMENT
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
     CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger),
     # HIGHLY THREATENED
-    #PathfindToSafetyAdvisor(threat_threshold=0.4, path_threat_tolerance=0.4),
-    # IN GNOMISH MINES
     TakeStaircaseAdvisor(),
     PathfindTactical(),
     # COMBAT
@@ -57,6 +56,7 @@ new_advisors = [
     # LYCANTHROPY PUNISHED ETC
     PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
     # Stuck and gotta bust out
+    StuckChangeOfSquare(),
     UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(),

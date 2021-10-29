@@ -380,6 +380,7 @@ class RunState():
         
         self.time_hung = 0
         self.time_stuck = 0
+        self.stuck_flag = False
         self.rng = self.make_seeded_rng()
         self.time_did_advance = True
         self.used_free_stethoscope_move = False
@@ -596,6 +597,7 @@ class RunState():
         if len(self.recent_position_counter) < 5:
             if sum(self.recent_position_counter.values()) == self.position_log_len:
                 import pdb; pdb.set_trace()
+                self.stuck_flag = True
                 pass
     
     def report_special_fact_handled(self, fact):
@@ -995,7 +997,7 @@ class CustomAgent(BatchedAgent):
             import pdb; pdb.set_trace()
 
         if "From the murky depths, a hand reaches up to bless the sword" in message.message:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             print(message.message)
 
         if run_state.debugger_on:

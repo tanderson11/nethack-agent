@@ -1098,6 +1098,14 @@ class ArmamentSlots(NamedTuple):
 
         return blockers
 
+class EscapePlan(NamedTuple):
+    escape_action: int = None
+    escape_item: Item = None
+
+class EscapePreparednessProposal(NamedTuple):
+    wield_item: Item = None
+    escape_plan: EscapePlan = None
+
 class RangedAttackPlan(NamedTuple):
     attack_action: int = None
     attack_item: Item = None
@@ -1221,6 +1229,39 @@ class PlayerInventory():
             #import pdb; pdb.set_trace()
             pass
         return self.AttireProposal(proposed_items, proposal_blockers)
+
+    def get_square_change_plan(self, preference):
+        # is pick-axe allowed?
+        if preference.includes(constants.ChangeSquarePreference.slow) and preference.includes(constants.ChangeSquarePreference.down):
+            # are we wielding a pick-axe? if so, start digging
+            if self.wielded_weapon.identity.name() == 'pick-axe':
+                plan = EscapePlan(escape_action=nethack.actions.Command.APPLY, escape_item=self.wielded_weapon)
+                return EscapePreparednessProposal(escape_plan=plan)
+            # do we have a pick to wield?
+            pick = self.get_item(oclass=Tool, name='pick-axe', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
+            if pick is not None and self.wielded_weapon.BUC != constants.BUC.cursed:
+                return EscapePreparednessProposal(wield_item=pick)
+        
+        if preference.includes(constants.ChangeSquarePreference.teleport):
+            # do we have a teleportation scroll?
+            teleport_scroll = self.get_item(oclass=Scroll, name='teleportation')
+            if teleport_scroll is not None:
+                plan = EscapePlan(escape_action=nethack.actions.Command.READ, escape_item=teleport_scroll)
+                return EscapePreparednessProposal(escape_plan=plan)
+            
+            # do we have a teleportation wand?
+            teleport_wand = self.get_item(oclass=Wand, name='teleportation', instance_selector=lambda i: i.charges != 0)
+            if teleport_wand is not None:
+                plan = EscapePlan(escape_action=nethack.actions.Command.ZAP, escape_item=teleport_wand)
+                return EscapePreparednessProposal(escape_plan=plan)
+
+        # wand of digging
+        if preference.includes(constants.ChangeSquarePreference.down):
+            digging_wand = self.get_item(oclass=Wand, name='digging', instance_selector=lambda i: i.charges != 0)
+            if digging_wand is not None:
+                plan = EscapePlan(escape_action=nethack.actions.Command.ZAP, escape_item=digging_wand)
+                return EscapePreparednessProposal(escape_plan=plan)
+        return
 
     def get_ranged_weapon_attack(self, preference):
         # shoot from your bow

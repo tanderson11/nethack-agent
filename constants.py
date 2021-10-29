@@ -28,6 +28,19 @@ ranged_default = ~RangedAttackPreference.wand & ~RangedAttackPreference.adjacent
 #ranged_powerful = ~RangedAttackPreference.setup & ~RangedAttackPreference.death
 ranged_powerful = ~RangedAttackPreference.death & ~RangedAttackPreference.adjacent & ~RangedAttackPreference.weak
 
+class ChangeSquarePreference(enum.Flag):
+    slow = enum.auto()
+    teleport = enum.auto()
+    digging = enum.auto()
+    up = enum.auto()
+    down = enum.auto()
+
+    def includes(self, flag):
+        return self & flag == flag
+
+escape_urgent = ~ChangeSquarePreference.slow
+escape_default = escape_urgent | ChangeSquarePreference.slow
+
 class IdentityDesirability(enum.Enum):
     desire_all = "desire all"
     desire_all_uncursed = "desire all uncursed"
