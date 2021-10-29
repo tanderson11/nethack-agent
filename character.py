@@ -302,6 +302,7 @@ class Character():
         return self.experience_level > 9
     
     def eager_for_mines1(self):
+        return True
         return self.base_class == constants.BaseRole.Caveperson
 
     def attempted_to_blind(self, monster, time):
