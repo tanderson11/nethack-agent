@@ -16,7 +16,7 @@ from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, M
 import advisor_sets
 
 import menuplan
-from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords
+from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
 import physics
 import inventory as inv
@@ -881,6 +881,18 @@ class CustomAgent(BatchedAgent):
         if "Things that are here:" in message.message or "There are several objects here." in message.message:
             run_state.current_square.stack_on_square = True
 
+        if 'You read: "Elbereth"' in message.message:
+            engraving_type = EngravingType.Temporary
+            if "engraved here on the floor" in message.message:
+                engraving_type = EngravingType.Semipermanent
+            elif "burned into the floor here" in message.message:
+                engraving_type = EngravingType.Permanent
+            run_state.current_square.elbereth = ElberethEngraving(
+                engrave_time=None,
+                confirm_time=time,
+                engraving_type=engraving_type
+            )
+
         if "lands on the altar" in message.message:
             #import pdb; pdb.set_trace()
             run_state.current_square.stack_on_square = True
@@ -1118,6 +1130,9 @@ class CustomAgent(BatchedAgent):
 
         level_map.garbage_collect_corpses(time)
         run_state.failed_move_record.garbage_collect(time)
+
+        if run_state.current_square.elbereth and run_state.current_square.elbereth.looked_for_it:
+            run_state.current_square.elbereth = None
 
         neighborhood = Neighborhood(
             time,

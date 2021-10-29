@@ -54,13 +54,13 @@ class Oracle():
     def can_pray_for_hp(self):
         level = self.character.experience_level
         current_hp = self.character.current_hp
-        max_hp = self.character.max_hp
+        max_hp = min(self.character.max_hp, level*15)
         if current_hp < 6: return True
         elif level < 6 and current_hp < max_hp * 1/5: return True
         elif level < 14 and current_hp < max_hp * 1/6: return True
         elif level < 22 and current_hp < max_hp * 1/7: return True
         elif level < 30 and current_hp < max_hp * 1/8: return True
-        elif level == 30 and current_hp < max_hp * 1/9: return True
+        elif level >= 30 and current_hp < max_hp * 1/9: return True
         else: return False
 
     @utilities.cached_property
@@ -76,6 +76,12 @@ class Oracle():
         current_hp = self.character.current_hp
         max_hp = self.character.max_hp
         return current_hp < max_hp * 0.6
+
+    @utilities.cached_property
+    def very_low_hp(self):
+        current_hp = self.character.current_hp
+        max_hp = self.character.max_hp
+        return current_hp < max_hp * 0.4
 
     """// From botl.h.
     mn.attr("BL_MASK_STONE") = py::int_(static_cast<int>(BL_MASK_STONE));
@@ -201,6 +207,10 @@ class Oracle():
     @utilities.cached_property
     def on_stairs(self):
         return self.on_downstairs or self.on_upstairs
+
+    @utilities.cached_property
+    def on_elbereth(self):
+        return self.run_state.current_square.elbereth is not None and self.run_state.current_square.elbereth.confirm_time == self.run_state.time
 
 class Advisor(abc.ABC):
     def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
@@ -1636,7 +1646,8 @@ class TravelToBespokeUnexploredAdvisor(Advisor):
             nearest_square_idx = np.argmin(np.sum(np.abs(desirable_unvisited - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
             self.target_square = physics.Square(*desirable_unvisited[nearest_square_idx])
             if lmap.visits_count_map[self.target_square] != 0:
-                import pdb; pdb.set_trace()
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
             self.lmap = lmap
             menu_plan = menuplan.MenuPlan(
                 "travel to unexplored", self, [
@@ -1691,7 +1702,8 @@ class TakeStaircaseAdvisor(Advisor):
             elif oracle.on_downstairs:
                 action = nethack.actions.MiscDirection.DOWN
             else:
-                import pdb; pdb.set_trace()
+                if environment.env.debug:
+                    import pdb; pdb.set_trace()
                 assert False, "on stairs but not on up or downstairs"
 
         return ActionAdvice(from_advisor=self, action=action)
@@ -1923,7 +1935,7 @@ class PathfindObivousMimicsSokoban(PathAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         mimic_path = run_state.neighborhood.path_obvious_mimics()
-        if mimic_path is not None:
+        if mimic_path is not None and environment.env.debug:
             import pdb; pdb.set_trace()
         return mimic_path
 
@@ -2030,19 +2042,22 @@ class EngraveTestWandsAdvisor(Advisor):
         menu_plan = menuplan.MenuPlan("engrave test wand", self, [
             menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
             menuplan.MoreMenuResponse("You write in the dust with"),
-            menuplan.MoreMenuResponse("A lit field surrounds you!"),
             menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
             menuplan.MoreMenuResponse("is a wand of digging!"),
             menuplan.MoreMenuResponse("is a wand of fire!"),
             menuplan.MoreMenuResponse("You engrave in the"),
-            menuplan.MoreMenuResponse("You engrave in the floor with a wand of digging."),
             menuplan.MoreMenuResponse("You burn into the"),
-            menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("You will overwrite the current message."),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+            menuplan.MoreMenuResponse("A lit field surrounds you!"),
+            menuplan.MoreMenuResponse("You feel self-knowledgeable..."),
             menuplan.MoreMenuResponse("Agent the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Wizard the"), # best match for enlightenment without regex
             menuplan.MoreMenuResponse("Your intelligence is"),
-            menuplan.MoreMenuResponse("You wipe out the message that was written"),
             menuplan.MoreMenuResponse("usage fee"),
             menuplan.MoreMenuResponse("The feeling subsides"),
             menuplan.MoreMenuResponse("The engraving on the floor vanishes!"),
@@ -2050,13 +2065,95 @@ class EngraveTestWandsAdvisor(Advisor):
             menuplan.MoreMenuResponse("You may wish for an object"),
             menuplan.WishMenuResponse("For what do you wish?", character, wand=w),
             menuplan.WishMoreMenuResponse(character),
-            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
-            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
-            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
             menuplan.EscapeMenuResponse("Create what kind of monster?"),
         ], listening_item=w)
 
         return ActionAdvice(from_advisor=self, action=engrave, new_menu_plan=menu_plan)
+
+class EngraveElberethAdvisor(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.dungeon_glyph_on_player.engraveable:
+            return None
+
+        if oracle.on_elbereth:
+            return None
+
+        if oracle.blind:
+            return None
+
+        self.current_square = run_state.current_square
+        self.usable_wand = None
+        self.engraving = neighborhood.ElberethEngraving(
+            engrave_time=run_state.time,
+            confirm_time=None,
+            engraving_type=neighborhood.EngravingType.Temporary
+        )
+        letter = ord('-')
+        
+        wand_of_fire = character.inventory.get_usable_wand('fire')
+        if wand_of_fire:
+            self.usable_wand = wand_of_fire
+            self.engraving.engraving_type = neighborhood.EngravingType.Permanent
+            self.engraving.confirm_time = self.engraving.engrave_time
+
+        if self.usable_wand is None:
+            wand_of_lightning = character.inventory.get_usable_wand('lightning')
+            wand_of_digging = character.inventory.get_usable_wand('digging')
+            unicorn_horn = character.inventory.get_item(inv.Tool, identity_selector=lambda i: i.name() == 'unicorn horn', instance_selector=lambda i: i.BUC != constants.BUC.cursed)
+            if wand_of_lightning and (unicorn_horn or not wand_of_digging):
+                self.usable_wand = wand_of_lightning
+                self.engraving.engraving_type = neighborhood.EngravingType.Permanent
+                self.engraving.confirm_time = self.engraving.engrave_time
+            elif wand_of_digging:
+                self.usable_wand = wand_of_digging
+                self.engraving.engraving_type = neighborhood.EngravingType.Semipermanent
+                self.engraving.confirm_time = self.engraving.engrave_time
+
+        if self.usable_wand is not None:
+            letter = self.usable_wand.inventory_letter
+
+        menu_plan = menuplan.MenuPlan("zap teleportation wand", self, [
+            menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
+            menuplan.MoreMenuResponse("You write in the dust with"),
+            menuplan.MoreMenuResponse("is a wand of lightning!"), # TK regular expressions in MenuResponse matching
+            menuplan.MoreMenuResponse("is a wand of digging!"),
+            menuplan.MoreMenuResponse("is a wand of fire!"),
+            menuplan.MoreMenuResponse("You engrave in the"),
+            menuplan.MoreMenuResponse("You burn into the"),
+            menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("You will overwrite the current message."),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+        ], listening_item=self.usable_wand)
+
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.ENGRAVE, new_menu_plan=menu_plan)
+
+    def advice_selected(self):
+        if self.usable_wand and self.usable_wand.charges == 0:
+            # We now know that it has 0 charges, which must mean it failed to engrave
+            return
+
+        self.current_square.elbereth = self.engraving
+
+class NearLook(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if oracle.blind:
+            return None
+
+        if run_state.current_square.elbereth is None or oracle.on_elbereth:
+            # Currently our only use case for NearLook is confirming Elbereth
+            # We only want to confirm if we have an unconfirmed Elbereth engraving on this square
+            return None
+
+        self.engraving = run_state.current_square.elbereth
+
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.LOOK)
+
+    def advice_selected(self):
+        self.engraving.looked_for_it = True
+
 
 class NameWishItemAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):

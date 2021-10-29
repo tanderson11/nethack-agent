@@ -2,6 +2,8 @@
 from  advisors import *
 
 new_advisors = [
+    # No-time recon
+    NearLook(),
     # FREE IMPROVEMENT
     NameItemAdvisor(),
     NameWishItemAdvisor(),
@@ -17,8 +19,9 @@ new_advisors = [
         #UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
+        WaitAdvisor(oracle_consultation=lambda o: o.on_elbereth),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
-        #EngraveElberethAdvisor(),
+        EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
     # ADJUST/ABORT SUBROUTINES
@@ -37,10 +40,12 @@ new_advisors = [
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
     DrinkHealingPotionWhenLow(),
     CastHealing(),
+    WaitAdvisor(oracle_consultation=lambda o: o.very_low_hp and o.on_elbereth),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
         BlindFearfulWithCamera(),
+        EngraveElberethAdvisor(oracle_consultation=lambda o: o.very_low_hp),
         MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),

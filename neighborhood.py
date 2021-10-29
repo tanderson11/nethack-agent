@@ -26,6 +26,19 @@ class Targets(NamedTuple):
     directions: list
     absolute_positions: list
 
+class EngravingType(enum.Enum):
+    Permanent = enum.auto()
+    Semipermanent = enum.auto()
+    Temporary = enum.auto()
+
+@dataclass
+class ElberethEngraving:
+    engrave_time: int
+    confirm_time: int
+    engraving_type: EngravingType
+    looked_for_it: bool = False
+
+
 @dataclass
 class CurrentSquare:
     dcoord: Tuple[int, int]
@@ -35,6 +48,7 @@ class CurrentSquare:
     stack_on_square: bool = False
     item_on_square: inventory.Item = None
     special_facts: list = None
+    elbereth: ElberethEngraving = None
 
 class FailedMove(NamedTuple):
     move: enum.IntEnum
