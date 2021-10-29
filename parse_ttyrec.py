@@ -152,8 +152,14 @@ def parse_dir(dr, outpath=None):
     df = pd.DataFrame(rows)
     df = df.sort_values('replay_number')
     df = df.set_index('replay_number')
-    #import pdb; pdb.set_trace()
 
+    if outpath is not None:
+        with open(outpath, 'wb') as f:
+            df.to_csv(f)
+
+    return df
+
+def print_stats_from_log(df):
     if 'killer' in df:
         print('Killers')
         print(df.groupby("killer").count().sort_values("score", ascending=False))
@@ -162,11 +168,7 @@ def parse_dir(dr, outpath=None):
     print("Score by role")
     print(df.groupby("role")["score"].describe().sort_values("mean", ascending=False))
 
-    if outpath is not None:
-        with open(outpath, 'wb') as f:
-            df.to_csv(f)
 
-    return df
 
 if __name__ == "__main__":
     #parse_dir(os.path.join(os.path(__file__), argv[1]), outpath=outpath)

@@ -111,14 +111,15 @@ def run_multiple(num_runners):
                 runner.done = True
                 done_runners += 1
 
-    return overall_results, crashed_runners
+    return overall_results, crashed_runners, episodes_per_runner
 
 
 if __name__ == "__main__":
     if environment.env.num_runners > 1:
-        overall_results, crashed_runners = run_multiple(environment.env.num_runners)
+        overall_results, crashed_runners, episodes_per_runner = run_multiple(environment.env.num_runners)
     else:
         overall_results = evaluate(0, TestEvaluationConfig.NUM_EPISODES)
+        episodes_per_runner = TestEvaluationConfig.NUM_EPISODES
         crashed_runners = 0
 
     print(
@@ -132,34 +133,43 @@ if __name__ == "__main__":
         f"Max Score: {max(overall_results.scores)}, "
     )
 
+    joint_log_df = None
+
     for path in overall_results.log_paths:
+        files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
+        for f in files:
+            if f.endswith('{}.ttyrec.bz2'.format(episodes_per_runner)): # rm this junk file
+                print("Removing {}".format(f))
+                os.remove(f)
+        outpath = os.path.join(path, "deaths.csv")
         try:
-            files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
-            for f in files:
-                if f.endswith('{}.ttyrec.bz2'.format(environment.env.num_episodes)): # rm this junk file
-                    print("Removing {}".format(f))
-                    os.remove(f)
-            outpath = os.path.join(path, "deaths.csv")
             score_df = parse_ttyrec.parse_dir(path, outpath=outpath)
-
-            log_df = pd.read_csv(os.path.join(path, "log.csv"))
-            df = score_df.join(log_df, rsuffix='_log')
-
-            with open(os.path.join(path, "joint_log.csv"), 'w') as f:
-                df.to_csv(f)
-
-            df = df[~pd.isna(df['scummed'])]
-            df = df[~df['scummed'].astype(bool)]
-
-            print(
-                f"Runs: {len(df.index)}, "
-                f"Ascensions: {df['ascended'].sum()}, "
-                f"Median Score: {df['score_log'].median()}, "
-                f"Mean Score: {df['score_log'].mean()}, "
-                f"Min Score: {df['score_log'].min()}, "
-                f"Max Score: {df['score_log'].max()}, "
-                f"Max depth: {df['depth_log'].max()}, "
-                f"Max experience: {df['explevel'].max()}, "
-            )
         except Exception as e:
             print(f"TTYREC parse failed with {e}. Failing gracefully")
+        else:
+            log_df = pd.read_csv(os.path.join(path, "log.csv"))
+            df = score_df.join(log_df, rsuffix='_log')
+            if joint_log_df is None:
+                joint_log_df = df
+            else:
+                joint_log_df = joint_log_df.append(df, ignore_index=True)
+
+    if joint_log_df is not None:
+        parse_ttyrec.print_stats_from_log(joint_log_df)
+
+        with open(os.path.join(overall_results.log_paths[0], "joint_log.csv"), 'w') as f:
+            joint_log_df.to_csv(f)
+
+        joint_log_df = joint_log_df[~pd.isna(joint_log_df['scummed'])]
+        joint_log_df = joint_log_df[~joint_log_df['scummed'].astype(bool)]
+
+        print(
+            f"Runs: {len(joint_log_df.index)}, "
+            f"Ascensions: {joint_log_df['ascended'].sum()}, "
+            f"Median Score: {joint_log_df['score_log'].median()}, "
+            f"Mean Score: {joint_log_df['score_log'].mean()}, "
+            f"Min Score: {joint_log_df['score_log'].min()}, "
+            f"Max Score: {joint_log_df['score_log'].max()}, "
+            f"Max depth: {joint_log_df['depth_log'].max()}, "
+            f"Max experience: {joint_log_df['explevel'].max()}, "
+        )
