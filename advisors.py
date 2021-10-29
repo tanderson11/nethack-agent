@@ -1143,7 +1143,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         return Target(targets.monsters[target_index], targets.directions[target_index], targets.absolute_positions[target_index])
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
-    preference = constants.ranged_powerful
+    preference = constants.ranged_powerful | constants.RangedAttackPreference.adjacent
     def targets(self, neighborhood, character, **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
