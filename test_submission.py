@@ -6,6 +6,7 @@
 # * Resources might vary from your local machine
 
 from typing import NamedTuple, List
+import csv
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
 import os
@@ -29,12 +30,27 @@ class RolloutResults(NamedTuple):
     scores: List[int]
     log_paths: str
 
-def evaluate(id, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=None):
+seed_whitelist = []
+if environment.env.use_seed_whitelist:
+    with open(os.path.join(os.path.dirname(__file__), "seeded_runs", "seed_whitelist.csv"), newline='') as csvfile:
+        seed_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
+        for i, row in enumerate(seed_reader):
+            if i == 0:
+                assert row[0] == 'core'
+                assert row[1] == 'display'
+                continue
+            seed_whitelist.append((int(row[0]), int(row[1])))
+
+def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=None):
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
     num_envs = SubmissionConfig.NUM_ENVIRONMENTS
     Agent = SubmissionConfig.AGENT
 
-    batched_env = BatchedEnv(env_make_fn=env_make_fn, num_envs=num_envs)
+    seeds = seed_whitelist[(runner_index * num_episodes):((runner_index + 1) * num_episodes)]
+    # If you want to manually try a single seed
+    # seeds = [(3781606510239413095, 8286170024939907219)]
+
+    batched_env = BatchedEnv(env_make_fn=env_make_fn, seeds=seeds, num_envs=num_envs)
 
     agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.log_runs else None)
 

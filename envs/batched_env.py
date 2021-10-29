@@ -1,8 +1,4 @@
-import csv
-import os
-
 from collections.abc import Iterable
-import pandas as pd
 
 import environment
 
@@ -13,22 +9,11 @@ def log_new_run(env):
     print(f"[{env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
 
 class BatchedEnv:
-    def __init__(self, env_make_fn, num_envs=32):
+    def __init__(self, env_make_fn, seeds=[], num_envs=32):
         """
         Creates multiple copies of the environment with the same env_make_fn function
         """
-        self.seeds = []
-        if environment.env.use_seed_whitelist:
-            with open(os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "seed_whitelist.csv"), newline='') as csvfile:
-                seed_reader = csv.reader(csvfile, delimiter=',', quotechar='"')
-                for i, row in enumerate(seed_reader):
-                    if i == 0:
-                        assert row[0] == 'core'
-                        assert row[1] == 'display'
-                        continue
-                    self.seeds.append((int(row[0]), int(row[1])))
-        # If you want to manually try a single seed
-        #self.seeds = [(3781606510239413095, 8286170024939907219)]
+        self.seeds = seeds
         self.num_envs = num_envs
         self.env_make_fn = env_make_fn
         self.envs = []
