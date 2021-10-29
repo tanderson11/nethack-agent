@@ -1143,6 +1143,8 @@ class PlayerInventory():
     def proposed_weapon_changes(self, character):
         if character.executing_ranged_plan:
             return None
+        if character.executing_escape_plan:
+            return None
 
         current_weapon = self.wielded_weapon
         relevant_weapons = self.get_items(Weapon, instance_selector=lambda i: not i.identity.is_ammo and i.uses_relevant_skill(character))

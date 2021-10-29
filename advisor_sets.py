@@ -22,6 +22,7 @@ new_advisors = [
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
     # ADJUST/ABORT SUBROUTINES
+    AdjustEscapePlanDummy(),
     AdjustRangedPlanDummy(),
     # FAST IMPROVEMENT
     WieldBetterWeaponAdvisor(),
@@ -65,8 +66,8 @@ new_advisors = [
         RandomMoveAdvisor(square_threat_tolerance=0.): 95,
         HuntNearestEnemyAdvisor(): 5, # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
     }),
-    WaitAdvisor(oracle_consultation=lambda o: o.in_shop and o.blind),
-    WaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
+    ConditionWaitAdvisor(oracle_consultation=lambda o: o.in_shop and o.blind),
+    ConditionWaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
     ###### OUT OF DANGER ###### ()
     BuyDesirableAdvisor(),
     DrinkHealingForMaxHPAdvisor(),

@@ -342,6 +342,9 @@ class WaitAdvisor(Advisor):
         wait = nethack.actions.MiscDirection.WAIT
         return ActionAdvice(from_advisor=self, action=wait)
 
+class ConditionWaitAdvisor(WaitAdvisor):
+    pass
+
 class WaitForHPAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if character.desperate_for_food():
@@ -978,10 +981,11 @@ class Attack(Advisor):
 class StuckPlanInMotion(NamedTuple):
     advisor: Advisor
     preference: constants.ChangeSquarePreference
+    from_level: int
 
 class ChangeOfSquare(Advisor):
     preference = constants.escape_default
-    def prepare(self, character, preference):
+    def prepare(self, character, preference, current_dlevel):
         stuck_preparedness_plan = character.inventory.get_square_change_plan(preference)
         if stuck_preparedness_plan is None:
             return None
@@ -990,7 +994,7 @@ class ChangeOfSquare(Advisor):
 
         if stuck_preparedness_plan.wield_item is not None:
             action = nethack.actions.Command.WIELD
-            character.executing_stuck_plan = StuckPlanInMotion(self, preference)
+            character.executing_escape_plan = StuckPlanInMotion(self, preference, current_dlevel)
             menu_plan = menuplan.MenuPlan("wield weapon for digging", self, [
                 menuplan.CharacterMenuResponse("What do you want to wield?", chr(stuck_preparedness_plan.wield_item.inventory_letter)),
                 ],
@@ -1000,8 +1004,8 @@ class ChangeOfSquare(Advisor):
     def make_apply_advice(self, item):
         if item.identity.name() == 'pick-axe':
             menu_plan = menuplan.MenuPlan("dig down with pick-axe", self, [
-                menuplan.CharacterMenuResponse("What do you want to use or apply?", item.inventory_letter),
-                menuplan.CharacterMenuResponse("In what direction?", '<'),
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(item.inventory_letter)),
+                menuplan.CharacterMenuResponse("In what direction do you want to dig?", '>'),
             ])
             #import pdb; pdb.set_trace()
             apply = nethack.actions.Command.APPLY
@@ -1029,7 +1033,8 @@ class ChangeOfSquare(Advisor):
         if not run_state.neighborhood.level_map.diggable_floor:
             preference &= ~constants.ChangeSquarePreference.digging
 
-        prep = self.prepare(character, preference)
+        #import pdb; pdb.set_trace()
+        prep = self.prepare(character, preference, run_state.neighborhood.dcoord.level)
         if prep is None:
             return None
         if isinstance(prep, Advice):
@@ -1250,6 +1255,13 @@ class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
             return None
         return super().advice(rng, run_state, character, oracle)
 
+class AdjustEscapePlanDummy(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not character.executing_escape_plan:
+            return None
+        #import pdb; pdb.set_trace()
+        if run_state.neighborhood.dcoord.level != character.executing_escape_plan.from_level:
+            character.executing_escape_plan = False
 
 class AdjustRangedPlanDummy(Advisor):
     def advice(self, rng, run_state, character, oracle):

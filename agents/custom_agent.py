@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice
+from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import advisor_sets
 
 import menuplan
@@ -380,6 +380,7 @@ class RunState():
         
         self.time_hung = 0
         self.time_stuck = 0
+        self.last_level_change_timestamp = 0
         self.stuck_flag = False
         self.rng = self.make_seeded_rng()
         self.time_did_advance = True
@@ -563,7 +564,10 @@ class RunState():
             self.position_log.append(None)
             return
         self.position_log.append((self.neighborhood.level_map.dcoord, self.current_square.location))
-        if isinstance(self.advice_log[-1], MenuAdvice) or isinstance(self.advice_log[-1].from_advisor, SearchDeadEndAdvisor):
+        if isinstance(self.advice_log[-1], MenuAdvice):
+            return
+        last_advisor = self.advice_log[-1].from_advisor
+        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, ConditionWaitAdvisor) or isinstance(last_advisor, WaitForHPAdvisor):
             return
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
@@ -574,10 +578,10 @@ class RunState():
                 advice = self.advice_log[i]
                 if position is None:
                     continue
-                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor):
+                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, ConditionWaitAdvisor) or isinstance(advice.from_advisor, WaitForHPAdvisor):
                     continue
                 if self.recent_position_counter[position] == 0:
-                    import pdb; pdb.set_trace()
+                    if environment.env.debug: import pdb; pdb.set_trace()
                 self.recent_position_counter[position] -= 1
                 #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
                 if self.recent_position_counter[position] == 0:
@@ -594,6 +598,9 @@ class RunState():
     def check_stuck(self):
         #if not environment.env.debug:
         #    return None
+        if self.time - self.last_level_change_timestamp < 30:
+            self.stuck_flag = False
+            return
         if len(self.recent_position_counter) < 5:
             if sum(self.recent_position_counter.values()) == self.position_log_len:
                 import pdb; pdb.set_trace()
@@ -913,6 +920,7 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
+            run_state.last_level_change_timestamp = run_state.time
             if dcoord.branch == map.Branches.Sokoban.value:
                 #import pdb; pdb.set_trace()
                 pass
