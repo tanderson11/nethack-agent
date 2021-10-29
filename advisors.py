@@ -50,13 +50,13 @@ class Oracle():
     def can_pray_for_hp(self):
         level = self.character.experience_level
         current_hp = self.character.current_hp
-        max_hp = self.character.max_hp
+        max_hp = min(self.character.max_hp, level*15)
         if current_hp < 6: return True
         elif level < 6 and current_hp < max_hp * 1/5: return True
         elif level < 14 and current_hp < max_hp * 1/6: return True
         elif level < 22 and current_hp < max_hp * 1/7: return True
         elif level < 30 and current_hp < max_hp * 1/8: return True
-        elif level == 30 and current_hp < max_hp * 1/9: return True
+        elif level >= 30 and current_hp < max_hp * 1/9: return True
         else: return False
 
     @utilities.cached_property
@@ -72,6 +72,12 @@ class Oracle():
         current_hp = self.character.current_hp
         max_hp = self.character.max_hp
         return current_hp < max_hp * 0.6
+
+    @utilities.cached_property
+    def very_low_hp(self):
+        current_hp = self.character.current_hp
+        max_hp = self.character.max_hp
+        return current_hp < max_hp * 0.4
 
     """// From botl.h.
     mn.attr("BL_MASK_STONE") = py::int_(static_cast<int>(BL_MASK_STONE));

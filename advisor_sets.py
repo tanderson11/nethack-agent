@@ -40,10 +40,12 @@ new_advisors = [
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
     DrinkHealingPotionWhenLow(),
     CastHealing(),
+    WaitAdvisor(oracle_consultation=lambda o: o.very_low_hp and o.on_elbereth),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0, advisors=[
         TameHerbivores(),
         TameCarnivores(),
         BlindFearfulWithCamera(),
+        EngraveElberethAdvisor(oracle_consultation=lambda o: o.very_low_hp),
         MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
