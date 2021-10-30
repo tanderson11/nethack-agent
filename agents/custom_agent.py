@@ -386,7 +386,7 @@ class RunState():
         self.stuck_flag = False
 
         self.seed = base64.b64encode(os.urandom(4))
-        self.seed = b'YgNfxQ=='
+        #self.seed = b'YgNfxQ=='
         self.rng = self.make_seeded_rng(self.seed)
 
         self.time_did_advance = True
