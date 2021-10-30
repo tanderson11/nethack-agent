@@ -1193,6 +1193,16 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+            range = physics.AttackRange('line', 4)
+            if attack_plan.attack_item.identity.direction_type() == 'ray':
+                #import pdb; pdb.set_trace()
+                range = physics.AttackRange('ray', 13)
+            retargets = self.targets(run_state.neighborhood, character, range=range, include_adjacent=include_adjacent, ray_override=[physics.action_to_delta[attack_direction]])
+            # A little hacky, but now that we know we're using a wand, let's recheck our target to ensure we don't explode ourselves
+            if retargets is None:
+                return None
+            if self.prioritize(run_state, retargets, character) != target:
+                return None
         elif attack_plan.attack_action == nethack.actions.Command.CAST:
             #import pdb; pdb.set_trace()
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
