@@ -384,7 +384,7 @@ class RunState():
         self.stuck_flag = False
 
         self.seed = base64.b64encode(os.urandom(4))
-        #self.seed = b'vYIDlQ=='
+        #self.seed = b'AMX0Dw=='
         self.rng = self.make_seeded_rng(self.seed)
 
         self.time_did_advance = True
@@ -746,6 +746,8 @@ class RunState():
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
             self.actions_without_consequence = set()
+        elif isinstance(self.last_non_menu_advice, StethoscopeAdvice):
+            pass
         else:
             self.last_non_menu_action_failed_advancement = True
             self.actions_without_consequence.add(self.last_non_menu_action)

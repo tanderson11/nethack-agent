@@ -28,6 +28,7 @@ new_advisors = [
     AdjustEscapePlanDummy(),
     AdjustRangedPlanDummy(),
     # FAST IMPROVEMENT
+    NameSting(),
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
@@ -81,6 +82,7 @@ new_advisors = [
     DrinkGainLevel(),
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
+    DropUndesriableInVault(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
         ChargeWandOfWishing(),
         ZapWandOfWishing(),
@@ -124,6 +126,7 @@ new_advisors = [
     # MOVE TO DESIRABLE
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
+    EscapeVault(),
     # EXPLORE
     SearchWithStethoscope(oracle_consultation=lambda o:o.have_free_stethoscope_action),
     SearchDeadEndsWithStethoscope(),
@@ -136,6 +139,7 @@ new_advisors = [
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         TravelToAltarAdvisor(): 2,
+        TravelToVaultCloset(): 5,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
     RandomMoveAdvisor(),

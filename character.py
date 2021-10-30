@@ -103,6 +103,9 @@ class Character():
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
 
+    def ready_for_vault(self):
+        return self.inventory.get_square_change_plan(constants.escape_default) is not None
+
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
         return self.relevant_skills['long sword'] == True

@@ -244,6 +244,7 @@ class DLevelMap():
         self.special_level_searcher = special_level_searcher
         self.special_level = None
         self.clear = False
+        self.vault_looted = False
         self.diggable_floor = True
         self.teleportable = True
 
@@ -472,6 +473,9 @@ class DLevelMap():
             self.add_vault_closet(location)
         else:
             self.add_owned_door(location)
+
+    def register_looted_vault(self):
+        self.vault_looted = True
 
     def add_owned_door(self, engraving_location):
         #import pdb; pdb.set_trace()
