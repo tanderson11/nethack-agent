@@ -1166,7 +1166,7 @@ class CustomAgent():
         run_state.update_neighborhood(neighborhood)
 
         if "_ZORP_ is confused from hunger" in message.message:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             run_state.neighborhood.level_map.confused_pet_flag = True
 
         run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
