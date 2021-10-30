@@ -807,6 +807,9 @@ class CustomAgent():
         changed_square = False
         previous_square = False
 
+        if run_state.character and changed_level:
+            run_state.character.borked_balance = False
+
         if changed_level or run_state.current_square.location != player_location:
             changed_square = True
             previous_square = run_state.current_square
