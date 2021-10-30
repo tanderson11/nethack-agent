@@ -497,7 +497,7 @@ class Character():
     def get_spell_attack(self, preference):
         if self.current_energy is None or self.current_energy < 5:
                 return None
-        if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
+        if self.hunger_state < 3 and 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
             attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
             proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
             return proposal
