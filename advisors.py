@@ -359,7 +359,7 @@ class WaitAdvisor(Advisor):
 class ConditionWaitAdvisor(WaitAdvisor):
     pass
 
-class WaitForHPAdvisor(Advisor):
+class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
         return super().advice(rng, run_state, character, oracle)
 
@@ -1193,6 +1193,16 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+            range = physics.AttackRange('line', 4)
+            if attack_plan.attack_item.identity.direction_type() == 'ray':
+                #import pdb; pdb.set_trace()
+                range = physics.AttackRange('ray', 13)
+            retargets = self.targets(run_state.neighborhood, character, range=range, include_adjacent=include_adjacent, ray_override=[physics.action_to_delta[attack_direction]])
+            # A little hacky, but now that we know we're using a wand, let's recheck our target to ensure we don't explode ourselves
+            if retargets is None:
+                return None
+            if self.prioritize(run_state, retargets, character) != target:
+                return None
         elif attack_plan.attack_action == nethack.actions.Command.CAST:
             #import pdb; pdb.set_trace()
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
@@ -1203,19 +1213,26 @@ class RangedAttackAdvisor(Attack):
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
+        if oracle.in_shop:
+            return None
+        #if character.current_hp < 30:
+        #    return None
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
             pass
             #import pdb; pdb.set_trace()
         return advice
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range= physics.AttackRange('line', 4), **kwargs):
+        
         #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
             #print(f"Annoying monster at range: {targets.monsters[0]}")
             pass
         return targets
+
+class NonWandRangedAttackFearfulMonsters(RangedAttackFearfulMonsters):
+    preference = constants.ranged_default
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
@@ -1225,16 +1242,14 @@ class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         return super().advice(rng, run_state, character, oracle)
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range, **kwargs)
         if targets is not None:
             print(f"Invisible monster: {targets.monsters[0]}")
         return targets
 
 class TameCarnivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1254,8 +1269,7 @@ class TameCarnivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class TameHerbivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1274,10 +1288,41 @@ class TameHerbivores(RangedAttackAdvisor):
         menu_plan = self.make_throw_plan(food, attack_direction)
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
+class RetameCarnivorePet(TameCarnivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
+class RetameHerbivorePet(TameHerbivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
 
     def prioritize(self, run_state, targets, character):
@@ -1296,7 +1341,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.adjacent
-    def targets(self, neighborhood, character, **kwargs):
+    def targets(self, neighborhood, character, range=None, **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1669,6 +1714,28 @@ class TravelToDesiredEgress(Advisor):
             fallback=ord('.')
         )
         return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+
+class NameStartingPet(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.named_starting_pet:
+            return None
+        pet_loc = run_state.neighborhood.find_starting_pet()
+
+        if pet_loc is None:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
+        #import pdb; pdb.set_trace()
+        call = nethack.actions.Command.CALL
+        menu_plan = menuplan.MenuPlan(
+            "name starting pet", self, [
+                menuplan.CharacterMenuResponse("What do you want to name?", "m"),
+                menuplan.SquarePlacementMenuResponse(re.compile("^(?!.*(What do you want to call)).*"), run_state, pet_loc), # offset because cursor row 0 = top line
+                menuplan.PhraseMenuResponse("What do you want to call", constants.pet_name)
+            ],
+            fallback=ord('.')
+        ) # fallback seems broken if you ever ESC out? check TK
+        run_state.named_starting_pet = True
+        return ActionAdvice(self, call, menu_plan)
 
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -2276,3 +2343,22 @@ class TravelToSokobanSquare(Advisor):
         )
 
         return ActionAdvice(self, travel, menu_plan)
+
+class WearSlowDigestion(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        rings_of_slow_digestion = character.inventory.get_items(inv.Ring, name='slow digestion')
+        if len(rings_of_slow_digestion) == 0:
+            return None
+        for ring in rings_of_slow_digestion:
+            if ring.equipped_status is not None:
+                return None
+
+        ring = rings_of_slow_digestion[0]
+        #import pdb; pdb.set_trace()
+        put_on = nethack.actions.Command.PUTON
+        menu_plan = menuplan.MenuPlan("don slow digestion", self, [
+            menuplan.CharacterMenuResponse("What do you want to put on?", chr(ring.inventory_letter)),
+            menuplan.CharacterMenuResponse("Which ring-finger, Right or Left?", 'l'),
+        ], listening_item=ring)
+
+        return ActionAdvice(self, put_on, menu_plan)

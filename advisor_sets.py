@@ -2,6 +2,8 @@
 from  advisors import *
 
 new_advisors = [
+    # Name starting pet
+    NameStartingPet(),
     # No-time recon
     NearLook(),
     # FREE IMPROVEMENT
@@ -38,6 +40,8 @@ new_advisors = [
     # COMBAT
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
+    RetameCarnivorePet(),
+    RetameHerbivorePet(),
     DrinkHealingPotionWhenLow(),
     CastHealing(),
     WaitAdvisor(oracle_consultation=lambda o: o.very_low_hp and o.on_elbereth),
@@ -53,6 +57,7 @@ new_advisors = [
     SafeMeleeAttackAdvisor(),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
+    NonWandRangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
@@ -87,6 +92,7 @@ new_advisors = [
         WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
+        WearSlowDigestion(),
         DropToPriceIDAdvisor(),
         DropUndesirableWantToLowerWeight(),
         AnyWardrobeChangeAdvisor(),

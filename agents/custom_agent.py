@@ -228,6 +228,7 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
+    menuplan.YesMenuResponse("Do you wish to teleport?"),
 ]
 
 wizard_background_menu_plan_options = [
@@ -337,6 +338,7 @@ class RunState():
     def reset(self):
         self.scumming = False
         self.character = None
+        self.named_starting_pet = False
         self.auto_pickup = True # defaults on
         self.gods_by_alignment = {}
 
@@ -384,7 +386,7 @@ class RunState():
         self.stuck_flag = False
 
         self.seed = base64.b64encode(os.urandom(4))
-        #self.seed = b'vYIDlQ=='
+        #self.seed = b'YgNfxQ=='
         self.rng = self.make_seeded_rng(self.seed)
 
         self.time_did_advance = True
@@ -794,6 +796,7 @@ class CustomAgent():
             run_state.dmap.update_target_dcoords(run_state.character)
 
         if not run_state.character and run_state.step_count > 2:
+            #import pdb; pdb.set_trace()
             # The first action should always be to look at attributes
             raw_screen_content = bytes(observation['tty_chars']).decode('ascii')
             run_state.update_base_attributes(raw_screen_content)
@@ -805,6 +808,9 @@ class CustomAgent():
         changed_level = (run_state.current_square is None or run_state.current_square.dcoord != dcoord)
         changed_square = False
         previous_square = False
+
+        if run_state.character and changed_level:
+            run_state.character.borked_balance = False
 
         if changed_level or run_state.current_square.location != player_location:
             changed_square = True
@@ -1158,6 +1164,10 @@ class CustomAgent():
         ### NEIGHBORHOOD UPDATED ###
         ############################
         run_state.update_neighborhood(neighborhood)
+
+        if "_ZORP_ is confused from hunger" in message.message:
+            #import pdb; pdb.set_trace()
+            run_state.neighborhood.level_map.confused_pet_flag = True
 
         run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
 

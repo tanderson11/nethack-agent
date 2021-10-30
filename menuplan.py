@@ -110,6 +110,31 @@ class DirectionMenuResponse(MenuResponse):
 class EndOfSequence(Exception):
     pass
 
+class SquarePlacementMenuResponse(MenuResponse):
+    def generate_action(self, tty_cursor, target_square):
+        if self.exhausted:
+            return None
+        current_square = physics.Square(*tty_cursor) + physics.Square(-1, 0) # offset because cursor row 0 = top line
+
+        if current_square != target_square:
+            offset = physics.Square(*np.sign(np.array(target_square - current_square)))
+            return physics.delta_to_action[offset]
+        else:
+            self.exhausted = True
+            return ord('.')
+
+    def __init__(self, match_str, run_state, target_square):
+        self.run_state = run_state
+        self.target_square = target_square
+        self.exhausted = False
+        super().__init__(match_str)
+
+    def value(self, message_obj):
+        next_action = self.generate_action(self.run_state.tty_cursor, self.target_square)
+        if next_action is not None:
+            return next_action
+        raise EndOfSequence()
+
 class TravelNavigationMenuResponse(MenuResponse):
     def generate_action(self, tty_cursor, target_square):
         if self.exhausted:
