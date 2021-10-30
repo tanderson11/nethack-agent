@@ -21,7 +21,7 @@ new_advisors = [
         UseEscapeItemAdvisor(),
         WaitForHPAdvisor(oracle_consultation=lambda o: o.on_elbereth),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
-        EngraveElberethAdvisor(),
+        #EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
         ]),
     # ADJUST/ABORT SUBROUTINES
