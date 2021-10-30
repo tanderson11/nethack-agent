@@ -228,6 +228,7 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
+    menuplan.YesMenuResponse("Do you wish to teleport?"),
 ]
 
 wizard_background_menu_plan_options = [
