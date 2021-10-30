@@ -1,6 +1,6 @@
-from collections.abc import Iterable
-
 import environment
+
+from tqdm import tqdm
 
 def log_new_run(env):
     if not (environment.env.print_seed or environment.env.debug): return
@@ -8,21 +8,18 @@ def log_new_run(env):
     core_seed, disp_seed, reseed = env.get_seeds()
     print(f"[{env._episode} {reseed} {core_seed} {disp_seed}] Starting run.")
 
-class BatchedEnv:
-    def __init__(self, env_make_fn, seeds=[], num_envs=32):
+class InstrumentedEnv:
+    def __init__(self, env_make_fn, seeds=[]):
         """
         Creates multiple copies of the environment with the same env_make_fn function
         """
         self.seeds = seeds
-        self.num_envs = num_envs
         self.env_make_fn = env_make_fn
-        self.envs = []
-        self.initial_observations = []
-        for _ in range(self.num_envs):
-            env, observation = self.make_environment()
-            self.envs.append(env)
-            self.initial_observations.append(observation)
-        self.num_actions = self.envs[0].action_space.n
+        env, observation = self.make_environment()
+        self.env = env
+        self.initial_observation = observation
+        self.initial_seeds = []
+        self.num_actions = self.env.action_space.n
 
     def next_seed(self):
         if not self.seeds:
@@ -34,6 +31,10 @@ class BatchedEnv:
         observation = self.reset_environment(env)
         return env, observation
 
+    @staticmethod
+    def seeded():
+        return environment.env.use_seed_whitelist or environment.env.debug or environment.env.print_seed
+
     def reset_environment(self, env):
         next_seed = self.next_seed()
         if next_seed:
@@ -41,32 +42,36 @@ class BatchedEnv:
         else:
             if environment.env.use_seed_whitelist:
                 print("Ran out of seeds!")
-            if environment.env.debug or environment.env.print_seed:
+            if self.seeded():
                 env.unwrapped.seed(None, None, False)
 
         observation = env.reset()
         log_new_run(env)
         return observation
 
-    def apply_batch_actions(self, actions):
-        """
-        Applies each action to each env in the same order as self.envs
-        Actions should be iterable and have the same length as self.envs
-        Returns lists of obsevations, rewards, dones, infos
-        """
-        assert isinstance(
-            actions, Iterable), f"actions with type {type(actions)} is not iterable"
-        assert len(
-            actions) == self.num_envs, f"actions has length {len(actions)} which different from num_envs"
+    def run_episode(self, agent):
+        observation = self.initial_observation
+        reward = 0
+        done = False
+        info = {}
 
-        observations, rewards, dones, infos = [], [], [], []
-        for i, env, a in zip(range(len(self.envs)), self.envs, actions):
-            observation, reward, done, info = env.step(a)
-            if done:
-                observation = self.reset_environment(env)
-            observations.append(observation)
-            rewards.append(reward)
-            dones.append(done)
-            infos.append(info)
+        total_score = 0
+        crashed = False
 
-        return observations, rewards, dones, infos
+        try:
+            while True:
+                action = agent.step(observation, reward, done, info)
+                observation, reward, done, info = self.env.step(action)
+                total_score += reward
+                if done:
+                    break
+        except Exception:
+            crashed = True
+        else:
+            agent.run_state.log_final_state(reward, info["is_ascended"])
+        finally:
+            agent.run_state.reset()
+            self.initial_observation = self.reset_environment(self.env)
+
+
+        return info.get("is_ascended", False), crashed, total_score

@@ -5,7 +5,7 @@
 # * The run might be slower than your local run
 # * Resources might vary from your local machine
 
-from typing import NamedTuple, List
+from typing import Any, NamedTuple, List
 import csv
 from dataclasses import dataclass
 from multiprocessing import Process, Queue
@@ -18,8 +18,7 @@ import pandas as pd
 
 from submission_config import SubmissionConfig, TestEvaluationConfig
 
-from rollout import run_batched_rollout
-from envs.batched_env import BatchedEnv
+from envs.batched_env import InstrumentedEnv
 
 import environment
 import parse_ttyrec
@@ -29,6 +28,7 @@ class RolloutResults(NamedTuple):
     ascensions: int
     scores: List[int]
     log_paths: str
+    crash_seeds: List[Any]
 
 seed_whitelist = []
 if environment.env.use_seed_whitelist:
@@ -43,28 +43,42 @@ if environment.env.use_seed_whitelist:
 
 def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=None):
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
-    num_envs = SubmissionConfig.NUM_ENVIRONMENTS
     Agent = SubmissionConfig.AGENT
 
     seeds = seed_whitelist[(runner_index * num_episodes):((runner_index + 1) * num_episodes)]
     # If you want to manually try a single seed
     #seeds = [(2942183824422711167, 2943579879461238948)]
 
-    batched_env = BatchedEnv(env_make_fn=env_make_fn, seeds=seeds, num_envs=num_envs)
+    instrumented_env = InstrumentedEnv(env_make_fn=env_make_fn, seeds=seeds)
+    agent = Agent(instrumented_env.env if environment.env.log_runs else None)
 
-    agent = Agent(num_envs, batched_env.num_actions, batched_env.envs if environment.env.log_runs else None)
+    ascension_count = 0
+    scores = []
+    crash_seeds = []
+    episode_count = 0
 
-    ascensions, scores = run_batched_rollout(num_episodes, batched_env, agent)
+    while episode_count < num_episodes:
+        seed = None
+        if instrumented_env.seeded():
+            core, disp, _ = instrumented_env.env.get_seeds()
+            seed = (core, disp, agent.run_state.seed)
+        ascension, crashed, score = instrumented_env.run_episode(agent)
+        scores.append(score)
+        ascension_count += int(ascension)
+        if crashed:
+            crash_seeds.append(seed)
+        episode_count += 1
 
     log_paths = []
     if environment.env.log_runs:
-        log_paths.append(batched_env.envs[0].savedir)
+        log_paths.append(instrumented_env.env.savedir)
 
     results = RolloutResults(
         runners=1,
-        ascensions=ascensions,
+        ascensions=ascension_count,
         scores=scores,
         log_paths=log_paths,
+        crash_seeds=crash_seeds,
     )
 
     if runner_queue:
@@ -85,6 +99,7 @@ def merge_results(results_1: RolloutResults, results_2: RolloutResults):
         ascensions=results_1.ascensions + results_2.ascensions,
         scores=results_1.scores + results_2.scores,
         log_paths=results_1.log_paths + results_2.log_paths,
+        crash_seeds=results_1.crash_seeds + results_2.crash_seeds,
     )
 
 def run_multiple(num_runners):
@@ -93,6 +108,7 @@ def run_multiple(num_runners):
         ascensions=0,
         scores=[],
         log_paths=[],
+        crash_seeds=[],
     )
     runners : List[Runner] = []
     episodes_per_runner = TestEvaluationConfig.NUM_EPISODES // num_runners + 1
@@ -141,6 +157,7 @@ if __name__ == "__main__":
     print(
         f"Runners: {overall_results.runners}, "
         f"Crashed runners: {crashed_runners}, "
+        f"Crashed runs: {len(overall_results.crash_seeds)}, "
         f"Runs: {len(overall_results.scores)}, "
         f"Ascensions: {overall_results.ascensions}, "
         f"Median Score: {np.median(overall_results.scores)}, "
@@ -149,6 +166,8 @@ if __name__ == "__main__":
         f"Min Score: {min(overall_results.scores)}, "
         f"Max Score: {max(overall_results.scores)}, "
     )
+
+    print(f"Crash seeds: {overall_results.crash_seeds}")
 
     joint_log_df = None
 
