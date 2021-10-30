@@ -167,7 +167,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.check_for_vault()
         self.in_vault = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.vault.value
         if self.in_vault:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
             pass
 
         self.extended_boulders = self.zoom_glyph_alike(
