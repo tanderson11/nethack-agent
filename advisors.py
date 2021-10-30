@@ -1071,6 +1071,43 @@ class ChangeOfSquare(Advisor):
 class StuckChangeOfSquare(ChangeOfSquare):
     preference = constants.escape_default
 
+class EngraveElberethStuckByMonster(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.am_stuck:
+            return None
+        if not run_state.neighborhood.n_adjacent_monsters > 0:
+            return None
+        if oracle.on_elbereth:
+            return None
+        if oracle.blind:
+            return None
+
+        self.current_square = run_state.current_square
+        self.engraving = neighborhood.ElberethEngraving(
+            engrave_time=run_state.time,
+            confirm_time=None,
+            engraving_type=neighborhood.EngravingType.Temporary
+        )
+        letter = ord('-')
+
+        menu_plan = menuplan.MenuPlan("engrave elbereth for stuck situation", self, [
+            menuplan.CharacterMenuResponse("What do you want to write with?", chr(letter)),
+            menuplan.MoreMenuResponse("You write in the dust with"),
+            menuplan.MoreMenuResponse("You engrave in the"),
+            menuplan.MoreMenuResponse("You burn into the"),
+            menuplan.NoMenuResponse("Do you want to add to the current engraving?"),
+            menuplan.MoreMenuResponse("You wipe out the message that was written"),
+            menuplan.MoreMenuResponse("You will overwrite the current message."),
+            menuplan.PhraseMenuResponse("What do you want to burn", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
+            menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
+        ])
+        import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.ENGRAVE, new_menu_plan=menu_plan)
+
+    def advice_selected(self):
+        self.current_square.elbereth = self.engraving
+        
 
 class RangedPlanInMotion(NamedTuple):
     advisor: Advisor
