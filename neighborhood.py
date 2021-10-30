@@ -549,7 +549,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             #import pdb; pdb.set_trace()
             return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
-    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True):
+    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True, ray_override=None):
         if attack_range.type == 'melee':
             satisfying_monsters = []
             satisfying_directions = []
