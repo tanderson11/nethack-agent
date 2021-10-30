@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitAdvisor, WaitForHPAdvisor
+from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import advisor_sets
 
 import menuplan
@@ -569,7 +569,7 @@ class RunState():
         if isinstance(self.advice_log[-1], MenuAdvice):
             return
         last_advisor = self.advice_log[-1].from_advisor
-        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, WaitAdvisor):
+        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, ConditionWaitAdvisor) or isinstance(last_advisor, WaitForHPAdvisor):
             return
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
@@ -580,7 +580,7 @@ class RunState():
                 advice = self.advice_log[i]
                 if position is None:
                     continue
-                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, WaitAdvisor):
+                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, ConditionWaitAdvisor) or isinstance(advice.from_advisor, WaitForHPAdvisor):
                     continue
                 if self.recent_position_counter[position] == 0:
                     if environment.env.debug: import pdb; pdb.set_trace()
