@@ -63,7 +63,8 @@ class InstrumentedEnv:
                 total_score += reward
                 if done:
                     break
-        except Exception:
+        except Exception as e:
+            print(e)
             crashed = True
         else:
             agent.run_state.log_final_state(reward, info["is_ascended"])
