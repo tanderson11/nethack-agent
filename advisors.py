@@ -41,6 +41,10 @@ class Oracle():
     @utilities.cached_property
     def am_stuck(self):
         return self.run_state.stuck_flag
+    
+    @utilities.cached_property
+    def desperate_for_food(self):
+        return self.character.desperate_for_food()
 
     @utilities.cached_property
     def weak_with_hunger(self):
@@ -357,8 +361,6 @@ class ConditionWaitAdvisor(WaitAdvisor):
 
 class WaitForHPAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if character.desperate_for_food():
-            return None
         return super().advice(rng, run_state, character, oracle)
 
 class SearchWithStethoscope(Advisor):
