@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitAdvisor, WaitForHPAdvisor
 import advisor_sets
 
 import menuplan
@@ -382,7 +382,11 @@ class RunState():
         self.time_stuck = 0
         self.last_level_change_timestamp = 0
         self.stuck_flag = False
-        self.rng = self.make_seeded_rng()
+
+        self.seed = base64.b64encode(os.urandom(4))
+        #self.seed = b'vYIDlQ=='
+        self.rng = self.make_seeded_rng(self.seed)
+
         self.time_did_advance = True
         self.used_free_stethoscope_move = False
 
@@ -421,10 +425,8 @@ class RunState():
             if self.wizmode_prep:
                 self.wizmode_prep.prepped = True
 
-    def make_seeded_rng(self):
+    def make_seeded_rng(self, seed):
         import random
-        seed = base64.b64encode(os.urandom(4))
-        #seed = b'nVbYEQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -567,7 +569,7 @@ class RunState():
         if isinstance(self.advice_log[-1], MenuAdvice):
             return
         last_advisor = self.advice_log[-1].from_advisor
-        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, ConditionWaitAdvisor) or isinstance(last_advisor, WaitForHPAdvisor):
+        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, WaitAdvisor):
             return
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
@@ -578,7 +580,7 @@ class RunState():
                 advice = self.advice_log[i]
                 if position is None:
                     continue
-                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, ConditionWaitAdvisor) or isinstance(advice.from_advisor, WaitForHPAdvisor):
+                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, WaitAdvisor):
                     continue
                 if self.recent_position_counter[position] == 0:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -763,16 +765,9 @@ def print_stats(done, run_state, blstats):
         f"time {blstats.get('time')}"
     )
 
-class CustomAgent(BatchedAgent):
-    """A example agent... that simple acts randomly. Adapt to your needs!"""
-
-    def __init__(self, num_envs, num_actions, debug_envs=None):
-        """Set up and load you model here"""
-        super().__init__(num_envs, num_actions, debug_envs)
-        if self.debug_envs:
-            self.run_states = [RunState(self.debug_envs[i]) for i in range(0, num_envs)]
-        else:
-            self.run_states = [RunState() for i in range(0, num_envs)]
+class CustomAgent():
+    def __init__(self, debug_env=None):
+        self.run_state = RunState(debug_env)
     
     @classmethod
     def generate_action(cls, run_state, observation):
@@ -1204,30 +1199,30 @@ class CustomAgent(BatchedAgent):
 
         return advice
 
-    def step(self, run_state, observation, reward, done, info):
+    def step(self, observation, reward, done, info):
         if environment.env.debug:
             # Catch any bugs that depend on pointers to the observation
             observation = copy.deepcopy(observation)
-        ARS.set_active(run_state)
+        ARS.set_active(self.run_state)
         if observation['glyphs'].shape != constants.GLYPHS_SHAPE:
             raise Exception("Bad glyphs shape")
 
-        if done and run_state.step_count != 0:
+        if done and self.run_state.step_count != 0:
             raise Exception("The runner framework should have reset the run state")
 
-        run_state.update_reward(reward)
-        run_state.log_tty_cursor(observation['tty_cursor'])
+        self.run_state.update_reward(reward)
+        self.run_state.log_tty_cursor(observation['tty_cursor'])
 
-        advice = self.generate_action(run_state, observation)
+        advice = self.generate_action(self.run_state, observation)
 
         if not isinstance(advice, Advice):
             raise Exception("Bad advice")
 
         if advice.new_menu_plan:
-            run_state.set_menu_plan(advice.new_menu_plan)
+            self.run_state.set_menu_plan(advice.new_menu_plan)
 
-        run_state.log_action(advice)
-        run_state.log_position()
+        self.run_state.log_action(advice)
+        self.run_state.log_position()
 
         if isinstance(advice, ActionAdvice) or isinstance(advice, StethoscopeAdvice):
             if advice.from_advisor:
@@ -1237,13 +1232,3 @@ class CustomAgent(BatchedAgent):
             return utilities.ACTION_LOOKUP[advice.action]
         else:
             return utilities.ACTION_LOOKUP[advice.keypress]
-
-    def batched_step(self, observations, rewards, dones, infos):
-        """
-        Perform a batched step on lists of environment outputs.
-
-        Each argument is a list of the respective gym output.
-        Returns an iterable of actions.
-        """
-        actions = [self.step(self.run_states[i], observations[i], rewards[i], dones[i], infos[i]) for i in range(self.num_envs)]
-        return actions
