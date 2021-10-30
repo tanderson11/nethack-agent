@@ -432,7 +432,7 @@ class SearchDeadEndAdvisor(Advisor):
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
         )[run_state.neighborhood.local_possible_secret_mask]
-        if not search_count.any():
+        if len(search_count) == 0:
             return None
         lowest_search_count = search_count.min()
 
