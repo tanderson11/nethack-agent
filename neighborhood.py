@@ -559,7 +559,7 @@ class Pathfinder(AStar):
         if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
         for f in failed_moves_at_node:
             #import pdb; pdb.set_trace()
-            failed_target = physics.offset_location_by_action(node, f)
+            failed_target = physics.offset_location_by_action(node, f.move)
             try:
                 neighboring_walkable_squares.remove(failed_target)
             except ValueError:

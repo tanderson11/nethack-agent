@@ -63,6 +63,7 @@ new_advisors = [
     PrayForLesserMajorTroubleAdvisor(oracle_consultation=lambda o: o.major_trouble),
     # Stuck and gotta bust out
     StuckChangeOfSquare(),
+    #EngraveElberethStuckByMonster(),
     UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(),
