@@ -158,60 +158,60 @@ if __name__ == "__main__":
         overall_results = evaluate(0, TestEvaluationConfig.NUM_EPISODES)
         episodes_per_runner = TestEvaluationConfig.NUM_EPISODES
         crashed_runners = 0
-
-    print(
-        f"Runners: {overall_results.runners}, "
-        f"Crashed runners: {crashed_runners}, "
-        f"Crashed runs: {len(overall_results.crash_seeds)}, "
-        f"Runs: {len(overall_results.scores)}, "
-        f"Ascensions: {overall_results.ascensions}, "
-        f"Median Score: {np.median(overall_results.scores)}, "
-        f"Above {environment.env.max_score}: {(np.asarray(overall_results.scores) >= environment.env.max_score).sum()}, "
-        f"Mean Score: {np.mean(overall_results.scores)}, "
-        f"Min Score: {min(overall_results.scores)}, "
-        f"Max Score: {max(overall_results.scores)}, "
-    )
-
-    print(f"Crash seeds: {overall_results.crash_seeds}")
-
-    joint_log_df = None
-
-    for path in overall_results.log_paths:
-        files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
-        for f in files:
-            if f.endswith('{}.ttyrec.bz2'.format(episodes_per_runner)): # rm this junk file
-                print("Removing {}".format(f))
-                os.remove(f)
-        outpath = os.path.join(path, "deaths.csv")
-        try:
-            score_df = parse_ttyrec.parse_dir(path, outpath=outpath)
-        except Exception as e:
-            print(f"TTYREC parse failed with {e}. Failing gracefully")
-        else:
-            log_df = pd.read_csv(os.path.join(path, "log.csv"))
-            df = score_df.join(log_df, rsuffix='_log')
-            if joint_log_df is None:
-                joint_log_df = df
-            else:
-                joint_log_df = joint_log_df.append(df, ignore_index=True)
-
-    if joint_log_df is not None:
-        parse_ttyrec.print_stats_from_log(joint_log_df)
-
-        with open(os.path.join(overall_results.log_paths[0], "joint_log.csv"), 'w') as f:
-            joint_log_df.to_csv(f)
-
-        joint_log_df = joint_log_df[~pd.isna(joint_log_df['scummed'])]
-        joint_log_df = joint_log_df[~joint_log_df['scummed'].astype(bool)]
-
+    if environment.env.log_runs:
         print(
-            f"Runs: {len(joint_log_df.index)}, "
-            f"Ascensions: {joint_log_df['ascended'].sum()}, "
-            f"Median Score: {joint_log_df['score_log'].median()}, "
-            f"Above {environment.env.max_score}: {(np.asarray(joint_log_df['score_log']) >= environment.env.max_score).sum()}, "
-            f"Mean Score: {joint_log_df['score_log'].mean()}, "
-            f"Min Score: {joint_log_df['score_log'].min()}, "
-            f"Max Score: {joint_log_df['score_log'].max()}, "
-            f"Max depth: {joint_log_df['depth_log'].max()}, "
-            f"Max experience: {joint_log_df['explevel'].max()}, "
+            f"Runners: {overall_results.runners}, "
+            f"Crashed runners: {crashed_runners}, "
+            f"Crashed runs: {len(overall_results.crash_seeds)}, "
+            f"Runs: {len(overall_results.scores)}, "
+            f"Ascensions: {overall_results.ascensions}, "
+            f"Median Score: {np.median(overall_results.scores)}, "
+            f"Above {environment.env.max_score}: {(np.asarray(overall_results.scores) >= environment.env.max_score).sum()}, "
+            f"Mean Score: {np.mean(overall_results.scores)}, "
+            f"Min Score: {min(overall_results.scores)}, "
+            f"Max Score: {max(overall_results.scores)}, "
         )
+
+        print(f"Crash seeds: {overall_results.crash_seeds}")
+
+        joint_log_df = None
+
+        for path in overall_results.log_paths:
+            files = [os.path.join(path,f) for f in os.listdir(path) if os.path.isfile(os.path.join(path,f)) and f.endswith('.ttyrec.bz2')]
+            for f in files:
+                if f.endswith('{}.ttyrec.bz2'.format(episodes_per_runner)): # rm this junk file
+                    print("Removing {}".format(f))
+                    os.remove(f)
+            outpath = os.path.join(path, "deaths.csv")
+            try:
+                score_df = parse_ttyrec.parse_dir(path, outpath=outpath)
+            except Exception as e:
+                print(f"TTYREC parse failed with {e}. Failing gracefully")
+            else:
+                log_df = pd.read_csv(os.path.join(path, "log.csv"))
+                df = score_df.join(log_df, rsuffix='_log')
+                if joint_log_df is None:
+                    joint_log_df = df
+                else:
+                    joint_log_df = joint_log_df.append(df, ignore_index=True)
+
+        if joint_log_df is not None:
+            parse_ttyrec.print_stats_from_log(joint_log_df)
+
+            with open(os.path.join(overall_results.log_paths[0], "joint_log.csv"), 'w') as f:
+                joint_log_df.to_csv(f)
+
+            joint_log_df = joint_log_df[~pd.isna(joint_log_df['scummed'])]
+            joint_log_df = joint_log_df[~joint_log_df['scummed'].astype(bool)]
+
+            print(
+                f"Runs: {len(joint_log_df.index)}, "
+                f"Ascensions: {joint_log_df['ascended'].sum()}, "
+                f"Median Score: {joint_log_df['score_log'].median()}, "
+                f"Above {environment.env.max_score}: {(np.asarray(joint_log_df['score_log']) >= environment.env.max_score).sum()}, "
+                f"Mean Score: {joint_log_df['score_log'].mean()}, "
+                f"Min Score: {joint_log_df['score_log'].min()}, "
+                f"Max Score: {joint_log_df['score_log'].max()}, "
+                f"Max depth: {joint_log_df['depth_log'].max()}, "
+                f"Max experience: {joint_log_df['explevel'].max()}, "
+            )
