@@ -676,6 +676,8 @@ class ThreatMap(FloodMap):
         if ray_override is not None:
             ray_offsets = ray_override
             stop_on_monsters = False
+            if ray_override[0] not in physics.ortholinear_offsets:
+                return np.full_like(glyph_grid, False, dtype='bool')
 
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
@@ -705,7 +707,7 @@ class ThreatMap(FloodMap):
                     if reflected:
                         range_counter += 1
                         #import pdb; pdb.set_trace()
-                        offset = (-1 * offset[0], -1 * offset[1])
+                        offset = (-1 * offset[0], -1 * offset[1]) # this simplification valid because we say no to all diagonal rays
 
                 if blocked and not reflected: # is this the full extent of what blocks projectiles/rays?
                     break # should we do anything with bouncing rays
