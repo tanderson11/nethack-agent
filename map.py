@@ -660,7 +660,7 @@ class ThreatMap(FloodMap):
         self.ranged_damage_threat = ranged_damage_threat
 
     @classmethod
-    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid, attack_range=None, **kwargs):
+    def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid, **kwargs):
         # TODO make gaze attacks hit everywhere
         it = np.nditer(can_occupy_mask, flags=['multi_index'])
         masks = []
@@ -671,11 +671,12 @@ class ThreatMap(FloodMap):
         return np.logical_or.reduce(masks)
 
     @staticmethod
-    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False, stop_on_boulders=True):
+    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False, stop_on_boulders=True, attack_range=None):
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
 
-        blocking_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid)
+        wall_geometry = gd.CMapGlyph.wall_mask(glyph_grid) | gd.CMapGlyph.closed_door_mask(glyph_grid)
+        blocking_geometry = wall_geometry.copy()
         if stop_on_boulders:
             blocking_geometry |= gd.RockGlyph.boulder_mask(glyph_grid)
         if reject_peaceful:
@@ -694,6 +695,12 @@ class ThreatMap(FloodMap):
             while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
                 blocked = blocking_geometry[current]
                 ray_mask[current] = True # moved before blocking since technically you can hit things in walls with ranged attacks
+
+                if attack_range is not None and attack_range.type == 'ray':
+                    reflected = wall_geometry[current]
+                    if reflected:
+                        import pdb; pdb.set_trace()
+
                 if blocked: # is this the full extent of what blocks projectiles/rays?
                     break # should we do anything with bouncing rays
 
