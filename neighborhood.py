@@ -76,7 +76,7 @@ class ViewField(enum.Enum):
     Extended = enum.auto()
 
 class Neighborhood(): # goal: mediates all access to glyphs by advisors
-    extended_vision = 3
+    extended_vision = 4
 
     def zoom_glyph_alike(self, glyph_alike, zoom_to):
         if glyph_alike.shape != constants.GLYPHS_SHAPE:
