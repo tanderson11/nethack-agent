@@ -1081,6 +1081,8 @@ class EngraveElberethStuckByMonster(Advisor):
             return None
         if oracle.blind:
             return None
+        
+        import pdb; pdb.set_trace()
 
         self.current_square = run_state.current_square
         self.engraving = neighborhood.ElberethEngraving(
