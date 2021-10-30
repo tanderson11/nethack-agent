@@ -413,6 +413,8 @@ class SearchDeadEndsWithStethoscope(Advisor):
         searchable = low_search_count & run_state.neighborhood.local_possible_secret_mask
         searchable[run_state.neighborhood.local_player_location] = False
         to_search = np.where(searchable)
+
+        #import pdb; pdb.set_trace()
         if len(to_search[0]) == 0:
             return None
         direction = run_state.neighborhood.action_grid[(to_search[0][0], to_search[1][0])]
@@ -1038,8 +1040,6 @@ class ChangeOfSquare(Advisor):
 
     def advice(self, rng, run_state, character, oracle):
         preference = self.preference
-        if not oracle.am_stuck:
-            return None
         if not run_state.neighborhood.level_map.teleportable:
             preference &= ~constants.ChangeSquarePreference.teleport
         if not run_state.neighborhood.level_map.diggable_floor:
@@ -1070,6 +1070,22 @@ class ChangeOfSquare(Advisor):
 
 class StuckChangeOfSquare(ChangeOfSquare):
     preference = constants.escape_default
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.am_stuck:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+class EscapeVault(ChangeOfSquare):
+    preference = constants.escape_default
+
+    def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.in_vault:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        #import pdb; pdb.set_trace()
+        pass
 
 class EngraveElberethStuckByMonster(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1683,6 +1699,38 @@ class TravelToDesiredEgress(Advisor):
         )
         return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
 
+class TravelToVaultCloset(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        lmap = run_state.neighborhood.level_map
+        if not (lmap.special_room_map == constants.SpecialRoomTypes.vault_closet.value).any():
+            return None
+        escape_prep = character.inventory.get_square_change_plan(constants.escape_default)
+        if escape_prep is None:
+            return None 
+        travel = nethack.actions.Command.TRAVEL
+        #import pdb; pdb.set_trace()
+        vault_closet = np.transpose(np.where(
+            (lmap.special_room_map == constants.SpecialRoomTypes.vault_closet.value) &
+            (~lmap.exhausted_travel_map) &
+            (~lmap.boulder_map)
+        ))
+
+        if len(vault_closet) > 0:
+            nearest_square_idx = np.argmin(np.sum(np.abs(vault_closet - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            self.target_square = physics.Square(*vault_closet[nearest_square_idx])
+            self.lmap = lmap
+            menu_plan = menuplan.MenuPlan(
+                "travel to vault", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state, self.target_square), # offset because cursor row 0 = top line
+                ],
+                fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
+
+            #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
+            return ActionAdvice(self, travel, menu_plan)
+    def advice_selected(self):
+        #import pdb; pdb.set_trace()
+        pass
+
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         travel = nethack.actions.Command.TRAVEL
@@ -1869,6 +1917,15 @@ class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
             return None
 
         #import pdb; pdb.set_trace()
+        return self.drop_undesirable(run_state, character)
+
+class DropUndesriableInVault(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.in_vault:
+            return None
+        if not character.want_less_weight():
+            return None
+        import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
