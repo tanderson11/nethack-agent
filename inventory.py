@@ -100,7 +100,7 @@ class Item():
         can_afford = True
         if self.shop_owned:
             if self.price is not None:
-                can_afford = character.gold >= (self.price + character.inventory.get_current_balance())
+                can_afford = not character.borked_balance and character.gold >= (self.price + character.inventory.get_current_balance())
             else:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 can_afford = True
