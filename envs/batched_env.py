@@ -1,7 +1,5 @@
 import environment
 
-from tqdm import tqdm
-
 def log_new_run(env):
     if not (environment.env.print_seed or environment.env.debug): return
     env = env.unwrapped

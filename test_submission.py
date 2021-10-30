@@ -15,6 +15,7 @@ import time
 
 import numpy as np
 import pandas as pd
+from tqdm import tqdm
 
 from submission_config import SubmissionConfig, TestEvaluationConfig
 
@@ -56,6 +57,7 @@ def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runne
     scores = []
     crash_seeds = []
     episode_count = 0
+    pbar = tqdm(total=num_episodes)
 
     while episode_count < num_episodes:
         seed = None
@@ -68,6 +70,9 @@ def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runne
         if crashed:
             crash_seeds.append(seed)
         episode_count += 1
+        pbar.update(1)
+
+    pbar.close()
 
     log_paths = []
     if environment.env.log_runs:
