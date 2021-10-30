@@ -1079,12 +1079,14 @@ class EscapeVault(ChangeOfSquare):
     preference = constants.escape_default
 
     def advice(self, rng, run_state, character, oracle):
+        self.level_map = None
         if not run_state.neighborhood.in_vault:
             return None
+        self.level_map = run_state.neighborhood.level_map
         return super().advice(rng, run_state, character, oracle)
 
     def advice_selected(self):
-        #import pdb; pdb.set_trace()
+        self.level_map.register_looted_vault()
         pass
 
 class EngraveElberethStuckByMonster(Advisor):
@@ -1702,6 +1704,8 @@ class TravelToDesiredEgress(Advisor):
 class TravelToVaultCloset(Advisor):
     def advice(self, rng, run_state, character, oracle):
         lmap = run_state.neighborhood.level_map
+        if lmap.vault_looted:
+            return None
         if not (lmap.special_room_map == constants.SpecialRoomTypes.vault_closet.value).any():
             return None
         escape_prep = character.inventory.get_square_change_plan(constants.escape_default)
