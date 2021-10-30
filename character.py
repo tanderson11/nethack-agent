@@ -57,11 +57,16 @@ class Character():
     blinding_attempts: dict = field(default_factory=dict)
     spells: list =  field(default_factory=list)
     borked_balance: bool = False
+    starting_pet_carnivore: bool = True
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"].to_dict()
         self.set_role_tier_mod()
+        self.set_pet_type()
+
+    def set_pet_type(self):
+        self.starting_pet_carnivore = not (self.base_class == constants.BaseRole.Knight)
 
     def set_base_spells(self):
         if self.base_class == constants.BaseRole.Wizard:
