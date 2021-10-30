@@ -601,7 +601,9 @@ class RunState():
         if self.time - self.last_level_change_timestamp < 30:
             self.stuck_flag = False
             return
-        if len(self.recent_position_counter) < 5:
+        if len(self.recent_position_counter) >= 5:
+            self.stuck_flag = False
+        else:
             if sum(self.recent_position_counter.values()) == self.position_log_len:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 self.stuck_flag = True

@@ -64,6 +64,7 @@ new_advisors = [
     # Stuck and gotta bust out
     StuckChangeOfSquare(),
     EngraveElberethStuckByMonster(),
+    WaitOnElberethStuckByMonster(),
     UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
     HuntNearestWeakEnemyAdvisor(),
