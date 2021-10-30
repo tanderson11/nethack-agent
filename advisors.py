@@ -2277,12 +2277,7 @@ class NameWishItemAdvisor(Advisor):
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
 
 class NameItemAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        name_action = run_state.queued_name_action
-        run_state.queued_name_action = None
-        if name_action is None:
-            return None
-
+    def generate_advice(self, character, name_action):
         #import pdb; pdb.set_trace()
         character.inventory.all_items()
         # sometimes the item has left our inventory when we wish to name it. handle that
@@ -2299,6 +2294,22 @@ class NameItemAdvisor(Advisor):
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        name_action = run_state.queued_name_action
+        run_state.queued_name_action = None
+        if name_action is None:
+            return None
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
+
+class NameSting(NameItemAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.global_identity_map.generated_artifacts['Sting'] or not character.inventory.wielded_weapon.identity.name() == 'elven dagger':
+            return None
+        name_action = inv.Item.NameAction(character.inventory.wielded_weapon.inventory_letter, "Sting")
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
 
 class SolveSokoban(Advisor):
     def advice(self, rng, run_state, character, oracle):

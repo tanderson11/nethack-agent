@@ -28,6 +28,7 @@ new_advisors = [
     AdjustEscapePlanDummy(),
     AdjustRangedPlanDummy(),
     # FAST IMPROVEMENT
+    NameSting(),
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
