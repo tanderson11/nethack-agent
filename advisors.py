@@ -1215,6 +1215,8 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if oracle.in_shop:
             return None
+        if character.current_hp < 30:
+            return None
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
             pass
