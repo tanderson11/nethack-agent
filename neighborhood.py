@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import NamedTuple
 
@@ -46,9 +47,29 @@ class CurrentSquare:
     glyph_under_player: gd.Glyph = None
     stack_on_square: bool = False
     item_on_square: inventory.Item = None
-    failed_moves_on_square: List[int] = field(default_factory=list)
     special_facts: list = None
     elbereth: ElberethEngraving = None
+
+class FailedMove(NamedTuple):
+    move: enum.IntEnum
+    time: int
+
+class FailedMoveRecords():
+    def __init__(self):
+        # dictionary that takes location -> failed
+        self.failed_moves = defaultdict(list)
+
+    def add_failed_move(self, location, time, move):
+        self.failed_moves[location].append(FailedMove(move, time))
+
+    def garbage_collect(self, time):
+        new_dict = defaultdict(list)
+        for k, v in self.failed_moves.items():
+            still_good = [move for move in v if move.time > (time - 10)]
+            if still_good:
+                new_dict[k] = still_good
+
+        self.failed_moves = new_dict
 
 class ViewField(enum.Enum):
     Local = enum.auto()
@@ -72,12 +93,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         offset = extended_position - player_location_in_extended
         return absolute_player_location + offset
 
-    def __init__(self, time, current_square, glyphs, level_map, character, latest_monster_flight, am_hallu):
+    def __init__(self, time, current_square, failed_move_record, glyphs, level_map, character, latest_monster_flight, am_hallu):
         ###################
         ### COPY FIELDS ###
         ###################
 
+        self.current_player_square = current_square
         absolute_player_location = Square(*current_square.location)
+        self.failed_move_record = failed_move_record
 
         self.previous_glyph_on_player = current_square.glyph_under_player
         self.item_on_player = current_square.item_on_square
@@ -225,8 +248,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             # Corrections to what is moveable in Sokoban
             self.local_prudent_walkable &= ~(self.diagonal_moves)
 
-        for f in current_square.failed_moves_on_square:
-            failed_target = physics.offset_location_by_action(self.local_player_location, f)
+        failed_moves_on_square = failed_move_record.failed_moves[current_square.location]
+        #if len(failed_moves_on_square) > 0:
+        #    import pdb; pdb.set_trace()
+        for f in failed_moves_on_square:
+            failed_target = physics.offset_location_by_action(self.local_player_location, f.move)
             try:
                 self.local_prudent_walkable[failed_target] = False
             except IndexError:
@@ -265,8 +291,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             target_mask = target_mask & ~self.imprudent
         if not target_mask.any():
             return None
+        if be_prudent:
+            walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster & ~self.imprudent
+        else:
+            walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
 
-        walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
         if target_monsters:
             # we only need to be adjacent to monsters to attack them
             target_mask = map.FloodMap.flood_one_level_from_mask(target_mask)
@@ -274,7 +303,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
             doors=self.zoom_glyph_alike(self.level_map.doors, ViewField.Extended),
-            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban
+            player_location = self.player_location_in_extended,
+            absolute_player_location = self.absolute_player_location,
+            failed_moves = self.failed_move_record,
+            diagonal=self.level_map.dcoord.branch != map.Branches.Sokoban,
         )
         it = np.nditer(target_mask, flags=['multi_index'])
 
@@ -499,10 +531,13 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
 class Pathfinder(AStar):
-    def __init__(self, walkable_mesh, doors, diagonal=True):
+    def __init__(self, walkable_mesh, doors, player_location, absolute_player_location, failed_moves, diagonal=True):
         self.walkable_mesh = walkable_mesh
         self.doors = doors
         self.diagonal = diagonal
+        self.player_location = player_location
+        self.absolute_player_location = absolute_player_location
+        self.failed_moves = failed_moves
 
     def neighbors(self, node):
         box_slices = utilities.centered_slices_bounded_on_array(node, (1,1), self.walkable_mesh) # radius 1 square
@@ -519,6 +554,16 @@ class Pathfinder(AStar):
             is_orthogonal = np.sum(np.abs(square-current_square)) == 1
             if walkable and (self.diagonal or is_orthogonal) and (not door_box[current_square] or is_orthogonal) and (not door_box[square] or is_orthogonal):
                 neighboring_walkable_squares.append(square + upper_left)
+
+        failed_moves_at_node = self.failed_moves.failed_moves[node - self.player_location + self.absolute_player_location]
+        if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
+        for f in failed_moves_at_node:
+            #import pdb; pdb.set_trace()
+            failed_target = physics.offset_location_by_action(node, f.move)
+            try:
+                neighboring_walkable_squares.remove(failed_target)
+            except ValueError:
+                pass
 
         return neighboring_walkable_squares
 

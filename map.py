@@ -378,7 +378,8 @@ class DLevelMap():
         if self.visits_count_map[self.player_location] == 0:
             self.time_of_new_square = time
         if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
+            pass
         if self.visits_count_map[self.player_location] == 0:
             self.visits_count_map[self.player_location] += 1
         else:

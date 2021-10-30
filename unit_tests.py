@@ -626,6 +626,7 @@ class TestNeighborhood(unittest.TestCase):
         self.neighborhood = neighborhood.Neighborhood(
             10,
             current_square,
+            neighborhood.FailedMoveRecords(),
             glyphs,
             dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
             None,

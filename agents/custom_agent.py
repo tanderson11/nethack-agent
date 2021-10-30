@@ -12,11 +12,11 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, MenuAdvice, ReplayAdvice, StethoscopeAdvice
+from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import advisor_sets
 
 import menuplan
-from neighborhood import Neighborhood, CurrentSquare, ElberethEngraving, EngravingType
+from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
 import physics
 import inventory as inv
@@ -243,6 +243,7 @@ wizard_background_menu_plan_options = [
 background_advisor = advs.BackgroundActionsAdvisor()
 
 class RunState():
+    position_log_len = 80
     def __init__(self, debug_env=None):
         self.debug_env = debug_env
         self.reset()
@@ -357,6 +358,9 @@ class RunState():
         self.action_log = []
         self.advice_log = []
         self.search_log = []
+        self.position_log = []
+        self.recent_position_start = 0
+        self.recent_position_counter = Counter()
         self.hp_log = []
         self.tty_cursor_log = []
         self.actions_without_consequence = set()
@@ -376,12 +380,15 @@ class RunState():
         
         self.time_hung = 0
         self.time_stuck = 0
+        self.last_level_change_timestamp = 0
+        self.stuck_flag = False
         self.rng = self.make_seeded_rng()
         self.time_did_advance = True
         self.used_free_stethoscope_move = False
 
         self.neighborhood = None
         self.current_square = None
+        self.failed_move_record = FailedMoveRecords()
 
         self.latest_monster_flight = None
 
@@ -417,7 +424,7 @@ class RunState():
     def make_seeded_rng(self):
         import random
         seed = base64.b64encode(os.urandom(4))
-        #seed = b'vYIDlQ=='
+        #seed = b'nVbYEQ=='
         print(f"Seeding Agent's RNG {seed}")
         return random.Random(seed)
 
@@ -551,6 +558,54 @@ class RunState():
         self.neighborhood = neighborhood
         if self.current_square.location != neighborhood.absolute_player_location:
             raise Exception("Somehow got out of sync")
+
+    def log_position(self):
+        if self.neighborhood is None:
+            self.position_log.append(None)
+            return
+        self.position_log.append((self.neighborhood.level_map.dcoord, self.current_square.location))
+        if isinstance(self.advice_log[-1], MenuAdvice):
+            return
+        last_advisor = self.advice_log[-1].from_advisor
+        if isinstance(last_advisor, SearchDeadEndAdvisor) or isinstance(last_advisor, ConditionWaitAdvisor) or isinstance(last_advisor, WaitForHPAdvisor):
+            return
+        self.recent_position_counter[self.position_log[-1]] += 1
+        #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
+        if sum(self.recent_position_counter.values()) > self.position_log_len:
+            #import pdb; pdb.set_trace()
+            for i in range(self.recent_position_start, len(self.position_log)):
+                position = self.position_log[i]
+                advice = self.advice_log[i]
+                if position is None:
+                    continue
+                if isinstance(advice, MenuAdvice) or isinstance(advice.from_advisor, SearchDeadEndAdvisor) or isinstance(advice.from_advisor, ConditionWaitAdvisor) or isinstance(advice.from_advisor, WaitForHPAdvisor):
+                    continue
+                if self.recent_position_counter[position] == 0:
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                self.recent_position_counter[position] -= 1
+                #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
+                if self.recent_position_counter[position] == 0:
+                    #import pdb; pdb.set_trace()
+                    del self.recent_position_counter[position]
+                    #print(f"Deleting {position}")
+                break
+            self.recent_position_start = i+1
+        if len(self.recent_position_counter) > self.position_log_len:
+            #import pdb; pdb.set_trace()
+            pass
+        #print("RET")
+
+    def check_stuck(self):
+        #if not environment.env.debug:
+        #    return None
+        if self.time - self.last_level_change_timestamp < 30:
+            self.stuck_flag = False
+            return
+        if len(self.recent_position_counter) < 5:
+            if sum(self.recent_position_counter.values()) == self.position_log_len:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                self.stuck_flag = True
+                pass
     
     def report_special_fact_handled(self, fact):
         print(f"Reporting special fact handled! {fact.name}")
@@ -623,7 +678,8 @@ class RunState():
             if message.feedback.carrying_too_much_message:
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
-                self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
+                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action)
+                #self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
                     if environment.env.debug: import pdb; pdb.set_trace()
@@ -876,6 +932,7 @@ class CustomAgent(BatchedAgent):
 
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
+            run_state.last_level_change_timestamp = run_state.time
             if dcoord.branch == map.Branches.Sokoban.value:
                 #import pdb; pdb.set_trace()
                 pass
@@ -938,32 +995,29 @@ class CustomAgent(BatchedAgent):
         if "You finish your dressing maneuver" in message.message or "You finish taking off" in message.message:
             print(message.message)
 
-        if "It's a wall" in message.message and environment.env.debug:
-            if environment.env.debug:
-                pass
-                #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
-                # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
+        if environment.env.debug and  "It's a wall" in message.message and environment.env.debug:
+            pass
+            #import pdb; pdb.set_trace() # we bumped into a wall but this shouldn't have been possible
+            # examples of moments when this can happen: are blind and try to step into shop through broken wall that has been repaired by shopkeeper but we've been unable to see
 
-        if "enough tries" in message.message and environment.env.debug:
+        if environment.env.debug and "enough tries" in message.message and environment.env.debug:
             #import pdb; pdb.set_trace()
             pass
 
-        if "You bite that, you pay for it!" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "You bite that, you pay for it!" in message.message:
+            import pdb; pdb.set_trace()
 
-        if "You bought" in message.message:
+        if environment.env.debug and "You bought" in message.message:
             print(message.message)
 
-        if "cannibal" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "cannibal" in message.message:
+            import pdb; pdb.set_trace()
 
-        if "Yak" in message.message:
-            if environment.env.debug:
-                import pdb; pdb.set_trace()
+        if environment.env.debug and "Yak" in message.message:
+            import pdb; pdb.set_trace()
 
         if "From the murky depths, a hand reaches up to bless the sword" in message.message:
+            #import pdb; pdb.set_trace()
             print(message.message)
 
         if run_state.debugger_on:
@@ -981,7 +1035,7 @@ class CustomAgent(BatchedAgent):
         if not run_state.dmap.oracle_level and ("You hear a strange wind." in message.message or "You hear convulsive ravings." in message.message or "You hear snoring snakes." in message.message):
             run_state.dmap.oracle_level = dcoord.level
             print(message.message)
- 
+
         if " stole " in message.message:
             print(message.message)
 
@@ -1075,6 +1129,7 @@ class CustomAgent(BatchedAgent):
             return advice
 
         level_map.garbage_collect_corpses(time)
+        run_state.failed_move_record.garbage_collect(time)
 
         if run_state.current_square.elbereth and run_state.current_square.elbereth.looked_for_it:
             run_state.current_square.elbereth = None
@@ -1082,6 +1137,7 @@ class CustomAgent(BatchedAgent):
         neighborhood = Neighborhood(
             time,
             run_state.current_square,
+            run_state.failed_move_record,
             observation['glyphs'],
             level_map,
             run_state.character,
@@ -1109,6 +1165,8 @@ class CustomAgent(BatchedAgent):
         run_state.update_neighborhood(neighborhood)
 
         run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
+
+        run_state.check_stuck()
         ############################
 
         if blstats.get('depth') == 1:
@@ -1169,6 +1227,7 @@ class CustomAgent(BatchedAgent):
             run_state.set_menu_plan(advice.new_menu_plan)
 
         run_state.log_action(advice)
+        run_state.log_position()
 
         if isinstance(advice, ActionAdvice) or isinstance(advice, StethoscopeAdvice):
             if advice.from_advisor:
