@@ -56,6 +56,7 @@ class Character():
     wish_in_progress: tuple = None
     blinding_attempts: dict = field(default_factory=dict)
     spells: list =  field(default_factory=list)
+    borked_balance: bool = False
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
@@ -214,6 +215,9 @@ class Character():
             self.update_held_by_from_message(message_text, time)
         except Exception as e:
             print(f"Exception while finding holding monster. Are we hallu? {e}")
+
+        if "You don't have enough money to buy" in message_text:
+            self.borked_balance = True
 
         self.garbage_collect_camera_shots(time)
 
