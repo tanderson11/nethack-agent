@@ -1277,26 +1277,34 @@ class TameHerbivores(RangedAttackAdvisor):
 class RetameCarnivorePet(TameCarnivores):
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 3)
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         if not character.starting_pet_carnivore:
-            return False
+            return None
         if not run_state.neighborhood.level_map.confused_pet_flag:
             return None
+        self.level_map = run_state.neighborhood.level_map
         return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
 
 class RetameHerbivorePet(TameHerbivores):
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 3)
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         if character.starting_pet_carnivore:
-            return False
+            return None
         if not run_state.neighborhood.level_map.confused_pet_flag:
             return None
+        self.level_map = run_state.neighborhood.level_map
         return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
@@ -1698,7 +1706,7 @@ class NameStartingPet(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if run_state.named_starting_pet:
             return None
-        pet_loc = run_state.neighborhood.find_pets()
+        pet_loc = run_state.neighborhood.find_starting_pet()
 
         if pet_loc is None:
             if environment.env.debug: import pdb; pdb.set_trace()
