@@ -9,7 +9,7 @@ import enum
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
 
-	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists, tier):
+	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists, tier, respects_elbereth):
 		self.name = name
 		self.tamed_by_meat = "dog" in name or "cat" in name or "kitten" in name
 		self.tamed_by_veg = "horse" in name or "pony" in name
@@ -26,6 +26,8 @@ class MonsterSpoiler():
 		self.speed = speed
 		self.MR = MR
 		self.tier = tier
+
+		self.respects_elbereth = respects_elbereth
 
 		self.resists = resists
 
@@ -296,8 +298,10 @@ for _, row in monster_df.iterrows():
 	if row['RESISTS'] is not np.nan:
 		for character in row['RESISTS'].upper():
 			resists |= RESIST_MAPPING[character]
+	
+	respects_elbereth = row['RESPECTS_ELBERETH']
 
-	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists, tier)
+	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists, tier, respects_elbereth)
 	#print(name, resists)
 	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage, passive_bundle.max_damage, death_bundle.max_damage)
 	#print(name, {k:v for k,v in zip(melee_bundle.damage_types._fields, melee_bundle.damage_types) if v==True})
