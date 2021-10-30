@@ -2285,3 +2285,22 @@ class TravelToSokobanSquare(Advisor):
         )
 
         return ActionAdvice(self, travel, menu_plan)
+
+class WearSlowDigestion(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        rings_of_slow_digestion = character.inventory.get_items(inv.Ring, name='slow digestion')
+        if len(rings_of_slow_digestion) == 0:
+            return None
+        for ring in rings_of_slow_digestion:
+            if ring.equipped_status is not None:
+                return None
+
+        ring = rings_of_slow_digestion[0]
+        #import pdb; pdb.set_trace()
+        put_on = nethack.actions.Command.PUTON
+        menu_plan = menuplan.MenuPlan("don slow digestion", self, [
+            menuplan.CharacterMenuResponse("What do you want to put on?", chr(ring.inventory_letter)),
+            menuplan.CharacterMenuResponse("Which ring-finger, Right or Left?", 'l'),
+        ], listening_item=ring)
+
+        return ActionAdvice(self, put_on, menu_plan)
