@@ -15,11 +15,11 @@ new_advisors = [
     PrayForUrgentMajorTroubleAdvisor(oracle_consultation=lambda o: o.urgent_major_trouble),
     # CRITICALLY INJURED
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.critically_injured or o.life_threatened, advisors=[
-        WaitForHPAdvisor(threat_tolerance=0.),
+        #WaitForHPAdvisor(threat_tolerance=0.),
         #UpstairsAdvisor(), # TK square_threat_tolerance=0. once we know who is waiting on the upstairs
         DoCombatHealingAdvisor(),
         UseEscapeItemAdvisor(),
-        WaitForHPAdvisor(oracle_consultation=lambda o: o.on_elbereth),
+        #WaitForHPAdvisor(oracle_consultation=lambda o: o.on_elbereth),
         PrayForHPAdvisor(oracle_consultation=lambda o: o.can_pray_for_hp),
         EngraveElberethAdvisor(),
         #PathfindToSafetyAdvisor(path_threat_tolerance=0.3),
