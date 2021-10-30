@@ -430,7 +430,17 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.adjacent_monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in adjacent_monsters])
         
         #import pdb; pdb.set_trace()
-    
+
+    def find_pets(self):
+        pet_idx = np.where(gd.PetGlyph.class_mask(self.vision_glyphs))
+        if len(pet_idx[0]) == 0:
+            return None
+        first_pet = Square(pet_idx[0][0],pet_idx[1][0]) - self.player_location_in_extended + self.absolute_player_location
+        if first_pet is None:
+            return None
+
+        return first_pet
+
     def count_monsters(self, selector, adjacent=True):
         if adjacent:
             count = 0
