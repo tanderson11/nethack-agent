@@ -1213,6 +1213,8 @@ class RangedAttackAdvisor(Attack):
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
+        if oracle.in_shop:
+            return None
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
             pass
