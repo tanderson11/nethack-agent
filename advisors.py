@@ -1227,6 +1227,9 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
             pass
         return targets
 
+class NonWandRangedAttackFearfulMonsters(RangedAttackFearfulMonsters):
+    preference = constants.ranged_default
+
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
     def advice(self, rng, run_state, character, oracle):
