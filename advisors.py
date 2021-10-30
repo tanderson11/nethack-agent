@@ -1193,6 +1193,16 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+            range = physics.AttackRange('line', 4)
+            if attack_plan.attack_item.direction_type() == 'ray':
+                range = physics.AttackRange('ray', 13)
+            retargets = self.targets(run_state.neighborhood, character, range=range, include_adjacent=include_adjacent)
+            # A little hacky, but now that we know we're using a wand, let's recheck our target to ensure we don't explode ourselves
+            import pdb; pdb.set_trace()
+            if retargets is None:
+                return None
+            if self.prioritize(run_state, retargets, character) != target:
+                return None
         elif attack_plan.attack_action == nethack.actions.Command.CAST:
             #import pdb; pdb.set_trace()
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
@@ -1208,8 +1218,8 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
             pass
             #import pdb; pdb.set_trace()
         return advice
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range= physics.AttackRange('line', 4), **kwargs):
+        
         #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
@@ -1225,16 +1235,14 @@ class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         return super().advice(rng, run_state, character, oracle)
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range, **kwargs)
         if targets is not None:
             print(f"Invisible monster: {targets.monsters[0]}")
         return targets
 
 class TameCarnivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1254,8 +1262,7 @@ class TameCarnivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class TameHerbivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1276,8 +1283,7 @@ class TameHerbivores(RangedAttackAdvisor):
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
 
     def prioritize(self, run_state, targets, character):
@@ -1296,7 +1302,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.adjacent
-    def targets(self, neighborhood, character, **kwargs):
+    def targets(self, neighborhood, character, range=None, **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
