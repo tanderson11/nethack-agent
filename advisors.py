@@ -1968,7 +1968,7 @@ class SellJewelryInShop(SellValuables):
         jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
         return jewelry
 
-class DropUndesirableWantToLowerWeight(SellValuables):
+class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
