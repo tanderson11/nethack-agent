@@ -983,6 +983,14 @@ class GemIdentity(ObjectIdentity):
             self.is_ammo = True
             self.ammo_type = "flint stone"
 
+    valuable_names = ['agate', 'amber', 'amethyst', 'aquamarine', 'black opal', 'chrysoberyl', 'citrine', 'diamond', 'dilithium crystal', 'emerald', 'fluorite', 'garnet', 'jacinth', 'jade', 'jasper', 'jet', 'obsidian', 'opal', 'ruby', 'sapphire', 'topaz', 'turquoise']
+    @classmethod
+    def check_formally_identified_valuable(cls, description):
+        for valuable_name in cls.valuable_names:
+            if valuable_name in description:
+                return True
+        return False
+
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 

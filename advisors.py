@@ -1919,6 +1919,8 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
 class SellValuables(Advisor):
     def drop_valuables(self, run_state, character, valuables):
+        if valuables is None:
+            return None
         undesirable_letters = [item.inventory_letter for item in valuables]
 
         menu_plan = menuplan.MenuPlan(
@@ -1939,7 +1941,6 @@ class SellValuables(Advisor):
         import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
-class SellJewelryInShop(SellValuables):
     def advice(self, rng, run_state, character, oracle):
         if not oracle.in_shop:
             return None
@@ -1948,12 +1949,24 @@ class SellJewelryInShop(SellValuables):
             # don't drop if on the first square of the shop next to the door
             return None
 
-        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
-        if len(jewelry) == 0:
-            return None
+        valuables = self.get_valuables(character)
+        if len(valuables) == 0: return None
+        return self.drop_valuables(run_state, character, valuables)
 
-        #import pdb; pdb.set_trace()
-        return self.drop_valuables(run_state, character, jewelry)
+class SellIdentifiedGemsInShop(SellValuables):
+    def get_valuables(self, character):
+        gems = character.inventory.get_items(
+            oclass=inv.Gem,
+            identity_selector=lambda i: i.name() != 'luckstone',
+            instance_selector=lambda i: i.formally_ided_valuable()
+        )
+        import pdb; pdb.set_trace()
+        return gems
+
+class SellJewelryInShop(SellValuables):
+    def get_valuables(self, character):
+        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
+        return jewelry
 
 class DropUndesirableWantToLowerWeight(SellValuables):
     def advice(self, rng, run_state, character, oracle):

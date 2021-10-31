@@ -89,6 +89,7 @@ new_advisors = [
         WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         SellJewelryInShop(),
+        SellIdentifiedGemsInShop(),
         DropShopOwnedAdvisor(),
         WearSlowDigestion(),
         DropToPriceIDAdvisor(),
