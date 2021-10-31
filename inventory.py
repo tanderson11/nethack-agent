@@ -155,6 +155,9 @@ class Item():
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph
 
+    def can_afford(self, character):
+        return False
+
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
@@ -572,6 +575,9 @@ class Rock(Item):
 
 class Ring(Item):
     glyph_class = gd.RingGlyph
+
+    def can_afford(self, character):
+        return False
 
 class UnimplementedItemClassException(Exception):
     pass
