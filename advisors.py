@@ -359,7 +359,7 @@ class WaitAdvisor(Advisor):
 class ConditionWaitAdvisor(WaitAdvisor):
     pass
 
-class WaitForHPAdvisor(Advisor):
+class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
         return super().advice(rng, run_state, character, oracle)
 
