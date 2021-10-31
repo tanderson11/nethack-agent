@@ -747,8 +747,6 @@ class RunState():
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
             self.actions_without_consequence = set()
-        elif isinstance(self.last_non_menu_advice, StethoscopeAdvice):
-            pass
         else:
             self.last_non_menu_action_failed_advancement = True
             self.actions_without_consequence.add(self.last_non_menu_action)
