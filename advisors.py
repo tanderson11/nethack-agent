@@ -1079,7 +1079,6 @@ class EngraveElberethStuckByMonster(Advisor):
             return None
         for monster in run_state.neighborhood.adjacent_monsters:
             if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
-                import pdb; pdb.set_trace()
                 return None
         if oracle.on_elbereth:
             return None
