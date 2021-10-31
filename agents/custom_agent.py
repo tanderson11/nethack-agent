@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, SearchDeadEndsWithStethoscope, StethoscopeAdvice, WaitForHPAdvisor
 import advisor_sets
 
 import menuplan
@@ -746,7 +746,7 @@ class RunState():
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
             self.actions_without_consequence = set()
-        elif isinstance(self.last_non_menu_advice, StethoscopeAdvice):
+        elif isinstance(self.last_non_menu_advice, StethoscopeAdvice) and isinstance(self.last_non_menu_advice.from_advisor, SearchDeadEndsWithStethoscope):
             pass
         else:
             self.last_non_menu_action_failed_advancement = True
@@ -1195,7 +1195,8 @@ class CustomAgent():
             try:
                 delta = physics.Square(*physics.action_to_delta[advice.direction])
             except:
-                import pdb; pdb.set_trace()
+                if environment.env.debug: import pdb; pdb.set_trace()
+                pass
             level_map.log_stethoscope_search(neighborhood.absolute_player_location + delta)
             #import pdb; pdb.set_trace()
 
