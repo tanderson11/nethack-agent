@@ -1105,7 +1105,6 @@ class EngraveElberethStuckByMonster(Advisor):
             menuplan.PhraseMenuResponse("What do you want to engrave", "Elbereth"),
             menuplan.PhraseMenuResponse("What do you want to write", "Elbereth"),
         ])
-        import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.ENGRAVE, new_menu_plan=menu_plan)
 
     def advice_selected(self):
