@@ -228,6 +228,7 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
+    menuplan.YesMenuResponse("Do you wish to teleport?"),
 ]
 
 wizard_background_menu_plan_options = [
@@ -805,6 +806,9 @@ class CustomAgent():
         changed_level = (run_state.current_square is None or run_state.current_square.dcoord != dcoord)
         changed_square = False
         previous_square = False
+
+        if run_state.character and changed_level:
+            run_state.character.borked_balance = False
 
         if changed_level or run_state.current_square.location != player_location:
             changed_square = True

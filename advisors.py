@@ -1193,6 +1193,16 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+            range = physics.AttackRange('line', 4)
+            if attack_plan.attack_item.identity.direction_type() == 'ray':
+                #import pdb; pdb.set_trace()
+                range = physics.AttackRange('ray', 13)
+            retargets = self.targets(run_state.neighborhood, character, range=range, include_adjacent=include_adjacent, ray_override=[physics.action_to_delta[attack_direction]])
+            # A little hacky, but now that we know we're using a wand, let's recheck our target to ensure we don't explode ourselves
+            if retargets is None:
+                return None
+            if self.prioritize(run_state, retargets, character) != target:
+                return None
         elif attack_plan.attack_action == nethack.actions.Command.CAST:
             #import pdb; pdb.set_trace()
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
@@ -1203,6 +1213,10 @@ class RangedAttackAdvisor(Attack):
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
+        if oracle.in_shop:
+            return None
+        #if character.current_hp < 30:
+        #    return None
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
             pass
@@ -1216,6 +1230,9 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
             #print(f"Annoying monster at range: {targets.monsters[0]}")
             pass
         return targets
+
+class NonWandRangedAttackFearfulMonsters(RangedAttackFearfulMonsters):
+    preference = constants.ranged_default
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
@@ -2276,3 +2293,22 @@ class TravelToSokobanSquare(Advisor):
         )
 
         return ActionAdvice(self, travel, menu_plan)
+
+class WearSlowDigestion(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        rings_of_slow_digestion = character.inventory.get_items(inv.Ring, name='slow digestion')
+        if len(rings_of_slow_digestion) == 0:
+            return None
+        for ring in rings_of_slow_digestion:
+            if ring.equipped_status is not None:
+                return None
+
+        ring = rings_of_slow_digestion[0]
+        #import pdb; pdb.set_trace()
+        put_on = nethack.actions.Command.PUTON
+        menu_plan = menuplan.MenuPlan("don slow digestion", self, [
+            menuplan.CharacterMenuResponse("What do you want to put on?", chr(ring.inventory_letter)),
+            menuplan.CharacterMenuResponse("Which ring-finger, Right or Left?", 'l'),
+        ], listening_item=ring)
+
+        return ActionAdvice(self, put_on, menu_plan)

@@ -53,6 +53,7 @@ new_advisors = [
     SafeMeleeAttackAdvisor(),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
+    NonWandRangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
@@ -87,6 +88,7 @@ new_advisors = [
         WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
+        #WearSlowDigestion(),
         DropToPriceIDAdvisor(),
         DropUndesirableWantToLowerWeight(),
         AnyWardrobeChangeAdvisor(),

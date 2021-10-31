@@ -671,7 +671,14 @@ class ThreatMap(FloodMap):
         return np.logical_or.reduce(masks)
 
     @staticmethod
-    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False, stop_on_boulders=True):
+    def raytrace_from(source, glyph_grid, include_adjacent=False, stop_on_monsters=False, reject_peaceful=False, stop_on_boulders=True, attack_range=None, ray_override=None):
+        ray_offsets=physics.action_deltas
+        if ray_override is not None:
+            ray_offsets = ray_override
+            stop_on_monsters = False
+            if ray_override[0] not in physics.ortholinear_offsets:
+                return np.full_like(glyph_grid, False, dtype='bool')
+
         row_lim = glyph_grid.shape[0]
         col_lim = glyph_grid.shape[1]
 
@@ -683,20 +690,30 @@ class ThreatMap(FloodMap):
         if stop_on_monsters:
             blocking_geometry |= gd.MonsterGlyph.class_mask(glyph_grid)
 
-        ray_offsets = physics.action_deltas
-
         masks = []
         for offset in ray_offsets:
             ray_mask = np.full_like(glyph_grid, False, dtype='bool')
 
             current = source
-            current = current + physics.Square(*offset) # initial bump so that ranged attacks don't threaten adjacent squares
+            current = current + physics.Square(*offset)
+            range_counter = 1
             while 0 <= current[0] < row_lim and 0 <= current[1] < col_lim:
                 blocked = blocking_geometry[current]
                 ray_mask[current] = True # moved before blocking since technically you can hit things in walls with ranged attacks
-                if blocked: # is this the full extent of what blocks projectiles/rays?
+                range_counter += 1
+                reflected = False
+                if attack_range is not None and attack_range.type == 'ray':
+                    reflected = wall_geometry[current]
+                    if reflected:
+                        range_counter += 1
+                        #import pdb; pdb.set_trace()
+                        offset = (-1 * offset[0], -1 * offset[1]) # this simplification valid because we say no to all diagonal rays
+
+                if blocked and not reflected: # is this the full extent of what blocks projectiles/rays?
                     break # should we do anything with bouncing rays
 
+                if attack_range is not None and range_counter > attack_range.range:
+                    break
 
                 current = (current[0]+offset[0], current[1]+offset[1])
 
@@ -704,10 +721,16 @@ class ThreatMap(FloodMap):
 
         can_hit_mask = np.logical_or.reduce(masks)
 
+        if can_hit_mask[source] and ray_override:
+            #import pdb; pdb.set_trace()
+            return np.full_like(glyph_grid, False, dtype='bool')
+
         if not include_adjacent:
             adjacent_rows, adjacent_cols = utilities.centered_slices_bounded_on_array(source, (1,1), can_hit_mask)
             can_hit_mask[adjacent_rows, adjacent_cols] = False
         return can_hit_mask
+    
+
 
 class SpecialLevelDecoder():
     CHARACTER_SET = None
