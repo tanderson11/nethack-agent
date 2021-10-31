@@ -375,6 +375,7 @@ class RunState():
         self.total_damage = 0
         self.adjacent_monster_turns = 0
         self.last_damage_timestamp = None
+        self.last_ranged_damage_timestamp = None
 
         self.queued_name_action = None
         self.last_dropped_item = None
@@ -505,6 +506,14 @@ class RunState():
     def log_damage(self, damage, time):
         self.last_damage_timestamp = time
         self.total_damage += damage
+
+    def check_for_surprising_damage(self):
+        if not self.last_damage_timestamp == self.time:
+            return None
+        if len(self.neighborhood.adjacent_monsters) == 0:
+            #import pdb; pdb.set_trace()
+            self.last_ranged_damage_timestamp = self.time
+
 
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
@@ -1164,6 +1173,7 @@ class CustomAgent():
         run_state.update_neighborhood(neighborhood)
 
         run_state.log_adjacent_monsters(neighborhood.n_adjacent_monsters)
+        run_state.check_for_surprising_damage()
 
         run_state.check_stuck()
         ############################
