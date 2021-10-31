@@ -1768,6 +1768,7 @@ class TravelToVaultCloset(Advisor):
     def advice_selected(self):
         #import pdb; pdb.set_trace()
         pass
+
 class NameStartingPet(Advisor):
     def advice(self, rng, run_state, character, oracle):
         if run_state.named_starting_pet:
@@ -2025,7 +2026,8 @@ class IdentifyGemsWithTouchstone(Advisor):
             return None
         valuable_gems = character.inventory.get_items(oclass=inv.Gem, identity_selector=lambda i: i.valuable)
         if len(valuable_gems) > 0:
-            import pdb; pdb.set_trace()
+            #import pdb; pdb.set_trace()
+            pass
         target_gem = character.inventory.get_item(oclass=inv.Gem, identity_selector=lambda i: i.valuable, instance_selector=lambda i: not i.formally_ided_valuable())
         if target_gem is None:
             return None
@@ -2418,12 +2420,7 @@ class NameWishItemAdvisor(Advisor):
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
 
 class NameItemAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        name_action = run_state.queued_name_action
-        run_state.queued_name_action = None
-        if name_action is None:
-            return None
-
+    def generate_advice(self, character, name_action):
         #import pdb; pdb.set_trace()
         character.inventory.all_items()
         # sometimes the item has left our inventory when we wish to name it. handle that
@@ -2440,6 +2437,22 @@ class NameItemAdvisor(Advisor):
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        name_action = run_state.queued_name_action
+        run_state.queued_name_action = None
+        if name_action is None:
+            return None
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
+
+class NameSting(NameItemAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.global_identity_map.generated_artifacts['Sting'] or not character.inventory.wielded_weapon.identity.name() == 'elven dagger':
+            return None
+        name_action = inv.Item.NameAction(character.inventory.wielded_weapon.inventory_letter, "Sting")
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
 
 class SolveSokoban(Advisor):
     def advice(self, rng, run_state, character, oracle):
