@@ -59,6 +59,7 @@ class Item():
 
         self._seen_as = seen_as
         self._full_str = instance_attributes.full_str
+        self._description = instance_attributes.description
 
     def __repr__(self):
         return self._full_str
@@ -569,6 +570,14 @@ class Gem(Item):
             if non_rock is not None:
                 return False
         return super().desirable(character, consider_funds=consider_funds)
+
+    def can_afford(self, character):
+        if self.identity.name() != 'luckstone': return False
+        return super().can_afford(character)
+    
+    def formally_ided_valuable(self):
+        print(self._description)
+        return self.identity.check_formally_identified_valuable(self._description)
 
 class Rock(Item):
     glyph_class = gd.RockGlyph
