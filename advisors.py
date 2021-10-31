@@ -1917,7 +1917,45 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
-class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
+class SellValuables(Advisor):
+    def drop_valuables(self, run_state, character, valuables):
+        undesirable_letters = [item.inventory_letter for item in valuables]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+class SellJewelryInShop(SellValuables):
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
+        if len(jewelry) == 0:
+            return None
+
+        #import pdb; pdb.set_trace()
+        return self.drop_valuables(run_state, character, jewelry)
+
+class DropUndesirableWantToLowerWeight(SellValuables):
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
