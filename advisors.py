@@ -1931,7 +1931,7 @@ class DropUndesriableInVault(DropUndesirableAdvisor):
             return None
         if not character.want_less_weight():
             return None
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
