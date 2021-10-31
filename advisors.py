@@ -1960,7 +1960,7 @@ class SellIdentifiedGemsInShop(SellValuables):
             identity_selector=lambda i: i.name() != 'luckstone',
             instance_selector=lambda i: i.formally_ided_valuable()
         )
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         return gems
 
 class SellJewelryInShop(SellValuables):
