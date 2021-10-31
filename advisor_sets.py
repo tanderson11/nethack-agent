@@ -88,7 +88,7 @@ new_advisors = [
         WrestWandOfWishing(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
-        WearSlowDigestion(),
+        #WearSlowDigestion(),
         DropToPriceIDAdvisor(),
         DropUndesirableWantToLowerWeight(),
         AnyWardrobeChangeAdvisor(),
