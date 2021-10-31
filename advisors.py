@@ -151,6 +151,15 @@ class Oracle():
         return (self.run_state.time - self.run_state.last_damage_timestamp)
 
     @utilities.cached_property
+    def turns_since_ranged_damage(self):
+        if self.run_state.last_ranged_damage_timestamp is None: return 0
+        return (self.run_state.time - self.run_state.last_ranged_damage_timestamp)
+
+    @utilities.cached_property
+    def recently_ranged_damaged(self):
+        return self.run_state.last_ranged_damage_timestamp is not None and self.turns_since_ranged_damage < 10
+
+    @utilities.cached_property
     def recently_damaged(self):
         return self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 10)
 
@@ -2118,6 +2127,10 @@ class EngraveElberethAdvisor(Advisor):
             return None
 
         if oracle.blind:
+            return None
+
+        if oracle.recently_ranged_damaged:
+            #import pdb; pdb.set_trace()
             return None
 
         self.current_square = run_state.current_square
