@@ -2,6 +2,8 @@
 from  advisors import *
 
 new_advisors = [
+    # Name starting pet
+    NameStartingPet(),
     # No-time recon
     NearLook(),
     # FREE IMPROVEMENT
@@ -28,6 +30,7 @@ new_advisors = [
     AdjustEscapePlanDummy(),
     AdjustRangedPlanDummy(),
     # FAST IMPROVEMENT
+    NameSting(),
     WieldBetterWeaponAdvisor(),
     GainSpeedFromWand(),
     # WEAK
@@ -38,6 +41,8 @@ new_advisors = [
     # COMBAT
     ApplyUnicornHornAdvisor(oracle_consultation=lambda o: o.minor_unicorn_condition),
     #PassiveMonsterRangedAttackAdvisor(), # if you want to do it at actual range
+    RetameCarnivorePet(),
+    RetameHerbivorePet(),
     DrinkHealingPotionWhenLow(),
     CastHealing(),
     WaitAdvisor(oracle_consultation=lambda o: o.very_low_hp and o.on_elbereth),
@@ -53,6 +58,7 @@ new_advisors = [
     SafeMeleeAttackAdvisor(),
     PassiveMonsterRangedAttackAdvisor(),
     RangedAttackFearfulMonsters(),
+    NonWandRangedAttackFearfulMonsters(),
     #RangedAttackHighlyThreateningMonsters(),
     # WEAK
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.weak_with_hunger, advisors=[
@@ -81,12 +87,17 @@ new_advisors = [
     DrinkGainLevel(),
     DipForExcaliburAdvisor(),
     # WHEN SAFE IMPROVEMENTS
+    DropUndesriableInVault(),
     SequentialCompositeAdvisor(oracle_consultation=lambda o: o.am_safe, advisors=[
         ChargeWandOfWishing(),
         ZapWandOfWishing(),
         WrestWandOfWishing(),
+        IdentifyGemsWithTouchstone(),
         DropUndesirableInShopAdvisor(),
+        SellJewelryInShop(),
+        SellIdentifiedGemsInShop(),
         DropShopOwnedAdvisor(),
+        WearSlowDigestion(),
         DropToPriceIDAdvisor(),
         DropUndesirableWantToLowerWeight(),
         AnyWardrobeChangeAdvisor(),
@@ -124,6 +135,7 @@ new_advisors = [
     # MOVE TO DESIRABLE
     PathfindUnvisitedShopSquares(oracle_consultation=lambda o: o.in_shop),
     PathfindDesirableObjectsAdvisor(oracle_consultation=lambda o: not o.in_shop),
+    EscapeVault(),
     # EXPLORE
     SearchWithStethoscope(oracle_consultation=lambda o:o.have_free_stethoscope_action),
     SearchDeadEndsWithStethoscope(),
@@ -136,6 +148,7 @@ new_advisors = [
         TravelToDesiredEgress(): 1,
         TravelToFountainAdvisorForExcalibur(): 3,
         TravelToAltarAdvisor(): 2,
+        TravelToVaultCloset(): 5,
         TravelToBespokeUnexploredAdvisor(lambda o: not o.recently_damaged): 4,
     }),
     RandomMoveAdvisor(),

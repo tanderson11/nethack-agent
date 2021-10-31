@@ -56,11 +56,17 @@ class Character():
     wish_in_progress: tuple = None
     blinding_attempts: dict = field(default_factory=dict)
     spells: list =  field(default_factory=list)
+    borked_balance: bool = False
+    starting_pet_carnivore: bool = True
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"].to_dict()
         self.set_role_tier_mod()
+        self.set_pet_type()
+
+    def set_pet_type(self):
+        self.starting_pet_carnivore = not (self.base_class == constants.BaseRole.Knight)
 
     def set_base_spells(self):
         if self.base_class == constants.BaseRole.Wizard:
@@ -102,6 +108,9 @@ class Character():
 
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
+
+    def ready_for_vault(self):
+        return self.inventory.get_square_change_plan(constants.escape_default) is not None
 
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
@@ -214,6 +223,9 @@ class Character():
             self.update_held_by_from_message(message_text, time)
         except Exception as e:
             print(f"Exception while finding holding monster. Are we hallu? {e}")
+
+        if "You don't have enough money to buy" in message_text:
+            self.borked_balance = True
 
         self.garbage_collect_camera_shots(time)
 
@@ -497,7 +509,7 @@ class Character():
     def get_spell_attack(self, preference):
         if self.current_energy is None or self.current_energy < 5:
                 return None
-        if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
+        if self.hunger_state < 3 and 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
             attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
             proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
             return proposal

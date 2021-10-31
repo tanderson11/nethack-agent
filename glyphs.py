@@ -973,15 +973,24 @@ class ToolIdentity(ObjectIdentity):
 
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+    valuable_names = ['agate', 'amber', 'amethyst', 'aquamarine', 'black opal', 'chrysoberyl', 'citrine', 'diamond', 'dilithium crystal', 'emerald', 'fluorite', 'garnet', 'jacinth', 'jade', 'jasper', 'jet', 'obsidian', 'opal', 'ruby', 'sapphire', 'topaz', 'turquoise']
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.thrown = False
         self.ammo_type = None
         self.is_ammo = False
+        self.valuable = self.name() in self.valuable_names
         if not self.name() == 'luckstone' and not self.name() == 'loadstone':
             self.is_ammo = True
             self.ammo_type = "flint stone"
+
+    @classmethod
+    def check_formally_identified_valuable(cls, description):
+        for valuable_name in cls.valuable_names:
+            if valuable_name in description:
+                return True
+        return False
 
 class RockIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
@@ -1008,7 +1017,14 @@ class WandIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
-        #self.direction = self.find_values('DIRECTION', dropna=True)
+        #self.direction = 
+
+    def direction_type(self):
+        direction = self.find_values('DIRECTION', dropna=True)
+        if isinstance(direction, np.ndarray):
+            return None
+        else:
+            return direction
 
     def is_attack(self):
         is_attack = self.find_values('ATTACK')

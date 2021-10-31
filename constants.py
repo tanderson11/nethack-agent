@@ -3,12 +3,15 @@ from typing import NamedTuple
 import pandas as pd
 import os
 
+pet_name = "_ZORP_"
+
 GLYPHS_SHAPE = (21, 79)
 
 class SpecialRoomTypes(enum.Enum):
     NONE = 0
     shop = 1
     vault_closet = 2
+    vault = 3
 
 class RangedAttackPreference(enum.Flag):
     wand = enum.auto()

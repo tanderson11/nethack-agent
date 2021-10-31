@@ -151,6 +151,15 @@ class Oracle():
         return (self.run_state.time - self.run_state.last_damage_timestamp)
 
     @utilities.cached_property
+    def turns_since_ranged_damage(self):
+        if self.run_state.last_ranged_damage_timestamp is None: return 0
+        return (self.run_state.time - self.run_state.last_ranged_damage_timestamp)
+
+    @utilities.cached_property
+    def recently_ranged_damaged(self):
+        return self.run_state.last_ranged_damage_timestamp is not None and self.turns_since_ranged_damage < 3
+
+    @utilities.cached_property
     def recently_damaged(self):
         return self.run_state.last_damage_timestamp is not None and (self.run_state.time - self.run_state.last_damage_timestamp < 10)
 
@@ -359,7 +368,7 @@ class WaitAdvisor(Advisor):
 class ConditionWaitAdvisor(WaitAdvisor):
     pass
 
-class WaitForHPAdvisor(Advisor):
+class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
         return super().advice(rng, run_state, character, oracle)
 
@@ -413,6 +422,8 @@ class SearchDeadEndsWithStethoscope(Advisor):
         searchable = low_search_count & run_state.neighborhood.local_possible_secret_mask
         searchable[run_state.neighborhood.local_player_location] = False
         to_search = np.where(searchable)
+
+        #import pdb; pdb.set_trace()
         if len(to_search[0]) == 0:
             return None
         direction = run_state.neighborhood.action_grid[(to_search[0][0], to_search[1][0])]
@@ -432,7 +443,7 @@ class SearchDeadEndAdvisor(Advisor):
             run_state.neighborhood.level_map.searches_count_map,
             neighborhood.ViewField.Local
         )[run_state.neighborhood.local_possible_secret_mask]
-        if not search_count.any():
+        if len(search_count) == 0:
             return None
         lowest_search_count = search_count.min()
 
@@ -1038,12 +1049,12 @@ class ChangeOfSquare(Advisor):
 
     def advice(self, rng, run_state, character, oracle):
         preference = self.preference
-        if not oracle.am_stuck:
-            return None
         if not run_state.neighborhood.level_map.teleportable:
             preference &= ~constants.ChangeSquarePreference.teleport
         if not run_state.neighborhood.level_map.diggable_floor:
             preference &= ~constants.ChangeSquarePreference.digging
+        if run_state.neighborhood.in_shop:
+            preference &= ~constants.ChangeSquarePreference.slow
 
         #import pdb; pdb.set_trace()
         prep = self.prepare(character, preference, run_state.neighborhood.dcoord.level)
@@ -1070,6 +1081,24 @@ class ChangeOfSquare(Advisor):
 
 class StuckChangeOfSquare(ChangeOfSquare):
     preference = constants.escape_default
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.am_stuck:
+            return None
+        return super().advice(rng, run_state, character, oracle)
+
+class EscapeVault(ChangeOfSquare):
+    preference = constants.escape_default
+
+    def advice(self, rng, run_state, character, oracle):
+        self.level_map = None
+        if not run_state.neighborhood.in_vault:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.register_looted_vault()
+        pass
 
 class EngraveElberethStuckByMonster(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1077,6 +1106,10 @@ class EngraveElberethStuckByMonster(Advisor):
             return None
         if not run_state.neighborhood.n_adjacent_monsters > 0:
             return None
+        for monster in run_state.neighborhood.adjacent_monsters:
+            if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
+                #import pdb; pdb.set_trace()
+                return None
         if oracle.on_elbereth:
             return None
         if oracle.blind:
@@ -1193,6 +1226,16 @@ class RangedAttackAdvisor(Attack):
             menu_plan = self.make_fire_plan(character.inventory.quivered, attack_direction)
         elif attack_plan.attack_action == nethack.actions.Command.ZAP:
             menu_plan = self.make_zap_plan(attack_plan.attack_item, attack_direction)
+            range = physics.AttackRange('line', 4)
+            if attack_plan.attack_item.identity.direction_type() == 'ray':
+                #import pdb; pdb.set_trace()
+                range = physics.AttackRange('ray', 13)
+            retargets = self.targets(run_state.neighborhood, character, range=range, include_adjacent=include_adjacent, ray_override=[physics.action_to_delta[attack_direction]])
+            # A little hacky, but now that we know we're using a wand, let's recheck our target to ensure we don't explode ourselves
+            if retargets is None:
+                return None
+            if self.prioritize(run_state, retargets, character) != target:
+                return None
         elif attack_plan.attack_action == nethack.actions.Command.CAST:
             #import pdb; pdb.set_trace()
             menu_plan = self.make_spell_zap_plan(character, attack_plan.attack_item, attack_direction)
@@ -1203,19 +1246,26 @@ class RangedAttackAdvisor(Attack):
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
     preference = constants.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
+        if oracle.in_shop:
+            return None
+        #if character.current_hp < 30:
+        #    return None
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
             pass
             #import pdb; pdb.set_trace()
         return advice
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range= physics.AttackRange('line', 4), **kwargs):
+        
         #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
             #print(f"Annoying monster at range: {targets.monsters[0]}")
             pass
         return targets
+
+class NonWandRangedAttackFearfulMonsters(RangedAttackFearfulMonsters):
+    preference = constants.ranged_default
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
@@ -1225,16 +1275,14 @@ class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
         if run_state.neighborhood.level_map.solved:
             return None
         return super().advice(rng, run_state, character, oracle)
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.InvisibleGlyph), attack_range=range, **kwargs)
         if targets is not None:
             print(f"Invisible monster: {targets.monsters[0]}")
         return targets
 
 class TameCarnivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_meat and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1254,8 +1302,7 @@ class TameCarnivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class TameHerbivores(RangedAttackAdvisor):
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 3)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 3), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.tamed_by_veg and (m.monster_spoiler.level + 3) > character.experience_level, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1274,10 +1321,41 @@ class TameHerbivores(RangedAttackAdvisor):
         menu_plan = self.make_throw_plan(food, attack_direction)
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
+class RetameCarnivorePet(TameCarnivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
+class RetameHerbivorePet(TameHerbivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
-    def targets(self, neighborhood, character, **kwargs):
-        range = physics.AttackRange('line', 4)
+    def targets(self, neighborhood, character, range=physics.AttackRange('line', 4), **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
 
     def prioritize(self, run_state, targets, character):
@@ -1296,7 +1374,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = constants.ranged_powerful | constants.RangedAttackPreference.adjacent
-    def targets(self, neighborhood, character, **kwargs):
+    def targets(self, neighborhood, character, range=None, **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1670,6 +1748,62 @@ class TravelToDesiredEgress(Advisor):
         )
         return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
 
+class TravelToVaultCloset(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        lmap = run_state.neighborhood.level_map
+        if lmap.vault_looted:
+            return None
+        if not (lmap.special_room_map == constants.SpecialRoomTypes.vault_closet.value).any():
+            return None
+        escape_prep = character.inventory.get_square_change_plan(constants.escape_default)
+        if escape_prep is None:
+            return None 
+        travel = nethack.actions.Command.TRAVEL
+        #import pdb; pdb.set_trace()
+        vault_closet = np.transpose(np.where(
+            (lmap.special_room_map == constants.SpecialRoomTypes.vault_closet.value) &
+            (~lmap.exhausted_travel_map) &
+            (~lmap.boulder_map)
+        ))
+
+        if len(vault_closet) > 0:
+            nearest_square_idx = np.argmin(np.sum(np.abs(vault_closet - np.array(run_state.neighborhood.absolute_player_location)), axis=1))
+            self.target_square = physics.Square(*vault_closet[nearest_square_idx])
+            self.lmap = lmap
+            menu_plan = menuplan.MenuPlan(
+                "travel to vault", self, [
+                    menuplan.TravelNavigationMenuResponse(re.compile(".*"), run_state, self.target_square), # offset because cursor row 0 = top line
+                ],
+                fallback=ord('.')) # fallback seems broken if you ever ESC out? check TK
+
+            #print(f"initial location = {run_state.neighborhood.absolute_player_location} travel target = {target_square}")
+            return ActionAdvice(self, travel, menu_plan)
+    def advice_selected(self):
+        #import pdb; pdb.set_trace()
+        pass
+
+class NameStartingPet(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.named_starting_pet:
+            return None
+        pet_loc = run_state.neighborhood.find_starting_pet()
+
+        if pet_loc is None:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
+        #import pdb; pdb.set_trace()
+        call = nethack.actions.Command.CALL
+        menu_plan = menuplan.MenuPlan(
+            "name starting pet", self, [
+                menuplan.CharacterMenuResponse("What do you want to name?", "m"),
+                menuplan.SquarePlacementMenuResponse(re.compile("^(?!.*(What do you want to call)).*"), run_state, pet_loc), # offset because cursor row 0 = top line
+                menuplan.PhraseMenuResponse("What do you want to call", constants.pet_name)
+            ],
+            fallback=ord('.')
+        ) # fallback seems broken if you ever ESC out? check TK
+        run_state.named_starting_pet = True
+        return ActionAdvice(self, call, menu_plan)
+
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
         travel = nethack.actions.Command.TRAVEL
@@ -1850,12 +1984,95 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
+class SellValuables(Advisor):
+    def drop_valuables(self, run_state, character, valuables):
+        if valuables is None:
+            return None
+        undesirable_letters = [item.inventory_letter for item in valuables]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        valuables = self.get_valuables(character)
+        if len(valuables) == 0: return None
+        return self.drop_valuables(run_state, character, valuables)
+
+class SellIdentifiedGemsInShop(SellValuables):
+    def get_valuables(self, character):
+        gems = character.inventory.get_items(
+            oclass=inv.Gem,
+            identity_selector=lambda i: i.name() != 'luckstone',
+            instance_selector=lambda i: i.formally_ided_valuable()
+        )
+        #import pdb; pdb.set_trace()
+        return gems
+
+class IdentifyGemsWithTouchstone(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.base_class != constants.BaseRole.Archeologist:
+            return None
+        touchstone = character.inventory.get_item(oclass=inv.Gem, name='touchstone')
+        if touchstone is None:
+            return None
+        valuable_gems = character.inventory.get_items(oclass=inv.Gem, identity_selector=lambda i: i.valuable)
+        if len(valuable_gems) > 0:
+            #import pdb; pdb.set_trace()
+            pass
+        target_gem = character.inventory.get_item(oclass=inv.Gem, identity_selector=lambda i: i.valuable, instance_selector=lambda i: not i.formally_ided_valuable())
+        if target_gem is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("identify gem with touchstone", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(touchstone.inventory_letter)),
+                menuplan.CharacterMenuResponse("What do you want to rub on the stone?", chr(target_gem.inventory_letter)),
+            ]
+        )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(self, nethack.actions.Command.APPLY, menu_plan)
+
+class SellJewelryInShop(SellValuables):
+    def get_valuables(self, character):
+        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
+        return jewelry
+
 class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
 
         #import pdb; pdb.set_trace()
+        return self.drop_undesirable(run_state, character)
+
+class DropUndesriableInVault(DropUndesirableAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if not run_state.neighborhood.in_vault:
+            return None
+        if not character.want_less_weight():
+            return None
+        import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
@@ -2120,6 +2337,15 @@ class EngraveElberethAdvisor(Advisor):
         if oracle.blind:
             return None
 
+        if oracle.recently_ranged_damaged:
+            #import pdb; pdb.set_trace()
+            return None
+
+        for monster in run_state.neighborhood.adjacent_monsters:
+            if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
+                #import pdb; pdb.set_trace()
+                return None
+
         self.current_square = run_state.current_square
         self.usable_wand = None
         self.engraving = neighborhood.ElberethEngraving(
@@ -2216,12 +2442,7 @@ class NameWishItemAdvisor(Advisor):
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
 
 class NameItemAdvisor(Advisor):
-    def advice(self, rng, run_state, character, oracle):
-        name_action = run_state.queued_name_action
-        run_state.queued_name_action = None
-        if name_action is None:
-            return None
-
+    def generate_advice(self, character, name_action):
         #import pdb; pdb.set_trace()
         character.inventory.all_items()
         # sometimes the item has left our inventory when we wish to name it. handle that
@@ -2238,6 +2459,22 @@ class NameItemAdvisor(Advisor):
             ])
 
         return ActionAdvice(self, nethack.actions.Command.CALL, menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        name_action = run_state.queued_name_action
+        run_state.queued_name_action = None
+        if name_action is None:
+            return None
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
+
+class NameSting(NameItemAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.global_identity_map.generated_artifacts['Sting'] or not character.inventory.wielded_weapon.identity.name() == 'elven dagger':
+            return None
+        name_action = inv.Item.NameAction(character.inventory.wielded_weapon.inventory_letter, "Sting")
+        #import pdb; pdb.set_trace()
+        return self.generate_advice(character, name_action)
 
 class SolveSokoban(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -2276,3 +2513,22 @@ class TravelToSokobanSquare(Advisor):
         )
 
         return ActionAdvice(self, travel, menu_plan)
+
+class WearSlowDigestion(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        rings_of_slow_digestion = character.inventory.get_items(inv.Ring, name='slow digestion')
+        if len(rings_of_slow_digestion) == 0:
+            return None
+        for ring in rings_of_slow_digestion:
+            if ring.equipped_status is not None:
+                return None
+
+        ring = rings_of_slow_digestion[0]
+        #import pdb; pdb.set_trace()
+        put_on = nethack.actions.Command.PUTON
+        menu_plan = menuplan.MenuPlan("don slow digestion", self, [
+            menuplan.CharacterMenuResponse("What do you want to put on?", chr(ring.inventory_letter)),
+            menuplan.CharacterMenuResponse("Which ring-finger, Right or Left?", 'l'),
+        ], listening_item=ring)
+
+        return ActionAdvice(self, put_on, menu_plan)
