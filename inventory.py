@@ -578,7 +578,7 @@ class Gem(Item):
         return super().can_afford(character)
     
     def formally_ided_valuable(self):
-        print(self._description)
+        #print(self._description)
         return self.identity.check_formally_identified_valuable(self._description)
 
 class Rock(Item):

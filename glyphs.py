@@ -973,17 +973,18 @@ class ToolIdentity(ObjectIdentity):
 
 class GemIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+    valuable_names = ['agate', 'amber', 'amethyst', 'aquamarine', 'black opal', 'chrysoberyl', 'citrine', 'diamond', 'dilithium crystal', 'emerald', 'fluorite', 'garnet', 'jacinth', 'jade', 'jasper', 'jet', 'obsidian', 'opal', 'ruby', 'sapphire', 'topaz', 'turquoise']
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.thrown = False
         self.ammo_type = None
         self.is_ammo = False
+        self.valuable = self.name() in self.valuable_names
         if not self.name() == 'luckstone' and not self.name() == 'loadstone':
             self.is_ammo = True
             self.ammo_type = "flint stone"
 
-    valuable_names = ['agate', 'amber', 'amethyst', 'aquamarine', 'black opal', 'chrysoberyl', 'citrine', 'diamond', 'dilithium crystal', 'emerald', 'fluorite', 'garnet', 'jacinth', 'jade', 'jasper', 'jet', 'obsidian', 'opal', 'ruby', 'sapphire', 'topaz', 'turquoise']
     @classmethod
     def check_formally_identified_valuable(cls, description):
         for valuable_name in cls.valuable_names:

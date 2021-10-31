@@ -87,6 +87,7 @@ new_advisors = [
         ChargeWandOfWishing(),
         ZapWandOfWishing(),
         WrestWandOfWishing(),
+        IdentifyGemsWithTouchstone(),
         DropUndesirableInShopAdvisor(),
         SellJewelryInShop(),
         SellIdentifiedGemsInShop(),
