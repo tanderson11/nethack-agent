@@ -1852,9 +1852,6 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
-<<<<<<< HEAD
-class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
-=======
 class SellValuables(Advisor):
     def drop_valuables(self, run_state, character, valuables):
         if valuables is None:
@@ -1876,7 +1873,6 @@ class SellValuables(Advisor):
                 menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
             ]
         )
-        import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1906,8 +1902,7 @@ class SellJewelryInShop(SellValuables):
         jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
         return jewelry
 
-class DropUndesirableWantToLowerWeight(SellValuables):
->>>>>>> fbac233 (Fix Rings, Amulets, etc. so you don't disregard them as un-purchasable when they're not actually shop-owned.)
+class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
