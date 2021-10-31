@@ -464,7 +464,7 @@ class Character():
 
         # TK damage from skills
         damage += self.attributes.melee_damage_modifiers()
-
+        damage = max(damage, 1)
         hits_to_kill = monster_spoiler.average_hp() / damage
         swings_to_kill = hits_to_kill / melee_hit_probability
         time_to_kill = swings_to_kill / self.actions_per_unit_time()
