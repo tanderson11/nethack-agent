@@ -1008,7 +1008,14 @@ class WandIdentity(ObjectIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
 
-        #self.direction = self.find_values('DIRECTION', dropna=True)
+        #self.direction = 
+
+    def direction_type(self):
+        direction = self.find_values('DIRECTION', dropna=True)
+        if isinstance(direction, np.ndarray):
+            return None
+        else:
+            return direction
 
     def is_attack(self):
         is_attack = self.find_values('ATTACK')
