@@ -1852,7 +1852,62 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
+<<<<<<< HEAD
 class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
+=======
+class SellValuables(Advisor):
+    def drop_valuables(self, run_state, character, valuables):
+        if valuables is None:
+            return None
+        undesirable_letters = [item.inventory_letter for item in valuables]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        import pdb; pdb.set_trace()
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        valuables = self.get_valuables(character)
+        if len(valuables) == 0: return None
+        return self.drop_valuables(run_state, character, valuables)
+
+class SellIdentifiedGemsInShop(SellValuables):
+    def get_valuables(self, character):
+        gems = character.inventory.get_items(
+            oclass=inv.Gem,
+            identity_selector=lambda i: i.name() != 'luckstone',
+            instance_selector=lambda i: i.formally_ided_valuable()
+        )
+        #import pdb; pdb.set_trace()
+        return gems
+
+class SellJewelryInShop(SellValuables):
+    def get_valuables(self, character):
+        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
+        return jewelry
+
+class DropUndesirableWantToLowerWeight(SellValuables):
+>>>>>>> fbac233 (Fix Rings, Amulets, etc. so you don't disregard them as un-purchasable when they're not actually shop-owned.)
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
