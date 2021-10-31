@@ -1044,6 +1044,8 @@ class ChangeOfSquare(Advisor):
             preference &= ~constants.ChangeSquarePreference.teleport
         if not run_state.neighborhood.level_map.diggable_floor:
             preference &= ~constants.ChangeSquarePreference.digging
+        if run_state.neighborhood.in_shop:
+            preference &= ~constants.ChangeSquarePreference.slow
 
         #import pdb; pdb.set_trace()
         prep = self.prepare(character, preference, run_state.neighborhood.dcoord.level)
