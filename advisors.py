@@ -1907,7 +1907,6 @@ class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
         if not character.want_less_weight():
             return None
 
-        #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):

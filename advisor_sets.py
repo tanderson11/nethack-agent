@@ -85,6 +85,7 @@ new_advisors = [
         ChargeWandOfWishing(),
         ZapWandOfWishing(),
         WrestWandOfWishing(),
+        SellJewelryInShop(),
         DropUndesirableInShopAdvisor(),
         DropShopOwnedAdvisor(),
         WearSlowDigestion(),
