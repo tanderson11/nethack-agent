@@ -248,6 +248,8 @@ class DLevelMap():
         self.diggable_floor = True
         self.teleportable = True
 
+        self.confused_pet_flag = False
+
         self.downstairs_count = 0
         self.upstairs_count = 0
         self.downstairs_target = 1

@@ -437,7 +437,26 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.adjacent_monsters = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in adjacent_monsters])
         
         #import pdb; pdb.set_trace()
-    
+
+    def make_pets(self):
+        self.pet_idx = np.where(gd.PetGlyph.class_mask(self.vision_glyphs))
+        pets = self.vision_glyphs[self.pet_idx]
+        self.pets = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in pets])
+
+        self.adjacent_pet_idx = np.where(gd.PetGlyph.class_mask(self.glyphs))
+        adjacent_pets = self.glyphs[self.adjacent_pet_idx]
+        self.adjacent_pets = np.array([gd.GLYPH_NUMERAL_LOOKUP[g] for g in adjacent_pets])
+
+    def find_starting_pet(self):
+        self.make_pets()
+        if len(self.pet_idx[0]) == 0:
+            return None
+        first_pet = Square(self.pet_idx[0][0],self.pet_idx[1][0]) - self.player_location_in_extended + self.absolute_player_location
+        if first_pet is None:
+            return None
+
+        return first_pet
+
     def count_monsters(self, selector, adjacent=True):
         if adjacent:
             count = 0
@@ -537,6 +556,43 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             return False
         
         return True
+
+    def target_pets(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True):
+        self.make_pets()
+        if attack_range.type == 'melee':
+            satisfying_monsters = []
+            satisfying_directions = []
+            absolute_positions = []
+            for i, monster in enumerate(self.adjacent_pets):
+                monster_square = physics.Square(self.adjacent_pet_idx[0][i], self.adjacent_pet_idx[1][i])
+                if monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square)):
+                    satisfying_monsters.append(monster)
+                    direction = self.action_grid[monster_square]
+                    satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.local_player_location)
+
+            if len(satisfying_directions) == 0: return None
+            #import pdb; pdb.set_trace()
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
+        else:
+            satisfying_monsters = []
+            satisfying_directions = []
+            absolute_positions = []
+            player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
+            player_mask[self.player_location_in_extended] = True
+            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=include_adjacent, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
+            for i, monster in enumerate(self.pets):
+                monster_square = physics.Square(self.pet_idx[0][i], self.pet_idx[1][i])
+                if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square, source_type='extended')):
+                    satisfying_monsters.append(monster)
+                    offset = physics.Square(*np.sign(np.array(monster_square - self.player_location_in_extended)))
+                    direction = physics.delta_to_action[offset]
+                    satisfying_directions.append(direction)
+                    absolute_positions.append(monster_square + self.absolute_player_location - self.player_location_in_extended)
+
+            if len(satisfying_directions) == 0: return None
+            #import pdb; pdb.set_trace()
+            return Targets(satisfying_monsters, satisfying_directions, absolute_positions)
 
     def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True, ray_override=None):
         if attack_range.type == 'melee':
