@@ -228,6 +228,7 @@ normal_background_menu_plan_options = [
     menuplan.MoreMenuResponse("In a cloud of smoke, a djinni emerges!"),
     menuplan.MoreMenuResponse("I am in your debt.  I will grant one wish!"),
     menuplan.MoreMenuResponse("You may wish for an object."),
+    menuplan.YesMenuResponse("Do you wish to teleport?"),
 ]
 
 wizard_background_menu_plan_options = [
@@ -384,7 +385,7 @@ class RunState():
         self.stuck_flag = False
 
         self.seed = base64.b64encode(os.urandom(4))
-        #self.seed = b'vYIDlQ=='
+        #self.seed = b'AMX0Dw=='
         self.rng = self.make_seeded_rng(self.seed)
 
         self.time_did_advance = True
@@ -746,6 +747,8 @@ class RunState():
 
         if game_did_advance: # we advanced the game state, forget the list of attempted actions
             self.actions_without_consequence = set()
+        elif isinstance(self.last_non_menu_advice, StethoscopeAdvice):
+            pass
         else:
             self.last_non_menu_action_failed_advancement = True
             self.actions_without_consequence.add(self.last_non_menu_action)
@@ -805,6 +808,9 @@ class CustomAgent():
         changed_level = (run_state.current_square is None or run_state.current_square.dcoord != dcoord)
         changed_square = False
         previous_square = False
+
+        if run_state.character and changed_level:
+            run_state.character.borked_balance = False
 
         if changed_level or run_state.current_square.location != player_location:
             changed_square = True

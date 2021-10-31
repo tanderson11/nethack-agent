@@ -155,6 +155,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             ViewField.Extended
         )
         dungeon_features = self.zoom_glyph_alike(self.level_map.dungeon_feature_map, ViewField.Extended)
+        self.dungeon_features = dungeon_features
         extended_walkable_tile = np.where(
             dungeon_features != 0,
             gd.walkable(dungeon_features),
@@ -162,6 +163,12 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         )
         extended_walkable_tile &= ~self.extended_embeds
         extended_walkable_tile[self.player_location_in_extended] = False # in case we turn invisible
+
+        self.check_for_vault()
+        self.in_vault = extended_special_rooms[self.player_location_in_extended] == constants.SpecialRoomTypes.vault.value
+        if self.in_vault:
+            #import pdb; pdb.set_trace()
+            pass
 
         self.extended_boulders = self.zoom_glyph_alike(
             level_map.boulder_map,
@@ -444,6 +451,41 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
                 count += 1
         return count
 
+    #'vwall', # 1
+    #'hwall', # 2
+    #'tlcorn', # 3
+    #'trcorn', # 4
+    #'blcorn', # 5
+    #'brcorn', # 6
+    # 3 2 2 4
+    # 1 - - 1
+    # 1 - - 1
+    # 5 2 2 6
+    vault_outline = np.array([3,2,2,4,1,0,0,1,1,0,0,1,5,2,2,6]).reshape(4,4)
+    def check_for_vault(self):
+        #import pdb; pdb.set_trace()
+        down_right = Square(1,1)
+        down_left = Square(1,-1)
+        up_right = Square(-1,1)
+        up_left = Square(-1,-1)
+        #vault_diagonal = Square(3,3)
+        offsets = [down_right, down_left, up_right, up_left]
+        for direction in offsets:
+            start_square = self.player_location_in_extended + direction
+            corner1_row = start_square[0]
+            corner1_col = start_square[1]
+            corner2_row = corner1_row - 3 * direction[0]
+            corner2_col = corner1_col - 3 * direction[1]
+
+            row_start, row_end = min(corner1_row, corner2_row), max(corner1_row, corner2_row)+1
+            col_start, col_end = min(corner1_col, corner2_col), max(corner1_col, corner2_col)+1
+            relevant_features = self.dungeon_features[row_start:row_end,col_start:col_end]
+
+            if np.count_nonzero(relevant_features == (self.vault_outline + gd.CMapGlyph.OFFSET)) >= 10:
+                #import pdb; pdb.set_trace()
+                self.level_map.add_room_from_square(self.absolute_player_location, constants.SpecialRoomTypes.vault)
+            pass
+
     def at_dead_end(self):
         # Consider the 8-location square surrounding the player
         # We define a dead end as a situation where a single edge holds all
@@ -466,6 +508,9 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
 
     def at_likely_secret(self):
         if self.at_dead_end():
+            return True
+        if self.level_map.warning_engravings.get(self.absolute_player_location, False):
+            #import pdb; pdb.set_trace()
             return True
         if self.level_map.special_level is None:
             return False
@@ -493,7 +538,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         
         return True
 
-    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True):
+    def target_monsters(self, monster_selector, attack_range=physics.AttackRange(), allow_anger=False, include_adjacent=True, ray_override=None):
         if attack_range.type == 'melee':
             satisfying_monsters = []
             satisfying_directions = []
@@ -516,7 +561,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             absolute_positions = []
             player_mask = np.full_like(self.vision_glyphs, False, dtype=bool)
             player_mask[self.player_location_in_extended] = True
-            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=include_adjacent, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False)
+            can_hit_mask = self.threat_map.calculate_ranged_can_hit_mask(player_mask, self.vision_glyphs, attack_range=attack_range, include_adjacent=include_adjacent, stop_on_monsters=True, reject_peaceful=True, stop_on_boulders=False, ray_override=ray_override)
             for i, monster in enumerate(self.monsters):
                 monster_square = physics.Square(self.monsters_idx[0][i], self.monsters_idx[1][i])
                 if can_hit_mask[monster_square] and monster_selector(monster) and (allow_anger or self.safe_detonation(monster, monster_square, source_type='extended')):

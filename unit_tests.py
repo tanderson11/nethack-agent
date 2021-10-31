@@ -1054,6 +1054,26 @@ def make_inventory(global_identity_map, inventory_inputs):
     inventory = inv.PlayerInventory(global_identity_map, np.array(letters), np.array(oclasses), np.array(strings), inv_glyphs=np.array(numerals))
     return inventory
 
+class TestGemFormalId(unittest.TestCase):
+    def test(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Archeologist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='lawful'
+        )
+        character.set_class_skills()
+
+        inventory = [
+            ItemTestInputs(2326, inv.Gem, "a green stone", ord("a")),
+            ItemTestInputs(2326, inv.Gem, "an uncursed aquamarine stone", ord("b")),
+        ]
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, inventory)
+        character.inventory.all_items()
+        self.assertFalse(character.inventory.items_by_letter[ord('a')].formally_ided_valuable())
+        self.assertTrue(character.inventory.items_by_letter[ord('b')].formally_ided_valuable())
+
 class TestWeaponWielding(unittest.TestCase):
     def test_tin_opener(self):
         character = agents.custom_agent.Character(

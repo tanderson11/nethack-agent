@@ -9,6 +9,7 @@ class SpecialRoomTypes(enum.Enum):
     NONE = 0
     shop = 1
     vault_closet = 2
+    vault = 3
 
 class RangedAttackPreference(enum.Flag):
     wand = enum.auto()
