@@ -1077,6 +1077,9 @@ class EngraveElberethStuckByMonster(Advisor):
             return None
         if not run_state.neighborhood.n_adjacent_monsters > 0:
             return None
+        for monster in run_state.neighborhood.adjacent_monsters:
+            if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
+                return None
         if oracle.on_elbereth:
             return None
         if oracle.blind:
@@ -2119,6 +2122,11 @@ class EngraveElberethAdvisor(Advisor):
 
         if oracle.blind:
             return None
+
+        for monster in run_state.neighborhood.adjacent_monsters:
+            if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
+                #import pdb; pdb.set_trace()
+                return None
 
         self.current_square = run_state.current_square
         self.usable_wand = None
