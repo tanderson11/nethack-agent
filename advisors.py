@@ -157,7 +157,7 @@ class Oracle():
 
     @utilities.cached_property
     def recently_ranged_damaged(self):
-        return self.run_state.last_ranged_damage_timestamp is not None and self.turns_since_ranged_damage < 10
+        return self.run_state.last_ranged_damage_timestamp is not None and self.turns_since_ranged_damage < 3
 
     @utilities.cached_property
     def recently_damaged(self):
@@ -1088,7 +1088,7 @@ class EngraveElberethStuckByMonster(Advisor):
             return None
         for monster in run_state.neighborhood.adjacent_monsters:
             if isinstance(monster, gd.MonsterGlyph) and not monster.monster_spoiler.respects_elbereth:
-                import pdb; pdb.set_trace()
+                #import pdb; pdb.set_trace()
                 return None
         if oracle.on_elbereth:
             return None
