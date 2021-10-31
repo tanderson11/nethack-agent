@@ -1938,7 +1938,7 @@ class SellValuables(Advisor):
                 menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
             ]
         )
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
 
     def advice(self, rng, run_state, character, oracle):
@@ -1962,6 +1962,28 @@ class SellIdentifiedGemsInShop(SellValuables):
         )
         #import pdb; pdb.set_trace()
         return gems
+
+class IdentifyGemsWithTouchstone(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if character.base_class != constants.BaseRole.Archeologist:
+            return None
+        touchstone = character.inventory.get_item(oclass=inv.Gem, name='touchstone')
+        if touchstone is None:
+            return None
+        valuable_gems = character.inventory.get_items(oclass=inv.Gem, identity_selector=lambda i: i.valuable)
+        if len(valuable_gems) > 0:
+            import pdb; pdb.set_trace()
+        target_gem = character.inventory.get_item(oclass=inv.Gem, identity_selector=lambda i: i.valuable, instance_selector=lambda i: not i.formally_ided_valuable())
+        if target_gem is None:
+            return None
+
+        menu_plan = menuplan.MenuPlan("identify gem with touchstone", self, [
+                menuplan.CharacterMenuResponse("What do you want to use or apply?", chr(touchstone.inventory_letter)),
+                menuplan.CharacterMenuResponse("What do you want to rub on the stone?", chr(target_gem.inventory_letter)),
+            ]
+        )
+        #import pdb; pdb.set_trace()
+        return ActionAdvice(self, nethack.actions.Command.APPLY, menu_plan)
 
 class SellJewelryInShop(SellValuables):
     def get_valuables(self, character):
