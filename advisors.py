@@ -1274,6 +1274,38 @@ class TameHerbivores(RangedAttackAdvisor):
         menu_plan = self.make_throw_plan(food, attack_direction)
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
+class RetameCarnivorePet(TameCarnivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
+class RetameHerbivorePet(TameHerbivores):
+    def targets(self, neighborhood, character, **kwargs):
+        range = physics.AttackRange('line', 3)
+        return neighborhood.target_pets(lambda m: isinstance(m, gd.PetGlyph), **kwargs)
+
+    def advice(self, rng, run_state, character, oracle):
+        if character.starting_pet_carnivore:
+            return None
+        if not run_state.neighborhood.level_map.confused_pet_flag:
+            return None
+        self.level_map = run_state.neighborhood.level_map
+        return super().advice(rng, run_state, character, oracle)
+
+    def advice_selected(self):
+        self.level_map.confused_pet_flag = False
+
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
     preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
     def targets(self, neighborhood, character, **kwargs):
@@ -1669,6 +1701,28 @@ class TravelToDesiredEgress(Advisor):
             fallback=ord('.')
         )
         return ActionAdvice(from_advisor=self, action=travel, new_menu_plan=menu_plan)
+
+class NameStartingPet(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        if run_state.named_starting_pet:
+            return None
+        pet_loc = run_state.neighborhood.find_starting_pet()
+
+        if pet_loc is None:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            return None
+        #import pdb; pdb.set_trace()
+        call = nethack.actions.Command.CALL
+        menu_plan = menuplan.MenuPlan(
+            "name starting pet", self, [
+                menuplan.CharacterMenuResponse("What do you want to name?", "m"),
+                menuplan.SquarePlacementMenuResponse(re.compile("^(?!.*(What do you want to call)).*"), run_state, pet_loc), # offset because cursor row 0 = top line
+                menuplan.PhraseMenuResponse("What do you want to call", constants.pet_name)
+            ],
+            fallback=ord('.')
+        ) # fallback seems broken if you ever ESC out? check TK
+        run_state.named_starting_pet = True
+        return ActionAdvice(self, call, menu_plan)
 
 class TravelToBespokeUnexploredAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
