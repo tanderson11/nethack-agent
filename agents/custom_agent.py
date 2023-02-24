@@ -11,9 +11,9 @@ import pandas as pd
 from nle import nethack
 from agents.base import BatchedAgent
 
-import advisors as advs
-from advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
-import advisor_sets
+import advice.advisors as advs
+from advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+import advice.advisor_sets as advisor_sets
 
 import menuplan
 from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
@@ -30,7 +30,7 @@ import glyphs as gd
 import map
 from map import DMap, DCoord
 import environment
-from wizmode_prep import WizmodePrep
+from wizmode.wizmodeprep import WizmodePrep
 
 from collections import Counter
 
