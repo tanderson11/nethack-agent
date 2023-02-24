@@ -1,25 +1,14 @@
 ![Nethack Banner](https://aicrowd-production.s3.eu-central-1.amazonaws.com/misc/neurips-2021-nethack-challenge-media/nethack_final_link+preview_starter_kit.jpg)
 
-# **[NeurIPS 2021 - The NetHack Challenge](https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge)** - Starter Kit
+# **[Facebook AI Research - The NetHack Challenge](https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge)**
 
+This repository is the submission from the StudentsOfStone (@tanderson11 and @canderson) to the 2021 NetHack Challenge sponsored by Facebook AI Research. The NetHack Challenge was a competition to build an agent --- either a "symbolic" agent or machine learning agent --- to play the 1987 computer game NetHack. Despite its simple text-based graphics, NetHack is both challenging and complicated. Casual players routinely play the game for years without ever winning ("ascending"): one playthrough of the game takes many hours to complete but can end instantly when an unforseen threat (a black dragon? a splintered drawbridge?) punishes the player for a single ill-planned keystroke. Over decades of active development, the simple world of NetHack has sprawled into a spiked mass of corner cases. Levitating and trying to move? Try throwing an apple in the opposite direction to reap the rewards of conservation of momentum. Hungry? Try eating a tin of food --- but don't eat slippery fried food on top of a stairwell and then pick up a glass bottle, it might slip through your fingers and break as it falls down the stairs.
 
-This repository is the Nethack Challenge **Starter kit**! It contains:
-* **Instructions** for setting up your codebase to make submissions easy.
-* **Baselines** for quickly getting started training your agent.
-* **Notebooks** for introducing you to NetHack and the NLE.
-* **Documentation** for how to submit your model to the leaderboard.
-
-Quick Links:
-
-* [The NetHack Challenge - Competition Page](https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge)
-* [The NetHack Challenge - Discord Server](https://discord.gg/zkFWQmSWBA)
-* [The NetHack Challenge - Starter Kit](https://gitlab.aicrowd.com/nethack/neurips-2021-the-nethack-challenge)
-* [IMPORTANT - Accept the rules before you submit](https://www.aicrowd.com/challenges/neurips-2021-nethack-challenge/challenge_rules)
-
+While hallcuinating, players might encounter tribbles from Star Trek, snarks from Lewis Carroll's *The Hunting Of*, or simply "existential angst" (from my real life?). 
 
 # Table of Contents
-1. [Intro to Nethack and the Nethack Challenge](#intro-to-nethack-and-the-nethack-challenge)
-2. [Setting up your codebase](#setting-up-your-codebase)
+1. [Introduction to our agent and our approach](#intro)
+2. [Installing the package](#installation)
 3. [Baselines](#baselines)
 4. [How to test and debug locally](#how-to-test-and-debug-locally)
 5. [How to submit](#how-to-submit)
