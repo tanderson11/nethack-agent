@@ -21,7 +21,7 @@ import utilities
 import physics
 import inventory as inv
 import constants
-import monster_messages
+import representation.monster_messages as monster_messages
 
 from utilities import ARS
 from character import Character

@@ -12,7 +12,7 @@ import environment
 import glyphs as gd
 import inventory as inv
 from utilities import ARS
-import monster_messages
+import representation.monster_messages as monster_messages
 
 @dataclass
 class HeldBy():
