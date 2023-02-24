@@ -189,7 +189,7 @@ sokoban_operations = {
     ]
 }
 
-import representation.physics as physics
+import agents.representation.physics as physics
 chr_to_offset = {
     'd': physics.Square(1,0),
     'u': physics.Square(-1,0),

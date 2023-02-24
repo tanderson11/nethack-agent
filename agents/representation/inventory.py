@@ -3,10 +3,10 @@ import re
 from typing import NamedTuple
 from collections import OrderedDict
 import pdb
-import representation.glyphs as gd
+import agents.representation.glyphs as gd
 import environment
 import numpy as np
-import representation.constants as constants
+import agents.representation.constants as constants
 import pandas as pd
 import nle.nethack as nethack
 

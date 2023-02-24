@@ -1,5 +1,5 @@
 import re
-import representation.glyphs as gd
+import agents.representation.glyphs as gd
 from utilities import ARS
 
 MONSTER_REGEX = '( )*((T|t)he )?(poor )?(invisible )?(saddled )?([a-zA-Z -]+?)( of .+?)?'

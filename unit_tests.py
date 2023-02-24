@@ -7,13 +7,13 @@ import numpy as np
 
 from nle import nethack
 
-import representation.constants as constants
-import representation.inventory as inv
-import representation.map as map
-import representation.monster_messages as monster_messages
-import advice.menuplan as menuplan
-import representation.neighborhood as neighborhood
-import representation.glyphs as gd
+import agents.representation.constants as constants
+import agents.representation.inventory as inv
+import agents.representation.map as map
+import agents.representation.monster_messages as monster_messages
+import agents.advice.menuplan as menuplan
+import agents.representation.neighborhood as neighborhood
+import agents.representation.glyphs as gd
 import agents.custom_agent
 import environment
 

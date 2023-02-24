@@ -1,5 +1,5 @@
-import representation.inventory as inventory
-import representation.constants as constants
+import agents.representation.inventory as inventory
+import agents.representation.constants as constants
 from typing import NamedTuple
 
 def want_charging(wand, character):

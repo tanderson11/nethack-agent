@@ -7,12 +7,12 @@ from dataclasses import dataclass, field
 
 import nle.nethack as nethack
 
-import representation.constants as constants
+import agents.representation.constants as constants
 import environment
-import representation.glyphs as gd
-import representation.inventory as inv
+import agents.representation.glyphs as gd
+import agents.representation.inventory as inv
 from utilities import ARS
-import representation.monster_messages as monster_messages
+import agents.representation.monster_messages as monster_messages
 
 @dataclass
 class HeldBy():

@@ -11,24 +11,24 @@ import pandas as pd
 from nle import nethack
 from agents.base import BatchedAgent
 
-import advice.advisors as advs
-from advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
-import advice.advisor_sets as advisor_sets
+import agents.advice.advisors as advs
+from agents.advice.advisors import ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+import agents.advice.advisor_sets as advisor_sets
 
-import advice.menuplan as menuplan
-from representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
+import agents.advice.menuplan as menuplan
+from agents.representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
-import representation.physics as physics
-import representation.inventory as inv
-import representation.constants as constants
-import representation.monster_messages as monster_messages
+import agents.representation.physics as physics
+import agents.representation.inventory as inv
+import agents.representation.constants as constants
+import agents.representation.monster_messages as monster_messages
 
 from utilities import ARS
-from representation.character import Character
-import representation.constants as constants
-import representation.glyphs as gd
-import representation.map as map
-from representation.map import DMap, DCoord
+from agents.representation.character import Character
+import agents.representation.constants as constants
+import agents.representation.glyphs as gd
+import agents.representation.map as map
+from agents.representation.map import DMap, DCoord
 import environment
 from wizmode.wizmodeprep import WizmodePrep
 

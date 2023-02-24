@@ -8,11 +8,11 @@ from nle import nethack
 import pandas as pd
 import numpy as np
 
-import representation.constants as constants
+import agents.representation.constants as constants
 import environment
 import utilities
 from utilities import ARS
-from representation.spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
+from agents.representation.spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
 
 class CorpseSpoiler(NamedTuple):
     name: str

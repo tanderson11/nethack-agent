@@ -3,21 +3,21 @@ from dataclasses import dataclass
 import enum
 from typing import NamedTuple
 
-import representation.glyphs as gd
+import agents.representation.glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 
 import functools
 
-import representation.map as map
-import representation.physics as physics
+import agents.representation.map as map
+import agents.representation.physics as physics
 import environment
-import representation.neighborhood as neighborhood
-import advice.menuplan as menuplan
+import agents.representation.neighborhood as neighborhood
+import agents.advice.menuplan as menuplan
 import utilities
 from utilities import ARS
-import representation.inventory as inv
-import representation.constants as constants
+import agents.representation.inventory as inv
+import agents.representation.constants as constants
 import re
 
 
