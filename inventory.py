@@ -3,7 +3,7 @@ import re
 from typing import NamedTuple
 from collections import OrderedDict
 import pdb
-import glyphs as gd
+import representation.glyphs as gd
 import environment
 import numpy as np
 import representation.constants as constants

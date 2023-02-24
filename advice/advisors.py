@@ -3,7 +3,7 @@ from dataclasses import dataclass
 import enum
 from typing import NamedTuple
 
-import glyphs as gd
+import representation.glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 

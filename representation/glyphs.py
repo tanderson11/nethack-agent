@@ -12,7 +12,7 @@ import representation.constants as constants
 import environment
 import utilities
 from utilities import ARS
-from spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
+from representation.spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
 
 class CorpseSpoiler(NamedTuple):
     name: str

@@ -26,7 +26,7 @@ import representation.monster_messages as monster_messages
 from utilities import ARS
 from character import Character
 import representation.constants as constants
-import glyphs as gd
+import representation.glyphs as gd
 import map
 from map import DMap, DCoord
 import environment

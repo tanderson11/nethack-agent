@@ -12,7 +12,7 @@ import scipy.signal
 
 import representation.constants as constants
 import environment
-import glyphs as gd
+import representation.glyphs as gd
 import map
 import representation.physics as physics
 import utilities

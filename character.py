@@ -9,7 +9,7 @@ import nle.nethack as nethack
 
 import representation.constants as constants
 import environment
-import glyphs as gd
+import representation.glyphs as gd
 import inventory as inv
 from utilities import ARS
 import representation.monster_messages as monster_messages
