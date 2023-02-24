@@ -13,13 +13,13 @@ import scipy.signal
 import representation.constants as constants
 import environment
 import representation.glyphs as gd
-import map
+import representation.map as map
 import representation.physics as physics
 import utilities
 from utilities import ARS
 from representation.physics import Square
 from typing import NamedTuple, Tuple, List
-import inventory
+import representation.inventory as inventory
 
 class Targets(NamedTuple):
     monsters: list

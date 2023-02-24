@@ -8,8 +8,8 @@ import numpy as np
 from nle import nethack
 
 import representation.constants as constants
-import inventory as inv
-import map
+import representation.inventory as inv
+import representation.map as map
 import representation.monster_messages as monster_messages
 import advice.menuplan as menuplan
 import representation.neighborhood as neighborhood

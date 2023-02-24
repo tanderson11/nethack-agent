@@ -19,16 +19,16 @@ import advice.menuplan as menuplan
 from representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
 import representation.physics as physics
-import inventory as inv
+import representation.inventory as inv
 import representation.constants as constants
 import representation.monster_messages as monster_messages
 
 from utilities import ARS
-from character import Character
+from representation.character import Character
 import representation.constants as constants
 import representation.glyphs as gd
-import map
-from map import DMap, DCoord
+import representation.map as map
+from representation.map import DMap, DCoord
 import environment
 from wizmode.wizmodeprep import WizmodePrep
 

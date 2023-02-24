@@ -10,7 +10,7 @@ import scipy.signal
 
 import environment
 import representation.glyphs as gd
-import inventory
+import representation.inventory as inventory
 import representation.physics as physics
 import utilities
 import representation.constants as constants
@@ -904,9 +904,9 @@ class SpecialLevelSearcher():
 class SpecialLevelLoader():
     @staticmethod
     def load(level_name):
-        with open(os.path.join(os.path.dirname(__file__), "representation", "spoilers", "special_levels", f"{level_name}.txt"), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.txt"), 'r') as f:
             characters = f.readlines()
-        with open(os.path.join(os.path.dirname(__file__), "representation", "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
+        with open(os.path.join(os.path.dirname(__file__), "spoilers", "special_levels", f"{level_name}.json"), 'r') as f:
             properties = json.load(f)
 
         initial_offset = SpecialLevelLoader.make_initial_offset(level_name, characters, properties["geometry_horizontal"], properties["geometry_vertical"])

@@ -1,4 +1,4 @@
-import inventory
+import representation.inventory as inventory
 import representation.constants as constants
 from typing import NamedTuple
 

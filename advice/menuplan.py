@@ -5,7 +5,7 @@ import numpy as np
 from collections import OrderedDict
 
 import environment
-import inventory as inv
+import representation.inventory as inv
 import representation.physics as physics
 import advice.wish as wish
 import representation.constants as constants
