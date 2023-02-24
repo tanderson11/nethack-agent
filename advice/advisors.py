@@ -13,7 +13,7 @@ import map
 import physics
 import environment
 import neighborhood
-import menuplan
+import advice.menuplan as menuplan
 import utilities
 from utilities import ARS
 import inventory as inv

@@ -15,7 +15,7 @@ import advice.advisors as advs
 from advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import advice.advisor_sets as advisor_sets
 
-import menuplan
+import advice.menuplan as menuplan
 from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
 import physics
