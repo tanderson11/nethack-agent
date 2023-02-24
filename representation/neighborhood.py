@@ -14,10 +14,10 @@ import constants
 import environment
 import glyphs as gd
 import map
-import physics
+import representation.physics as physics
 import utilities
 from utilities import ARS
-from physics import Square
+from representation.physics import Square
 from typing import NamedTuple, Tuple, List
 import inventory
 

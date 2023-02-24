@@ -11,7 +11,7 @@ import scipy.signal
 import environment
 import glyphs as gd
 import inventory
-import physics
+import representation.physics as physics
 import utilities
 import constants
 from spoilers.special_levels.sokoban_solutions import SOKOBAN_SOLUTIONS

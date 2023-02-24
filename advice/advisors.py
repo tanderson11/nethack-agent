@@ -10,7 +10,7 @@ import numpy as np
 import functools
 
 import map
-import physics
+import representation.physics as physics
 import environment
 import representation.neighborhood as neighborhood
 import advice.menuplan as menuplan

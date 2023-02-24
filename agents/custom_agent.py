@@ -18,7 +18,7 @@ import advice.advisor_sets as advisor_sets
 import advice.menuplan as menuplan
 from representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
-import physics
+import representation.physics as physics
 import inventory as inv
 import constants
 import representation.monster_messages as monster_messages

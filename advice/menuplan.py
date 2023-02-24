@@ -6,7 +6,7 @@ from collections import OrderedDict
 
 import environment
 import inventory as inv
-import physics
+import representation.physics as physics
 import advice.wish as wish
 import constants
 
