@@ -10,9 +10,9 @@ from nle import nethack
 import constants
 import inventory as inv
 import map
-import monster_messages
-import menuplan
-import neighborhood
+import representation.monster_messages as monster_messages
+import advice.menuplan as menuplan
+import representation.neighborhood as neighborhood
 import glyphs as gd
 import agents.custom_agent
 import environment

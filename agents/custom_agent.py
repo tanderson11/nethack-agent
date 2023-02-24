@@ -16,7 +16,7 @@ from advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdv
 import advice.advisor_sets as advisor_sets
 
 import advice.menuplan as menuplan
-from neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
+from representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveRecords, ElberethEngraving, EngravingType
 import utilities
 import physics
 import inventory as inv

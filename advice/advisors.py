@@ -12,7 +12,7 @@ import functools
 import map
 import physics
 import environment
-import neighborhood
+import representation.neighborhood as neighborhood
 import advice.menuplan as menuplan
 import utilities
 from utilities import ARS
