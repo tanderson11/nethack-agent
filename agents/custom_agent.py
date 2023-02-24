@@ -12,7 +12,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import agents.advice.advisors as advs
-from agents.advice.advisors import ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+from agents.advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import agents.advice.advisor_sets as advisor_sets
 
 import agents.advice.menuplan as menuplan
@@ -30,7 +30,7 @@ import agents.representation.glyphs as gd
 import agents.representation.map as map
 from agents.representation.map import DMap, DCoord
 import environment
-from wizmode.wizmodeprep import WizmodePrep
+from agents.wizmode.wizmodeprep import WizmodePrep
 
 from collections import Counter
 
