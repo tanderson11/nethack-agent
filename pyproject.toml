@@ -8,7 +8,7 @@ authors = ["Christian Anderson <canderson13@gmail.com>"]
 python = ">=3.7.1,<3.10"
 aicrowd-api = "^0.1.23"
 aicrowd-gym = "^0.0.3"
-gym = "<=0.24"
+gym = "<=0.23.1"
 numpy = "^1.20.2"
 scipy = "^1.6.3"
 nle = { git = "https://github.com/tanderson11/nle.git", branch="thayer-apple-patch" }
