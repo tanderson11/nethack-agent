@@ -5,11 +5,9 @@ import numpy as np
 from collections import OrderedDict
 
 import environment
-import glyphs as gd
-import utilities
 import inventory as inv
 import physics
-import wish
+import advice.wish as wish
 import constants
 
 import nle.nethack as nethack
