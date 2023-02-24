@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 import nle.nethack as nethack
 
-import constants
+import representation.constants as constants
 import environment
 import glyphs as gd
 import inventory as inv

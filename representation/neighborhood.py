@@ -10,7 +10,7 @@ from nle import nethack
 import numpy as np
 import scipy.signal
 
-import constants
+import representation.constants as constants
 import environment
 import glyphs as gd
 import map

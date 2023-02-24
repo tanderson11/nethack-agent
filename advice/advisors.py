@@ -17,7 +17,7 @@ import advice.menuplan as menuplan
 import utilities
 from utilities import ARS
 import inventory as inv
-import constants
+import representation.constants as constants
 import re
 
 

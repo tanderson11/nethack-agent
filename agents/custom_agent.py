@@ -20,12 +20,12 @@ from representation.neighborhood import Neighborhood, CurrentSquare, FailedMoveR
 import utilities
 import representation.physics as physics
 import inventory as inv
-import constants
+import representation.constants as constants
 import representation.monster_messages as monster_messages
 
 from utilities import ARS
 from character import Character
-import constants
+import representation.constants as constants
 import glyphs as gd
 import map
 from map import DMap, DCoord

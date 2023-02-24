@@ -6,7 +6,7 @@ import pdb
 import glyphs as gd
 import environment
 import numpy as np
-import constants
+import representation.constants as constants
 import pandas as pd
 import nle.nethack as nethack
 

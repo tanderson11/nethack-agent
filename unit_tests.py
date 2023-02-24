@@ -7,7 +7,7 @@ import numpy as np
 
 from nle import nethack
 
-import constants
+import representation.constants as constants
 import inventory as inv
 import map
 import representation.monster_messages as monster_messages

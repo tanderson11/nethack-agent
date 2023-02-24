@@ -13,7 +13,7 @@ import glyphs as gd
 import inventory
 import representation.physics as physics
 import utilities
-import constants
+import representation.constants as constants
 from spoilers.special_levels.sokoban_solutions import SOKOBAN_SOLUTIONS
 
 import functools

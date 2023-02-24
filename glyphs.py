@@ -8,7 +8,7 @@ from nle import nethack
 import pandas as pd
 import numpy as np
 
-import constants
+import representation.constants as constants
 import environment
 import utilities
 from utilities import ARS

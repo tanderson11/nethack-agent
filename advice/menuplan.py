@@ -8,7 +8,7 @@ import environment
 import inventory as inv
 import representation.physics as physics
 import advice.wish as wish
-import constants
+import representation.constants as constants
 
 import nle.nethack as nethack
 
