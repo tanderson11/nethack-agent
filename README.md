@@ -1,80 +1,36 @@
 ![Nethack Banner](https://aicrowd-production.s3.eu-central-1.amazonaws.com/misc/neurips-2021-nethack-challenge-media/nethack_final_link+preview_starter_kit.jpg)
 
-# **[Facebook AI Research - The NetHack Challenge](https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge)**
-
-This repository is the submission from the StudentsOfStone (@tanderson11 and @canderson) to the 2021 NetHack Challenge sponsored by Facebook AI Research. The NetHack Challenge was a competition to build an agent --- either a "symbolic" agent or machine learning agent --- to play the 1987 computer game NetHack. Despite its simple text-based graphics, NetHack is both challenging and complicated. Casual players routinely play the game for years without ever winning ("ascending"): one playthrough of the game takes many hours to complete but can end instantly when an unforseen threat (a black dragon? a splintered drawbridge?) punishes the player for a single ill-planned keystroke. Over decades of active development, the simple world of NetHack has sprawled into a spiked mass of corner cases. Levitating and trying to move? Try throwing an apple in the opposite direction to reap the rewards of conservation of momentum. Hungry? Try eating a tin of food --- but don't eat slippery fried food on top of a stairwell and then pick up a glass bottle, it might slip through your fingers and break as it falls down the stairs.
-
-While hallcuinating, players might encounter tribbles from Star Trek, snarks from Lewis Carroll's *The Hunting Of*, or simply "existential angst" (from my real life?). 
+# **[Facebook AI Research - The NetHack Challenge](https://nethackchallenge.com/report.html)**
 
 # Table of Contents
-1. [Introduction to our agent and our approach](#intro)
+1. [Intro](#intro)
 2. [Installing the package](#installation)
-3. [Baselines](#baselines)
-4. [How to test and debug locally](#how-to-test-and-debug-locally)
-5. [How to submit](#how-to-submit)
+3. [Package structure](#structure)
+4. [Future direction](#future)
 
-# Intro to Nethack and the Nethack Challenge
+# [Intro][intro]
 
-Your goal is to produce the best possible agent for navigating the depths
-of Nethack dungeons and emerging with the Amulet in hand! 
-You can approach this task however you please, but a good starting point 
-would be [**this notebook**](./notebooks/NetHackTutorial.ipynb) which provides
-an overview of  (1) the many dynamics at play in the game and   (2) the 
-observation and action space with which your agent will interact. 
+This repository is the submission from the StudentsOfStone (@tanderson11 and @canderson) to the 2021 NetHack Challenge sponsored by Facebook AI Research. The NetHack Challenge was a competition to build an agent &mdash; either a traditional "symbolic" agent or a machine learning agent &mdash; to play the 1987 computer game NetHack.
 
-#### A high level description of the Challenge Procedure:
-1. **Sign up** to join the competition [on the AIcrowd website](https://www.aicrowd.com/challenges/neurips-2021-nethack-challenge).
-2. **Clone** this repo and start developing your solution.
-3. **Train** your models on NLE, and ensure run.sh will generate rollouts.
-4. **Submit** your trained models to [AIcrowd Gitlab](https://gitlab.aicrowd.com)
-for evaluation (full instructions below). The automated evaluation setup
-will evaluate the submissions against the NLE environment for a fixed 
-number of rollouts to compute and report the metrics on the leaderboard
-of the competition.
+Despite its simple text-based graphics, NetHack is challenging and complicated. Casual players routinely play the game for years without ever winning ("ascending"), and one playthrough of the game may take many hours to complete but end instantly when an unforseen threat (a black dragon? a splintered drawbridge?) punishes the player for an ill-planned keystroke. Over decades of development, the world of NetHack has grown into a spiked mass of corner cases. Levitating and trying to move? Try throwing an apple in the opposite direction and profit from the conservation of momentum. Hungry? Try eating a tin of food &mdash; but don't eat slippery fried food on top of a stairwell and then pick up a glass bottle, it might slip through your fingers and break as it falls down the stairs. NetHack a museum of physical comedy reminiscent of the Three Stooges or Road Runner. Every monster, item, and trap appears to the player as a single ASCII character on their screen. And every event in the game &mdash; brutal defeats and rare victories alike &mdash; is communicated to the player one line at a time in a text field above the map.
 
-![](https://images.aicrowd.com/raw_images/challenges/banner_file/423/5f69010437d25bf569c4.jpg)
+It's not surprising that NetHack is a challenge for artificial intelligence. Planning effective turns can require an encyclopedic knowledge of what challenges different enemies present. On top of that, the player's interface with the game is often the first victim of dangerous foes. If a raven scratches your eyes, you become temporarily blind. Then, even the slim affordance of one letter on screen per enemy is retracted, as the display doesn't update until you smash headfirst into a wall. And, when forced to hallucinate, players might encounter tribbles from Star Trek, snarks from Lewis Carroll's *The Hunting Of*, or simply "existential angst" (from my real life?).
 
-# Setting Up Your Codebase
+For this challenge, Facebook AI Research equipped players with the [NetHack Learning Environment](https://github.com/facebookresearch/nle) (NLE) &mdash; a wrapper around NetHack's C executable that makes the screen accessible as a Python array to agents in between each turn. We approached the NetHack challenge with the goal of building a symbolic bot that knows a few simple strategies but can access an enriched representation of the state of the game on each turn. By investing in technology to parse the game messages and to turn the condensed environment (the grid of characters) into a full representation of enemies, geometry, and items, we were able to teach our agent simple heuristics for best play. Our approach was successful, and our agent won the [2nd prize overall](https://nethackchallenge.com/report.html) in the competition. We're optimisic about the potential for this approach to achieve a game victory, and we look forwards to spending more time in the future to realize this goal.
 
-AIcrowd provides great flexibility in the details of your submission!  
-Find the answers to FAQs about submission structure below, followed by 
-the guide for setting up this starter kit and linking it to the AIcrowd 
-GitLab.
+# [Installing the package][installation]
 
-## FAQs
+To test or extend our agent, first clone this git repository and then install requirements. We manage dependencies through [Poetry](https://python-poetry.org/docs/), which makes it easy to manage specific versions of required packages. The steps to install this repository are simple:
 
-### How does submission work?
+- Clone the repository.
+- Install Poetry (see [the docs](https://python-poetry.org/docs/)).
+- Execute `poetry install` from the root of the repository.
 
-The submission entrypoint is a bash script `run.sh`. When this script is 
-called, aicrowd will expect you to generate all your rollouts in the 
-allotted time, using `aicrowd_gym` in place of regular `gym`.  This means 
-that AIcrowd can make sure everyone is running the same environment, 
-and can keep score!
+# [Package structure][#structure]
 
-### What languages can I use?
+## Starter kit and submission 
 
-Since the entrypoint is a bash script `run.sh`, you can call any arbitrary
-code from this script.  However, to get you started, the environment is 
-set up to generate rollouts in Python. 
-
-The repo gives you a template placeholder to load your model 
-(`agents/your_agent.py`), and a config to choose which agent to load 
-(`submission_config.py`). You can then test a submission, adding all of 
-AIcrowd’s timeouts on the environment, with `python test_submission.py`
-
-### How do I specify my dependencies?
-
-We accept submissions with custom runtimes, so you can choose your 
-favorite! The configuration files typically include `requirements.txt` 
-(pypi packages), `apt.txt` (apt packages) or even your own `Dockerfile`.
-
-You can check detailed information about the same in the [RUNTIME.md](/docs/RUNTIME.md) file.
-
-### What should my code structure look like?
-
-Please follow the example structure as it is in the starter kit for the code structure.
-The different files and directories have following meaning:
-
+The following default file structure is in place as provided in the starter kit.
 ```
 .
 ├── aicrowd.json                  # Submission meta information - add tags for tracks here
@@ -103,146 +59,52 @@ The different files and directories have following meaning:
 
 ```
 
-Finally, **you must specify an AIcrowd submission JSON in `aicrowd.json` to be scored!** See [How do I actually make a submission?](#how-do-i-actually-make-a-submission) below for more details.
+## Agent
 
+The code for the agent is layed out as follows:
 
-### How can I get going with an existing baseline?
-
-The best current baseline is the torchbeast baseline. Follow the instructions 
-[here](/nethack_baselines/torchbeast/) to install and start training 
-the model (there are even some suggestions for improvements).
-
-To then submit your saved model, simply set the `AGENT` in 
-`submission config` to be `TorchBeastAgent`, and modify the 
-`agent/torchbeast_agent.py` to point to your saved directory.
-
-You can now test your saved model with `python test_submission.py`
-
-### How can I get going with a completely new model?
-
-Train your model as you like, and when you’re ready to submit, just adapt
-`YourAgent` in `agents/your_agent.py` to load your model and take a `batched_step`.
-
-Then just set your `AGENT` in `submission_config.py` to be this class 
-and you are ready to test with `python test_submission.py`
-
-### How do I actually make a submission?
-
-First you need to fill in you `aicrowd.json`, to give AIcrowd some info so you can be scored.
-The `aicrowd.json` of each submission should contain the following content:
-
-```json
-{
-  "challenge_id": "neurips-2021-the-nethack-challenge",
-  "authors": ["your-aicrowd-username"],
-  "description": "(optional) description about your awesome agent",
-  "gpu": true
-}
+```
+.
+├── unit_tests.py                 # Unit tests.
+├── pyproject.toml                # Package dependencies.
+├── environment_files             # Files to `source` to set shell environment variables
+│   ├── development.env           # Debugging is on and multithreading is off
+│   ├── good_roles.env   	      # Agent quits unless it gets a 'good' role.
+│   └── test_run.env   	          # Like the conditions for competition submission.
+└── agents                        # Baseline agents for submission
+    ├── custom_agent.py           # Core logic to track state and input action on turn.
+    ├── representation            # Module for enriching representations of game observation.
+    │   ├── spoilers              # Files that describe NetHack game objects.
+    │   │   └── many files
+    │   ├── character.py          # State about player's status and attributes.
+    │   ├── constants.py          # NetHack constants.
+    │   ├── glyphs.py             # Mappings of glyphs to game entities.
+    │   ├── inventory.py          # Parsers of item strings into item objects.
+    │   ├── map.py                # State about level geometry and connectivity.
+    │   ├── monster_messages.py   # Methods for identifying what monster is acting.
+    │   ├── neighborhood.py       # Vision, pathfinding, and state about local geometry.
+    │   └── physics.py            # Mappings of directions and actions.
+    ├── advice  	              # Implementations of specific strategies.
+    │   ├── advisors.py           # Specific advisors that can execute stratgems.
+    │   ├── advisor_sets.py       # Ranked sets of advisors that form complete strategies. 
+    │   ├── menuplan.py           # Methods for navigating menus in the game.
+    │   ├── preferences.py        # Preferred way to take certain actions.
+    │   └── wish.py               # Knowledge of what to wish for and how.
+    └── wizmode  	              # Tools for entering wizard mode to test certain game conditions.
+        └── wizmodeprep.py        # Routines for accumulating powerful items to debug.
 ```
 
-The submission is made by adding everything including the model to git,
-tagging the submission with a git tag that starts with `submission-`, and 
-pushing to AIcrowd's GitLab. The rest is done for you!
-
-More details are available [here](/docs/SUBMISSION.md).
-
-### Are there any hardware or time constraints?
-
-Your submission will need to complete 128 rollouts in 30 minutes. We will
-run 4 of these in parallel, and a total of 512 episodes will be used for
-evaluation. The episode will timeout and terminate if any action is
-left hanging for 300 seconds, or 10,000 steps are taken without 
-advancing the in game clock. 
-
-The machine where the submission will run will have following specifications:
-* 1 NVIDIA T4 GPU
-* 4 vCPUs
-* 16 GB RAM
-
-## Setting Up Details
-
-1. **Add your SSH key** to AIcrowd GitLab
-
-    You can add your SSH Keys to your GitLab account by going to your profile settings [here](https://gitlab.aicrowd.com/profile/keys). If you do not have SSH Keys, you will first need to [generate one](https://docs.gitlab.com/ee/ssh/README.html#generating-a-new-ssh-key-pair).
-
-2.  **Clone the repository**
-
-    ```
-    git clone git@gitlab.aicrowd.com:nethack/neurips-2021-the-nethack-challenge.git
-    ```
-    
-3. **Verify you have dependencies** for the Nethack Learning Environment
-
-    NLE requires `python>=3.5`, `cmake>=3.14` to be installed and available both when building the
-    package, and at runtime.
-    
-    On **MacOS**, one can use `Homebrew` as follows:
-    
-    ``` bash
-    brew install cmake
-    ```
-    
-    On a plain **Ubuntu 18.04** distribution, `cmake` and other dependencies
-    can be installed by doing:
-    
-    ```bash
-    # Python and most build deps
-    sudo apt-get install -y build-essential autoconf libtool pkg-config \
-        python3-dev python3-pip python3-numpy git flex bison libbz2-dev
-    
-    # recent cmake version
-    wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null | sudo apt-key add -
-    sudo apt-add-repository 'deb https://apt.kitware.com/ubuntu/ bionic main'
-    sudo apt-get update && apt-get --allow-unauthenticated install -y \
-        cmake \
-        kitware-archive-keyring
-    ```
-
-4. **Install** competition specific dependencies!
-
-    We advise using a conda environment for this:
-    ```bash
-    # Optional: Create a conda env
-    conda create -n nle_challenge python=3.8 'cmake>=3.15'
-    conda activate nle_challenge
-    pip install -r requirements.txt
-    ```
-    If `pip install` fails with errors when installing NLE, please see installation requirements at https://github.com/facebookresearch/nle.
-
-5. **Run rollouts** with a random agent with `python test_submission.py`.
-
-    Find more details on the [original nethack repository](https://github.com/facebookresearch/nle)
-
-# Baselines
-
-Although we are looking to supply this repository with more baselines throughout the first month of the competition, this repository comes with a strong IMPALA-based baseline in the directory `./nethack_baselines/torchbeast`.
-
-Follow the instructions [here](/nethack_baselines/torchbeast/) to install and start training the model (there are even some suggestions for improvements).
+# [Future directions][future]
 
 
-# How to Test and Debug Locally
+## Agent contributors
+- [Thayer Anderson](https://github.com/tanderson11)
+- [Christian Anderson](https://github.com/canderson)
 
-The best way to test your model is to run your submission locally.
-
-You can do this naively by simply running  `python rollout.py` or you can simulate the extra timeout wrappers that AIcrowd will implement by using `python test_submission.py`. 
-
-# How to Submit
-
-More information on submissions can be found at our [SUBMISSION.md](/docs/SUBMISSION.md).
-
-## Contributors
+## NetHack Challenge starter kit contributors
 
 - [Dipam Chakraborty](https://www.aicrowd.com/participants/dipam)
 - [Shivam Khandelwal](https://www.aicrowd.com/participants/shivam)
 - [Eric Hambro](https://www.aicrowd.com/participants/eric_hammy)
 - [Danielle Rothermel](https://www.aicrowd.com/participants/danielle_rothermel)
 - [Jyotish Poonganam](https://www.aicrowd.com/participants/jyotish)
-
-
-# 📎 Important links
-
-- 💪 Challenge Page: https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge
-- 🗣️ Discussion Forum: https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge/discussion
-- 🏆 Leaderboard: https://www.aicrowd.com/challenges/neurips-2021-the-nethack-challenge/leaderboards
-
-**Best of Luck** 🎉 🎉
