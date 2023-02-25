@@ -69,7 +69,7 @@ The code for the agent is layed out as follows:
 ├── pyproject.toml                # Package dependencies.
 ├── environment_files             # Files to `source` to set shell environment variables
 │   ├── development.env           # Debugging is on and multithreading is off
-│   ├── good_roles.env   	      # Agent quits unless it gets a 'good' role.
+│   ├── good_roles.env            # Agent quits unless it gets a 'good' role.
 │   └── test_run.env   	          # Like the conditions for competition submission.
 └── agents                        # Baseline agents for submission
     ├── custom_agent.py           # Core logic to track state and input action on turn.
@@ -84,13 +84,13 @@ The code for the agent is layed out as follows:
     │   ├── monster_messages.py   # Methods for identifying what monster is acting.
     │   ├── neighborhood.py       # Vision, pathfinding, and state about local geometry.
     │   └── physics.py            # Mappings of directions and actions.
-    ├── advice  	              # Implementations of specific strategies.
+    ├── advice                    # Implementations of specific strategies.
     │   ├── advisors.py           # Specific advisors that can execute stratgems.
     │   ├── advisor_sets.py       # Ranked sets of advisors that form complete strategies. 
     │   ├── menuplan.py           # Methods for navigating menus in the game.
     │   ├── preferences.py        # Preferred way to take certain actions.
     │   └── wish.py               # Knowledge of what to wish for and how.
-    └── wizmode  	              # Tools for entering wizard mode to test certain game conditions.
+    └── wizmode                   # Tools for entering wizard mode to test certain game conditions.
         └── wizmodeprep.py        # Routines for accumulating powerful items to debug.
 ```
 
