@@ -4,11 +4,11 @@
 
 # Table of Contents
 1. [Intro](#intro)
-2. [Installing the package](#installation)
-3. [Package structure](#structure)
-4. [Future direction](#future)
+2. [Installing the package](#installing-the-package)
+3. [Package structure](#package-structure)
+4. [Future directions](#future-directions)
 
-# [Intro][intro]
+# Intro
 
 This repository is the submission from the StudentsOfStone (@tanderson11 and @canderson) to the 2021 NetHack Challenge sponsored by Facebook AI Research. The NetHack Challenge was a competition to build an agent &mdash; either a traditional "symbolic" agent or a machine learning agent &mdash; to play the 1987 computer game NetHack.
 
@@ -18,7 +18,7 @@ It's not surprising that NetHack is a challenge for artificial intelligence. Pla
 
 For this challenge, Facebook AI Research equipped players with the [NetHack Learning Environment](https://github.com/facebookresearch/nle) (NLE) &mdash; a wrapper around NetHack's C executable that makes the screen accessible as a Python array to agents in between each turn. We approached the NetHack challenge with the goal of building a symbolic bot that knows a few simple strategies but can access an enriched representation of the state of the game on each turn. By investing in technology to parse the game messages and to turn the condensed environment (the grid of characters) into a full representation of enemies, geometry, and items, we were able to teach our agent simple heuristics for best play. Our approach was successful, and our agent won the [2nd prize overall](https://nethackchallenge.com/report.html) in the competition. We're optimisic about the potential for this approach to achieve a game victory, and we look forwards to spending more time in the future to realize this goal.
 
-# [Installing the package][installation]
+# Installing the package
 
 To test or extend our agent, first clone this git repository and then install requirements. We manage dependencies through [Poetry](https://python-poetry.org/docs/), which makes it easy to manage specific versions of required packages. The steps to install this repository are simple:
 
@@ -26,7 +26,7 @@ To test or extend our agent, first clone this git repository and then install re
 - Install Poetry (see [the docs](https://python-poetry.org/docs/)).
 - Execute `poetry install` from the root of the repository.
 
-# [Package structure][#structure]
+# Package structure
 
 ## Starter kit and submission 
 
@@ -94,7 +94,7 @@ The code for the agent is layed out as follows:
         └── wizmodeprep.py        # Routines for accumulating powerful items to debug.
 ```
 
-# [Future directions][future]
+# Future directions
 
 
 ## Agent contributors
