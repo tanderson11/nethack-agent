@@ -1,18 +1,17 @@
-import csv
 import os
 import pdb
 from typing import NamedTuple
-from collections import Counter
-
-from nle import nethack
 import pandas as pd
 import numpy as np
 
+
+from nle import nethack
+
 import agents.representation.constants as constants
+import agents.advice.preferences as preferences
 import environment
-import utilities
-from utilities import ARS
 from agents.representation.spoilers.monsters_csv_parsing import MONSTERS_BY_NAME
+from utilities import ARS
 
 class CorpseSpoiler(NamedTuple):
     name: str
@@ -883,10 +882,10 @@ class ObjectIdentity():
         else:
             return None
 
-    desirability_if_unidentified = constants.IdentityDesirability.desire_none
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
     def desirable_identity(self, character):
         if self.is_identified():
-            return constants.IdentityDesirability(self.find_values('IDENTITY_DESIRABILITY'))
+            return preferences.IdentityDesirability(self.find_values('IDENTITY_DESIRABILITY'))
 
         return self.desirability_if_unidentified
 
@@ -906,7 +905,7 @@ class ObjectIdentity():
 
 class ScrollIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.listened_actions = {}
@@ -928,15 +927,15 @@ class SpellbookIdentity(ObjectIdentity):
 
 class RingIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
 class AmuletIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
 class PotionIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_none
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
 
 class FoodIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
@@ -1003,7 +1002,7 @@ class ChainIdentity(ObjectIdentity):
 
 class WandIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
@@ -1038,7 +1037,7 @@ class WandIdentity(ObjectIdentity):
 
 class ArmorIdentity(ObjectIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
-    desirability_if_unidentified = constants.IdentityDesirability.desire_all
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)

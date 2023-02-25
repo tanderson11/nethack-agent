@@ -1,17 +1,15 @@
-import functools
 import re
 from typing import NamedTuple
-from collections import OrderedDict
-import pdb
-import agents.representation.glyphs as gd
-import environment
-import numpy as np
-import agents.representation.constants as constants
 import pandas as pd
+import numpy as np
+
 import nle.nethack as nethack
+import environment
 
+import agents.representation.glyphs as gd
+import agents.representation.constants as constants
+import agents.advice.preferences as preferences
 import utilities
-
 from utilities import ARS
 
 class Item():
@@ -125,19 +123,19 @@ class Item():
             return False
 
         identity_desirability = self.identity.desirable_identity(character)
-        if identity_desirability == constants.IdentityDesirability.desire_none:
+        if identity_desirability == preferences.IdentityDesirability.desire_none:
             return False
 
         if consider_funds is True and not self.can_afford(character):
             return False
 
-        if identity_desirability == constants.IdentityDesirability.desire_all:
+        if identity_desirability == preferences.IdentityDesirability.desire_all:
             return True
 
-        if identity_desirability == constants.IdentityDesirability.desire_all_uncursed:
+        if identity_desirability == preferences.IdentityDesirability.desire_all_uncursed:
             return self.BUC != constants.BUC.cursed
 
-        if identity_desirability == constants.IdentityDesirability.desire_one:
+        if identity_desirability == preferences.IdentityDesirability.desire_one:
             assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
             same_items = self.find_equivalents(character.inventory)
             equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_equivalent(i, character)]
@@ -536,7 +534,7 @@ class Tool(Item):
     def desirable(self, character, consider_funds=True):
         identity_desirability = self.identity.desirable_identity(character)
 
-        if identity_desirability == constants.IdentityDesirability.desire_seven:
+        if identity_desirability == preferences.IdentityDesirability.desire_seven:
             candles = character.inventory.get_items(Tool, identity_selector=lambda i: i.type == 'candles')
             seven_stacks = [c for c in candles if c.quantity >= 7]
 
@@ -1234,7 +1232,7 @@ class PlayerInventory():
 
     def get_square_change_plan(self, preference):
         # is pick-axe allowed?
-        if preference.includes(constants.ChangeSquarePreference.slow) and preference.includes(constants.ChangeSquarePreference.down):
+        if preference.includes(preferences.ChangeSquarePreference.slow) and preference.includes(preferences.ChangeSquarePreference.down):
             # are we wielding a pick-axe? if so, start digging
             if self.wielded_weapon.identity.name() == 'pick-axe':
                 plan = EscapePlan(escape_action=nethack.actions.Command.APPLY, escape_item=self.wielded_weapon)
@@ -1244,7 +1242,7 @@ class PlayerInventory():
             if pick is not None and self.wielded_weapon.BUC != constants.BUC.cursed:
                 return EscapePreparednessProposal(wield_item=pick)
         
-        if preference.includes(constants.ChangeSquarePreference.teleport):
+        if preference.includes(preferences.ChangeSquarePreference.teleport):
             # do we have a teleportation scroll?
             teleport_scroll = self.get_item(oclass=Scroll, name='teleportation')
             if teleport_scroll is not None:
@@ -1258,7 +1256,7 @@ class PlayerInventory():
                 return EscapePreparednessProposal(escape_plan=plan)
 
         # wand of digging
-        if preference.includes(constants.ChangeSquarePreference.down):
+        if preference.includes(preferences.ChangeSquarePreference.down):
             digging_wand = self.get_item(oclass=Wand, name='digging', instance_selector=lambda i: i.charges != 0)
             if digging_wand is not None:
                 plan = EscapePlan(escape_action=nethack.actions.Command.ZAP, escape_item=digging_wand)
@@ -1299,11 +1297,11 @@ class PlayerInventory():
             return RangedPreparednessProposal(quiver_item=quiver_thrown_weapons[0])
 
         # if you have a bow and arrows, wield your bow [top subroutine will then quiver arrows]
-        if preference.includes(constants.RangedAttackPreference.setup):
+        if preference.includes(preferences.RangedAttackPreference.setup):
             bows = self.get_items(Weapon, instance_selector=lambda i:(i.BUC == constants.BUC.uncursed or i.BUC == constants.BUC.blessed), identity_selector=lambda i: i.ranged)
             for bow in bows:
                 if bow.identity.name() == 'sling':
-                    if not preference.includes(constants.RangedAttackPreference.weak):
+                    if not preference.includes(preferences.RangedAttackPreference.weak):
                         continue
                     #import pdb; pdb.set_trace()
                     klasses = [Weapon, Gem]
@@ -1315,9 +1313,9 @@ class PlayerInventory():
 
     def get_wand_attack(self, preference):
         forbidden_names = []
-        if not preference.includes(constants.RangedAttackPreference.sleep): forbidden_names.append("sleep")
-        if not preference.includes(constants.RangedAttackPreference.death): forbidden_names.append("death")
-        if not preference.includes(constants.RangedAttackPreference.striking): forbidden_names.append("striking")
+        if not preference.includes(preferences.RangedAttackPreference.sleep): forbidden_names.append("sleep")
+        if not preference.includes(preferences.RangedAttackPreference.death): forbidden_names.append("death")
+        if not preference.includes(preferences.RangedAttackPreference.striking): forbidden_names.append("striking")
         attack_wands = self.get_items(Wand, identity_selector=lambda i: i.is_attack() and i.name() not in forbidden_names, instance_selector=lambda i: i.charges is None or i.charges > 0)
 
         if len(attack_wands) > 0:
