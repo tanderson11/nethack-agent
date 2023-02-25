@@ -10,16 +10,16 @@ from nle import nethack
 import numpy as np
 import scipy.signal
 
-import constants
+import agents.representation.constants as constants
 import environment
-import glyphs as gd
-import map
-import physics
+import agents.representation.glyphs as gd
+import agents.representation.map as map
+import agents.representation.physics as physics
 import utilities
 from utilities import ARS
-from physics import Square
+from agents.representation.physics import Square
 from typing import NamedTuple, Tuple, List
-import inventory
+import agents.representation.inventory as inventory
 
 class Targets(NamedTuple):
     monsters: list

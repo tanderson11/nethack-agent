@@ -2,24 +2,23 @@ import abc
 from dataclasses import dataclass
 import enum
 from typing import NamedTuple
+import functools
+import re
 
-import glyphs as gd
+import agents.representation.glyphs as gd
 import nle.nethack as nethack
 import numpy as np
 
-import functools
-
-import map
-import physics
+import agents.representation.map as map
+import agents.representation.physics as physics
 import environment
-import neighborhood
-import menuplan
+import agents.representation.neighborhood as neighborhood
+import agents.advice.menuplan as menuplan
 import utilities
 from utilities import ARS
-import inventory as inv
-import constants
-import re
-
+import agents.representation.inventory as inv
+import agents.representation.constants as constants
+import agents.advice.preferences as preferences
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -992,11 +991,11 @@ class Attack(Advisor):
 
 class StuckPlanInMotion(NamedTuple):
     advisor: Advisor
-    preference: constants.ChangeSquarePreference
+    preference: preferences.ChangeSquarePreference
     from_level: int
 
 class ChangeOfSquare(Advisor):
-    preference = constants.escape_default
+    preference = preferences.escape_default
     def prepare(self, character, preference, current_dlevel):
         stuck_preparedness_plan = character.inventory.get_square_change_plan(preference)
         if stuck_preparedness_plan is None:
@@ -1041,11 +1040,11 @@ class ChangeOfSquare(Advisor):
         if not oracle.am_stuck:
             return None
         if not run_state.neighborhood.level_map.teleportable:
-            preference &= ~constants.ChangeSquarePreference.teleport
+            preference &= ~preferences.ChangeSquarePreference.teleport
         if not run_state.neighborhood.level_map.diggable_floor:
-            preference &= ~constants.ChangeSquarePreference.digging
+            preference &= ~preferences.ChangeSquarePreference.digging
         if run_state.neighborhood.in_shop:
-            preference &= ~constants.ChangeSquarePreference.slow
+            preference &= ~preferences.ChangeSquarePreference.slow
 
         #import pdb; pdb.set_trace()
         prep = self.prepare(character, preference, run_state.neighborhood.dcoord.level)
@@ -1071,7 +1070,7 @@ class ChangeOfSquare(Advisor):
         return advice
 
 class StuckChangeOfSquare(ChangeOfSquare):
-    preference = constants.escape_default
+    preference = preferences.escape_default
 
 class EngraveElberethStuckByMonster(Advisor):
     def advice(self, rng, run_state, character, oracle):
@@ -1113,10 +1112,10 @@ class EngraveElberethStuckByMonster(Advisor):
 
 class RangedPlanInMotion(NamedTuple):
     advisor: Advisor
-    preference: constants.RangedAttackPreference
+    preference: preferences.RangedAttackPreference
 
 class RangedAttackAdvisor(Attack):
-    preference = constants.ranged_default
+    preference = preferences.ranged_default
     def prepare_for_ranged(self, character, preference):
         ranged_plan = character.get_ranged_attack(preference)
         if ranged_plan is None or ranged_plan.attack_plan is not None:
@@ -1169,8 +1168,8 @@ class RangedAttackAdvisor(Attack):
     def advice(self, rng, run_state, character, oracle):
         preference = self.preference
         if run_state.neighborhood.level_map.dcoord.branch == map.Branches.Sokoban:
-            preference = self.preference & ~constants.RangedAttackPreference.striking
-        include_adjacent = preference.includes(constants.RangedAttackPreference.adjacent)
+            preference = self.preference & ~preferences.RangedAttackPreference.striking
+        include_adjacent = preference.includes(preferences.RangedAttackPreference.adjacent)
         targets = self.targets(run_state.neighborhood, character, include_adjacent=include_adjacent)
         if targets is None:
             return None
@@ -1203,7 +1202,7 @@ class RangedAttackAdvisor(Attack):
         return AttackAdvice(from_advisor=self, action=attack_plan.attack_action, new_menu_plan=menu_plan, target=target)
 
 class RangedAttackFearfulMonsters(RangedAttackAdvisor):
-    preference = constants.ranged_powerful
+    preference = preferences.ranged_powerful
     def advice(self, rng, run_state, character, oracle):
         advice = super().advice(rng, run_state, character, oracle)
         if advice is not None:
@@ -1220,7 +1219,7 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         return targets
 
 class RangedAttackInvisibleInSokoban(RangedAttackAdvisor):
-    preference = constants.ranged_powerful | constants.RangedAttackPreference.weak # main advisor knows not to do striking
+    preference = preferences.ranged_powerful | preferences.RangedAttackPreference.weak # main advisor knows not to do striking
     def advice(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
@@ -1277,7 +1276,7 @@ class TameHerbivores(RangedAttackAdvisor):
         return AttackAdvice(from_advisor=self, action=nethack.actions.Command.THROW, new_menu_plan=menu_plan, target=target)
 
 class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
-    preference = constants.ranged_default | constants.RangedAttackPreference.adjacent | constants.RangedAttackPreference.weak
+    preference = preferences.ranged_default | preferences.RangedAttackPreference.adjacent | preferences.RangedAttackPreference.weak
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.passive_attack_bundle.num_attacks > 0, attack_range=range, **kwargs)
@@ -1297,7 +1296,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         return Target(targets.monsters[target_index], targets.directions[target_index], targets.absolute_positions[target_index])
 
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
-    preference = constants.ranged_powerful | constants.RangedAttackPreference.adjacent
+    preference = preferences.ranged_powerful | preferences.RangedAttackPreference.adjacent
     def targets(self, neighborhood, character, **kwargs):
         return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
 
@@ -1320,7 +1319,7 @@ class AdjustRangedPlanDummy(Advisor):
             return None
 
         # stop trying to use your bow unless you are happy to target adjacent
-        if not character.executing_ranged_plan.preference.includes(constants.RangedAttackPreference.adjacent):
+        if not character.executing_ranged_plan.preference.includes(preferences.RangedAttackPreference.adjacent):
             if run_state.neighborhood.n_adjacent_monsters > 0:
                 character.executing_ranged_plan = False
                 #import pdb; pdb.set_trace()

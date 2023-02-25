@@ -1,5 +1,5 @@
 #from advisors import *
-from  advisors import *
+from agents.advice.advisors import *
 
 new_advisors = [
     # No-time recon

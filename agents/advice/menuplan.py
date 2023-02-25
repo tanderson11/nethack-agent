@@ -5,12 +5,10 @@ import numpy as np
 from collections import OrderedDict
 
 import environment
-import glyphs as gd
-import utilities
-import inventory as inv
-import physics
-import wish
-import constants
+import agents.representation.inventory as inv
+import agents.representation.physics as physics
+import agents.advice.wish as wish
+import agents.representation.constants as constants
 
 import nle.nethack as nethack
 

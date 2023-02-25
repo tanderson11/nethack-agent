@@ -22,7 +22,7 @@ from submission_config import SubmissionConfig, TestEvaluationConfig
 from envs.batched_env import InstrumentedEnv
 
 import environment
-import parse_ttyrec
+import utility.parse_ttyrec as parse_ttyrec
 
 class RolloutResults(NamedTuple):
     runners: int

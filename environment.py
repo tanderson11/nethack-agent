@@ -1,6 +1,6 @@
 from typing import NamedTuple, Set
 import os
-import constants
+import agents.representation.constants as constants
 
 class EnvironmentVariable(NamedTuple):
     num_environments: int

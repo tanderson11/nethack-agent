@@ -9,12 +9,12 @@ import numpy as np
 import scipy.signal
 
 import environment
-import glyphs as gd
-import inventory
-import physics
+import agents.representation.glyphs as gd
+import agents.representation.inventory as inventory
+import agents.representation.physics as physics
 import utilities
-import constants
-from spoilers.special_levels.sokoban_solutions import SOKOBAN_SOLUTIONS
+import agents.representation.constants as constants
+from agents.representation.spoilers.special_levels.sokoban_solutions import SOKOBAN_SOLUTIONS
 
 import functools
 from utilities import ARS

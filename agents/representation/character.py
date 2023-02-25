@@ -1,18 +1,19 @@
 from typing import Optional
-from typing import NamedTuple, Tuple
+from typing import NamedTuple
 
 import pandas as pd
 import numpy as np
 from dataclasses import dataclass, field
 
 import nle.nethack as nethack
-
-import constants
 import environment
-import glyphs as gd
-import inventory as inv
+
+import agents.representation.constants as constants
+import agents.representation.glyphs as gd
+import agents.representation.inventory as inv
+import agents.representation.monster_messages as monster_messages
+import agents.advice.preferences as preferences
 from utilities import ARS
-import monster_messages
 
 @dataclass
 class HeldBy():
@@ -484,11 +485,11 @@ class Character():
         return pd.DataFrame(danger_rows, columns=columns)
 
     def get_ranged_attack(self, preference):
-        if preference.includes(constants.RangedAttackPreference.wand):
+        if preference.includes(preferences.RangedAttackPreference.wand):
             wand_attack = self.inventory.get_wand_attack(preference)
             if wand_attack is not None:
                 return wand_attack
-        if preference.includes(constants.RangedAttackPreference.spell):
+        if preference.includes(preferences.RangedAttackPreference.spell):
             spell_attack = self.get_spell_attack(preference)
             if spell_attack is not None:
                 return spell_attack
@@ -499,7 +500,7 @@ class Character():
                 return None
         if self.hunger_state > 2:
             return None
-        if 'force bolt' in self.spells and preference.includes(constants.RangedAttackPreference.striking):
+        if 'force bolt' in self.spells and preference.includes(preferences.RangedAttackPreference.striking):
             attack_plan = inv.RangedAttackPlan(attack_action=nethack.actions.Command.CAST, attack_item='force bolt')
             proposal = inv.RangedPreparednessProposal(attack_plan=attack_plan)
             return proposal

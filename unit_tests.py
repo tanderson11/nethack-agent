@@ -7,13 +7,14 @@ import numpy as np
 
 from nle import nethack
 
-import constants
-import inventory as inv
-import map
-import monster_messages
-import menuplan
-import neighborhood
-import glyphs as gd
+import agents.representation.constants as constants
+import agents.representation.inventory as inv
+import agents.representation.map as map
+import agents.representation.monster_messages as monster_messages
+import agents.advice.preferences as preferences
+import agents.advice.menuplan as menuplan
+import agents.representation.neighborhood as neighborhood
+import agents.representation.glyphs as gd
 import agents.custom_agent
 import environment
 
@@ -1176,7 +1177,7 @@ class TestRangedAttack(unittest.TestCase):
         ]
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, inventory)
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "a")
 
@@ -1187,7 +1188,7 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "b")
 
@@ -1199,7 +1200,7 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
@@ -1220,7 +1221,7 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.quiver_item.inventory_letter), "c")
 
@@ -1233,7 +1234,7 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
@@ -1256,7 +1257,7 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(chr(ranged_proposal.wield_item.inventory_letter), "b")
 
@@ -1275,7 +1276,7 @@ class TestRangedAttack(unittest.TestCase):
         ]
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal, None)
 
@@ -1288,7 +1289,7 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.FIRE)
 
@@ -1313,7 +1314,7 @@ class TestRangedAttack(unittest.TestCase):
         #import pdb; pdb.set_trace()
         character.inventory = make_inventory(global_identity_map, inventory)
 
-        preference = constants.ranged_default
+        preference = preferences.ranged_default
         ranged_proposal = character.get_ranged_attack(preference)
         self.assertEqual(ranged_proposal.attack_plan.attack_action, nethack.actions.Command.THROW)
 

@@ -1,8 +1,8 @@
 from re import L
 from nle import nethack
 
-import advisors
-import menuplan
+import agents.advice.advisors as advisors
+import agents.advice.menuplan as menuplan
 
 class WizmodePrepAdvisor(advisors.Advisor): # dummy advisor to hold background menu plans
     def advice(self, rng, run_state, character, oracle):
