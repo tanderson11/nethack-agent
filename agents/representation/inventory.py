@@ -153,6 +153,10 @@ class Item():
 class Amulet(Item):
     glyph_class = gd.AmuletGlyph
 
+    def can_afford(self, character):
+        if not self.shop_owned: return True
+        return False
+
 class Armor(Item):
     glyph_class = gd.ArmorGlyph
 
@@ -565,11 +569,20 @@ class Gem(Item):
                 return False
         return super().desirable(character, consider_funds=consider_funds)
 
+    def can_afford(self, character):
+        if not self.shop_owned: return True
+        if self.identity.name() != 'luckstone': return False
+        return super().can_afford(character)
+
 class Rock(Item):
     glyph_class = gd.RockGlyph
 
 class Ring(Item):
     glyph_class = gd.RingGlyph
+
+    def can_afford(self, character):
+        if not self.shop_owned: return True
+        return False
 
 class UnimplementedItemClassException(Exception):
     pass

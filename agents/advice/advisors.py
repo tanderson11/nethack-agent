@@ -358,7 +358,7 @@ class WaitAdvisor(Advisor):
 class ConditionWaitAdvisor(WaitAdvisor):
     pass
 
-class WaitForHPAdvisor(Advisor):
+class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
         return super().advice(rng, run_state, character, oracle)
 
@@ -1043,6 +1043,8 @@ class ChangeOfSquare(Advisor):
             preference &= ~preferences.ChangeSquarePreference.teleport
         if not run_state.neighborhood.level_map.diggable_floor:
             preference &= ~preferences.ChangeSquarePreference.digging
+        if run_state.neighborhood.in_shop:
+            preference &= ~preferences.ChangeSquarePreference.slow
 
         #import pdb; pdb.set_trace()
         prep = self.prepare(character, preference, run_state.neighborhood.dcoord.level)
@@ -1849,12 +1851,61 @@ class DropUndesirableInShopAdvisor(DropUndesirableAdvisor):
 
         return self.drop_undesirable(run_state, character)
 
+class SellValuables(Advisor):
+    def drop_valuables(self, run_state, character, valuables):
+        if valuables is None:
+            return None
+        undesirable_letters = [item.inventory_letter for item in valuables]
+
+        menu_plan = menuplan.MenuPlan(
+            "drop all undesirable objects",
+            self,
+            [
+                menuplan.YesMenuResponse("Sell it?"),
+                menuplan.YesMenuResponse("Sell them?"),
+                menuplan.MoreMenuResponse("You drop", always_necessary=False),
+                menuplan.MoreMenuResponse("seems uninterested", always_necessary=False),
+                menuplan.MoreMenuResponse(re.compile("(y|Y)ou sold .+ for"), always_necessary=False),
+            ],
+            interactive_menu=[
+                menuplan.InteractiveDropTypeChooseTypeMenu(selector_name='all types'),
+                menuplan.InteractiveDropTypeMenu(character, character.inventory, desired_letter=undesirable_letters)
+            ]
+        )
+        return ActionAdvice(from_advisor=self, action=nethack.actions.Command.DROPTYPE, new_menu_plan=menu_plan)
+
+    def advice(self, rng, run_state, character, oracle):
+        if not oracle.in_shop:
+            return None
+        doors = gd.CMapGlyph.is_door_check(run_state.neighborhood.glyphs - gd.CMapGlyph.OFFSET)
+        if np.count_nonzero(doors) > 0:
+            # don't drop if on the first square of the shop next to the door
+            return None
+
+        valuables = self.get_valuables(character)
+        if len(valuables) == 0: return None
+        return self.drop_valuables(run_state, character, valuables)
+
+class SellIdentifiedGemsInShop(SellValuables):
+    def get_valuables(self, character):
+        gems = character.inventory.get_items(
+            oclass=inv.Gem,
+            identity_selector=lambda i: i.name() != 'luckstone',
+            instance_selector=lambda i: i.formally_ided_valuable()
+        )
+        #import pdb; pdb.set_trace()
+        return gems
+
+class SellJewelryInShop(SellValuables):
+    def get_valuables(self, character):
+        jewelry = character.inventory.get_items(oclass=[inv.Ring, inv.Amulet], instance_selector=lambda i: i.equipped_status is None)
+        return jewelry
+
 class DropUndesirableWantToLowerWeight(DropUndesirableAdvisor):
     def advice(self, rng, run_state, character, oracle):
         if not character.want_less_weight():
             return None
 
-        #import pdb; pdb.set_trace()
         return self.drop_undesirable(run_state, character)
 
 class BuyDesirableAdvisor(Advisor):
@@ -2275,3 +2326,22 @@ class TravelToSokobanSquare(Advisor):
         )
 
         return ActionAdvice(self, travel, menu_plan)
+
+class WearSlowDigestion(Advisor):
+    def advice(self, rng, run_state, character, oracle):
+        rings_of_slow_digestion = character.inventory.get_items(inv.Ring, name='slow digestion')
+        if len(rings_of_slow_digestion) == 0:
+            return None
+        for ring in rings_of_slow_digestion:
+            if ring.equipped_status is not None:
+                return None
+
+        ring = rings_of_slow_digestion[0]
+        #import pdb; pdb.set_trace()
+        put_on = nethack.actions.Command.PUTON
+        menu_plan = menuplan.MenuPlan("don slow digestion", self, [
+            menuplan.CharacterMenuResponse("What do you want to put on?", chr(ring.inventory_letter)),
+            menuplan.CharacterMenuResponse("Which ring-finger, Right or Left?", 'l'),
+        ], listening_item=ring)
+
+        return ActionAdvice(self, put_on, menu_plan)
