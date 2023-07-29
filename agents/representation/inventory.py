@@ -136,7 +136,7 @@ class Item():
             return self.BUC != constants.BUC.cursed
 
         if identity_desirability == preferences.IdentityDesirability.desire_one:
-            assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
+            if environment.env.debug: assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
             same_items = self.find_equivalents(character.inventory)
             equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_equivalent(i, character)]
 
@@ -904,7 +904,7 @@ class ItemParser():
                     identity = global_identity_map.identity_by_numeral[glyph_numeral]
                 else:
                     identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
-                    identity = identity_class(possible_glyphs)
+                    identity = identity_class.get_identity(possible_glyphs)
 
             return item_class(identity, match_components, inventory_letter=inventory_letter, seen_as=seen_as)
         elif len(possible_glyphs) == 0:

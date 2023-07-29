@@ -792,13 +792,37 @@ class ObjectIdentity():
     def stacked_name_to_singular(cls, stacked_name):
         return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
+    @classmethod
+    def get_identity(cls, idx, shuffle_class=None, do_create=True):
+        if cls.identities is None:
+            cls.identities = {}
+        idx = pd.Int64Index(idx).copy().sort_values()
+        idx_bytes = np.array(idx).tobytes()
+
+        identity = cls.identities.get(idx_bytes, None)
+
+        if identity is not None: return identity
+        if do_create:
+            identity = cls(idx, shuffle_class=shuffle_class)
+            cls.identities[idx_bytes] = identity
+            return identity
+        return None
+
+    def log_identity(cls, identity, idx):
+        if environment.env.debug: import pdb; pdb.set_trace()
+        idx = pd.Int64Index(idx).sort_values()
+        idx_bytes = np.array(idx).tobytes()
+        cls.identities[idx_bytes] = identity
+
+    identities = None
     def __init__(self, idx, shuffle_class=None):
-        self.idx = idx.copy()
+        self.idx = pd.Int64Index(idx).copy()
         self.listened_actions = {}
         self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
         self.unique_values = {}
+        self.uncertain_value_cache = {}
         self.is_artifact = False
 
         self.shuffle_class_idx = shuffle_class
@@ -806,21 +830,25 @@ class ObjectIdentity():
 
     @classmethod
     def identity_from_name(cls, name):
-        # make an identity that represents the information you know from seeing the object
+        # make/find identity that represents the information you know from seeing the object
         matches_name = (cls.data.NAME == name)
         idx = matches_name.index[matches_name]
 
-        return cls(idx)
+        return cls.get_identity(idx)
 
     def give_name(self, name):
         matches_name = self.data.loc[self.idx].NAME == name
-        self.idx = matches_name.index[matches_name]
-        if len(self.idx) == 0:
+        new_idx = matches_name.index[matches_name]
+        existing_identity = self.get_identity(new_idx, do_create=False)
+        if environment.env.debug and existing_identity is not None:
+            import pdb; pdb.set_trace()
+        if len(new_idx) == 0:
             if environment.env.debug: import pdb; pdb.set_trace()
             print("FAILED DEDUCTION: giving name and overriding inferences")
             hard_name_match = (self.data.NAME == name)
-            self.idx = hard_name_match.index[hard_name_match]
-
+            new_idx = hard_name_match.index[hard_name_match]
+        self.idx = new_idx
+        self.log_identity(self, new_idx)
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
     def is_identified(self):
@@ -839,23 +867,53 @@ class ObjectIdentity():
     def process_message(self, message_obj, action):
         pass
 
-    def apply_filter(self, idx):
-        self.idx = idx
+    def apply_filter(self, new_idx):
+        #if environment.env.debug: import pdb; pdb.set_trace()
+        existing_identity = self.get_identity(new_idx, do_create=False)
+        if environment.env.debug and existing_identity is not None:
+            import pdb; pdb.set_trace()
+        self.idx = new_idx
+        self.log_identity(self, new_idx)
 
     def find_values(self, column, dropna=False, false_if_na=False):
-        value = self.unique_values.get(column, None)
-        if value is not None:
-            return value
+        # our cache that never stales: if we have a unique value, we know it will never change
+        singular_value = self.unique_values.get(column)
+        if singular_value is not None:
+            return singular_value
 
+        # but even if we have a range of values, those are locked unless our idx changes
+        # TK except possibly in non local circumstances where we do process of elmination,
+        # in which case we can work around by introducing a global integer to the key
+        # that we increase whenever we learn something about items in the class
+        idx_bytes = np.array(self.idx.sort_values()).tobytes()
+        cached_values = self.uncertain_value_cache.get((column, idx_bytes), None)
+
+        if cached_values is not None:
+            # don't have to care about dropna, as everything stored in cached values has been hit by an np.unique, which clears NAs
+            # dropna only to prevent error on np.unique if we get all nas
+            if len(cached_values) == 1:
+                if false_if_na and pd.isna(cached_values[0]):
+                    return False
+                return cached_values[0] # policy: one value: just return it
+            if environment.env.debug: print("hit uncertain cache")
+            return cached_values
+
+        if environment.env.debug: print(self, "missed caches", self.idx, column)
+        if len(self.idx) == 1:
+            #import pdb; pdb.set_trace()
+            pass
+        # we failed to hit either cache, we have to filter the df ourselves
         if dropna:
             unique = np.unique(self.data.loc[self.idx][column].dropna()) # the filtered dataframe values
         else:
             unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
+
         if len(unique) == 1:
             if false_if_na and pd.isna(unique[0]):
                 unique[0] = False
             self.unique_values[column] = unique[0]
             return unique[0] # policy: if we find only one value, just return it
+        self.uncertain_value_cache[(column, idx_bytes)] = unique
         return unique
 
     def weight(self):
@@ -1309,7 +1367,7 @@ class GlobalIdentityMap():
                 idx = same_shuffle_class.index[same_shuffle_class]
                 shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
 
-            identity = identity_class(idx, shuffle_class=shuffle_class_idx)
+            identity = identity_class.get_identity(idx, shuffle_class=shuffle_class_idx)
 
         self.identity_by_numeral[numeral] = identity
 
