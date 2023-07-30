@@ -1321,7 +1321,7 @@ class GlobalIdentityMap():
 
     def __init__(self, is_priest=False):
         self.identity_by_numeral = {}
-        # indexed by (glyph_class, appearance) because of 'blank paper' being both a spellbook and scroll
+        # indexed by (glyph_class, name) because of 'blank paper' being both a spellbook and scroll
         self.identity_by_name = {} # this we will have to be careful to keep updated
         self.identity_by_japanese_name = {}
         # indexed by (glyph_class, appearance) for consistency (don't think there are any overlapping appearances, but there could be)
