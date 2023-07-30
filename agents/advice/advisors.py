@@ -215,6 +215,14 @@ class Oracle():
     def on_elbereth(self):
         return self.run_state.current_square.elbereth is not None and self.run_state.current_square.elbereth.confirm_time == self.run_state.time
 
+    @utilities.cached_property
+    def inventory_did_change(self):
+        return self.run_state.inventory_did_change
+
+    @utilities.cached_property
+    def character_changed_plan(self):
+        return self.run_state.character_changed_plan
+
 class Advisor(abc.ABC):
     def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
         self.consult = oracle_consultation
@@ -2056,7 +2064,9 @@ class WieldBetterWeaponAdvisor(Advisor):
 
         best_weapon = character.inventory.proposed_weapon_changes(character)
         if best_weapon is None:
+            run_state.had_better_weapon = False
             return None
+        run_state.had_better_weapon = True
 
         assert best_weapon.quantity == 1, "shouldn't be in the business of wielding stacks"
         menu_plan = menuplan.MenuPlan("wield weaon", self, [

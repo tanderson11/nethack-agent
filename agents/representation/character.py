@@ -56,7 +56,7 @@ class Character():
     queued_wish_name: tuple = None
     wish_in_progress: tuple = None
     blinding_attempts: dict = field(default_factory=dict)
-    spells: list =  field(default_factory=list)
+    spells: list = field(default_factory=list)
 
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
@@ -152,11 +152,14 @@ class Character():
         #import pdb; pdb.set_trace()
         return tier < self.tier
 
+    def executing_a_plan(self):
+        return self.executing_escape_plan or self.executing_ranged_plan
+
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
         self.experience_level = blstats.get('experience_level')
         if not self.experience_level >= 1:
-            raise Exception("Surprising experience level")
+            if environment.env.debug: raise Exception("Surprising experience level")
         if old_experience_level != self.experience_level: # Just to save us some effort
             self.set_innate_intrinsics()
 
@@ -262,8 +265,9 @@ class Character():
         self.attributes = attributes
 
     def update_inventory_from_observation(self, character, am_hallu, observation):
+        # return True if inventory needed to be updated
         if self.inventory and ((observation['inv_strs'] == self.inventory.inv_strs).all()):
-            return
+            return False
 
         inv_strs = observation['inv_strs'].copy()
         inv_letters = observation['inv_letters'].copy()
@@ -274,6 +278,7 @@ class Character():
             inv_glyphs = observation['inv_glyphs'].copy()
 
         self.inventory = inv.PlayerInventory(character.global_identity_map, inv_letters, inv_oclasses, inv_strs, inv_glyphs=inv_glyphs)
+        return True
 
     def can_cannibalize(self):
         if self.base_race == constants.BaseRace.orc:

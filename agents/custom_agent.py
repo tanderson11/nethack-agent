@@ -383,6 +383,11 @@ class RunState():
         self.last_level_change_timestamp = 0
         self.stuck_flag = False
 
+        self.inventory_did_change=True
+        self.executing_character_plan_on_last_turn=False
+        self.character_changed_plan=False
+        self.had_better_weapon=False
+
         self.seed = base64.b64encode(os.urandom(4))
         #self.seed = b'vYIDlQ=='
         self.rng = self.make_seeded_rng(self.seed)
@@ -778,7 +783,7 @@ class CustomAgent():
         player_location = (blstats.get('hero_row'), blstats.get('hero_col'))
 
         if run_state.character:
-            run_state.character.update_inventory_from_observation(
+            run_state.inventory_did_change = run_state.character.update_inventory_from_observation(
                 run_state.character, blstats.am_hallu(), observation)
 
         dungeon_number = blstats.get("dungeon_number")
@@ -852,6 +857,10 @@ class CustomAgent():
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if run_state.character:
+            run_state.character_changed_plan = (run_state.executing_character_plan_on_last_turn != run_state.character.executing_a_plan())
+            run_state.executing_character_plan_on_last_turn != run_state.character.executing_a_plan
 
         if run_state.character:
             if run_state.last_non_menu_action == nethack.actions.Command.DROP or run_state.last_non_menu_action == nethack.actions.Command.DROPTYPE:

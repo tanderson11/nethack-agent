@@ -28,7 +28,7 @@ new_advisors = [
     AdjustEscapePlanDummy(),
     AdjustRangedPlanDummy(),
     # FAST IMPROVEMENT
-    WieldBetterWeaponAdvisor(),
+    WieldBetterWeaponAdvisor(oracle_consultation=lambda o: (o.had_better_weapon or o.inventory_did_change or o.character_changed_plan)),
     GainSpeedFromWand(),
     # WEAK
     CombatEatAdvisor(oracle_consultation=lambda o: o.weak_with_hunger),
