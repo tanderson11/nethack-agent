@@ -2047,8 +2047,24 @@ class FallbackSearchAdvisor(Advisor):
         search = nethack.actions.Command.SEARCH
         return ActionAdvice(from_advisor=self, action=search)
 
-class WieldBetterWeaponAdvisor(Advisor):
+class ImprovementAdvisor(Advisor):
+    def __init__(self, oracle_consultation=None, threat_tolerance=None, threat_threshold=None, no_adjacent_monsters=False):
+        super().__init__(oracle_consultation, threat_tolerance, threat_threshold, no_adjacent_monsters)
+        self.last_tried = 0
+
     def advice(self, rng, run_state, character, oracle):
+        #print("Pre thinning")
+        if self.last_tried >= max([run_state.last_inventory_change, run_state.last_character_plan_change]):
+            return None
+        #print("Made it past thinning", run_state.time)
+        self.last_tried = run_state.time
+        return True
+
+class WieldBetterWeaponAdvisor(ImprovementAdvisor):
+    def advice(self, rng, run_state, character, oracle):
+        if super().advice(rng, run_state, character, oracle) is None:
+            return None
+
         wield = nethack.actions.Command.WIELD
 
         if character.inventory.wielded_weapon.BUC == constants.BUC.cursed:
@@ -2056,7 +2072,9 @@ class WieldBetterWeaponAdvisor(Advisor):
 
         best_weapon = character.inventory.proposed_weapon_changes(character)
         if best_weapon is None:
+            run_state.had_better_weapon = False
             return None
+        run_state.had_better_weapon = True
 
         assert best_weapon.quantity == 1, "shouldn't be in the business of wielding stacks"
         menu_plan = menuplan.MenuPlan("wield weaon", self, [
@@ -2067,8 +2085,11 @@ class WieldBetterWeaponAdvisor(Advisor):
         #import pdb; pdb.set_trace()
         return ActionAdvice(from_advisor=self, action=wield, new_menu_plan=menu_plan)
 
-class WearUnblockedArmorAdvisor(Advisor):
+class WearUnblockedArmorAdvisor(ImprovementAdvisor):
     def advice(self, rng, run_state, character, oracle):
+        if super().advice(rng, run_state, character, oracle) is None:
+            return None
+
         proposed_items, proposal_blockers = character.inventory.proposed_attire_changes(character)
 
         for item, blockers in zip(proposed_items, proposal_blockers):
@@ -2085,8 +2106,11 @@ class WearUnblockedArmorAdvisor(Advisor):
 class UnblockedWardrobeChangesAdvisor(PrebakedSequentialCompositeAdvisor):
     sequential_advisors = [WearUnblockedArmorAdvisor]
 
-class WearEvenBlockedArmorAdvisor(Advisor):
+class WearEvenBlockedArmorAdvisor(ImprovementAdvisor):
     def advice(self, rng, run_state, character, oracle):
+        if super().advice(rng, run_state, character, oracle) is None:
+            return None
+
         proposed_items, proposal_blockers = character.inventory.proposed_attire_changes(character)
 
         for item, blockers in zip(proposed_items, proposal_blockers):
