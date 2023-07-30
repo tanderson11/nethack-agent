@@ -1,3 +1,4 @@
+import abc
 import os
 import pdb
 from typing import NamedTuple
@@ -756,12 +757,7 @@ class ObjectSpoilers():
 
 OBJECT_SPOILERS = ObjectSpoilers()
 
-class ObjectIdentity():
-    '''
-    Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
-
-    Listens to messages to gain knowledge about the identity of the object.
-    '''
+class IdentityLike(abc.ABC):
     @classmethod
     def appearances(cls):
         return cls.data.APPEARANCE
@@ -808,11 +804,22 @@ class ObjectIdentity():
             return identity
         return None
 
+    @classmethod
     def log_identity(cls, identity, idx):
         if environment.env.debug: import pdb; pdb.set_trace()
         idx = pd.Int64Index(idx).sort_values()
         idx_bytes = np.array(idx).tobytes()
         cls.identities[idx_bytes] = identity
+
+
+#class AmbiguousIdentity(IdentityLike):
+
+class ObjectIdentity(IdentityLike):
+    '''
+    Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
+
+    Listens to messages to gain knowledge about the identity of the object.
+    '''
 
     identities = None
     def __init__(self, idx, shuffle_class=None):
