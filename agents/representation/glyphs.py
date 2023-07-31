@@ -788,40 +788,48 @@ class IdentityLike(abc.ABC):
     def stacked_name_to_singular(cls, stacked_name):
         return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
-    @classmethod
-    def get_identity(cls, idx, shuffle_class=None, do_create=True):
-        if cls.identities is None:
-            cls.identities = {}
-        idx = pd.Int64Index(idx).copy().sort_values()
-        idx_bytes = np.array(idx).tobytes()
+class AmbiguousIdentity(IdentityLike):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        super().__init__()
+        self.possible_numerals = possible_numerals
+        self.possible_identities = [global_identity_map.identity_by_numeral[n] for n in self.possible_numerals]
 
-        identity = cls.identities.get(idx_bytes, None)
+    def weight(self):
+        return max([self.possible_identities.weight()])
 
-        if identity is not None: return identity
-        if do_create:
-            identity = cls(idx, shuffle_class=shuffle_class)
-            cls.identities[idx_bytes] = identity
-            return identity
+    def name(self):
         return None
 
-    @classmethod
-    def log_identity(cls, identity, idx):
+    def japanese_name(self):
+        return None
+
+    def is_identified(self):
+        # returning False is one opinion ("we don't know exactly what this is")
+        # return .all() of underlying ids is another opinion ("if we were holding this, we would know what it is")
+        return False
+
+    def could_be(self, names):
+        return np.array([self.possible_identities.could_be(names)]).any()
+
+    def find_values(self, column, dropna=False):
+        return np.unique([self.possible_identities.find_values(column, dropna=dropna)])
+
+    def give_name(self, name):
         if environment.env.debug: import pdb; pdb.set_trace()
-        idx = pd.Int64Index(idx).sort_values()
-        idx_bytes = np.array(idx).tobytes()
-        cls.identities[idx_bytes] = identity
+        return None
 
+    def apply_filter(self, name):
+        if environment.env.debug: import pdb; pdb.set_trace()
+        return None
 
-#class AmbiguousIdentity(IdentityLike):
-
-class ObjectIdentity(IdentityLike):
+class NumeralIdentity(IdentityLike):
     '''
     Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
 
     Listens to messages to gain knowledge about the identity of the object.
     '''
 
-    identities = None
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
     def __init__(self, idx, shuffle_class=None):
         self.idx = pd.Int64Index(idx).copy()
         self.listened_actions = {}
@@ -835,27 +843,15 @@ class ObjectIdentity(IdentityLike):
         self.shuffle_class_idx = shuffle_class
         self.is_shuffled = shuffle_class is not None
 
-    @classmethod
-    def identity_from_name(cls, name):
-        # make/find identity that represents the information you know from seeing the object
-        matches_name = (cls.data.NAME == name)
-        idx = matches_name.index[matches_name]
-
-        return cls.get_identity(idx)
-
     def give_name(self, name):
         matches_name = self.data.loc[self.idx].NAME == name
         new_idx = matches_name.index[matches_name]
-        existing_identity = self.get_identity(new_idx, do_create=False)
-        if environment.env.debug and existing_identity is not None:
-            import pdb; pdb.set_trace()
         if len(new_idx) == 0:
             if environment.env.debug: import pdb; pdb.set_trace()
             print("FAILED DEDUCTION: giving name and overriding inferences")
             hard_name_match = (self.data.NAME == name)
             new_idx = hard_name_match.index[hard_name_match]
         self.idx = new_idx
-        self.log_identity(self, new_idx)
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
     def is_identified(self):
@@ -876,9 +872,9 @@ class ObjectIdentity(IdentityLike):
 
     def apply_filter(self, new_idx):
         #if environment.env.debug: import pdb; pdb.set_trace()
-        existing_identity = self.get_identity(new_idx, do_create=False)
-        if environment.env.debug and existing_identity is not None:
-            import pdb; pdb.set_trace()
+        #existing_identity = self.get_identity(new_idx, do_create=False)
+        #if environment.env.debug and existing_identity is not None:
+        #    import pdb; pdb.set_trace()
         self.idx = new_idx
         self.log_identity(self, new_idx)
 
@@ -905,7 +901,7 @@ class ObjectIdentity(IdentityLike):
             if environment.env.debug: print("hit uncertain cache")
             return cached_values
 
-        if environment.env.debug: print(self, "missed caches", self.idx, column)
+        #if environment.env.debug: print(self, "missed caches", self.idx, column)
         if len(self.idx) == 1:
             #import pdb; pdb.set_trace()
             pass
@@ -947,7 +943,6 @@ class ObjectIdentity(IdentityLike):
         else:
             return None
 
-    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
     def desirable_identity(self, character):
         if self.is_identified():
             return preferences.IdentityDesirability(self.find_values('IDENTITY_DESIRABILITY'))
@@ -967,16 +962,20 @@ class ObjectIdentity(IdentityLike):
         if self.is_identified():
             print(f"Identified by price id! name={self.name()}")
 
-
-class ScrollIdentity(ObjectIdentity):
+### Scrolls
+class ScrollLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ScrollGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    bad_scrolls_any_buc = ['destroy armor', 'amensia']
+    bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
+
+class AmbiguousScrollIdentity(AmbiguousIdentity, ScrollLike):
+    pass
+
+class ScrollIdentity(ScrollLike, NumeralIdentity):
     def __init__(self, idx, shuffle_class=None):
         super().__init__(idx, shuffle_class=shuffle_class)
         self.listened_actions = {}
-
-    bad_scrolls_any_buc = ['destroy armor', 'amensia']
-    bad_scrolls_worse_than_blessed = ['punishment', 'fire', 'stinking cloud']
 
     def process_message(self, message_obj, action):
         #import pdb; pdb.set_trace()
@@ -987,26 +986,69 @@ class ScrollIdentity(ObjectIdentity):
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
 
-class SpellbookIdentity(ObjectIdentity):
+### Spellbooks
+class SpellbookLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[SpellbookGlyph]
 
-class RingIdentity(ObjectIdentity):
-    data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+class AmbiguousSpellbookIdentity(SpellbookLike, AmbiguousIdentity):
+    pass
 
-class AmuletIdentity(ObjectIdentity):
+class SpellbookIdentity(SpellbookLike, NumeralIdentity):
+    pass
+
+### Rings
+class RingLike():
+    data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all    
+
+class AmbiguousRingIdentity(RingLike, AmbiguousIdentity):
+    pass
+class RingIdentity(RingLike, NumeralIdentity):
+    pass
+
+### Amulets
+class AmuletLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
-class PotionIdentity(ObjectIdentity):
+class AmbiguousAmuletIdentity(AmuletLike, AmbiguousIdentity):
+    pass
+class AmuletIdentity(AmuletLike, NumeralIdentity):
+    pass
+
+### Potions
+class PotionLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[PotionGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_none
 
-class FoodIdentity(ObjectIdentity):
+class AmbiguousPotionIdentity(PotionLike, AmbiguousIdentity):
+    pass
+class PotionIdentity(PotionLike, NumeralIdentity):
+    pass
+
+### Food
+class FoodLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[FoodGlyph]
 
+    def __init__(self, nutrition, taming_food_type) -> None:
+        self.nutrition = nutrition
+        self.taming_food_type = taming_food_type
+
+class AmbiguousFoodIdentity(FoodLike, AmbiguousIdentity):
+    def safe_non_perishable(self, character):
+        return np.array([self.possible_identities.safe_non_perishable(character)]).all()
+    
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
+        
+        taming_type = np.unique(np.array([p.taming_type for p in self.possible_identities]))
+        nutrition = min([p.nutrition for p in self.possible_identities.nutrition])
+
+        FoodLike.__init__(self, nutrition, taming_type)
+
+class FoodIdentity(FoodLike, NumeralIdentity):
     def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
+        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
         try:
             self.nutrition = int(self.find_values('NUTRITION'))
         except Exception:
@@ -1025,55 +1067,89 @@ class FoodIdentity(ObjectIdentity):
 
         return True
 
-class ToolIdentity(ObjectIdentity):
+### Tools
+class ToolLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
 
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-
-        self.type = self.find_values('TYPE')
+    def __init__(self, type) -> None:
         self.ranged = False
         self.thrown = False
+        self.type = type
 
-class GemIdentity(ObjectIdentity):
-    data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity, ):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
+        ToolLike.__init__(self, self.find_values('TYPE'))
 
+class ToolIdentity(ToolLike, NumeralIdentity):
     def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.thrown = False
-        self.ammo_type = None
-        self.is_ammo = False
-        if not self.name() == 'luckstone' and not self.name() == 'loadstone':
-            self.is_ammo = True
-            self.ammo_type = "flint stone"
+        NumeralIdentity.__init__(self, idx, shuffle_class)
+        ToolLike.__init__(self, self.find_values('TYPE'))
 
-class RockIdentity(ObjectIdentity):
+### Gems
+class GemLike():
+    data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
+    def __init__(self, is_ammo, ammo_type) -> None:
+        self.thrown = False
+        self.is_ammo = is_ammo
+        self.ammo_type = ammo_type
+
+class AmbiguousGemIdentity(GemLike, AmbiguousIdentity):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
+        is_ammo = False
+        ammo_type = None
+        if not self.could_be(['luckstone', 'loadstone']):
+            is_ammo = True
+            ammo_type = "flint stone"
+
+        GemLike.__init__(self, is_ammo, ammo_type)
+
+class GemIdentity(GemLike, NumeralIdentity):
+    def __init__(self, idx, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+
+        is_ammo = False
+        ammo_type = None
+        if not self.name() == 'luckstone' and not self.name() == 'loadstone':
+            is_ammo = True
+            ammo_type = "flint stone"
+
+        GemLike.__init__(self, is_ammo, ammo_type)
+
+### Rocks
+class RockLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[RockGlyph]
 
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
+    def __init__(self):
         self.thrown = False
         self.is_ammo = True
         self.ammo_type = "flint stone"
 
-class CoinIdentity(ObjectIdentity):
+class RockIdentity(RockLike, NumeralIdentity):
+    def __init__(self, idx, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, shuffle_class)
+        RockLike.__init__(self)
+
+class CoinIdentity(NumeralIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[CoinGlyph]
 
-class BallIdentity(ObjectIdentity):
+class BallIdentity(NumeralIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[BallGlyph]
 
-class ChainIdentity(ObjectIdentity):
+class ChainIdentity(NumeralIdentity):
     data = OBJECT_SPOILERS.object_spoilers_by_class[ChainGlyph]
 
-class WandIdentity(ObjectIdentity):
+### Wands
+class WandLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[WandGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
+class AmbiguousWandIdentity(WandLike, AmbiguousIdentity):
+    def is_attack(self):
+        return np.array([p.is_attack for p in self.possible_identities]).all()
 
-        #self.direction = self.find_values('DIRECTION', dropna=True)
-
+class WandIdentity(WandLike, NumeralIdentity):
     def is_attack(self):
         is_attack = self.find_values('ATTACK')
         if isinstance(is_attack, np.ndarray):
@@ -1099,18 +1175,14 @@ class WandIdentity(ObjectIdentity):
             #print(message_matches)
             if message_matches.any():
                 self.apply_filter(message_matches.index[message_matches])
-
-class ArmorIdentity(ObjectIdentity):
+    
+### Armor
+class ArmorLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
 
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        try:
-            self.slot = self.find_values('SLOT')
-        except AttributeError:
-            if environment.env.debug: pdb.set_trace()
-            pass
+    def __init__(self, slot):
+        self.slot = slot
 
     def tier(self):
         tier = self.find_values('TIER')
@@ -1141,12 +1213,23 @@ class ArmorIdentity(ObjectIdentity):
     def converted_wear_value(self):
         return self.find_values('CONVERTED_WEAR_VALUE')
 
-class WeaponIdentity(ObjectIdentity):
+class AmbiguousArmorIdentity(ArmorLike, AmbiguousIdentity):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        AmbiguousIdentity.__init__(global_identity_map, possible_numerals)
+        slot = self.find_values('SLOT')
+        ArmorLike.__init__(self, slot)
+
+class ArmorIdentity(ArmorLike, NumeralIdentity):
+    def __init__(self, idx, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        slot = self.find_values('SLOT')
+        ArmorLike.__init__(self, slot)
+
+### Weapons
+class WeaponLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[WeaponGlyph]
 
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-
+    def __init__(self):
         self.stackable = self.is_identified() and not pd.isna(self.find_values('STACKED_NAME'))
 
         self.slot = self.find_values('SLOT')
@@ -1176,6 +1259,16 @@ class WeaponIdentity(ObjectIdentity):
         # TK know about monster size
         return (self.find_values('SAVG') + self.find_values('LAVG'))/2
 
+class AmbiguousWeaponIdentity(WeaponLike, AmbiguousIdentity):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
+        WeaponLike.__init__(self)
+
+class WeaponIdentity(WeaponLike, NumeralIdentity):
+    def __init__(self, idx, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, shuffle_class)
+        WeaponLike.__init__(self)
+
     def process_message(self, message_obj, action):
         if action == nethack.actions.Command.THROW or nethack.actions.Command.FIRE:
             if "slips as you throw it" in message_obj.message or "misfires" in message_obj.message:
@@ -1200,6 +1293,7 @@ class BareHandsIdentity(WeaponIdentity):
     def is_identified(self):
         return True
 
+### Artifacts
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
 
@@ -1268,6 +1362,20 @@ class GlobalIdentityMap():
         ChainGlyph: ChainIdentity,
     }
 
+    ambiguous_identity_by_glyph_class = {
+        ArmorGlyph: AmbiguousArmorIdentity,
+        WandGlyph: AmbiguousWandIdentity,
+        WeaponGlyph: AmbiguousWeaponIdentity,
+        FoodGlyph: AmbiguousFoodIdentity,
+        AmuletGlyph: AmbiguousAmuletIdentity,
+        RingGlyph: AmbiguousRingIdentity,
+        GemGlyph: AmbiguousGemIdentity,
+        PotionGlyph: AmbiguousPotionIdentity,
+        ToolGlyph: AmbiguousToolIdentity,
+        SpellbookGlyph: AmbiguousSpellbookIdentity,
+        ScrollGlyph: AmbiguousScrollIdentity,
+    }
+
     artifact_identity_by_type = {
         "Weapon": (WeaponGlyph, ArtifactWeaponIdentity),
         "Tool": (ToolGlyph, ArtifactToolIdentity),
@@ -1275,6 +1383,14 @@ class GlobalIdentityMap():
         "Armor": (ArmorGlyph, ArtifactArmorIdentity),
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
+
+    def identity_from_name(self, glyph_class, name):
+        # make/find identity that represents the information you know from seeing the object
+        ambiguous_class = self.ambiguous_identity_by_glyph_class[glyph_class]
+        matches_name = (ambiguous_class.data.NAME == name)
+        possible_glyphs = np.unique(matches_name.index[matches_name])
+
+        return ambiguous_class(possible_glyphs)
 
     def buc_from_string(self, buc_string):
         if self.is_priest:
@@ -1340,12 +1456,13 @@ class GlobalIdentityMap():
 
         for numeral in ObjectGlyph.numerals():
             glyph = GLYPH_NUMERAL_LOOKUP[numeral]
-            identity_class = self.identity_by_glyph_class.get(type(glyph), ObjectIdentity)
+            identity_class = self.identity_by_glyph_class.get(type(glyph), NumeralIdentity)
             self.make_identity(numeral, glyph, identity_class)
 
         special_corpses = [1299, 1466]
         for corpse_numeral in special_corpses:
-            glyph = GLYPH_NUMERAL_LOOKUP[numeral]
+            #import pdb; pdb.set_trace()
+            glyph = GLYPH_NUMERAL_LOOKUP[corpse_numeral]
             identity_class = FoodIdentity
             self.make_identity(corpse_numeral, glyph, identity_class)
 
@@ -1374,10 +1491,11 @@ class GlobalIdentityMap():
                 idx = same_shuffle_class.index[same_shuffle_class]
                 shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
 
-            identity = identity_class.get_identity(idx, shuffle_class=shuffle_class_idx)
+            identity = identity_class(idx, shuffle_class=shuffle_class_idx)
 
         self.identity_by_numeral[numeral] = identity
 
+        ''' Ill-advised attempt to do frequency tracking! We only make each identity once
         try:
             self.appearance_counts[(type(glyph), glyph.appearance)] += 1
             # class + appearance no longer uniquely identifies but we can add to the list
@@ -1385,15 +1503,20 @@ class GlobalIdentityMap():
         except KeyError:
             self.appearance_counts[(type(glyph), glyph.appearance)] = 1
             self.glyph_by_appearance[(type(glyph), glyph.appearance)] = [glyph] 
+        '''
 
         name = identity.name() if identity else None
         japanese_name = identity.japanese_name() if identity else None
 
+        glyph_type = type(glyph)
+        if glyph_type == CorpseGlyph:
+            glyph_type = FoodGlyph
+        #print(glyph_type)
         if name is not None:
-            self.identity_by_name[(type(glyph), name)] = identity
+            self.identity_by_name[(glyph_type, name)] = identity
 
         if japanese_name is not None:
-            self.identity_by_japanese_name[(type(glyph), japanese_name)] = identity
+            self.identity_by_japanese_name[(glyph_type, japanese_name)] = identity
 
     def associate_identity_and_name(self, identity, name):
         self.identity_by_name[name] = identity
