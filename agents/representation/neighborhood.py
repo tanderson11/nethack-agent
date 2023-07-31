@@ -65,7 +65,7 @@ class FailedMoveRecords():
     def garbage_collect(self, time):
         new_dict = defaultdict(list)
         for k, v in self.failed_moves.items():
-            still_good = [move for move in v if move.time > (time - 10)]
+            still_good = [move for move in v if move.time > (time - 30)]
             if still_good:
                 new_dict[k] = still_good
 
