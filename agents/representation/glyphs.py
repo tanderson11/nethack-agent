@@ -1,4 +1,5 @@
 import abc
+import functools
 import os
 import pdb
 from typing import NamedTuple
@@ -757,7 +758,17 @@ class ObjectSpoilers():
 
 OBJECT_SPOILERS = ObjectSpoilers()
 
-class IdentityLike(abc.ABC):
+class IdentityLike():
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
+
+    def __init__(self, idx) -> None:
+        self.idx = idx.copy()
+        self.listened_actions = {}
+        self.listened_price_id_methods = {}
+        # whenever we find values, if it's unique, we store it in this dictionary
+        # and don't have to touch the database repeatedly
+        self.is_artifact = False
+
     @classmethod
     def appearances(cls):
         return cls.data.APPEARANCE
@@ -788,71 +799,28 @@ class IdentityLike(abc.ABC):
     def stacked_name_to_singular(cls, stacked_name):
         return cls.data[cls.data.STACKED_NAME == stacked_name]['NAME'].iloc[0]
 
-class AmbiguousIdentity(IdentityLike):
-    def __init__(self, global_identity_map, possible_numerals) -> None:
-        super().__init__()
-        self.possible_numerals = possible_numerals
-        self.possible_identities = [global_identity_map.identity_by_numeral[n] for n in self.possible_numerals]
+    @classmethod
+    @functools.cache
+    def _find_values_from_idx_bytes(cls, column, idx_bytes, idx_shape, dtype, dropna=False, false_if_na=False):
+        idx = np.frombuffer(idx_bytes, dtype=dtype).reshape(idx_shape)
+        if dropna:
+            unique = np.unique(cls.data.loc[idx][column].dropna()) # the filtered dataframe values
+        else:
+            unique = np.unique(cls.data.loc[idx][column]) # the filtered dataframe values
 
-    def weight(self):
-        return max([self.possible_identities.weight()])
+        if len(unique) == 1:
+            if false_if_na and pd.isna(unique[0]):
+                unique[0] = False
+            return unique[0] # policy: if we find only one value, just return it
+        return unique
 
-    def name(self):
-        return None
-
-    def japanese_name(self):
-        return None
-
-    def is_identified(self):
-        # returning False is one opinion ("we don't know exactly what this is")
-        # return .all() of underlying ids is another opinion ("if we were holding this, we would know what it is")
-        return False
-
-    def could_be(self, names):
-        return np.array([self.possible_identities.could_be(names)]).any()
-
-    def find_values(self, column, dropna=False):
-        return np.unique([self.possible_identities.find_values(column, dropna=dropna)])
-
-    def give_name(self, name):
-        if environment.env.debug: import pdb; pdb.set_trace()
-        return None
-
-    def apply_filter(self, name):
-        if environment.env.debug: import pdb; pdb.set_trace()
-        return None
-
-class NumeralIdentity(IdentityLike):
-    '''
-    Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
-
-    Listens to messages to gain knowledge about the identity of the object.
-    '''
-
-    desirability_if_unidentified = preferences.IdentityDesirability.desire_none
-    def __init__(self, idx, shuffle_class=None):
-        self.idx = pd.Int64Index(idx).copy()
-        self.listened_actions = {}
-        self.listened_price_id_methods = {}
-        # whenever we find values, if it's unique, we store it in this dictionary
-        # and don't have to touch the database repeatedly
-        self.unique_values = {}
-        self.uncertain_value_cache = {}
-        self.is_artifact = False
-
-        self.shuffle_class_idx = shuffle_class
-        self.is_shuffled = shuffle_class is not None
-
-    def give_name(self, name):
-        matches_name = self.data.loc[self.idx].NAME == name
-        new_idx = matches_name.index[matches_name]
-        if len(new_idx) == 0:
-            if environment.env.debug: import pdb; pdb.set_trace()
-            print("FAILED DEDUCTION: giving name and overriding inferences")
-            hard_name_match = (self.data.NAME == name)
-            new_idx = hard_name_match.index[hard_name_match]
-        self.idx = new_idx
-        if environment.env.debug and self.name() != name: pdb.set_trace()
+    @classmethod
+    def _find_values(cls, column, data_idx, dropna=False, false_if_na=False):
+        # convert idx to something immutable for caching
+        idx_bytes = np.array(data_idx.sort_values()).tobytes()
+        shape = data_idx.shape
+        dtype = data_idx.dtype
+        return cls._find_values_from_idx_bytes(column, idx_bytes, shape, dtype, dropna, false_if_na)
 
     def is_identified(self):
         return len(self.idx) == 1
@@ -866,58 +834,6 @@ class NumeralIdentity(IdentityLike):
                 return True
 
         return False
-
-    def process_message(self, message_obj, action):
-        pass
-
-    def apply_filter(self, new_idx):
-        #if environment.env.debug: import pdb; pdb.set_trace()
-        #existing_identity = self.get_identity(new_idx, do_create=False)
-        #if environment.env.debug and existing_identity is not None:
-        #    import pdb; pdb.set_trace()
-        self.idx = new_idx
-        self.log_identity(self, new_idx)
-
-    def find_values(self, column, dropna=False, false_if_na=False):
-        # our cache that never stales: if we have a unique value, we know it will never change
-        singular_value = self.unique_values.get(column)
-        if singular_value is not None:
-            return singular_value
-
-        # but even if we have a range of values, those are locked unless our idx changes
-        # TK except possibly in non local circumstances where we do process of elmination,
-        # in which case we can work around by introducing a global integer to the key
-        # that we increase whenever we learn something about items in the class
-        idx_bytes = np.array(self.idx.sort_values()).tobytes()
-        cached_values = self.uncertain_value_cache.get((column, idx_bytes), None)
-
-        if cached_values is not None:
-            # don't have to care about dropna, as everything stored in cached values has been hit by an np.unique, which clears NAs
-            # dropna only to prevent error on np.unique if we get all nas
-            if len(cached_values) == 1:
-                if false_if_na and pd.isna(cached_values[0]):
-                    return False
-                return cached_values[0] # policy: one value: just return it
-            if environment.env.debug: print("hit uncertain cache")
-            return cached_values
-
-        #if environment.env.debug: print(self, "missed caches", self.idx, column)
-        if len(self.idx) == 1:
-            #import pdb; pdb.set_trace()
-            pass
-        # we failed to hit either cache, we have to filter the df ourselves
-        if dropna:
-            unique = np.unique(self.data.loc[self.idx][column].dropna()) # the filtered dataframe values
-        else:
-            unique = np.unique(self.data.loc[self.idx][column]) # the filtered dataframe values
-
-        if len(unique) == 1:
-            if false_if_na and pd.isna(unique[0]):
-                unique[0] = False
-            self.unique_values[column] = unique[0]
-            return unique[0] # policy: if we find only one value, just return it
-        self.uncertain_value_cache[(column, idx_bytes)] = unique
-        return unique
 
     def weight(self):
         return self.find_values('WEIGHT').max()
@@ -949,6 +865,23 @@ class NumeralIdentity(IdentityLike):
 
         return self.desirability_if_unidentified
 
+    def give_name(self, name):
+        matches_name = self.data.loc[self.idx].NAME == name
+        new_idx = matches_name.index[matches_name]
+        if len(new_idx) == 0:
+            if environment.env.debug: import pdb; pdb.set_trace()
+            print("FAILED DEDUCTION: giving name and overriding inferences")
+            hard_name_match = (self.data.NAME == name)
+            new_idx = hard_name_match.index[hard_name_match]
+        self.idx = new_idx
+        if environment.env.debug and self.name() != name: pdb.set_trace()
+
+    def find_values(self, column, dropna=False, false_if_na=False):
+        return self._find_values(column, self.idx, dropna, false_if_na)
+
+    def apply_filter(self, new_idx):
+        self.idx = new_idx
+
     def restrict_by_base_prices(self, base_prices, method='buy'):
         self.listened_price_id_methods[method] = True
 
@@ -961,6 +894,53 @@ class NumeralIdentity(IdentityLike):
         
         if self.is_identified():
             print(f"Identified by price id! name={self.name()}")
+    
+    def process_message(self, message_obj, action):
+        pass
+
+class AmbiguousIdentity(IdentityLike):
+    def __init__(self, global_identity_map, possible_numerals) -> None:
+        self.possible_numerals = possible_numerals
+        self.possible_identities = [global_identity_map.identity_by_numeral[n] for n in self.possible_numerals]
+        idx = functools.reduce(pd.Index.union, [p.idx for p in self.possible_identities])
+
+        super().__init__(idx)
+
+    def give_name(self, name):
+        # Should do something around reducing possible glyphs it could be?
+        # doesn't really matter that much as these shouldn't be very persistent
+        #import pdb; pdb.set_trace()
+        if environment.env.debug: import pdb; pdb.set_trace()
+
+        return super().give_name(name)
+        return None
+
+    def apply_filter(self, new_idx):
+        import pdb; pdb.set_trace()
+        if environment.env.debug: import pdb; pdb.set_trace()
+
+        return super().apply_filter(new_idx)
+        return None
+
+    def restrict_by_base_prices(self, base_prices, method='buy'):
+        import pdb; pdb.set_trace()
+        if environment.env.debug: import pdb; pdb.set_trace()
+
+        return super().restrict_by_base_prices(base_prices, method)
+        return None
+
+class NumeralIdentity(IdentityLike):
+    '''
+    Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
+
+    Listens to messages to gain knowledge about the identity of the object.
+    '''
+    def __init__(self, idx, shuffle_class=None):
+        idx = pd.Int64Index(idx).copy()
+        super().__init__(idx)
+
+        self.shuffle_class_idx = shuffle_class
+        self.is_shuffled = shuffle_class is not None
 
 ### Scrolls
 class ScrollLike():
@@ -1215,7 +1195,7 @@ class ArmorLike():
 
 class AmbiguousArmorIdentity(ArmorLike, AmbiguousIdentity):
     def __init__(self, global_identity_map, possible_numerals) -> None:
-        AmbiguousIdentity.__init__(global_identity_map, possible_numerals)
+        AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
         slot = self.find_values('SLOT')
         ArmorLike.__init__(self, slot)
 
@@ -1384,13 +1364,25 @@ class GlobalIdentityMap():
         "Gem": (GemGlyph, ArtifactGemIdentity),
     }
 
-    def identity_from_name(self, glyph_class, name):
-        # make/find identity that represents the information you know from seeing the object
+    def make_ambiguous_identity_with_name(self, glyph_class, name):
         ambiguous_class = self.ambiguous_identity_by_glyph_class[glyph_class]
-        matches_name = (ambiguous_class.data.NAME == name)
-        possible_glyphs = np.unique(matches_name.index[matches_name])
+        data = ambiguous_class.data
+        matches_name = (data.NAME == name)
+        data_entry_matches = np.unique(matches_name.index[matches_name])
+        possible_glyphs = data_entry_matches
 
-        return ambiguous_class(possible_glyphs)
+        if data[matches_name].SHUFFLED.any():
+            same_shuffle_class = data['SHUFFLE_CLASS'] == data.loc[data_entry_matches[0]]['SHUFFLE_CLASS']
+            shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
+            possible_glyphs = np.unique(shuffle_class_idx)
+        else:
+            print("WARNING: A named identity should never be ambiguous if it's not shuffled")
+            if environment.env.debug: assert False
+
+        #print(name, possible_glyphs)
+        ambiguous_id = ambiguous_class(self, possible_glyphs)
+        ambiguous_id.give_name(name)
+        return ambiguous_id
 
     def buc_from_string(self, buc_string):
         if self.is_priest:

@@ -882,8 +882,11 @@ class ItemParser():
                         glyph_for_name = global_identity_map.identity_by_name[(glyph_class, name)].idx
                         possible_glyphs.extend(glyph_for_name)
                     except KeyError:
-                        import pdb; pdb.set_trace()
-                        identity = global_identity_map.identity_from_name(glyph_class, name)
+                        # In this exceedingly rare scenario, we are seeing an identified item (has its name)
+                        # but we've never held it, so we don't know its numeral
+                        # and its numeral can't be deduced by its name (it's shuffled)
+                        #import pdb; pdb.set_trace()
+                        identity = global_identity_map.make_ambiguous_identity_with_name(glyph_class, name)
                         break
 
 
@@ -904,7 +907,7 @@ class ItemParser():
                     identity = global_identity_map.identity_by_numeral[glyph_numeral]
                 else:
                     ambiguous_identity_class = gd.GlobalIdentityMap.ambiguous_identity_by_glyph_class[glyph_class]
-                    identity = ambiguous_identity_class(possible_glyphs)
+                    identity = ambiguous_identity_class(global_identity_map, possible_glyphs)
 
             return item_class(identity, match_components, inventory_letter=inventory_letter, seen_as=seen_as)
         elif len(possible_glyphs) == 0:
