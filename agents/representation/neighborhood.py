@@ -50,22 +50,29 @@ class CurrentSquare:
     special_facts: list = None
     elbereth: ElberethEngraving = None
 
+class FailType(enum.IntEnum):
+    other = 0
+    boulder = 1
+
 class FailedMove(NamedTuple):
     move: enum.IntEnum
     time: int
+    fail_type: FailType
 
 class FailedMoveRecords():
-    def __init__(self):
+    def __init__(self, expiry=30):
         # dictionary that takes location -> failed
         self.failed_moves = defaultdict(list)
+        self.expiry=expiry
 
-    def add_failed_move(self, location, time, move):
-        self.failed_moves[location].append(FailedMove(move, time))
+    def add_failed_move(self, location, time, move, was_boulder=False):
+        fail_type = FailType.boulder if was_boulder else FailType.other
+        self.failed_moves[location].append(FailedMove(move, time, fail_type))
 
     def garbage_collect(self, time):
         new_dict = defaultdict(list)
         for k, v in self.failed_moves.items():
-            still_good = [move for move in v if move.time > (time - 30)]
+            still_good = [move for move in v if move.time > (time - self.expiry)]
             if still_good:
                 new_dict[k] = still_good
 
@@ -249,14 +256,27 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.local_prudent_walkable &= ~(self.diagonal_moves)
 
         failed_moves_on_square = failed_move_record.failed_moves[current_square.location]
+        #import pdb; pdb.set_trace()
         #if len(failed_moves_on_square) > 0:
         #    import pdb; pdb.set_trace()
+        failed_seems_stale = []
         for f in failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f.move)
+
+            # if the square is no longer occupied by a boulder, infer we can make the move again
+            stale = False
+            if f.fail_type == FailType.boulder:
+                stale = not self.extended_boulders[neighborhood_view][failed_target]
+            failed_seems_stale.append(stale)
+
+            if stale:
+                continue
             try:
                 self.local_prudent_walkable[failed_target] = False
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
+
+        failed_move_record.failed_moves[current_square.location] = [f for f,s in zip(failed_moves_on_square,failed_seems_stale) if not s]
 
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###

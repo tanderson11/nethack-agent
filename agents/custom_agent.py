@@ -677,10 +677,11 @@ class RunState():
                 pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
+            boulder_fail = (message.feedback.boulder_in_vain_message or message.feedback.boulder_blocked_message)
             if message.feedback.carrying_too_much_message:
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
-                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action)
+                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action, boulder_fail)
                 #self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
