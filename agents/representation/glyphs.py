@@ -762,7 +762,7 @@ class IdentityLike():
     desirability_if_unidentified = preferences.IdentityDesirability.desire_none
 
     def __init__(self, idx) -> None:
-        self.idx = idx.copy()
+        self.idx = idx.copy().sort_values()
         self.listened_actions = {}
         self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
@@ -817,7 +817,8 @@ class IdentityLike():
     @classmethod
     def _find_values(cls, column, data_idx, dropna=False, false_if_na=False):
         # convert idx to something immutable for caching
-        idx_bytes = np.array(data_idx.sort_values()).tobytes()
+        #if len(data_idx) > 1: print(len(data_idx))
+        idx_bytes = np.array(data_idx).tobytes()
         shape = data_idx.shape
         dtype = data_idx.dtype
         return cls._find_values_from_idx_bytes(column, idx_bytes, shape, dtype, dropna, false_if_na)
@@ -873,14 +874,14 @@ class IdentityLike():
             print("FAILED DEDUCTION: giving name and overriding inferences")
             hard_name_match = (self.data.NAME == name)
             new_idx = hard_name_match.index[hard_name_match]
-        self.idx = new_idx
+        self.idx = new_idx.sort_values()
         if environment.env.debug and self.name() != name: pdb.set_trace()
 
     def find_values(self, column, dropna=False, false_if_na=False):
         return self._find_values(column, self.idx, dropna, false_if_na)
 
     def apply_filter(self, new_idx):
-        self.idx = new_idx
+        self.idx = new_idx.sort_values()
 
     def restrict_by_base_prices(self, base_prices, method='buy'):
         self.listened_price_id_methods[method] = True
