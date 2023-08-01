@@ -188,6 +188,16 @@ class TestItemParsing(unittest.TestCase):
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
             self.assertEqual(item.identity.name(), values.name_in_inventory)
 
+    def test_recognize_from_string_after_numeral(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        glyph_input = self.ItemTestInputs(2031, "a blessed +2 cloak of magic resistance")
+
+        # hopefully teaching us that 2032 is a cloak of magic resistance
+        inv.ItemParser.make_item_with_glyph(global_identity_map, glyph_input.numeral, glyph_input.item_str)
+        item = inv.ItemParser.make_item_with_string(global_identity_map, glyph_input.item_str)
+        self.assertEqual(item.identity.name(), "cloak of magic resistance")
+        self.assertTrue(not isinstance(item, gd.AmbiguousIdentity))
+
     def test_recognition_with_numeral(self):
         #return
         for inputs, values in self.test_values.items():
