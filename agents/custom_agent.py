@@ -544,8 +544,8 @@ class RunState():
         )
         self.video_deque.append(frame)
 
-        if self.time == 100:
-            self.make_issue('time=100', 'time')
+        #if self.time == 100:
+        #    self.make_issue('time=100', 'time')
 
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
@@ -621,7 +621,7 @@ class RunState():
             f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
             '-d', description
         ]
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         subprocess.run(command)
 
     def render_video(self, path='video_logs/'):
