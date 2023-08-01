@@ -5,6 +5,7 @@ import copy
 from dataclasses import astuple
 import os
 import re
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -425,6 +426,7 @@ class RunState():
 
         if environment.env.log_video:
             self.video_deque = collections.deque()
+            assert environment.env.log_runs
         else:
             self.video_deque = None
 
@@ -569,7 +571,44 @@ class RunState():
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
 
-    def render_video(self, path='video_logs/video_log.gif'):
+    def make_issue(self, title, label, attach_video=True):
+        import git
+        import pickle
+        save_path = os.path.join(self.log_root, 'issues', str(self.seed))
+        os.makedirs(save_path, exist_ok=True)
+
+        # dump information needed to replay the game
+        core_seed, disp_seed, _ = self.debug_env.get_seeds()
+        replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+        subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
+        with open((os.path.join(save_path), 'core_disp_seeds.pickle'), 'w') as f:
+            pickle.dump((core_seed, disp_seed), f)
+        with open((os.path.join(save_path), 'agent_seed.pickle'), 'w') as f:
+            pickle.dump(self.seed)
+
+        body = ""
+        if attach_video:
+            video_path = self.render_video(save_path)
+            last_sha = git.commit(video_path, push=True)
+            body = body + f"![image](https://github.com/{git.owner}/{git.repo}/raw/{last_sha}/{video_path})"
+
+        body += f'\n{self.seed}'
+        #body += f'\n{}' # env seeds
+
+        description = f'"title":"{title}","body":"{body}","labels":["{label}"]'
+        description = "'{" + description + "}'"
+        subprocess.run([
+            'curl', '-L', '-X', 'POST',
+            '-H', '"Accept: application/vnd.github+json"',
+            '-H', '"Authorization: Bearer <YOUR-TOKEN>"',
+            '-H', '"X-GitHub-Api-Version: 2022-11-28"',
+            f'https://api.github.com/repos/{git.owner}/{git.repo}/issues',
+            '-d', description
+        ])
+
+
+    def render_video(self, path='video_logs/'):
+        save_file = os.path.join(path, f"{self.seed}-{self.time}.gif")
         from PIL import ImageFont, Image, ImageDraw
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
@@ -580,9 +619,9 @@ class RunState():
             draw.text(origin, frame, font=font, fill='black')
             img_frames.append(img)
 
-        img_frames[0].save(path, format='GIF',
-               append_images=img_frames[1:], save_all=True, duration=60, loop=0)
-
+        img_frames[0].save(save_file, format='GIF',
+               append_images=img_frames[1:], save_all=True, duration=85, loop=0)
+        return save_file
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
