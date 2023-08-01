@@ -574,10 +574,10 @@ class RunState():
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
 
-    def make_issue(self, title, label, attach_video=True):
+    def make_issue(self, title, labels, attach_video=True):
         import nh_git
         import pickle
-        import shlex
+        import json
         core_seed, disp_seed, _ = self.debug_env.get_seeds()
         save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
         os.makedirs(save_path, exist_ok=True)
@@ -593,23 +593,34 @@ class RunState():
         body = ""
         if attach_video:
             video_path = self.render_video(save_path)
-            last_sha = nh_git.commit(video_path, push=True)
-            body = body + f'"![image](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})"'
+
+        last_sha = nh_git.commit(save_path, push=True)
+
+        if attach_video:
+            body = body + f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})'
 
         #body += f'\n{self.seed}'
         #body += f'\n{core_seed}, {disp_seed}'
+        body += f"""\ngit cherry-pick {last_sha}"""
 
-        description = f""""title":"{title}","body":"{body}","labels":["{label}"]"""
-        description = "{" + description + "}"
+        if isinstance(labels, str):
+            labels = [labels]
+
+        description = json.dumps({
+            'title':title,
+            'body':body,
+            'labels':labels
+        })
+
+        #description = f"""{{"title":"{title}", "body":"{body}", "labels":"[{label}]"}}"""
         command = [
             'curl', '-L', '-X', 'POST',
-            '-H', '"Accept: application/vnd.github+json"',
-            '-H', f'"Authorization: Bearer {nh_git.pat}"',
-            '-H', '"X-GitHub-Api-Version: 2022-11-28"',
+            '-H', 'Accept: application/vnd.github+json',
+            '-H', f'Authorization: Bearer {nh_git.pat}',
+            '-H', 'X-GitHub-Api-Version: 2022-11-28',
             f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
             '-d', description
         ]
-        command_str = "".join(map(lambda x: str(x)+' ', command))
         import pdb; pdb.set_trace()
         subprocess.run(command)
 
