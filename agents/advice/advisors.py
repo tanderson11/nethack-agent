@@ -264,7 +264,7 @@ class ActionAdvice(Advice):
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
     def __repr__(self):
-        return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action, self.from_advisor, self.new_menu_plan)
+        return "Advice: (action={};\n advisor={};\n menu_plan={}\n)".format(str(nethack.actions.ACTIONS[nethack.actions.ACTIONS.index(self.action)]), type(self.from_advisor), self.new_menu_plan)
 
     def __post_init__(self):
         utilities.ACTION_LOOKUP[self.action] # check that this exists

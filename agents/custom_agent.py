@@ -70,6 +70,22 @@ class BLStats():
     def __init__(self, raw):
         self.raw = raw
 
+    def __repr__(self) -> str:
+        hunger_states = {
+            0: 'satiated',
+            1: 'normal',
+            2: 'hungry',
+            3: 'weak',
+            4: 'fainting'
+        }
+
+        blind = self.check_condition(nethack.BL_MASK_BLIND)
+        stun  = self.check_condition(nethack.BL_MASK_STUN)
+        conf  = self.check_condition(nethack.BL_MASK_CONF)
+        hallu = self.check_condition(nethack.BL_MASK_HALLU)
+
+        return f"Time:{self.get('time')} HP:{self.get('hitpoints')}/{self.get('max_hitpoints')} EXP:{self.get('experience_level')} D:{self.get('dungeon_number')} DLevel:{self.get('level_number')} Hunger:{hunger_states[self.get('hunger_state')]}" + '\n' + f"Blind:{blind} Conf:{conf} Stun:{stun} Hallu:{hallu}"
+
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
 
@@ -515,10 +531,15 @@ class RunState():
     def save_frame(self, message):
         if len(self.video_deque) == 40:
             self.video_deque.popleft()
-        frame = message.message + '\n' + self.debug_env.render('ansi')
+        frame = (
+            message.message + '\n' +
+            self.debug_env.render('ansi') + '\n' +
+            str(self.blstats) + '\n' +
+            str(self.advice_log[-1]) if self.advice_log else None
+        )
         self.video_deque.append(frame)
 
-        #if self.time > 100:
+        #if self.time == 100:
         #    self.render_video()
 
     def update_observation(self, observation):
