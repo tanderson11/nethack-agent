@@ -4,7 +4,7 @@ owner = "tanderson11"
 repo  = "nethack-agent"
 
 with open('secrets/pat.txt', 'r') as f:
-    pat = f.readlines()
+    pat = f.readlines()[0]
 
 def get_git_revision_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode('ascii').strip()

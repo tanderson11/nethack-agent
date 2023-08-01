@@ -29,7 +29,7 @@ from utilities import ARS
 from agents.representation.character import Character
 import agents.representation.constants as constants
 import agents.representation.glyphs as gd
-import agents.representation.map as map
+import agents.representation.map as dmap
 from agents.representation.map import DMap, DCoord
 import environment
 from agents.wizmode.wizmodeprep import WizmodePrep
@@ -435,16 +435,18 @@ class RunState():
         self.replay_index = 0
         if self.debug_env:
             core_seed, disp_seed, _ = self.debug_env.get_seeds()
-            #import pdb; pdb.set_trace()
-            self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
-            if os.path.exists(self.replay_log_path):
-                #self.replay_log_path = replay_log_path
+            replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+            if os.path.exists(replay_log_path):
+                self.replay_log_path = replay_log_path
                 with open(self.replay_log_path, newline='') as csvfile:
                     reader = csv.DictReader(csvfile)
                     self.replay_log = [row for row in reader]
-            if self.replay_log:
-                self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
-            else:
+                    if self.replay_log:
+                        self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
+                    else:
+                        self.replay_run_number = 0
+            elif environment.env.make_replay:
+                self.replay_log_path = replay_log_path
                 self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
@@ -542,8 +544,8 @@ class RunState():
         )
         self.video_deque.append(frame)
 
-        #if self.time == 100:
-        #    self.render_video()
+        if self.time == 100:
+            self.make_issue('time=100', 'time')
 
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
@@ -575,7 +577,7 @@ class RunState():
     def make_issue(self, title, label, attach_video=True):
         import nh_git
         import pickle
-        #import pdb; pdb.set_trace()
+        import shlex
         core_seed, disp_seed, _ = self.debug_env.get_seeds()
         save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
         os.makedirs(save_path, exist_ok=True)
@@ -586,33 +588,33 @@ class RunState():
         with open((os.path.join(save_path, 'core_disp_seeds.pickle')), 'wb') as f:
             pickle.dump((core_seed, disp_seed), f)
         with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
-            pickle.dump(self.seed,f )
+            pickle.dump(self.seed, f)
 
         body = ""
         if attach_video:
             video_path = self.render_video(save_path)
-            import pdb; pdb.set_trace()
-
             last_sha = nh_git.commit(video_path, push=True)
-            body = body + f"![image](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{video_path})"
+            body = body + f'"![image](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})"'
 
-        body += f'\n{self.seed}'
-        #body += f'\n{}' # env seeds
+        #body += f'\n{self.seed}'
+        #body += f'\n{core_seed}, {disp_seed}'
 
-        description = f'"title":"{title}","body":"{body}","labels":["{label}"]'
-        description = "'{" + description + "}'"
-        subprocess.run([
+        description = f""""title":"{title}","body":"{body}","labels":["{label}"]"""
+        description = "{" + description + "}"
+        command = [
             'curl', '-L', '-X', 'POST',
             '-H', '"Accept: application/vnd.github+json"',
-            '-H', '"Authorization: Bearer <YOUR-TOKEN>"',
+            '-H', f'"Authorization: Bearer {nh_git.pat}"',
             '-H', '"X-GitHub-Api-Version: 2022-11-28"',
-            f'https://api.github.com/repos/{git.owner}/{git.repo}/issues',
+            f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
             '-d', description
-        ])
-
+        ]
+        command_str = "".join(map(lambda x: str(x)+' ', command))
+        import pdb; pdb.set_trace()
+        subprocess.run(command)
 
     def render_video(self, path='video_logs/'):
-        save_file = os.path.join(path, f"{self.seed}-{self.time}.gif")
+        save_file = os.path.join(path, f"{self.time}.gif")
         from PIL import ImageFont, Image, ImageDraw
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
@@ -1027,7 +1029,7 @@ class CustomAgent():
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
             run_state.last_level_change_timestamp = run_state.time
-            if dcoord.branch == map.Branches.Sokoban.value:
+            if dcoord.branch == dmap.Branches.Sokoban.value:
                 #import pdb; pdb.set_trace()
                 pass
             if len(run_state.message_log) > 1:
@@ -1037,9 +1039,9 @@ class CustomAgent():
                     print(run_state.message_log[-2])
                     # create the staircases (idempotent)
                     if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                        direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                        direction = (dmap.DirectionThroughDungeon.down, dmap.DirectionThroughDungeon.up)
                     elif "You climb" in run_state.message_log[-2]:
-                        direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+                        direction = (dmap.DirectionThroughDungeon.up, dmap.DirectionThroughDungeon.down)
 
                     if dcoord.branch != previous_square.dcoord.branch:
                         run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)
