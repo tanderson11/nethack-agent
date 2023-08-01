@@ -583,7 +583,7 @@ class RunState():
         os.makedirs(save_path, exist_ok=True)
 
         # dump information needed to replay the game
-        replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+        replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "tmp", f"{core_seed}-{disp_seed}.csv")
         subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
         with open((os.path.join(save_path, 'core_disp_seeds.pickle')), 'wb') as f:
             pickle.dump((core_seed, disp_seed), f)
