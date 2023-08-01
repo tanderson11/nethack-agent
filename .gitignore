@@ -149,6 +149,7 @@ nle_data/
 test_batched_env.py
 notebooks/*.ipynb
 parsed/
+seeded_runs/tmp
 
 # top level csvs
 /*.csv

@@ -446,7 +446,7 @@ class RunState():
                     else:
                         self.replay_run_number = 0
             elif environment.env.make_replay:
-                self.replay_log_path = replay_log_path
+                self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "tmp", f"{core_seed}-{disp_seed}.csv")
                 self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
@@ -601,7 +601,7 @@ class RunState():
 
         #body += f'\n{self.seed}'
         #body += f'\n{core_seed}, {disp_seed}'
-        body += f"""\ngit cherry-pick {last_sha}"""
+        body += f"""\n`git cherry-pick {last_sha}`"""
 
         if isinstance(labels, str):
             labels = [labels]
