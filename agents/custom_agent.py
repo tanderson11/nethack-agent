@@ -435,16 +435,17 @@ class RunState():
         self.replay_index = 0
         if self.debug_env:
             core_seed, disp_seed, _ = self.debug_env.get_seeds()
-            replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
-            if os.path.exists(replay_log_path):
-                self.replay_log_path = replay_log_path
+            #import pdb; pdb.set_trace()
+            self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
+            if os.path.exists(self.replay_log_path):
+                #self.replay_log_path = replay_log_path
                 with open(self.replay_log_path, newline='') as csvfile:
                     reader = csv.DictReader(csvfile)
                     self.replay_log = [row for row in reader]
-                    if self.replay_log:
-                        self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
-                    else:
-                        self.replay_run_number = 0
+            if self.replay_log:
+                self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
+            else:
+                self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
             if self.wizmode_prep:
@@ -572,25 +573,28 @@ class RunState():
         self.blstats = blstats
 
     def make_issue(self, title, label, attach_video=True):
-        import git
+        import nh_git
         import pickle
-        save_path = os.path.join(self.log_root, 'issues', str(self.seed))
+        #import pdb; pdb.set_trace()
+        core_seed, disp_seed, _ = self.debug_env.get_seeds()
+        save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
         os.makedirs(save_path, exist_ok=True)
 
         # dump information needed to replay the game
-        core_seed, disp_seed, _ = self.debug_env.get_seeds()
         replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
         subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
-        with open((os.path.join(save_path), 'core_disp_seeds.pickle'), 'w') as f:
+        with open((os.path.join(save_path, 'core_disp_seeds.pickle')), 'wb') as f:
             pickle.dump((core_seed, disp_seed), f)
-        with open((os.path.join(save_path), 'agent_seed.pickle'), 'w') as f:
-            pickle.dump(self.seed)
+        with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
+            pickle.dump(self.seed,f )
 
         body = ""
         if attach_video:
             video_path = self.render_video(save_path)
-            last_sha = git.commit(video_path, push=True)
-            body = body + f"![image](https://github.com/{git.owner}/{git.repo}/raw/{last_sha}/{video_path})"
+            import pdb; pdb.set_trace()
+
+            last_sha = nh_git.commit(video_path, push=True)
+            body = body + f"![image](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{video_path})"
 
         body += f'\n{self.seed}'
         #body += f'\n{}' # env seeds
