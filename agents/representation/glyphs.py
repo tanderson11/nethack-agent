@@ -934,7 +934,7 @@ class NumeralIdentity(IdentityLike):
     Listens to messages to gain knowledge about the identity of the object.
     '''
     def __init__(self, idx, shuffle_class=None):
-        idx = pd.Int64Index(idx).copy()
+        idx = pd.Index(idx, dtype=int).copy()
         super().__init__(idx)
 
         self.shuffle_class_idx = shuffle_class
