@@ -914,21 +914,18 @@ class AmbiguousIdentity(IdentityLike):
         if environment.env.debug: import pdb; pdb.set_trace()
 
         return super().give_name(name)
-        return None
 
     def apply_filter(self, new_idx):
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if environment.env.debug: import pdb; pdb.set_trace()
 
         return super().apply_filter(new_idx)
-        return None
 
     def restrict_by_base_prices(self, base_prices, method='buy'):
-        import pdb; pdb.set_trace()
+        #import pdb; pdb.set_trace()
         if environment.env.debug: import pdb; pdb.set_trace()
 
         return super().restrict_by_base_prices(base_prices, method)
-        return None
 
 class NumeralIdentity(IdentityLike):
     '''
