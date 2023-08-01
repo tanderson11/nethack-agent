@@ -653,7 +653,7 @@ class TestNeighborhood(unittest.TestCase):
             dcoord=(0,1)
         )
         self._setup(glyphs, current_square)
-        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
         path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
@@ -682,7 +682,7 @@ class TestNeighborhood(unittest.TestCase):
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
 
         self._setup(glyphs, current_square, failed_move_record=fm_record)
-        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
         path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.S)
 
@@ -710,7 +710,7 @@ class TestNeighborhood(unittest.TestCase):
         fm_record = neighborhood.FailedMoveRecords()
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
         self._setup(glyphs, current_square, failed_move_record=fm_record)
-        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
         path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
