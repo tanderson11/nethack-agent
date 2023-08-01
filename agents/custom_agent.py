@@ -1,4 +1,5 @@
 import base64
+import collections
 import csv
 import copy
 from dataclasses import astuple
@@ -406,6 +407,11 @@ class RunState():
 
         self.debugger_on = None
 
+        if environment.env.log_video:
+            self.video_deque = collections.deque()
+        else:
+            self.video_deque = None
+
         self.replay_log_path = None
         self.replay_log = []
         self.replay_index = 0
@@ -506,6 +512,15 @@ class RunState():
         self.last_damage_timestamp = time
         self.total_damage += damage
 
+    def save_frame(self, message):
+        if len(self.video_deque) == 40:
+            self.video_deque.popleft()
+        frame = message.message + '\n' + self.debug_env.render('ansi')
+        self.video_deque.append(frame)
+
+        #if self.time > 100:
+        #    self.render_video()
+
     def update_observation(self, observation):
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
@@ -532,6 +547,21 @@ class RunState():
         self.time = new_time
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
+
+    def render_video(self, path='video_logs/video_log.gif'):
+        from PIL import ImageFont, Image, ImageDraw
+        font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
+        img_frames = []
+        for frame in self.video_deque:
+            img = Image.new('L', (1000, 720), color='white')
+            draw = ImageDraw.Draw(img)
+            origin = (10,10)
+            draw.text(origin, frame, font=font, fill='black')
+            img_frames.append(img)
+
+        img_frames[0].save(path, format='GIF',
+               append_images=img_frames[1:], save_all=True, duration=60, loop=0)
+
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -854,6 +884,9 @@ class CustomAgent():
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if environment.env.log_video:
+            run_state.save_frame(message)
 
         if run_state.character:
             if run_state.last_non_menu_action == nethack.actions.Command.DROP or run_state.last_non_menu_action == nethack.actions.Command.DROPTYPE:

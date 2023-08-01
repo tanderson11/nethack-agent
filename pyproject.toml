@@ -25,6 +25,7 @@ astar = "^0.93"
 scikit-learn = "^1.0"
 nltk = "^3.6.3"
 snakeviz = "^2.1.0"
+pillow = "^10.0.0"
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"

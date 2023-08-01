@@ -9,6 +9,7 @@ class EnvironmentVariable(NamedTuple):
     debug: bool
     print_seed: bool
     log_runs: bool
+    log_video: bool
     target_roles: Set[str]
     wizard: bool
     use_seed_whitelist: bool
@@ -32,6 +33,7 @@ def make_environment(**kwargs):
         'num_episodes': 8192, # AIcrowd will cut the assessment early as needed
         'debug': False,
         'log_runs': False,
+        'log_video': False,
         'print_seed': False,
         'target_roles': set(),
         'wizard': False,
@@ -45,6 +47,7 @@ def make_environment(**kwargs):
         'num_episodes':try_cast(int, os.getenv("NLE_DEV_NUM_EPISODES")),
         'debug':(os.getenv("NLE_DEV_DEBUG") == "true"),
         'print_seed':(os.getenv("NLE_DEV_PRINT_SEED") == "true"),
+        'log_video':((os.getenv("NLE_DEV_LOG_VIDEO") == "true")),
         'log_runs':((os.getenv("NLE_DEV_LOG_RUNS") == "true")),
         'target_roles':parse_target_roles(os.getenv("NLE_DEV_TARGET_ROLES")),
         'wizard':(os.getenv("NLE_DEV_WIZARD") == "true"),
