@@ -343,6 +343,13 @@ class Character():
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
 
+    def desire_to_eat_corpses(self, neighborhood):
+        # not if we're satiated
+        if self.hunger_state == 0: return False
+        # not if we're in a store
+        if neighborhood.in_shop: return False
+        return True
+
     def desperate_for_food(self):
         if self.hunger_state == 0:
             return False 

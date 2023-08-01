@@ -653,7 +653,8 @@ class TestNeighborhood(unittest.TestCase):
             dcoord=(0,1)
         )
         self._setup(glyphs, current_square)
-        path = self.neighborhood.path_to_desirable_objects()
+        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
     def test_boulder_block(self):
@@ -681,8 +682,8 @@ class TestNeighborhood(unittest.TestCase):
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
 
         self._setup(glyphs, current_square, failed_move_record=fm_record)
-
-        path = self.neighborhood.path_to_desirable_objects()
+        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.S)
 
     def test_boulder_was_blocking(self):
@@ -709,11 +710,9 @@ class TestNeighborhood(unittest.TestCase):
         fm_record = neighborhood.FailedMoveRecords()
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
         self._setup(glyphs, current_square, failed_move_record=fm_record)
-
-        path = self.neighborhood.path_to_desirable_objects()
+        character = MagicMock(desire_to_eat_corpses=lambda: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
-
-
 
 def labeled_string_to_raw_and_expected(multiline_str):
     expected_by_selector = {}

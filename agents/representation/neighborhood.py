@@ -106,6 +106,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ###################
 
         self.current_player_square = current_square
+        self.character = character
         absolute_player_location = Square(*current_square.location)
         self.failed_move_record = failed_move_record
 
@@ -411,15 +412,20 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             pass
         return self.path_to_targets(is_next_square)
 
-    def path_to_desirable_objects(self):
-        desirable_corpses = self.zoom_glyph_alike(
-            self.level_map.edible_corpse_map,
-            ViewField.Extended
-        )
+    def path_to_desirable_objects(self, character):
         lootable_squares = self.zoom_glyph_alike(
             self.level_map.lootable_squares_map,
             ViewField.Extended
         )
+
+        if character.desire_to_eat_corpses(self):
+            desirable_corpses = self.zoom_glyph_alike(
+                self.level_map.edible_corpse_map,
+                ViewField.Extended
+            )
+        else:
+            #import pdb; pdb.set_trace()
+            desirable_corpses = np.zeros_like(lootable_squares)
         return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & ~self.extended_embeds & (desirable_corpses | lootable_squares))
 
     def path_to_unvisited_shop_sqaures(self):
@@ -576,7 +582,7 @@ class Pathfinder(AStar):
                 neighboring_walkable_squares.append(square + upper_left)
 
         failed_moves_at_node = self.failed_moves.failed_moves[node - self.player_location + self.absolute_player_location]
-        if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
+        #if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
         for f in failed_moves_at_node:
             #import pdb; pdb.set_trace()
             failed_target = physics.offset_location_by_action(node, f.move)

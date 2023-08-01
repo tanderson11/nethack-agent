@@ -866,16 +866,12 @@ class EnhanceSkillsAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if run_state.neighborhood.in_shop:
-            return None
+        if not character.desire_to_eat_corpses(run_state.neighborhood): return None
 
         if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
             return None
 
         if not run_state.neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
-            return None
-
-        if oracle.am_satiated:
             return None
 
         if run_state.neighborhood.count_monsters(
@@ -2007,7 +2003,7 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
-        return run_state.neighborhood.path_to_desirable_objects()
+        return run_state.neighborhood.path_to_desirable_objects(character)
 
 class PathfindInvisibleMonstersSokoban(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
