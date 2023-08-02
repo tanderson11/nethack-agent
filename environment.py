@@ -16,6 +16,12 @@ class EnvironmentVariable(NamedTuple):
     use_seed_whitelist: bool
     max_score: int
 
+    def dump(self):
+        self_dict = self._asdict()
+        target_roles = self_dict['target_roles']
+        self_dict['target_roles'] = [r.value for r in target_roles] if target_roles else []
+        return self_dict
+
 def try_cast(type, var):
     if var is None:
         return None
@@ -26,12 +32,6 @@ def parse_target_roles(raw_str):
         return set()
 
     return set([constants.BaseRole[s] for s in raw_str.split(',')])
-
-def dump(self):
-    self_dict = self._asdict()
-    target_roles = self_dict['target_roles']
-    self_dict['target_roles'] = [r.value for r in target_roles] if target_roles else []
-    return self_dict
 
 def make_environment(**kwargs):
     default_environment = {
