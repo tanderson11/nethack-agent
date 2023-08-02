@@ -264,7 +264,7 @@ class ActionAdvice(Advice):
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
     def __repr__(self):
-        return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action, self.from_advisor, self.new_menu_plan)
+        return "Advice: (action={};\n advisor={};\n menu_plan={}\n)".format(str(nethack.actions.ACTIONS[nethack.actions.ACTIONS.index(self.action)]), type(self.from_advisor), self.new_menu_plan)
 
     def __post_init__(self):
         utilities.ACTION_LOOKUP[self.action] # check that this exists
@@ -866,16 +866,12 @@ class EnhanceSkillsAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if run_state.neighborhood.in_shop:
-            return None
+        if not character.desire_to_eat_corpses(run_state.neighborhood): return None
 
         if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
             return None
 
         if not run_state.neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
-            return None
-
-        if oracle.am_satiated:
             return None
 
         if run_state.neighborhood.count_monsters(
@@ -2007,7 +2003,7 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
-        return run_state.neighborhood.path_to_desirable_objects()
+        return run_state.neighborhood.path_to_desirable_objects(character)
 
 class PathfindInvisibleMonstersSokoban(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):

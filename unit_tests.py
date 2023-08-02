@@ -188,6 +188,25 @@ class TestItemParsing(unittest.TestCase):
             item = inv.ItemParser.make_item_with_glyph(global_identity_map, inputs.numeral, inputs.item_str)
             self.assertEqual(item.identity.name(), values.name_in_inventory)
 
+    def test_recognize_from_string_after_numeral(self):
+        global_identity_map = gd.GlobalIdentityMap()
+        glyph_input = self.ItemTestInputs(2031, "a blessed +2 cloak of magic resistance")
+
+        # hopefully teaching us that 2032 is a cloak of magic resistance
+        inv.ItemParser.make_item_with_glyph(global_identity_map, glyph_input.numeral, glyph_input.item_str)
+        item = inv.ItemParser.make_item_with_string(global_identity_map, glyph_input.item_str)
+        self.assertEqual(item.identity.name(), "cloak of magic resistance")
+        self.assertTrue(not isinstance(item, gd.AmbiguousIdentity))
+
+        global_identity_map = gd.GlobalIdentityMap()
+        glyph_input = self.ItemTestInputs(1986, "a blessed rustproof +10 helm of brilliance")
+
+        # hopefully teaching us that 2032 is a cloak of magic resistance
+        inv.ItemParser.make_item_with_glyph(global_identity_map, glyph_input.numeral, glyph_input.item_str)
+        item = inv.ItemParser.make_item_with_string(global_identity_map, glyph_input.item_str)
+        self.assertEqual(item.identity.name(), "helm of brilliance")
+        self.assertTrue(not isinstance(item, gd.AmbiguousIdentity))
+
     def test_recognition_with_numeral(self):
         #return
         for inputs, values in self.test_values.items():
@@ -610,7 +629,20 @@ class TestCMapGlyphs(unittest.TestCase):
             self.assertEqual(v, gd.CMapGlyph.is_room_floor_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
 class TestNeighborhood(unittest.TestCase):
-    def setUp(self):
+    def _setup(self, glyphs, current_square, failed_move_record=neighborhood.FailedMoveRecords()):
+        dmap = map.DMap()
+        self.neighborhood = neighborhood.Neighborhood(
+            10,
+            current_square,
+            failed_move_record,
+            glyphs,
+            dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
+            None,
+            None,
+            False,
+        )
+
+    def test_attributes(self):
         room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
         ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
         glyphs = make_glyphs({
@@ -623,25 +655,83 @@ class TestNeighborhood(unittest.TestCase):
             location=(0,0),
             dcoord=(0,1)
         )
-        dmap = map.DMap()
-        self.neighborhood = neighborhood.Neighborhood(
-            10,
-            current_square,
-            neighborhood.FailedMoveRecords(),
-            glyphs,
-            dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
-            None,
-            None,
-            False,
-        )
-
-    def test_attributes(self):
+        self._setup(glyphs, current_square)
         self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
 
     def test_pathfind(self):
-        path = self.neighborhood.path_to_desirable_objects()
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): room_numeral,
+            (0,2): ruby_numeral,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        self._setup(glyphs, current_square)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
+    def test_boulder_block(self):
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
+        boulder_numeral = gd.get_by_name(gd.ObjectGlyph, 'boulder').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): boulder_numeral,
+            (0,2): boulder_numeral,
+            (0,3): ruby_numeral,
+            (1,0): room_numeral,
+            (2,0): room_numeral,
+            (2,1): room_numeral,
+            (2,2): room_numeral,
+            (2,3): room_numeral,
+            (1,3): room_numeral,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        fm_record = neighborhood.FailedMoveRecords()
+        fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
+
+        self._setup(glyphs, current_square, failed_move_record=fm_record)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
+        self.assertEqual(path.path_action, nethack.actions.CompassDirection.S)
+
+    def test_boulder_was_blocking(self):
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
+        boulder_numeral = gd.get_by_name(gd.ObjectGlyph, 'boulder').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): room_numeral,
+            (0,2): room_numeral,
+            (0,3): ruby_numeral,
+            (1,0): room_numeral,
+            (2,0): room_numeral,
+            (2,1): room_numeral,
+            (2,2): room_numeral,
+            (2,3): room_numeral,
+            (1,3): room_numeral,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        fm_record = neighborhood.FailedMoveRecords()
+        fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
+        self._setup(glyphs, current_square, failed_move_record=fm_record)
+        character = MagicMock(desire_to_eat_corpses=lambda x: True)
+        path = self.neighborhood.path_to_desirable_objects(character)
+        self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
 def labeled_string_to_raw_and_expected(multiline_str):
     expected_by_selector = {}

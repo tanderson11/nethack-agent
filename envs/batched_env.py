@@ -65,6 +65,7 @@ class InstrumentedEnv:
                     break
         except Exception as e:
             print(e)
+            if environment.env.debug: raise(e)
             crashed = True
         else:
             agent.run_state.log_final_state(reward, info["is_ascended"])

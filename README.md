@@ -25,6 +25,7 @@ To test or extend our agent, first clone this git repository and then install re
 - Clone the repository.
 - Install Poetry (see [the docs](https://python-poetry.org/docs/)).
 - Execute `poetry install` from the root of the repository.
+- To test the agent run `poetry run python test_submission.py`
 
 # Package structure
 
@@ -91,10 +92,11 @@ The code for the agent is layed out as follows:
     │   ├── preferences.py        # Preferred way to take certain actions.
     │   └── wish.py               # Knowledge of what to wish for and how.
     └── wizmode                   # Tools for entering wizard mode to test certain game conditions.
-        └── wizmodeprep.py        # Routines for accumulating powerful items to debug.
+        └── wizmodeprep.py        # Routines for accumulating powerful items to test late game performance.
 ```
 
 # Future directions
+
 
 
 ## Agent contributors

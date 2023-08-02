@@ -136,7 +136,7 @@ class Item():
             return self.BUC != constants.BUC.cursed
 
         if identity_desirability == preferences.IdentityDesirability.desire_one:
-            assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
+            if environment.env.debug: assert self.identity.is_identified(), "shouldn't desire exactly 1 copy of unidentified item"
             same_items = self.find_equivalents(character.inventory)
             equal_or_better_versions = [i for i in same_items if self != i and not self.better_than_equivalent(i, character)]
 
@@ -768,7 +768,7 @@ class ItemParser():
 
             class_appearances = identity_class.appearances()
 
-            if defuzzed_appearance not in class_appearances.unique():
+            if defuzzed_appearance not in set(class_appearances[~class_appearances.isna()]):
                 return None
             else:
                 #import pdb; pdb.set_trace()
@@ -787,6 +787,7 @@ class ItemParser():
             return None
         # First line of defense: figure out if this is a ___ named {ARTIFACT NAME}
         # instance name exists for artifacts that aren't identified (hence why we look at appearance_name)
+        # TK not sure if this is safe against spookily named items [are those generated in nethack? plastic imitations?]
         if match_components.instance_name is not None:
             identity = global_identity_map.artifact_identity_by_appearance_name.get(match_components.instance_name, None)
             if identity is not None:
@@ -810,6 +811,7 @@ class ItemParser():
         glyph = gd.GLYPH_NUMERAL_LOOKUP[item_glyph]
         glyph_class = type(glyph)
 
+        # if our item identity has this recorded as unidentified, try to see if it actually looks identified now
         if identity is not None and identity.name() is None:
             name = cls.extract_name_from_description_given_numeral(global_identity_map, match_components.description, item_glyph)
             if name is not None:
@@ -880,10 +882,11 @@ class ItemParser():
                         glyph_for_name = global_identity_map.identity_by_name[(glyph_class, name)].idx
                         possible_glyphs.extend(glyph_for_name)
                     except KeyError:
-                        # we've seen an identified item that we haven't entered into our state about discoveries
-                        # we generate an identity object to pass to our item to capture this extra information
-                        identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
-                        identity = identity_class.identity_from_name(name)
+                        # In this exceedingly rare scenario, we are seeing an identified item (has its name)
+                        # but we've never held it, so we don't know its numeral
+                        # and its numeral can't be deduced by its name (it's shuffled)
+                        #import pdb; pdb.set_trace()
+                        identity = global_identity_map.make_ambiguous_identity_with_name(glyph_class, name)
                         break
 
 
@@ -903,8 +906,8 @@ class ItemParser():
                     glyph_numeral = next(iter(possible_glyphs)) # since it's a set
                     identity = global_identity_map.identity_by_numeral[glyph_numeral]
                 else:
-                    identity_class = gd.GlobalIdentityMap.identity_by_glyph_class[glyph_class]
-                    identity = identity_class(possible_glyphs)
+                    ambiguous_identity_class = gd.GlobalIdentityMap.ambiguous_identity_by_glyph_class[glyph_class]
+                    identity = ambiguous_identity_class(global_identity_map, possible_glyphs)
 
             return item_class(identity, match_components, inventory_letter=inventory_letter, seen_as=seen_as)
         elif len(possible_glyphs) == 0:
