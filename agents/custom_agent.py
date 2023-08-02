@@ -535,7 +535,7 @@ class RunState():
         self.total_damage += damage
 
     def save_frame(self, message):
-        if len(self.video_deque) == 40:
+        if len(self.video_deque) == 1000:
             self.video_deque.popleft()
         frame = (
             message.message + '\n' +
@@ -575,7 +575,7 @@ class RunState():
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
 
-    def make_issue(self, title, labels, attach_video=True):
+    def make_issue(self, title, labels, attach_video=True, **video_kwargs):
         import nh_git
         import pickle
         import json
@@ -595,7 +595,7 @@ class RunState():
 
         body = ""
         if attach_video:
-            video_path = self.render_video(save_path)
+            video_path = self.render_video(save_path, **video_kwargs)
 
         last_sha = nh_git.commit(save_path, push=True)
 
@@ -627,12 +627,13 @@ class RunState():
         #import pdb; pdb.set_trace()
         subprocess.run(command)
 
-    def render_video(self, path='video_logs/'):
+    def render_video(self, path='video_logs/', video_length=40):
         save_file = os.path.join(path, f"{self.time}.gif")
         from PIL import ImageFont, Image, ImageDraw
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
-        for frame in self.video_deque:
+        video_length = min(len(self.video_deque), video_length)
+        for frame in self.video_deque[-1*video_length:]:
             img = Image.new('L', (1000, 720), color='white')
             draw = ImageDraw.Draw(img)
             origin = (10,10)
