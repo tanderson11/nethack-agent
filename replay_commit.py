@@ -1,7 +1,6 @@
 import sys
 import os
 import pickle
-import json
 import subprocess
 
 import nh_git
@@ -31,7 +30,6 @@ if __name__ == "__main__":
                 print(f"Core seed: {core_seed} Disp seed: {disp_seed}")
             elif 'environment.json' in word:
                 os.environ["NLE_DEV_USE_JSON_ENV"] = word
-                import pdb; pdb.set_trace()
             elif f".csv" in word:
                 seeded_runs_path = os.path.join(os.path.dirname(__file__), "seeded_runs")
                 print("Copying replay to seeded_runs/")
@@ -41,5 +39,3 @@ if __name__ == "__main__":
     nh_git.revert(commit_sha)
 
     play_seeded.play_seed(agent_seed, core_seed, disp_seed, respond_to_issue=None)
-
-    import pdb; pdb.set_trace()
