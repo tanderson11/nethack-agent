@@ -77,7 +77,8 @@ class BLStats():
             1: 'normal',
             2: 'hungry',
             3: 'weak',
-            4: 'fainting'
+            4: 'fainting',
+            5: '5 IDK'
         }
 
         blind = self.check_condition(nethack.BL_MASK_BLIND)
