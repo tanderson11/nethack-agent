@@ -78,7 +78,6 @@ class BLStats():
             2: 'hungry',
             3: 'weak',
             4: 'fainting',
-            5: '5 IDK'
         }
 
         blind = self.check_condition(nethack.BL_MASK_BLIND)
@@ -86,7 +85,7 @@ class BLStats():
         conf  = self.check_condition(nethack.BL_MASK_CONF)
         hallu = self.check_condition(nethack.BL_MASK_HALLU)
 
-        return f"Time:{self.get('time')} HP:{self.get('hitpoints')}/{self.get('max_hitpoints')} EXP:{self.get('experience_level')} D:{self.get('dungeon_number')} DLevel:{self.get('level_number')} Hunger:{hunger_states[self.get('hunger_state')]}" + '\n' + f"Blind:{blind} Conf:{conf} Stun:{stun} Hallu:{hallu}"
+        return f"Time:{self.get('time')} HP:{self.get('hitpoints')}/{self.get('max_hitpoints')} EXP:{self.get('experience_level')} D:{self.get('dungeon_number')} DLevel:{self.get('level_number')} Hunger:{hunger_states.get(self.get('hunger_state'), self.get('hunger_state'))}" + '\n' + f"Blind:{blind} Conf:{conf} Stun:{stun} Hallu:{hallu}"
 
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
