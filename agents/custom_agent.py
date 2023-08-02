@@ -632,7 +632,7 @@ class RunState():
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
         video_length = min(len(self.video_deque), video_length)
-        for frame in self.video_deque[-1*video_length:]:
+        for frame in [self.video_deque[i] for i in range(len(self.video_deque)-1-video_length, len(self.video_deque))]:
             img = Image.new('L', (1000, 720), color='white')
             draw = ImageDraw.Draw(img)
             origin = (10,10)
