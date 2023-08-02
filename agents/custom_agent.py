@@ -591,7 +591,7 @@ class RunState():
         with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
             pickle.dump(self.seed, f)
         with open((os.path.join(save_path, 'environment.json')), 'w') as f:
-            json.dump(environment.env._asdict(), f)
+            json.dump(environment.env.dump(), f)
 
         body = ""
         if attach_video:
