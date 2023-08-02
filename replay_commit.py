@@ -1,12 +1,13 @@
 import sys
 import os
-import pickle
 import subprocess
+import json
+import ast
 
 import nh_git
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
+    if len(sys.argv) < 2:
         raise ValueError("expected commit sha as first argument")
 
     commit_sha = sys.argv[1]
@@ -20,13 +21,13 @@ if __name__ == "__main__":
 
     for line in cherry_pick_output.split('\n'):
         for word in line.split(' '):
-            if 'agent_seed.pickle' in word:
-                with open(word, 'rb') as f:
-                    agent_seed = pickle.load(f)
+            if 'seeds.json' in word:
+                with open(word, 'r') as f:
+                    seeds = json.load(f)
+                agent_seed = ast.literal_eval(seeds['agent_seed']) # eval to bytes
+                core_seed  = seeds['core_seed']
+                disp_seed  = seeds['disp_seed']
                 print(f"Agent seed: {agent_seed}")
-            elif 'core_disp_seeds.pickle' in word:
-                with open(word, 'rb') as f:
-                    core_seed, disp_seed = pickle.load(f)
                 print(f"Core seed: {core_seed} Disp seed: {disp_seed}")
             elif 'environment.json' in word:
                 os.environ["NLE_DEV_USE_JSON_ENV"] = word
@@ -34,7 +35,6 @@ if __name__ == "__main__":
                 seeded_runs_path = os.path.join(os.path.dirname(__file__), "seeded_runs")
                 print("Copying replay to seeded_runs/")
                 subprocess.check_output(['cp', word, seeded_runs_path])
-
     import play_seeded
     nh_git.revert(commit_sha)
 

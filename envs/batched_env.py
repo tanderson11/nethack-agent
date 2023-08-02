@@ -36,6 +36,8 @@ class InstrumentedEnv:
     def reset_environment(self, env):
         next_seed = self.next_seed()
         if next_seed:
+            print("Adding seed")
+            print(next_seed)
             env.unwrapped.seed(next_seed[0], next_seed[1], False)
         else:
             if environment.env.use_seed_whitelist:

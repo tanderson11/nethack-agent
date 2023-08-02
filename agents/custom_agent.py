@@ -267,6 +267,7 @@ class RunState():
         self.reset(agent_seed)
         self.log_path = None
         self.target_roles = environment.env.target_roles
+        self.respond_to_issue = respond_to_issue
         if environment.env.log_runs:
             self.log_root = debug_env.savedir
             self.log_path = os.path.join(self.log_root, "log.csv")
@@ -358,6 +359,7 @@ class RunState():
         self.gods_by_alignment = {}
 
         self.step_count = 0
+        self.step_hook = 0
         self.l1_advised_step_count = 0
         self.l1_need_downstairs_step_count = 0
         self.reward = 0
@@ -435,8 +437,14 @@ class RunState():
         self.replay_log_path = None
         self.replay_log = []
         self.replay_index = 0
+        self.is_replaying = False
+
         if self.debug_env:
             core_seed, disp_seed, _ = self.debug_env.get_seeds()
+            self.initial_core_seed = core_seed
+            self.initial_disp_seed = disp_seed
+            print(f"Core: {core_seed} Disp: {disp_seed}")
+            #import pdb; pdb.set_trace()
             replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
             if os.path.exists(replay_log_path):
                 self.replay_log_path = replay_log_path
@@ -458,6 +466,7 @@ class RunState():
             self.auto_pickup = False
             if self.wizmode_prep:
                 self.wizmode_prep.prepped = True
+        print(f"Replay log path: {self.replay_log_path}")
 
     def make_seeded_rng(self, seed):
         import random
@@ -466,7 +475,14 @@ class RunState():
 
     def replay_advice(self):
         if self.replay_index >= len(self.replay_log):
+            if self.replay_index > 0 and self.replay_index == len(self.replay_log):
+                self.stall_detection_on=True
+                print("FINISHED REPLAY")
+                if self.respond_to_issue:
+                    self.step_hook = self.step_count + 40
+            self.is_replaying = False
             return None
+        self.is_replaying = True
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
         self.replay_index += 1
@@ -555,11 +571,9 @@ class RunState():
         #    self.make_issue('time=100', 'time')
 
     def update_observation(self, observation):
-        if len(self.replay_log) > 0:
-            if (self.replay_index >= len(self.replay_log)):
-                self.stall_detection_on = True
-            else:
-                self.stall_detection_on = False
+        if self.is_replaying:
+            self.stall_detection_on = False
+
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
         # our metric for time advanced: true if game time advanced or if neighborhood changed
@@ -586,21 +600,45 @@ class RunState():
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
 
+    def make_issue_response(self, issue_num, **video_kwargs):
+        import nh_git
+        import json
+
+        last_commit = nh_git.get_git_revision_short_hash()
+
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
+        save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
+
+        video_path = self.render_video(save_path, **video_kwargs)
+        new_sha = nh_git.commit(video_path, push=True)
+
+        body = f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{new_sha}/{os.path.relpath(video_path)})\n{last_commit}'
+        description = json.dumps({
+            'body':body,
+        })
+        command = [
+            'curl', '-L', '-X', 'POST',
+            '-H', 'Accept: application/vnd.github+json',
+            '-H', f'Authorization: Bearer {nh_git.pat}',
+            '-H', 'X-GitHub-Api-Version: 2022-11-28',
+            f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues/{issue_num}/comments',
+            '-d', description
+        ]
+        subprocess.run(command)
+
     def make_issue(self, title, labels, attach_video=True, **video_kwargs):
         import nh_git
-        import pickle
         import json
-        core_seed, disp_seed, _ = self.debug_env.get_seeds()
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
         save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
         os.makedirs(save_path, exist_ok=True)
 
         # dump information needed to replay the game
         replay_log_path = self.replay_log_path
+
         subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
-        with open((os.path.join(save_path, 'core_disp_seeds.pickle')), 'wb') as f:
-            pickle.dump((core_seed, disp_seed), f)
-        with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
-            pickle.dump(self.seed, f)
+        with open((os.path.join(save_path, 'seeds.json')), 'w') as f:
+            json.dump({'core_seed':core_seed, 'disp_seed':disp_seed, 'agent_seed':str(self.seed)}, f)
         with open((os.path.join(save_path, 'environment.json')), 'w') as f:
             env_dict = environment.env.dump()
             env_dict.pop('make_replay') # we don't want to keep making replays when we replay this ...
@@ -615,9 +653,10 @@ class RunState():
         if attach_video:
             body = body + f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})'
 
-        #body += f'\n{self.seed}'
-        #body += f'\n{core_seed}, {disp_seed}'
-        body += f"""\n`git cherry-pick {last_sha}`"""
+        #body += f"""\n`git cherry-pick {last_sha}`"""
+        body += f"""\n`poetry run python replay_commit.py {last_sha}`"""
+        body += f"""\n{last_sha}"""
+
 
         if isinstance(labels, str):
             labels = [labels]
@@ -640,7 +679,7 @@ class RunState():
         subprocess.run(command)
 
     def render_video(self, path='video_logs/', video_length=40):
-        save_file = os.path.join(path, f"{self.time}.gif")
+        save_file = os.path.join(path, f"{self.step_count}.gif")
         from PIL import ImageFont, Image, ImageDraw
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
@@ -963,14 +1002,16 @@ class CustomAgent():
 
         run_state.update_observation(observation) # moved after previous glyph futzing
 
+        #if run_state.step_count == 1200:
+        #    run_state.make_issue('t=1200', 'test')
+
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
 
-        #if run_state.time % 1000 == 0:
-        #    ARS.rs.debug_env.render()
-        #    print(ARS.rs.character.inventory.wielded_weapon)
-        #    print(ARS.rs.character.tier)
-            #import pdb; pdb.set_trace()
+        if run_state.step_hook != 0 and run_state.step_hook == run_state.step_count:
+            print("Hooked by step")
+            if run_state.respond_to_issue:
+                run_state.make_issue_response(run_state.respond_to_issue, video_length=40)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
