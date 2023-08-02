@@ -16,7 +16,7 @@ def cherry_pick(sha) -> str:
     return subprocess.check_output(['git', 'cherry-pick', sha]).decode('ascii').strip()
 
 def revert(sha) -> str:
-    return subprocess.check_output(['git', 'revert', sha]).decode('ascii').strip()
+    return subprocess.check_output(['git', 'revert', '--no-edit', sha]).decode('ascii').strip()
 
 def commit(path, branch='assets', push=False):
     # save current branch info

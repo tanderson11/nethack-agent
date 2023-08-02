@@ -67,5 +67,19 @@ def make_environment(**kwargs):
     default_environment.update(kwargs)
     return EnvironmentVariable(**default_environment)
 
-env = make_environment()
+json_env = os.getenv("NLE_DEV_USE_JSON_ENV")
+import pdb; pdb.set_trace()
+if json_env:
+    import json
+    with open(json_env, 'r') as f:
+        env_dict = json.load(f)
+
+    try:
+        env_dict.pop('make_replay')
+    except KeyError:
+        pass
+    env = make_environment(**env_dict)
+else:
+    env = make_environment()
+
 print(env)

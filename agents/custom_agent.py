@@ -262,9 +262,9 @@ background_advisor = advs.BackgroundActionsAdvisor()
 
 class RunState():
     position_log_len = 80
-    def __init__(self, debug_env=None):
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
         self.debug_env = debug_env
-        self.reset()
+        self.reset(agent_seed)
         self.log_path = None
         self.target_roles = environment.env.target_roles
         if environment.env.log_runs:
@@ -352,7 +352,7 @@ class RunState():
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(state, counter_file)
 
-    def reset(self):
+    def reset(self, agent_seed=None):
         self.scumming = False
         self.character = None
         self.auto_pickup = True # defaults on
@@ -401,7 +401,10 @@ class RunState():
         self.last_level_change_timestamp = 0
         self.stuck_flag = False
 
-        self.seed = base64.b64encode(os.urandom(4))
+        if agent_seed is None:
+            self.seed = base64.b64encode(os.urandom(4))
+        else:
+            self.seed = agent_seed
         #self.seed = b'Q9MtUg=='
 
         self.rng = self.make_seeded_rng(self.seed)
@@ -590,7 +593,9 @@ class RunState():
         with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
             pickle.dump(self.seed, f)
         with open((os.path.join(save_path, 'environment.json')), 'w') as f:
-            json.dump(environment.env.dump(), f)
+            env_dict = environment.env.dump()
+            env_dict.pop('make_replay') # we don't want to keep making replays when we replay this ...
+            json.dump(env_dict, f)
 
         body = ""
         if attach_video:
@@ -878,8 +883,8 @@ def print_stats(done, run_state, blstats):
     )
 
 class CustomAgent():
-    def __init__(self, debug_env=None):
-        self.run_state = RunState(debug_env)
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
+        self.run_state = RunState(debug_env, agent_seed, respond_to_issue)
     
     @classmethod
     def generate_action(cls, run_state, observation):
