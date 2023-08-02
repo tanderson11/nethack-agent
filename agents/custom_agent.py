@@ -94,7 +94,7 @@ class BLStats():
         strength_25 = self.get('strength_25')
 
         if strength_25 not in range(3,26):
-            import pdb; pdb.set_trace()
+            if environment.env.debug(): import pdb; pdb.set_trace()
             raise Exception('Surprising strength_25')
 
         strength_pct = 0
@@ -278,7 +278,6 @@ class RunState():
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
-
     REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
     def log_final_state(self, final_reward, ascended):
@@ -450,6 +449,10 @@ class RunState():
                         self.replay_run_number = 0
             elif environment.env.make_replay:
                 self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "tmp", f"{core_seed}-{disp_seed}.csv")
+                with open(self.replay_log_path, 'w') as replay_file:
+                    writer = csv.DictWriter(replay_file, fieldnames=self.REPLAY_HEADER)
+                    writer.writeheader()
+
                 self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
@@ -548,9 +551,15 @@ class RunState():
         self.video_deque.append(frame)
 
         #if self.time == 100:
+        #    import pdb; pdb.set_trace()
         #    self.make_issue('time=100', 'time')
 
     def update_observation(self, observation):
+        if len(self.replay_log) > 0:
+            if (self.replay_index >= len(self.replay_log)):
+                self.stall_detection_on = True
+            else:
+                self.stall_detection_on = False
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
         # our metric for time advanced: true if game time advanced or if neighborhood changed
@@ -628,7 +637,6 @@ class RunState():
             f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
             '-d', description
         ]
-        #import pdb; pdb.set_trace()
         subprocess.run(command)
 
     def render_video(self, path='video_logs/', video_length=40):
@@ -690,7 +698,6 @@ class RunState():
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
         if sum(self.recent_position_counter.values()) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             for i in range(self.recent_position_start, len(self.position_log)):
                 position = self.position_log[i]
                 advice = self.advice_log[i]
@@ -703,13 +710,11 @@ class RunState():
                 self.recent_position_counter[position] -= 1
                 #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
                 if self.recent_position_counter[position] == 0:
-                    #import pdb; pdb.set_trace()
                     del self.recent_position_counter[position]
                     #print(f"Deleting {position}")
                 break
             self.recent_position_start = i+1
         if len(self.recent_position_counter) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             pass
         #print("RET")
 
@@ -1009,7 +1014,6 @@ class CustomAgent():
             )
 
         if "lands on the altar" in message.message:
-            #import pdb; pdb.set_trace()
             run_state.current_square.stack_on_square = True
             level_map.lootable_squares_map[player_location] = True
 

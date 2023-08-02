@@ -68,7 +68,6 @@ def make_environment(**kwargs):
     return EnvironmentVariable(**default_environment)
 
 json_env = os.getenv("NLE_DEV_USE_JSON_ENV")
-import pdb; pdb.set_trace()
 if json_env:
     import json
     with open(json_env, 'r') as f:
