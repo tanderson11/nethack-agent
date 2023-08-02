@@ -82,19 +82,17 @@ class DMap():
         # Dungeons of Doom
         current_dcoord = self.target_dcoords[Branches.DungeonsOfDoom]
         current_map = self.dlevels.get(current_dcoord, None)
-        if current_map is None or not (current_map.clear or current_map.long_time_since_new):
+        if current_map is None or not current_map.clear:
             new_targets[Branches.DungeonsOfDoom] = current_dcoord
         elif not character.desperate_for_food() and character.comfortable_depth() <= current_dcoord.level:
             new_targets[Branches.DungeonsOfDoom] = current_dcoord
         else:
             if character.desperate_for_food():
                 print("Going deeper looking for food")
-            if current_map.long_time_since_new:
-                print("Going deeper because feeling stuck")
             first_novel_dcoord = current_dcoord
             while True:
                 level_map = self.dlevels.get(first_novel_dcoord, None)
-                if level_map is None or not (level_map.clear or current_map.long_time_since_new):
+                if level_map is None or not level_map.clear:
                     break
                 first_novel_dcoord = DCoord(first_novel_dcoord.branch, first_novel_dcoord.level + 1)
             new_targets[Branches.DungeonsOfDoom] = first_novel_dcoord
@@ -246,7 +244,6 @@ class DLevelMap():
         self.special_level_searcher = special_level_searcher
         self.special_level = None
         self.clear = False
-        self.long_time_since_new = False
         self.diggable_floor = True
         self.teleportable = True
 
@@ -380,10 +377,9 @@ class DLevelMap():
         self.player_location = player_location
         if self.visits_count_map[self.player_location] == 0:
             self.time_of_new_square = time
-        if not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
-            #if environment.env.debug: import pdb; pdb.set_trace()
-            self.long_time_since_new = True
-
+        if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
+            #import pdb; pdb.set_trace()
+            pass
         if self.visits_count_map[self.player_location] == 0:
             self.visits_count_map[self.player_location] += 1
         else:
