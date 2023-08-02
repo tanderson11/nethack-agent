@@ -38,4 +38,4 @@ if __name__ == "__main__":
     import play_seeded
     nh_git.revert(commit_sha)
 
-    play_seeded.play_seed(agent_seed, core_seed, disp_seed, respond_to_issue=None)
+    play_seeded.play_seed(agent_seed, core_seed, disp_seed, respond_to_issue=issue)

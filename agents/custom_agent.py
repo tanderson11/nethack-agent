@@ -478,6 +478,7 @@ class RunState():
             if self.replay_index > 0 and self.replay_index == len(self.replay_log):
                 self.stall_detection_on=True
                 print("FINISHED REPLAY")
+                self.replay_index += 1
                 if self.respond_to_issue:
                     self.step_hook = self.step_count + 40
             self.is_replaying = False
@@ -604,10 +605,11 @@ class RunState():
         import nh_git
         import json
 
-        last_commit = nh_git.get_git_revision_short_hash()
+        last_commit = nh_git.get_git_revision_hash()
 
         core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
         save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
+        os.makedirs(save_path, exist_ok=True)
 
         video_path = self.render_video(save_path, **video_kwargs)
         new_sha = nh_git.commit(video_path, push=True)
@@ -1008,6 +1010,8 @@ class CustomAgent():
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
 
+        if run_state.step_hook != 0 and run_state.step_hook > run_state.step_count:
+            print(f"Waiting for hook: {run_state.step_count}, {run_state.step_hook}")
         if run_state.step_hook != 0 and run_state.step_hook == run_state.step_count:
             print("Hooked by step")
             if run_state.respond_to_issue:
