@@ -70,8 +70,8 @@ class InstrumentedEnv:
         else:
             agent.run_state.log_final_state(reward, info["is_ascended"])
         finally:
-            agent.run_state.reset()
             self.initial_observation = self.reset_environment(self.env)
+            agent.run_state.reset()
 
 
         return info.get("is_ascended", False), crashed, total_score
