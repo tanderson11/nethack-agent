@@ -125,7 +125,7 @@ class AttackBundle():
 	digit_pattern = re.compile('[0-9]')
 	suffix_pattern = re.compile('([^0-9\)\]]+)(?:\)|\])?$')
 
-	def __init__(self, attack_strs):
+	def __init__(self, attack_strs, name):
 		self.num_attacks = 0
 
 		self.min_damage = 0
@@ -144,11 +144,14 @@ class AttackBundle():
 				if suffix_match:
 					damage_type = suffix_match[1]
 					damage_type, attack_does_physical_damage = threat.csv_str_to_enum.get(damage_type, (threat.ThreatTypes.NO_SPECIAL, True))
-					damage_types.append(damage_type)
 				else:
-					damage_types.append(threat.ThreatTypes.NO_SPECIAL)
+					damage_type = threat.ThreatTypes.NO_SPECIAL
 					attack_does_physical_damage = True # no suffix == normal attack
 
+				if name == 'grid bug':
+					damage_type = threat.ThreatTypes.NO_SPECIAL
+
+				damage_types.append(damage_type)
 				damage_dice_match = re.search(self.dice_pattern, a)
 				if not damage_dice_match:
 					import pdb; pdb.set_trace()
@@ -203,11 +206,11 @@ for _, row in monster_df.iterrows():
 		attack_strs = []
 	else:
 		attack_strs = row["ATTACKS"].split(' ')
-	ranged_bundle = RangedAttackBundle(attack_strs)
-	melee_bundle = MeleeAttackBundle(attack_strs)
-	passive_bundle = PassiveAttackBundle(attack_strs)
-	engulf_bundle = EngulfAttackBundle(attack_strs)
-	death_bundle = DeathAttackBundle(attack_strs)
+	ranged_bundle = RangedAttackBundle(attack_strs, name)
+	melee_bundle = MeleeAttackBundle(attack_strs, name)
+	passive_bundle = PassiveAttackBundle(attack_strs, name)
+	engulf_bundle = EngulfAttackBundle(attack_strs, name)
+	death_bundle = DeathAttackBundle(attack_strs, name)
 
 	level = row['LVL']
 	AC = row['AC']
