@@ -1,7 +1,7 @@
 import enum
 from agents.representation.constants import Intrinsics
 
-class Threat(enum.IntEnum):
+class CharacterThreat(enum.IntEnum):
     safe = 0
     low = 1
     high = 2
@@ -9,35 +9,36 @@ class Threat(enum.IntEnum):
 
 class ThreatTypes(enum.IntFlag):
     NO_SPECIAL = 0
-    # really bad
+    # deadly
     DISINTEGRATE = enum.auto()
     WRAP         = enum.auto()
-    D_INT        = enum.auto()
     STONE        = enum.auto()
     SLIME        = enum.auto() # both SLIME and LYCAN represented by @ in csv
-    LYCAN        = enum.auto()
     DISEASE      = enum.auto()
+    # really bad
     PARALYSIS    = enum.auto()
     SLEEP        = enum.auto()
+    LYCAN        = enum.auto()
+    D_INT        = enum.auto()
     # quite bad
     STUN   = enum.auto()
     SPELL  = enum.auto()
     RIDER  = enum.auto()
     DIGEST = enum.auto() # can kill you if you wait really long ...
-    # mild bad
+    # sometimes bad
     SHOCK  = enum.auto()
     FIRE   = enum.auto()
     COLD   = enum.auto()
     POISON = enum.auto()
-    D_DEX  = enum.auto()
     SLOW   = enum.auto()
     BLIND  = enum.auto()
     STICK  = enum.auto()
+    DRAIN     = enum.auto()
     # not bad in practice
     INTRINSIC = enum.auto()
     ENERGY    = enum.auto()
-    DRAIN     = enum.auto()
     TELEPORT  = enum.auto()
+    D_DEX  = enum.auto()
     # degrading
     DISENCHANT = enum.auto()
     RUST       = enum.auto()
@@ -51,8 +52,47 @@ class ThreatTypes(enum.IntFlag):
     # mild annoying
     GOLD = enum.auto()
 
+class ThreatLevels(enum.Enum):
+    deadly = ThreatTypes.DISINTEGRATE | ThreatTypes.WRAP | ThreatTypes.STONE | ThreatTypes.SLIME | ThreatTypes.DISEASE
+    really_bad = ThreatTypes.PARALYSIS | ThreatTypes.SLEEP | ThreatTypes.LYCAN | ThreatTypes.D_INT
+    mid_bad = ThreatTypes.STUN | ThreatTypes.SPELL | ThreatTypes.RIDER | ThreatTypes.DIGEST
+    little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND | ThreatTypes.STICK | ThreatTypes.DRAIN
+    not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX
+    degrading = ThreatTypes.DISENCHANT | ThreatTypes.RUST | ThreatTypes.ROT
+    annoying = ThreatTypes.STEAL | ThreatTypes.SEDUCE | ThreatTypes.HALLU | ThreatTypes.CONF | ThreatTypes.PRICK
+    mild_annoying = ThreatTypes.GOLD
+
+def threat(damage_threat, threat_types, character):
+    # remove threats that we resist
+    for intrinsic, threat in resist_to_threat.items():
+        if character.has_intrinsic(intrinsic.value):
+            threat_types &= ~threat
+
+    present_levels = []
+    for level in ThreatLevels:
+        if level.value & threat_types:
+            present_levels.append(level)
+    present_levels = set(present_levels)
+
+    if damage_threat > character.hp * 0.5:
+        return CharacterThreat.deadly
+
+    if ThreatLevels.deadly in present_levels or ThreatLevels.really_bad in present_levels:
+        return CharacterThreat.deadly
+
+    if damage_threat > character.hp * 0.2:
+        return CharacterThreat.high
+
+    if ThreatLevels.mid_bad in present_levels or ThreatLevels.annoying in present_levels or ThreatLevels.little_bad in present_levels or ThreatLevels.degrading in present_levels:
+        return CharacterThreat.high
+
+    if damage_threat > 0:
+        return CharacterThreat.low
+
+    return CharacterThreat.safe
+
 threat_to_resist = {
-    ThreatTypes.DISINTEGRATE: Intrinsics.disint_resistance,
+    ThreatTypes.DISINTEGRATE: [Intrinsics.disint_resistance, Intrinsics.reflection],
     ThreatTypes.FIRE: Intrinsics.fire_resistance,
     ThreatTypes.COLD: Intrinsics.cold_resistance,
     ThreatTypes.SLEEP: Intrinsics.sleep_resistance,
@@ -61,7 +101,15 @@ threat_to_resist = {
     ThreatTypes.D_DEX: Intrinsics.poison_resistance,
     ThreatTypes.BLIND: Intrinsics.telepathy,
     ThreatTypes.WRAP: [Intrinsics.magical_breathing, Intrinsics.amphibiousness],
+    ThreatTypes.PARALYSIS: Intrinsics.free_action,
 }
+
+resist_to_threat = {}
+for k,v in threat_to_resist.items():
+    if not isinstance(v, list):
+        v = [v]
+    for res in v:
+        resist_to_threat[res] = k
 
 # bool = does the attack do HP damage as well?
 csv_str_to_enum = {

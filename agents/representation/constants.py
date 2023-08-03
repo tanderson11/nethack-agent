@@ -125,6 +125,8 @@ class Intrinsics(enum.Flag):
     amphibiousness = enum.auto()
     jumping = enum.auto()
     infravision = enum.auto()
+    reflection = enum.auto()
+    free_action = enum.auto()
 
 ROLE_TO_INTRINSIC = {
     BaseRole.Archeologist: {
