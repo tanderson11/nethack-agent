@@ -910,8 +910,7 @@ class AmbiguousIdentity(IdentityLike):
     def give_name(self, name):
         # Should do something around reducing possible glyphs it could be?
         # doesn't really matter that much as these shouldn't be very persistent
-        #import pdb; pdb.set_trace()
-        if environment.env.debug: import pdb; pdb.set_trace()
+        #if environment.env.debug: import pdb; pdb.set_trace()
 
         return super().give_name(name)
 
