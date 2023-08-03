@@ -1,5 +1,6 @@
 import enum
 from agents.representation.constants import Intrinsics
+from typing import NamedTuple
 
 class CharacterThreat(enum.IntEnum):
     safe = 0
@@ -15,6 +16,7 @@ class ThreatTypes(enum.IntFlag):
     STONE        = enum.auto()
     SLIME        = enum.auto() # both SLIME and LYCAN represented by @ in csv
     DISEASE      = enum.auto()
+    RIDER  = enum.auto()
     # really bad
     PARALYSIS    = enum.auto()
     SLEEP        = enum.auto()
@@ -23,7 +25,6 @@ class ThreatTypes(enum.IntFlag):
     # quite bad
     STUN   = enum.auto()
     SPELL  = enum.auto()
-    RIDER  = enum.auto()
     DIGEST = enum.auto() # can kill you if you wait really long ...
     # sometimes bad
     SHOCK  = enum.auto()
@@ -33,12 +34,12 @@ class ThreatTypes(enum.IntFlag):
     SLOW   = enum.auto()
     BLIND  = enum.auto()
     STICK  = enum.auto()
-    DRAIN     = enum.auto()
+    DRAIN  = enum.auto()
     # not bad in practice
     INTRINSIC = enum.auto()
     ENERGY    = enum.auto()
     TELEPORT  = enum.auto()
-    D_DEX  = enum.auto()
+    D_DEX     = enum.auto()
     # degrading
     DISENCHANT = enum.auto()
     RUST       = enum.auto()
@@ -51,11 +52,20 @@ class ThreatTypes(enum.IntFlag):
     PRICK  = enum.auto()
     # mild annoying
     GOLD = enum.auto()
+    # not special
+    MISSILES = enum.auto()
+
+# these two attacks can be resisted but don't have their base damage negated when they are
+resist_but_additional = ThreatTypes.POISON | ThreatTypes.DRAIN
+
+class Threat(NamedTuple):
+    damage: int
+    threat_type: ThreatTypes
 
 class ThreatLevels(enum.Enum):
-    deadly = ThreatTypes.DISINTEGRATE | ThreatTypes.WRAP | ThreatTypes.STONE | ThreatTypes.SLIME | ThreatTypes.DISEASE
+    deadly = ThreatTypes.DISINTEGRATE | ThreatTypes.WRAP | ThreatTypes.STONE | ThreatTypes.SLIME | ThreatTypes.DISEASE | ThreatTypes.RIDER
     really_bad = ThreatTypes.PARALYSIS | ThreatTypes.SLEEP | ThreatTypes.LYCAN | ThreatTypes.D_INT
-    mid_bad = ThreatTypes.STUN | ThreatTypes.SPELL | ThreatTypes.RIDER | ThreatTypes.DIGEST
+    mid_bad = ThreatTypes.STUN | ThreatTypes.SPELL | ThreatTypes.DIGEST
     little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND | ThreatTypes.STICK | ThreatTypes.DRAIN
     not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX
     degrading = ThreatTypes.DISENCHANT | ThreatTypes.RUST | ThreatTypes.ROT
@@ -74,13 +84,13 @@ def threat(damage_threat, threat_types, character):
             present_levels.append(level)
     present_levels = set(present_levels)
 
-    if damage_threat > character.hp * 0.5:
+    if damage_threat >= character.hp * 0.5:
         return CharacterThreat.deadly
 
     if ThreatLevels.deadly in present_levels or ThreatLevels.really_bad in present_levels:
         return CharacterThreat.deadly
 
-    if damage_threat > character.hp * 0.2:
+    if damage_threat >= character.hp * 0.2:
         return CharacterThreat.high
 
     if ThreatLevels.mid_bad in present_levels or ThreatLevels.annoying in present_levels or ThreatLevels.little_bad in present_levels or ThreatLevels.degrading in present_levels:
@@ -102,6 +112,7 @@ threat_to_resist = {
     ThreatTypes.BLIND: Intrinsics.telepathy,
     ThreatTypes.WRAP: [Intrinsics.magical_breathing, Intrinsics.amphibiousness],
     ThreatTypes.PARALYSIS: Intrinsics.free_action,
+    ThreatTypes.MISSILES: Intrinsics.magic_resistance,
 }
 
 resist_to_threat = {}
@@ -111,7 +122,7 @@ for k,v in threat_to_resist.items():
     for res in v:
         resist_to_threat[res] = k
 
-# bool = does the attack do HP damage as well?
+# 1st bool = does the attack do HP damage as well?
 csv_str_to_enum = {
     'C': (ThreatTypes.COLD, True),
     'D': (ThreatTypes.DISINTEGRATE, True),
@@ -146,4 +157,5 @@ csv_str_to_enum = {
     '$': (ThreatTypes.GOLD, False),
     '*': (ThreatTypes.STONE, True),
     '@': (ThreatTypes.LYCAN, True), # OR SLIME!
+    'M': (ThreatTypes.MISSILES, True)
 }

@@ -628,6 +628,10 @@ class TestCMapGlyphs(unittest.TestCase):
         for k, v in true_labels.items():
             self.assertEqual(v, gd.CMapGlyph.is_room_floor_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
+class TestThreat(unittest.TestCase):
+    def test_damage_threat(self):
+        pass
+
 class TestNeighborhood(unittest.TestCase):
     def _setup(self, glyphs, current_square, failed_move_record=neighborhood.FailedMoveRecords()):
         dmap = map.DMap()

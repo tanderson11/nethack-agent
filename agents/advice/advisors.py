@@ -1207,7 +1207,6 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         return advice
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
-        #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
             #print(f"Annoying monster at range: {targets.monsters[0]}")
@@ -1283,7 +1282,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         target_index = None
         # prioritize by maximum passive damage
         for i,m in enumerate(monsters):
-            damage = m.monster_spoiler.passive_attack_bundle.expected_damage
+            damage, _ = m.monster_spoiler.expected_passive_damage_to_character(character)
 
             if target_index is None or damage > max_damage:
                 target_index = i

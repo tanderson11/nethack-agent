@@ -11,7 +11,7 @@ import agents.representation.threat as threat
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
 
-	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, AC, speed, MR, resists, tier):
+	def __init__(self, name, melee_attack_bundle, ranged_attack_bundle, death_attack_bundle, engulf_attack_bundle, passive_attack_bundle, level, max_level, AC, speed, MR, resists, tier):
 		self.name = name
 		self.tamed_by_meat = "dog" in name or "cat" in name or "kitten" in name
 		self.tamed_by_veg = "horse" in name or "pony" in name
@@ -24,6 +24,7 @@ class MonsterSpoiler():
 		self.has_active_attacks = (self.melee_attack_bundle.num_attacks + self.ranged_attack_bundle.num_attacks) > 0
 
 		self.level = level
+		self.max_level = max_level
 		self.AC = AC
 		self.speed = speed
 		self.MR = MR
@@ -31,39 +32,37 @@ class MonsterSpoiler():
 
 		self.resists = resists
 
-	def probability_to_hit_AC(self, AC):
-		# ignoring weapon bonuses/penalties
-		# ignoring multi-attack penalty
+	def expected_melee_damage_to_character(self, character):
+		return self.melee_attack_bundle.expected_damage_to_character(character, self.max_level)
 
-		if AC >= 0:
-			target = 10 + AC + self.level
-		else:
-			# when AC is negative you get a random number between -1 and AC towards defense
-			target = 10 + (AC + (-1))/2 + self.level
+	def expected_ranged_damage_to_character(self, character):
+		return self.ranged_attack_bundle.expected_damage_to_character(character, self.max_level)
+	
+	def expected_engulf_damage_to_character(self, character):
+		return self.engulf_attack_bundle.expected_damage_to_character(character, self.max_level)
 
-		if target < 1:
-			target = 1
+	def expected_passive_damage_to_character(self, character):
+		return self.passive_attack_bundle.expected_damage_to_character(character, self.max_level)
 
-		probability = min((target-1)/20, 1)
+	def expected_death_damage_to_character(self, character):
+		return self.death_attack_bundle.expected_damage_to_character(character, self.max_level)
 
-		return probability
-    
 	def actions_per_unit_time(self):
 		# assume player has speed 12
 		return self.speed / self.NORMAL_SPEED
 
-	def melee_dps(self, AC):
-		p = self.probability_to_hit_AC(AC)
-		return self.melee_attack_bundle.expected_damage * p * self.actions_per_unit_time()
+	def melee_dps(self, character):
+		return self.expected_melee_damage_to_character(character).damage * self.actions_per_unit_time()
 
 	def passive_damage_over_encounter(self, character, kill_trajectory):
-		return self.passive_attack_bundle.expected_damage * kill_trajectory.swings_to_kill
+		#import pdb; pdb.set_trace()
+		return self.expected_passive_damage_to_character(character).damage * kill_trajectory.swings_to_kill
 
 	def death_damage_over_encounter(self, character):
-		return self.death_attack_bundle.expected_damage
+		return self.expected_death_damage_to_character(character).damage
 
 	def excepted_hp_loss_in_melee(self, character, kill_trajectory):
-		excepted_hp_loss = self.melee_dps(character.AC) * kill_trajectory.time_to_kill + self.passive_damage_over_encounter(character, kill_trajectory) + self.death_damage_over_encounter(character)
+		excepted_hp_loss = self.melee_dps(character) * kill_trajectory.time_to_kill + self.passive_damage_over_encounter(character, kill_trajectory) + self.death_damage_over_encounter(character)
 		return excepted_hp_loss
 
 	class FightOutcome(NamedTuple):
@@ -118,63 +117,130 @@ RESIST_MAPPING = {
 	'*': Resists.stoning
 }
 
+class AttackDamage():
+	def __init__(self, dice_damage, damage_type, can_miss) -> None:
+		self.dice_damage = dice_damage
+		self.damage_type = damage_type
+		self.can_miss = can_miss
+
+	def expected_damage_to_character(self, character, mon_level):
+		resisted = character.resists(self.damage_type)
+		return self.expected_damage(mon_level, character.AC, resisted)
+
+	def expected_damage(self, mon_level, AC, resisted):
+		if self.can_miss:
+			if AC >= 0:
+				hit_threshold = 10 + mon_level + AC
+				damage_reduction = 0
+			else:
+				# random between -1 and AC (subtract AC here because negative)
+				expected_AC = -1*(1-AC)/2
+				hit_threshold = 10 + expected_AC + mon_level
+				damage_reduction = (1-AC)/2
+
+			# roll a d20, it must be below hit threshold
+			chance_to_hit = max(5*(hit_threshold-1)/100, 0)
+		else:
+			damage_reduction = 0
+			chance_to_hit = 1
+
+		if self.dice_damage != 0:
+			damage = max(self.dice_damage-damage_reduction,1)
+		else:
+			damage = max(self.dice_damage-damage_reduction,0)
+		damage = damage * chance_to_hit
+		if resisted and self.damage_type & ~threat.resist_but_additional:
+			damage = 0
+
+		# convention I might change later: damage_type will be non-zero even if the type is resisted
+		# pushes the work of checking elsewhere
+		return threat.Threat(damage, self.damage_type)
+
 class AttackBundle():
+	never_misses = True
 	matches_no_prefix = False
 	prefix_set = set()
 	dice_pattern = re.compile('([0-9]+)d([0-9]+)')
 	digit_pattern = re.compile('[0-9]')
 	suffix_pattern = re.compile('([^0-9\)\]]+)(?:\)|\])?$')
 
+	def expected_damage_to_character(self, character, level):
+		cum_damage = 0
+		damage_types = threat.ThreatTypes.NO_SPECIAL
+		for attack in self.attack_damages:
+			damage, damage_type = attack.expected_damage_to_character(character, level)
+			cum_damage += damage
+			damage_types |= damage_type
+		return threat.Threat(cum_damage, damage_types)
+
 	def __init__(self, attack_strs, name):
-		self.num_attacks = 0
+		self.attack_damages = []
 
-		self.min_damage = 0
-		self.expected_damage = 0
-		self.max_damage = 0
-
-		damage_types = []
 		for a in attack_strs:
-			if "(" in a and "(" in self.prefix_set:
-				#import pdb; pdb.set_trace()
-				pass
+			if a[0] not in self.prefix_set and not (self.matches_no_prefix and re.match(self.digit_pattern, a[0])):
+				# this type of attack doesn't apply to our bundle
+				continue
+			
+			if re.match(self.digit_pattern, a[0]):
+				prefix = None
+				instrument = None
+			else:
+				prefix = a[0]
+				instrument = prefix_instrument.get(prefix, None)
 
-			if a[0] in self.prefix_set or (re.match(self.digit_pattern, a[0]) and self.matches_no_prefix): # we care about this kind of attack
-				self.num_attacks += 1
-				suffix_match = re.search(self.suffix_pattern, a)
-				if suffix_match:
-					damage_type = suffix_match[1]
-					damage_type, attack_does_physical_damage = threat.csv_str_to_enum.get(damage_type, (threat.ThreatTypes.NO_SPECIAL, True))
-				else:
-					damage_type = threat.ThreatTypes.NO_SPECIAL
-					attack_does_physical_damage = True # no suffix == normal attack
+			suffix_match = re.search(self.suffix_pattern, a)
+			damage_type = threat.ThreatTypes.NO_SPECIAL
+			if suffix_match:
+				damage_type = suffix_match[1]
+				damage_type, attack_does_physical_damage = threat.csv_str_to_enum.get(damage_type, (threat.ThreatTypes.NO_SPECIAL, True))
+			else:
+				attack_does_physical_damage = True # no suffix == normal attack
 
-				if name == 'grid bug':
-					damage_type = threat.ThreatTypes.NO_SPECIAL
+			if name == 'grid bug':
+				damage_type = threat.ThreatTypes.NO_SPECIAL
 
-				damage_types.append(damage_type)
-				damage_dice_match = re.search(self.dice_pattern, a)
-				if not damage_dice_match:
-					import pdb; pdb.set_trace()
+			damage_dice_match = re.search(self.dice_pattern, a)
+			if not damage_dice_match:
+				import pdb; pdb.set_trace()
 
-				num_dice = int(damage_dice_match[1])
-				num_sides = int(damage_dice_match[2])
+			num_dice = int(damage_dice_match[1])
+			num_sides = int(damage_dice_match[2])
 
-				if attack_does_physical_damage:
-					self.min_damage += num_dice
-					self.max_damage += num_dice * num_sides
-					self.expected_damage += num_dice * (num_sides + 1)/2
+			if attack_does_physical_damage:
+				dice_damage = num_dice * (num_sides + 1)/2
+			else:
+				dice_damage = 0
+			
+			can_miss = True
+			if self.never_misses:
+				can_miss = False
+			elif instrument == 'magic':
+				can_miss = False
+			elif instrument == 'explode':
+				# technically dex affects these but whatever
+				can_miss = False
+			elif instrument == 'gaze':
+				can_miss = False
+			damage = AttackDamage(dice_damage, damage_type, can_miss)
+			self.attack_damages.append(damage)
 
-		damage_type = threat.ThreatTypes.NO_SPECIAL
-		for t in damage_types:
-			damage_type |= t
+		self.num_attacks = len(self.attack_damages)
 
-		self.damage_types = damage_type
-		#print(attack_strs, self.damage_types)
-
+prefix_instrument = {
+	'B': 'breath',
+	'W': 'weapon',
+	'M': 'magic', # never misses
+	'G': 'gaze', # never misses
+	'S': 'spit',
+	'E': 'engulf', # can miss (fail to engulf) except once you are engulfed it can't
+	'H': 'held',
+	'X': 'explode'
+}
 class RangedAttackBundle(AttackBundle):
 	prefix_set = set(['B', 'W', 'M', 'G', 'S'])
 
 class DeathAttackBundle(AttackBundle):
+	never_misses = True
 	prefix_set = set(['['])
 
 class MeleeAttackBundle(AttackBundle):
@@ -183,9 +249,11 @@ class MeleeAttackBundle(AttackBundle):
 	matches_no_prefix = True
 
 class PassiveAttackBundle(AttackBundle):
+	never_misses = True
 	prefix_set = set(['('])
 
 class EngulfAttackBundle(AttackBundle):
+	never_misses = True
 	prefix_set = set(['E'])
 
 monster_df = pd.read_csv(os.path.join(os.path.dirname(__file__), "monsters.csv"))
@@ -202,6 +270,15 @@ MONSTERS_BY_NAME = {}
 for _, row in monster_df.iterrows():
 	name = row.name
 
+	level = int(row['LVL'])
+	if name == 'Wizard of Yendor':
+		max_level = 49
+	elif name in ['Demogorgon', 'Asmodeus', 'Baalzebub', 'Dispater', 'Geryon', 'Orcus', 'Yeenoghu', 'Juiblex']:
+		max_level = level
+	else:
+		max_level = np.floor(level*1.5)
+
+
 	if row['ATTACKS'] is np.nan:
 		attack_strs = []
 	else:
@@ -212,7 +289,6 @@ for _, row in monster_df.iterrows():
 	engulf_bundle = EngulfAttackBundle(attack_strs, name)
 	death_bundle = DeathAttackBundle(attack_strs, name)
 
-	level = row['LVL']
 	AC = row['AC']
 	speed = row['SPD']
 	MR = row['MR']
@@ -222,7 +298,7 @@ for _, row in monster_df.iterrows():
 		for character in row['RESISTS'].upper():
 			resists |= RESIST_MAPPING[character]
 
-	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, AC, speed, MR, resists, tier)
+	spoiler = MonsterSpoiler(name, melee_bundle, ranged_bundle, death_bundle, engulf_bundle, passive_bundle, level, max_level, AC, speed, MR, resists, tier)
 	#print(name, resists)
 	#print(name, melee_bundle.max_damage, ranged_bundle.max_damage, passive_bundle.max_damage, death_bundle.max_damage)
 	#print(name, {k:v for k,v in zip(melee_bundle.damage_types._fields, melee_bundle.damage_types) if v==True})

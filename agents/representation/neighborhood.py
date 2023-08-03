@@ -283,7 +283,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
         self.make_monsters(character)
-        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
+        self.threat_map = map.ThreatMap(character, extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
 
         #########################################
