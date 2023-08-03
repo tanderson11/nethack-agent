@@ -12,6 +12,12 @@ def get_git_revision_hash() -> str:
 def get_git_revision_short_hash() -> str:
     return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
 
+def cherry_pick(sha) -> str:
+    return subprocess.check_output(['git', 'cherry-pick', sha]).decode('ascii').strip()
+
+def revert(sha) -> str:
+    return subprocess.check_output(['git', 'revert', '--no-edit', sha]).decode('ascii').strip()
+
 def commit(path, branch='assets', push=False):
     # save current branch info
     start_branch = subprocess.check_output(['git', 'branch', '--show-current']).decode('ascii').strip()

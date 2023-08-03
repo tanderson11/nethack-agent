@@ -33,6 +33,9 @@ def parse_target_roles(raw_str):
 
     return set([constants.BaseRole[s] for s in raw_str.split(',')])
 
+def parse_target_roles_from_list(l):
+    return set([constants.BaseRole[s] for s in l])
+
 def make_environment(**kwargs):
     default_environment = {
         'num_environments': 1,
@@ -65,7 +68,22 @@ def make_environment(**kwargs):
     }
     default_environment.update({k:v for k,v in environment.items() if v is not None})
     default_environment.update(kwargs)
+    if 'target_roles' in kwargs.keys():
+        default_environment.update({'target_roles': parse_target_roles_from_list(kwargs['target_roles'])})
     return EnvironmentVariable(**default_environment)
 
-env = make_environment()
+json_env = os.getenv("NLE_DEV_USE_JSON_ENV")
+if json_env:
+    import json
+    with open(json_env, 'r') as f:
+        env_dict = json.load(f)
+
+    try:
+        env_dict.pop('make_replay')
+    except KeyError:
+        pass
+    env = make_environment(**env_dict)
+else:
+    env = make_environment()
+
 print(env)

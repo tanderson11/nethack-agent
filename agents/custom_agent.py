@@ -94,7 +94,7 @@ class BLStats():
         strength_25 = self.get('strength_25')
 
         if strength_25 not in range(3,26):
-            import pdb; pdb.set_trace()
+            if environment.env.debug(): import pdb; pdb.set_trace()
             raise Exception('Surprising strength_25')
 
         strength_pct = 0
@@ -262,11 +262,12 @@ background_advisor = advs.BackgroundActionsAdvisor()
 
 class RunState():
     position_log_len = 80
-    def __init__(self, debug_env=None):
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
         self.debug_env = debug_env
-        self.reset()
+        self.reset(agent_seed)
         self.log_path = None
         self.target_roles = environment.env.target_roles
+        self.respond_to_issue = respond_to_issue
         if environment.env.log_runs:
             self.log_root = debug_env.savedir
             self.log_path = os.path.join(self.log_root, "log.csv")
@@ -278,7 +279,6 @@ class RunState():
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
-
     REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
     def log_final_state(self, final_reward, ascended):
@@ -352,13 +352,14 @@ class RunState():
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(state, counter_file)
 
-    def reset(self):
+    def reset(self, agent_seed=None):
         self.scumming = False
         self.character = None
         self.auto_pickup = True # defaults on
         self.gods_by_alignment = {}
 
         self.step_count = 0
+        self.step_hook = 0
         self.l1_advised_step_count = 0
         self.l1_need_downstairs_step_count = 0
         self.reward = 0
@@ -401,7 +402,10 @@ class RunState():
         self.last_level_change_timestamp = 0
         self.stuck_flag = False
 
-        self.seed = base64.b64encode(os.urandom(4))
+        if agent_seed is None:
+            self.seed = base64.b64encode(os.urandom(4))
+        else:
+            self.seed = agent_seed
         #self.seed = b'Q9MtUg=='
 
         self.rng = self.make_seeded_rng(self.seed)
@@ -433,8 +437,14 @@ class RunState():
         self.replay_log_path = None
         self.replay_log = []
         self.replay_index = 0
+        self.is_replaying = False
+
         if self.debug_env:
             core_seed, disp_seed, _ = self.debug_env.get_seeds()
+            self.initial_core_seed = core_seed
+            self.initial_disp_seed = disp_seed
+            print(f"Core: {core_seed} Disp: {disp_seed}")
+            #import pdb; pdb.set_trace()
             replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
             if os.path.exists(replay_log_path):
                 self.replay_log_path = replay_log_path
@@ -447,11 +457,16 @@ class RunState():
                         self.replay_run_number = 0
             elif environment.env.make_replay:
                 self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "tmp", f"{core_seed}-{disp_seed}.csv")
+                with open(self.replay_log_path, 'w') as replay_file:
+                    writer = csv.DictWriter(replay_file, fieldnames=self.REPLAY_HEADER)
+                    writer.writeheader()
+
                 self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
             if self.wizmode_prep:
                 self.wizmode_prep.prepped = True
+        print(f"Replay log path: {self.replay_log_path}")
 
     def make_seeded_rng(self, seed):
         import random
@@ -460,7 +475,15 @@ class RunState():
 
     def replay_advice(self):
         if self.replay_index >= len(self.replay_log):
+            if self.replay_index > 0 and self.replay_index == len(self.replay_log):
+                self.stall_detection_on=True
+                print("FINISHED REPLAY")
+                self.replay_index += 1
+                if self.respond_to_issue:
+                    self.step_hook = self.step_count + 40
+            self.is_replaying = False
             return None
+        self.is_replaying = True
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
         self.replay_index += 1
@@ -545,9 +568,13 @@ class RunState():
         self.video_deque.append(frame)
 
         #if self.time == 100:
+        #    import pdb; pdb.set_trace()
         #    self.make_issue('time=100', 'time')
 
     def update_observation(self, observation):
+        if self.is_replaying:
+            self.stall_detection_on = False
+
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
         # our metric for time advanced: true if game time advanced or if neighborhood changed
@@ -574,23 +601,50 @@ class RunState():
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
 
+    def make_issue_response(self, issue_num, **video_kwargs):
+        import nh_git
+        import json
+
+        last_commit = nh_git.get_git_revision_hash()
+
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
+        save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
+        os.makedirs(save_path, exist_ok=True)
+
+        video_path = self.render_video(save_path, **video_kwargs)
+        new_sha = nh_git.commit(video_path, push=True)
+
+        body = f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{new_sha}/{os.path.relpath(video_path)})\n{last_commit}'
+        description = json.dumps({
+            'body':body,
+        })
+        command = [
+            'curl', '-L', '-X', 'POST',
+            '-H', 'Accept: application/vnd.github+json',
+            '-H', f'Authorization: Bearer {nh_git.pat}',
+            '-H', 'X-GitHub-Api-Version: 2022-11-28',
+            f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues/{issue_num}/comments',
+            '-d', description
+        ]
+        subprocess.run(command)
+
     def make_issue(self, title, labels, attach_video=True, **video_kwargs):
         import nh_git
-        import pickle
         import json
-        core_seed, disp_seed, _ = self.debug_env.get_seeds()
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
         save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
         os.makedirs(save_path, exist_ok=True)
 
         # dump information needed to replay the game
         replay_log_path = self.replay_log_path
+
         subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
-        with open((os.path.join(save_path, 'core_disp_seeds.pickle')), 'wb') as f:
-            pickle.dump((core_seed, disp_seed), f)
-        with open((os.path.join(save_path, 'agent_seed.pickle')), 'wb') as f:
-            pickle.dump(self.seed, f)
+        with open((os.path.join(save_path, 'seeds.json')), 'w') as f:
+            json.dump({'core_seed':core_seed, 'disp_seed':disp_seed, 'agent_seed':str(self.seed)}, f)
         with open((os.path.join(save_path, 'environment.json')), 'w') as f:
-            json.dump(environment.env.dump(), f)
+            env_dict = environment.env.dump()
+            env_dict.pop('make_replay') # we don't want to keep making replays when we replay this ...
+            json.dump(env_dict, f)
 
         body = ""
         if attach_video:
@@ -601,9 +655,10 @@ class RunState():
         if attach_video:
             body = body + f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})'
 
-        #body += f'\n{self.seed}'
-        #body += f'\n{core_seed}, {disp_seed}'
-        body += f"""\n`git cherry-pick {last_sha}`"""
+        #body += f"""\n`git cherry-pick {last_sha}`"""
+        body += f"""\n`poetry run python replay_commit.py {last_sha}`"""
+        body += f"""\n{last_sha}"""
+
 
         if isinstance(labels, str):
             labels = [labels]
@@ -623,11 +678,10 @@ class RunState():
             f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
             '-d', description
         ]
-        #import pdb; pdb.set_trace()
         subprocess.run(command)
 
     def render_video(self, path='video_logs/', video_length=40):
-        save_file = os.path.join(path, f"{self.time}.gif")
+        save_file = os.path.join(path, f"{self.step_count}.gif")
         from PIL import ImageFont, Image, ImageDraw
         font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
         img_frames = []
@@ -685,7 +739,6 @@ class RunState():
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
         if sum(self.recent_position_counter.values()) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             for i in range(self.recent_position_start, len(self.position_log)):
                 position = self.position_log[i]
                 advice = self.advice_log[i]
@@ -698,13 +751,11 @@ class RunState():
                 self.recent_position_counter[position] -= 1
                 #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
                 if self.recent_position_counter[position] == 0:
-                    #import pdb; pdb.set_trace()
                     del self.recent_position_counter[position]
                     #print(f"Deleting {position}")
                 break
             self.recent_position_start = i+1
         if len(self.recent_position_counter) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             pass
         #print("RET")
 
@@ -878,8 +929,8 @@ def print_stats(done, run_state, blstats):
     )
 
 class CustomAgent():
-    def __init__(self, debug_env=None):
-        self.run_state = RunState(debug_env)
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
+        self.run_state = RunState(debug_env, agent_seed, respond_to_issue)
     
     @classmethod
     def generate_action(cls, run_state, observation):
@@ -953,14 +1004,18 @@ class CustomAgent():
 
         run_state.update_observation(observation) # moved after previous glyph futzing
 
+        #if run_state.step_count == 1200:
+        #    run_state.make_issue('t=1200', 'test')
+
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
 
-        #if run_state.time % 1000 == 0:
-        #    ARS.rs.debug_env.render()
-        #    print(ARS.rs.character.inventory.wielded_weapon)
-        #    print(ARS.rs.character.tier)
-            #import pdb; pdb.set_trace()
+        if run_state.step_hook != 0 and run_state.step_hook > run_state.step_count:
+            print(f"Waiting for hook: {run_state.step_count}, {run_state.step_hook}")
+        if run_state.step_hook != 0 and run_state.step_hook == run_state.step_count:
+            print("Hooked by step")
+            if run_state.respond_to_issue:
+                run_state.make_issue_response(run_state.respond_to_issue, video_length=40)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
@@ -1004,7 +1059,6 @@ class CustomAgent():
             )
 
         if "lands on the altar" in message.message:
-            #import pdb; pdb.set_trace()
             run_state.current_square.stack_on_square = True
             level_map.lootable_squares_map[player_location] = True
 

@@ -42,6 +42,14 @@ if environment.env.use_seed_whitelist:
                 continue
             seed_whitelist.append((int(row[0]), int(row[1])))
 
+def evaluate_one(agent_seed, core, disp, respond_to_issue=None):
+    seeds = [(core, disp)]
+    env_make_fn = SubmissionConfig.MAKE_ENV_FN
+    instrumented_env = InstrumentedEnv(env_make_fn=env_make_fn, seeds=seeds)
+    Agent = SubmissionConfig.AGENT
+    agent = Agent(instrumented_env.env if environment.env.log_runs else None, agent_seed, respond_to_issue)
+    return instrumented_env.run_episode(agent)
+
 def evaluate(runner_index, num_episodes=TestEvaluationConfig.NUM_EPISODES, runner_queue=None):
     env_make_fn = SubmissionConfig.MAKE_ENV_FN
     Agent = SubmissionConfig.AGENT
