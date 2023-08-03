@@ -334,7 +334,9 @@ class Character():
     unsafe_hp_loss = 0.5
     def death_by_passive(self, spoiler):
         trajectory = self.average_time_to_kill_monster_in_melee(spoiler)
-        return spoiler.passive_damage_over_encounter(self, trajectory) + spoiler.death_damage_over_encounter(self) > self.unsafe_hp_loss * self.current_hp
+        looks_like_death = spoiler.passive_damage_over_encounter(self, trajectory) + spoiler.death_damage_over_encounter(self) > self.unsafe_hp_loss * self.current_hp
+        #if looks_like_death: import pdb; pdb.set_trace()
+        return looks_like_death
 
     #def threatened_by(self, monster):
     #    if not isinstance(monster, gd.MonsterGlyph):
