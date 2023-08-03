@@ -6,6 +6,8 @@ import re
 import numpy as np
 import enum
 
+import agents.representation.threat as threat
+
 class MonsterSpoiler():
 	NORMAL_SPEED = 12
 
@@ -123,87 +125,6 @@ class AttackBundle():
 	digit_pattern = re.compile('[0-9]')
 	suffix_pattern = re.compile('([^0-9\)\]]+)(?:\)|\])?$')
 
-	class DamageTypes(NamedTuple): # some day we should disambiguate damage qualities and damage quantities
-		acid: bool
-		cold: bool
-		disintegration: bool
-		electricity: bool
-		fire: bool
-		heal: bool
-		missiles: bool
-		poison: bool
-		rust: bool
-		sleep: bool
-		drain: bool
-		blind: bool
-		confusion: bool
-		digest: bool
-		energy: bool
-		hallucination: bool
-		intrinsic: bool
-		stick: bool
-		rot: bool
-		stun: bool
-		teleport: bool
-		wrap: bool
-		prick: bool
-		rider: bool
-		paralysis: bool
-		spell: bool
-		steal: bool
-		disenchant: bool
-		seduce: bool
-		slow: bool
-		str_drain: bool
-		int_drain: bool
-		con_drain: bool
-		dex_drain: bool
-		disease: bool
-		gold: bool
-		stone: bool
-		lycanthropy: bool
-
-		suffix_mapping = { # bool corresponds to if the damage dice affect actual HP
-			'A': ('acid',True),
-			'C': ('cold', True),
-			'D': ('disintegration', True),
-			'E': ('electricity', True),
-			'F': ('fire', True),
-			'H': ('heal', False),
-			'M': ('missiles', True),
-			'P': ('poison', True),
-			'R': ('rust', True),
-			'S': ('sleep', True),
-			'V': ('drain', True),
-			'b': ('blind', False),
-			'c': ('confusion', True),
-			'd': ('digest', True),
-			'e': ('energy', False),
-			'h': ('hallucination',False),
-			'i': ('intrinsic', True),
-			'm': ('stick', True),
-			'r': ('rot', True),
-			's': ('stun', True),
-			't': ('teleport',True),
-			'w': ('wrap', True),
-			'x': ('prick', True),
-			'z': ('rider', True),
-			'.': ('paralysis', True),
-			'+': ('spell', True),
-			'-': ('steal', True),
-			'"': ('disenchant', True),
-			'&': ('seduce', True),
-			'<': ('slow', True),
-			'!I': ('int_drain', False), # mind flayers are only doing int drain with tentacles
-			'!C': ('con_drain', True), # rabid rats are actually doing damage
-			'!S': ('str_drain', True), # this doesn't actually exist ... just normal poison
-			'!D': ('dex_drain', True), # quasits also do real damage
-			'#': ('disease', True),
-			'$': ('gold', True),
-			'*': ('stone', True),
-			'@': ('lycanthropy', True),
-		}
-
 	def __init__(self, attack_strs):
 		self.num_attacks = 0
 
@@ -222,10 +143,11 @@ class AttackBundle():
 				suffix_match = re.search(self.suffix_pattern, a)
 				if suffix_match:
 					damage_type = suffix_match[1]
+					damage_type, attack_does_physical_damage = threat.csv_str_to_enum.get(damage_type, (threat.ThreatTypes.NO_SPECIAL, True))
 					damage_types.append(damage_type)
-					attack_does_physical_damage = self.DamageTypes.suffix_mapping[damage_type][1]
 				else:
-					attack_does_physical_damage = True # no suffix is normal attack
+					damage_types.append(threat.ThreatTypes.NO_SPECIAL)
+					attack_does_physical_damage = True # no suffix == normal attack
 
 				damage_dice_match = re.search(self.dice_pattern, a)
 				if not damage_dice_match:
@@ -239,12 +161,12 @@ class AttackBundle():
 					self.max_damage += num_dice * num_sides
 					self.expected_damage += num_dice * (num_sides + 1)/2
 
-		keys = [f for f in self.__class__.DamageTypes._fields]
-		damage_type_dict = {k: False for k in keys}
+		damage_type = threat.ThreatTypes.NO_SPECIAL
 		for t in damage_types:
-			damage_type_dict[self.DamageTypes.suffix_mapping[t][0]] = True
+			damage_type |= t
 
-		self.damage_types = self.DamageTypes(**damage_type_dict)
+		self.damage_types = damage_type
+		#print(attack_strs, self.damage_types)
 
 class RangedAttackBundle(AttackBundle):
 	prefix_set = set(['B', 'W', 'M', 'G', 'S'])
