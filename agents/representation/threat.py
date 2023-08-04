@@ -145,7 +145,7 @@ csv_str_to_enum = {
     'w': (ThreatTypes.WRAP, True),
     'x': (ThreatTypes.PRICK, True),
     'z': (ThreatTypes.RIDER, True),
-    '.': (ThreatTypes.PARALYSIS, True),
+    '.': (ThreatTypes.PARALYSIS, True), # the all important decision to pretend paralysis causes damage so we are very scared of floating eyes
     '+': (ThreatTypes.SPELL, True),
     '-': (ThreatTypes.STEAL, True),
     '"': (ThreatTypes.DISENCHANT, True),
