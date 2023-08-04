@@ -660,6 +660,7 @@ class TestThreat(NeighborhoodBuildingTest):
         c.set_class_skills()
         c.innate_intrinsics = intrinsics
         c.AC = AC
+        c.current_hp = 50
         return c
 
     def get_spoiler(self, name):
