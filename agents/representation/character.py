@@ -356,9 +356,6 @@ class Character():
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
 
-    def overpowered(self):
-        return self.AC < -20 and self.current_hp > 50
-
     def desire_to_eat_corpses(self, neighborhood):
         # not if we're satiated
         if self.hunger_state == 0: return False
