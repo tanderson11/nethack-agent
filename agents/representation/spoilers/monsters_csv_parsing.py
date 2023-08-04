@@ -33,6 +33,20 @@ class MonsterSpoiler():
 
         self.resists = resists
 
+    def char_would_tussle_with(self, character):
+        # TK implement avoidance of deadly melee combatants (but pursuit of deadly ranged combatants that are weak in melee)
+        cumulative_safety = threat.CharacterThreat.safe
+        passive_damage = self.expected_passive_damage_to_character(character)
+        # Don't evaluate passive damage TYPE because in general there is avoiding that
+        # recall that floating eyes' paralysis will be recorded as damage damage so they will still be unsafe
+        cumulative_safety = max(threat.evaluate_threat_damage(passive_damage, character), cumulative_safety)
+        death_damage = self.expected_death_damage_to_character(character)
+        cumulative_safety = max(threat.evaluate_threat_damage(death_damage, character), threat.evaluate_threat_type(death_damage, character), cumulative_safety)
+
+        if cumulative_safety < threat.CharacterThreat.high:
+            return True
+        return False
+
     def expected_melee_damage_to_character(self, character):
         return self.melee_attack_bundle.expected_damage_to_character(character, self.max_level)
 
