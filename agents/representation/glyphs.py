@@ -899,8 +899,9 @@ class IdentityLike():
     def extrinsics_by_colname(self, column):
         extrinsics = constants.Intrinsics.NONE
         values = self.find_values(column)
-        if not values:
+        if not values or pd.isna(values):
             return extrinsics
+
         for intrinsic_str in values.split(','):
             #import pdb; pdb.set_trace()
             try:
@@ -908,6 +909,7 @@ class IdentityLike():
             except KeyError:
                 print(f"Failed to know about intrinsic {intrinsic_str}")
                 extrinsic = constants.Intrinsics.NONE
+
             extrinsics |= extrinsic
         return extrinsics
 
