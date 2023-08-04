@@ -1386,7 +1386,7 @@ class ScariestAttack(Attack):
 
 class MeleePriorityTargets(ScariestAttack):
     def targets(self, neighborhood, character):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and m.monster_spoiler.char_would_tussle_with(character))
 
 class UnsafeMeleeAttackAdvisor(Attack):
     def prioritize(self, run_state, targets, character):
@@ -1413,7 +1413,7 @@ class SafeMeleeAttackAdvisor(ScariestAttack):
             if not isinstance(monster, gd.MonsterGlyph):
                 return True
             spoiler = monster.monster_spoiler
-            if spoiler and character.death_by_passive(spoiler):
+            if spoiler and not monster.monster_spoiler.char_would_tussle_with(character):
                 return False
             return True
 
@@ -1991,7 +1991,7 @@ class PickupDesirableItems(Advisor):
         )
         return ActionAdvice(from_advisor=self, action=nethack.actions.Command.PICKUP, new_menu_plan=menu_plan)
 
-class HuntNearestWeakEnemyAdvisor(PathAdvisor):
+class HuntNearestEnemyWeWouldFight(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         return run_state.neighborhood.path_to_nearest_weak_monster()
 
@@ -1999,6 +1999,10 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         #import pdb; pdb.set_trace()
         return run_state.neighborhood.path_to_nearest_monster()
+
+class HuntDistantThreat(PathAdvisor):
+    def find_path(self, rng, run_state, character, oracle):
+        return run_state.neighborhood.path_to_distant_threatening_monster()
 
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
