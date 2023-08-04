@@ -36,6 +36,8 @@ class InstrumentedEnv:
     def reset_environment(self, env):
         next_seed = self.next_seed()
         if next_seed:
+            print("Adding seed")
+            print(next_seed)
             env.unwrapped.seed(next_seed[0], next_seed[1], False)
         else:
             if environment.env.use_seed_whitelist:
@@ -70,8 +72,8 @@ class InstrumentedEnv:
         else:
             agent.run_state.log_final_state(reward, info["is_ascended"])
         finally:
-            agent.run_state.reset()
             self.initial_observation = self.reset_environment(self.env)
+            agent.run_state.reset()
 
 
         return info.get("is_ascended", False), crashed, total_score

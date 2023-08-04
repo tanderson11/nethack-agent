@@ -1,9 +1,11 @@
 import base64
+import collections
 import csv
 import copy
 from dataclasses import astuple
 import os
 import re
+import subprocess
 
 import numpy as np
 import pandas as pd
@@ -27,7 +29,7 @@ from utilities import ARS
 from agents.representation.character import Character
 import agents.representation.constants as constants
 import agents.representation.glyphs as gd
-import agents.representation.map as map
+import agents.representation.map as dmap
 from agents.representation.map import DMap, DCoord
 import environment
 from agents.wizmode.wizmodeprep import WizmodePrep
@@ -69,6 +71,22 @@ class BLStats():
     def __init__(self, raw):
         self.raw = raw
 
+    def __repr__(self) -> str:
+        hunger_states = {
+            0: 'satiated',
+            1: 'normal',
+            2: 'hungry',
+            3: 'weak',
+            4: 'fainting',
+        }
+
+        blind = self.check_condition(nethack.BL_MASK_BLIND)
+        stun  = self.check_condition(nethack.BL_MASK_STUN)
+        conf  = self.check_condition(nethack.BL_MASK_CONF)
+        hallu = self.check_condition(nethack.BL_MASK_HALLU)
+
+        return f"Time:{self.get('time')} HP:{self.get('hitpoints')}/{self.get('max_hitpoints')} EXP:{self.get('experience_level')} D:{self.get('dungeon_number')} DLevel:{self.get('level_number')} Hunger:{hunger_states.get(self.get('hunger_state'), self.get('hunger_state'))}" + '\n' + f"Blind:{blind} Conf:{conf} Stun:{stun} Hallu:{hallu}"
+
     def get(self, key):
         return self.raw[self.__class__.bl_meaning.index(key)]
 
@@ -76,7 +94,7 @@ class BLStats():
         strength_25 = self.get('strength_25')
 
         if strength_25 not in range(3,26):
-            import pdb; pdb.set_trace()
+            if environment.env.debug(): import pdb; pdb.set_trace()
             raise Exception('Surprising strength_25')
 
         strength_pct = 0
@@ -166,7 +184,7 @@ class Message():
             self.carrying_too_much_message = "You are carrying too much to get through." in message.message
             self.solid_stone = "It's solid stone" in message.message
 
-            if self.solid_stone and environment.env.debug: import pdb; pdb.set_trace()
+            #if self.solid_stone and environment.env.debug: import pdb; pdb.set_trace()
             #no_hands_door_message = "You can't open anything -- you have no hands!" in message.message
             
             #"Can't find dungeon feature"
@@ -244,11 +262,12 @@ background_advisor = advs.BackgroundActionsAdvisor()
 
 class RunState():
     position_log_len = 80
-    def __init__(self, debug_env=None):
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
         self.debug_env = debug_env
-        self.reset()
+        self.reset(agent_seed)
         self.log_path = None
         self.target_roles = environment.env.target_roles
+        self.respond_to_issue = respond_to_issue
         if environment.env.log_runs:
             self.log_root = debug_env.savedir
             self.log_path = os.path.join(self.log_root, "log.csv")
@@ -260,7 +279,6 @@ class RunState():
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
-
     REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
 
     def log_final_state(self, final_reward, ascended):
@@ -334,13 +352,14 @@ class RunState():
         with open(os.path.join(self.log_root,  filename), 'w') as counter_file:
             json.dump(state, counter_file)
 
-    def reset(self):
+    def reset(self, agent_seed=None):
         self.scumming = False
         self.character = None
         self.auto_pickup = True # defaults on
         self.gods_by_alignment = {}
 
         self.step_count = 0
+        self.step_hook = 0
         self.l1_advised_step_count = 0
         self.l1_need_downstairs_step_count = 0
         self.reward = 0
@@ -383,8 +402,12 @@ class RunState():
         self.last_level_change_timestamp = 0
         self.stuck_flag = False
 
-        self.seed = base64.b64encode(os.urandom(4))
-        #self.seed = b'vYIDlQ=='
+        if agent_seed is None:
+            self.seed = base64.b64encode(os.urandom(4))
+        else:
+            self.seed = agent_seed
+        #self.seed = b'Q9MtUg=='
+
         self.rng = self.make_seeded_rng(self.seed)
 
         self.time_did_advance = True
@@ -405,11 +428,23 @@ class RunState():
 
         self.debugger_on = None
 
+        if environment.env.log_video:
+            self.video_deque = collections.deque()
+            assert environment.env.log_runs
+        else:
+            self.video_deque = None
+
         self.replay_log_path = None
         self.replay_log = []
         self.replay_index = 0
+        self.is_replaying = False
+
         if self.debug_env:
             core_seed, disp_seed, _ = self.debug_env.get_seeds()
+            self.initial_core_seed = core_seed
+            self.initial_disp_seed = disp_seed
+            print(f"Core: {core_seed} Disp: {disp_seed}")
+            #import pdb; pdb.set_trace()
             replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", f"{core_seed}-{disp_seed}.csv")
             if os.path.exists(replay_log_path):
                 self.replay_log_path = replay_log_path
@@ -420,10 +455,18 @@ class RunState():
                         self.replay_run_number = int(self.replay_log[-1]['run_number']) + 1
                     else:
                         self.replay_run_number = 0
+            elif environment.env.make_replay:
+                self.replay_log_path = os.path.join(os.path.dirname(__file__), "..", "seeded_runs", "tmp", f"{core_seed}-{disp_seed}.csv")
+                with open(self.replay_log_path, 'w') as replay_file:
+                    writer = csv.DictWriter(replay_file, fieldnames=self.REPLAY_HEADER)
+                    writer.writeheader()
+
+                self.replay_run_number = 0
         if self.replay_log:
             self.auto_pickup = False
             if self.wizmode_prep:
                 self.wizmode_prep.prepped = True
+        print(f"Replay log path: {self.replay_log_path}")
 
     def make_seeded_rng(self, seed):
         import random
@@ -432,7 +475,15 @@ class RunState():
 
     def replay_advice(self):
         if self.replay_index >= len(self.replay_log):
+            if self.replay_index > 0 and self.replay_index == len(self.replay_log):
+                self.stall_detection_on=True
+                print("FINISHED REPLAY")
+                self.replay_index += 1
+                if self.respond_to_issue:
+                    self.step_hook = self.step_count + 40
+            self.is_replaying = False
             return None
+        self.is_replaying = True
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
         self.replay_index += 1
@@ -505,7 +556,25 @@ class RunState():
         self.last_damage_timestamp = time
         self.total_damage += damage
 
+    def save_frame(self, message):
+        if len(self.video_deque) == 1000:
+            self.video_deque.popleft()
+        frame = (
+            message.message + '\n' +
+            self.debug_env.render('ansi') + '\n' +
+            str(self.blstats) + '\n' +
+            str(self.advice_log[-1]) if self.advice_log else None
+        )
+        self.video_deque.append(frame)
+
+        #if self.time == 100:
+        #    import pdb; pdb.set_trace()
+        #    self.make_issue('time=100', 'time')
+
     def update_observation(self, observation):
+        if self.is_replaying:
+            self.stall_detection_on = False
+
         # we want to track when we are taking game actions that are progressing the game
         # time isn't a totally reliable metric for this, as game time doesn't advance after every action for fast players
         # our metric for time advanced: true if game time advanced or if neighborhood changed
@@ -531,6 +600,102 @@ class RunState():
         self.time = new_time
         self.glyphs = observation['glyphs'].copy() # does this need to be a copy?
         self.blstats = blstats
+
+    def make_issue_response(self, issue_num, **video_kwargs):
+        import nh_git
+        import json
+
+        last_commit = nh_git.get_git_revision_hash()
+
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
+        save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
+        os.makedirs(save_path, exist_ok=True)
+
+        video_path = self.render_video(save_path, **video_kwargs)
+        new_sha = nh_git.commit(video_path, push=True)
+
+        body = f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{new_sha}/{os.path.relpath(video_path)})\n{last_commit}'
+        description = json.dumps({
+            'body':body,
+        })
+        command = [
+            'curl', '-L', '-X', 'POST',
+            '-H', 'Accept: application/vnd.github+json',
+            '-H', f'Authorization: Bearer {nh_git.pat}',
+            '-H', 'X-GitHub-Api-Version: 2022-11-28',
+            f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues/{issue_num}/comments',
+            '-d', description
+        ]
+        subprocess.run(command)
+
+    def make_issue(self, title, labels, attach_video=True, **video_kwargs):
+        import nh_git
+        import json
+        core_seed, disp_seed = self.initial_core_seed, self.initial_disp_seed
+        save_path = os.path.join(self.log_root, 'issues', f"{core_seed}-{disp_seed}")
+        os.makedirs(save_path, exist_ok=True)
+
+        # dump information needed to replay the game
+        replay_log_path = self.replay_log_path
+
+        subprocess.run(['cp', replay_log_path, os.path.join(save_path)])
+        with open((os.path.join(save_path, 'seeds.json')), 'w') as f:
+            json.dump({'core_seed':core_seed, 'disp_seed':disp_seed, 'agent_seed':str(self.seed)}, f)
+        with open((os.path.join(save_path, 'environment.json')), 'w') as f:
+            env_dict = environment.env.dump()
+            env_dict.pop('make_replay') # we don't want to keep making replays when we replay this ...
+            json.dump(env_dict, f)
+
+        body = ""
+        if attach_video:
+            video_path = self.render_video(save_path, **video_kwargs)
+
+        last_sha = nh_git.commit(save_path, push=True)
+
+        if attach_video:
+            body = body + f'![](https://github.com/{nh_git.owner}/{nh_git.repo}/raw/{last_sha}/{os.path.relpath(video_path)})'
+
+        #body += f"""\n`git cherry-pick {last_sha}`"""
+        body += f"""\n`poetry run python replay_commit.py {last_sha}`"""
+        body += f"""\n{last_sha}"""
+
+
+        if isinstance(labels, str):
+            labels = [labels]
+
+        description = json.dumps({
+            'title':title,
+            'body':body,
+            'labels':labels
+        })
+
+        #description = f"""{{"title":"{title}", "body":"{body}", "labels":"[{label}]"}}"""
+        command = [
+            'curl', '-L', '-X', 'POST',
+            '-H', 'Accept: application/vnd.github+json',
+            '-H', f'Authorization: Bearer {nh_git.pat}',
+            '-H', 'X-GitHub-Api-Version: 2022-11-28',
+            f'https://api.github.com/repos/{nh_git.owner}/{nh_git.repo}/issues',
+            '-d', description
+        ]
+        subprocess.run(command)
+
+    def render_video(self, path='video_logs/', video_length=40):
+        save_file = os.path.join(path, f"{self.step_count}.gif")
+        from PIL import ImageFont, Image, ImageDraw
+        font = ImageFont.truetype("Roboto_Mono/RobotoMono-Light.ttf", 20)
+        img_frames = []
+        video_length = min(len(self.video_deque), video_length)
+        for frame in [self.video_deque[i] for i in range(len(self.video_deque)-1-video_length, len(self.video_deque))]:
+            img = Image.new('L', (1000, 720), color='white')
+            draw = ImageDraw.Draw(img)
+            origin = (10,10)
+            draw.text(origin, frame, font=font, fill='black')
+            img_frames.append(img)
+
+        img_frames[0].save(save_file, format='GIF',
+               append_images=img_frames[1:], save_all=True, duration=85, loop=0)
+        return save_file
 
     def set_menu_plan(self, menu_plan):
         self.active_menu_plan = menu_plan
@@ -574,7 +739,6 @@ class RunState():
         self.recent_position_counter[self.position_log[-1]] += 1
         #print(f"Adding to {self.position_log[-1]} -> {self.recent_position_counter[self.position_log[-1]]}")
         if sum(self.recent_position_counter.values()) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             for i in range(self.recent_position_start, len(self.position_log)):
                 position = self.position_log[i]
                 advice = self.advice_log[i]
@@ -587,13 +751,11 @@ class RunState():
                 self.recent_position_counter[position] -= 1
                 #print(f"Subtracting from {position} -> {self.recent_position_counter[position]}")
                 if self.recent_position_counter[position] == 0:
-                    #import pdb; pdb.set_trace()
                     del self.recent_position_counter[position]
                     #print(f"Deleting {position}")
                 break
             self.recent_position_start = i+1
         if len(self.recent_position_counter) > self.position_log_len:
-            #import pdb; pdb.set_trace()
             pass
         #print("RET")
 
@@ -677,10 +839,11 @@ class RunState():
                 pass
 
         if message.feedback.boulder_in_vain_message or message.feedback.diagonal_into_doorway_message or message.feedback.boulder_blocked_message or message.feedback.carrying_too_much_message or message.feedback.solid_stone:
+            boulder_fail = (message.feedback.boulder_in_vain_message or message.feedback.boulder_blocked_message)
             if message.feedback.carrying_too_much_message:
                 self.character.carrying_too_much_for_diagonal = True
             if self.last_non_menu_action in physics.direction_actions:
-                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action)
+                self.failed_move_record.add_failed_move(self.current_square.location, self.time, self.last_non_menu_action, boulder_fail)
                 #self.current_square.failed_moves_on_square.append(self.last_non_menu_action)
             else:
                 if self.last_non_menu_action != nethack.actions.Command.TRAVEL:
@@ -766,8 +929,8 @@ def print_stats(done, run_state, blstats):
     )
 
 class CustomAgent():
-    def __init__(self, debug_env=None):
-        self.run_state = RunState(debug_env)
+    def __init__(self, debug_env=None, agent_seed=None, respond_to_issue=None):
+        self.run_state = RunState(debug_env, agent_seed, respond_to_issue)
     
     @classmethod
     def generate_action(cls, run_state, observation):
@@ -841,17 +1004,24 @@ class CustomAgent():
 
         run_state.update_observation(observation) # moved after previous glyph futzing
 
+        #if run_state.step_count == 1200:
+        #    run_state.make_issue('t=1200', 'test')
+
         if run_state.step_count % 1000 == 0:
             print_stats(False, run_state, blstats)
 
-        #if run_state.time % 1000 == 0:
-        #    ARS.rs.debug_env.render()
-        #    print(ARS.rs.character.inventory.wielded_weapon)
-        #    print(ARS.rs.character.tier)
-            #import pdb; pdb.set_trace()
+        if run_state.step_hook != 0 and run_state.step_hook > run_state.step_count:
+            print(f"Waiting for hook: {run_state.step_count}, {run_state.step_hook}")
+        if run_state.step_hook != 0 and run_state.step_hook == run_state.step_count:
+            print("Hooked by step")
+            if run_state.respond_to_issue:
+                run_state.make_issue_response(run_state.respond_to_issue, video_length=40)
 
         message = Message(observation['message'], observation['tty_chars'], observation['misc'])
         run_state.handle_message(message)
+
+        if environment.env.log_video:
+            run_state.save_frame(message)
 
         if run_state.character:
             if run_state.last_non_menu_action == nethack.actions.Command.DROP or run_state.last_non_menu_action == nethack.actions.Command.DROPTYPE:
@@ -889,7 +1059,6 @@ class CustomAgent():
             )
 
         if "lands on the altar" in message.message:
-            #import pdb; pdb.set_trace()
             run_state.current_square.stack_on_square = True
             level_map.lootable_squares_map[player_location] = True
 
@@ -928,7 +1097,7 @@ class CustomAgent():
         #create staircases. as of NLE 0.7.3, we receive the descend/ascend message while still in the old region
         if previous_square and previous_square.dcoord != dcoord:
             run_state.last_level_change_timestamp = run_state.time
-            if dcoord.branch == map.Branches.Sokoban.value:
+            if dcoord.branch == dmap.Branches.Sokoban.value:
                 #import pdb; pdb.set_trace()
                 pass
             if len(run_state.message_log) > 1:
@@ -938,9 +1107,9 @@ class CustomAgent():
                     print(run_state.message_log[-2])
                     # create the staircases (idempotent)
                     if "You descend the" in run_state.message_log[-2] or "You fall down the stairs" in run_state.message_log[-2]:
-                        direction = (map.DirectionThroughDungeon.down, map.DirectionThroughDungeon.up)
+                        direction = (dmap.DirectionThroughDungeon.down, dmap.DirectionThroughDungeon.up)
                     elif "You climb" in run_state.message_log[-2]:
-                        direction = (map.DirectionThroughDungeon.up, map.DirectionThroughDungeon.down)
+                        direction = (dmap.DirectionThroughDungeon.up, dmap.DirectionThroughDungeon.down)
 
                     if dcoord.branch != previous_square.dcoord.branch:
                         run_state.dmap.add_branch_traversal(start_dcoord=dcoord, end_dcoord=previous_square.dcoord)

@@ -264,7 +264,7 @@ class ActionAdvice(Advice):
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
     def __repr__(self):
-        return "Advice: (action={}; advisor={}; menu_plan={})".format(self.action, self.from_advisor, self.new_menu_plan)
+        return "Advice: (action={};\n advisor={};\n menu_plan={}\n)".format(str(nethack.actions.ACTIONS[nethack.actions.ACTIONS.index(self.action)]), type(self.from_advisor), self.new_menu_plan)
 
     def __post_init__(self):
         utilities.ACTION_LOOKUP[self.action] # check that this exists
@@ -866,16 +866,12 @@ class EnhanceSkillsAdvisor(Advisor):
 
 class EatCorpseAdvisor(Advisor):
     def advice(self, rng, run_state, character, oracle):
-        if run_state.neighborhood.in_shop:
-            return None
+        if not character.desire_to_eat_corpses(run_state.neighborhood): return None
 
         if run_state.neighborhood.fresh_corpse_on_square_glyph is None:
             return None
 
         if not run_state.neighborhood.fresh_corpse_on_square_glyph.safe_to_eat(character):
-            return None
-
-        if oracle.am_satiated:
             return None
 
         if run_state.neighborhood.count_monsters(
@@ -1211,7 +1207,6 @@ class RangedAttackFearfulMonsters(RangedAttackAdvisor):
         return advice
     def targets(self, neighborhood, character, **kwargs):
         range = physics.AttackRange('line', 4)
-        #return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m) and not character.death_by_passive(m.monster_spoiler))
         targets = neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and character.scared_by(m), attack_range=range, **kwargs)
         if targets is not None:
             #print(f"Annoying monster at range: {targets.monsters[0]}")
@@ -1287,7 +1282,7 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
         target_index = None
         # prioritize by maximum passive damage
         for i,m in enumerate(monsters):
-            damage = m.monster_spoiler.passive_attack_bundle.expected_damage
+            damage, _ = m.monster_spoiler.expected_passive_damage_to_character(character)
 
             if target_index is None or damage > max_damage:
                 target_index = i
@@ -2007,7 +2002,7 @@ class HuntNearestEnemyAdvisor(PathAdvisor):
 
 class PathfindDesirableObjectsAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
-        return run_state.neighborhood.path_to_desirable_objects()
+        return run_state.neighborhood.path_to_desirable_objects(character)
 
 class PathfindInvisibleMonstersSokoban(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):

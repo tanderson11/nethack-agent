@@ -768,7 +768,7 @@ class ItemParser():
 
             class_appearances = identity_class.appearances()
 
-            if defuzzed_appearance not in class_appearances.unique():
+            if defuzzed_appearance not in set(class_appearances[~class_appearances.isna()]):
                 return None
             else:
                 #import pdb; pdb.set_trace()

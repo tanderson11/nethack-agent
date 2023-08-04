@@ -674,7 +674,6 @@ for klass in klasses:
     GLYPH_NUMERAL_LOOKUP.update(klass.numeral_mapping())
 
 
-#print(GLYPH_NUMERAL_LOOKUP)
 ks = GLYPH_NUMERAL_LOOKUP.keys()
 for i in range(0, 5977):
     if i not in ks:
@@ -910,8 +909,7 @@ class AmbiguousIdentity(IdentityLike):
     def give_name(self, name):
         # Should do something around reducing possible glyphs it could be?
         # doesn't really matter that much as these shouldn't be very persistent
-        #import pdb; pdb.set_trace()
-        if environment.env.debug: import pdb; pdb.set_trace()
+        #if environment.env.debug: import pdb; pdb.set_trace()
 
         return super().give_name(name)
 
@@ -934,7 +932,7 @@ class NumeralIdentity(IdentityLike):
     Listens to messages to gain knowledge about the identity of the object.
     '''
     def __init__(self, idx, shuffle_class=None):
-        idx = pd.Int64Index(idx).copy()
+        idx = pd.Index(idx, dtype=int).copy()
         super().__init__(idx)
 
         self.shuffle_class_idx = shuffle_class
@@ -1573,3 +1571,7 @@ def stackable_glyph(glyph):
 
 def monster_like_mask(numerals):
     return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals) | WarningGlyph.class_mask(numerals)
+
+#for k,v in MonsterGlyph.numeral_mapping().items():
+#    print(k, v)
+#print(MonsterGlyph.OFFSET)

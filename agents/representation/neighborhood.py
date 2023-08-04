@@ -50,22 +50,29 @@ class CurrentSquare:
     special_facts: list = None
     elbereth: ElberethEngraving = None
 
+class FailType(enum.IntEnum):
+    other = 0
+    boulder = 1
+
 class FailedMove(NamedTuple):
     move: enum.IntEnum
     time: int
+    fail_type: FailType
 
 class FailedMoveRecords():
-    def __init__(self):
+    def __init__(self, expiry=30):
         # dictionary that takes location -> failed
         self.failed_moves = defaultdict(list)
+        self.expiry=expiry
 
-    def add_failed_move(self, location, time, move):
-        self.failed_moves[location].append(FailedMove(move, time))
+    def add_failed_move(self, location, time, move, was_boulder=False):
+        fail_type = FailType.boulder if was_boulder else FailType.other
+        self.failed_moves[location].append(FailedMove(move, time, fail_type))
 
     def garbage_collect(self, time):
         new_dict = defaultdict(list)
         for k, v in self.failed_moves.items():
-            still_good = [move for move in v if move.time > (time - 10)]
+            still_good = [move for move in v if move.time > (time - self.expiry)]
             if still_good:
                 new_dict[k] = still_good
 
@@ -99,6 +106,7 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         ###################
 
         self.current_player_square = current_square
+        self.character = character
         absolute_player_location = Square(*current_square.location)
         self.failed_move_record = failed_move_record
 
@@ -249,27 +257,42 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             self.local_prudent_walkable &= ~(self.diagonal_moves)
 
         failed_moves_on_square = failed_move_record.failed_moves[current_square.location]
+        #import pdb; pdb.set_trace()
         #if len(failed_moves_on_square) > 0:
         #    import pdb; pdb.set_trace()
+        failed_seems_stale = []
         for f in failed_moves_on_square:
             failed_target = physics.offset_location_by_action(self.local_player_location, f.move)
+
+            # if the square is no longer occupied by a boulder, infer we can make the move again
+            stale = False
+            if f.fail_type == FailType.boulder:
+                stale = not self.extended_boulders[neighborhood_view][failed_target]
+            failed_seems_stale.append(stale)
+
+            if stale:
+                continue
             try:
                 self.local_prudent_walkable[failed_target] = False
             except IndexError:
                 if environment.env.debug: import pdb; pdb.set_trace()
 
+        failed_move_record.failed_moves[current_square.location] = [f for f,s in zip(failed_moves_on_square,failed_seems_stale) if not s]
+
         #########################################
         ### MAPS DERVIED FROM EXTENDED VISION ###
         #########################################
         self.make_monsters(character)
-        self.threat_map = map.ThreatMap(extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
+        self.threat_map = map.ThreatMap(character, extended_visible_raw_glyphs, self.monsters, self.monsters_idx, player_location_in_extended)
         self.extended_threat = self.threat_map.melee_damage_threat + self.threat_map.ranged_damage_threat
-
+        self.extended_threat_types = self.threat_map.melee_threat_type | self.threat_map.ranged_threat_type
         #########################################
         ### LOCAL PROPERTIES OF EXTENDED MAPS ###
         #########################################
         self.threat = self.extended_threat[neighborhood_view]
         self.threat_on_player = self.threat[self.local_player_location]
+        self.threat_types = self.extended_threat_types[neighborhood_view]
+        self.threat_types_on_player = self.threat_types[self.local_player_location]
 
         ####################
         ### CORPSE STUFF ###
@@ -391,15 +414,20 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             pass
         return self.path_to_targets(is_next_square)
 
-    def path_to_desirable_objects(self):
-        desirable_corpses = self.zoom_glyph_alike(
-            self.level_map.edible_corpse_map,
-            ViewField.Extended
-        )
+    def path_to_desirable_objects(self, character):
         lootable_squares = self.zoom_glyph_alike(
             self.level_map.lootable_squares_map,
             ViewField.Extended
         )
+
+        if character.desire_to_eat_corpses(self):
+            desirable_corpses = self.zoom_glyph_alike(
+                self.level_map.edible_corpse_map,
+                ViewField.Extended
+            )
+        else:
+            #import pdb; pdb.set_trace()
+            desirable_corpses = np.zeros_like(lootable_squares)
         return self.path_to_targets(self.extended_has_item_stack & ~self.extended_boulders & ~self.extended_embeds & (desirable_corpses | lootable_squares))
 
     def path_to_unvisited_shop_sqaures(self):
@@ -556,7 +584,7 @@ class Pathfinder(AStar):
                 neighboring_walkable_squares.append(square + upper_left)
 
         failed_moves_at_node = self.failed_moves.failed_moves[node - self.player_location + self.absolute_player_location]
-        if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
+        #if len(failed_moves_at_node) > 0 and environment.env.debug: import pdb; pdb.set_trace()
         for f in failed_moves_at_node:
             #import pdb; pdb.set_trace()
             failed_target = physics.offset_location_by_action(node, f.move)

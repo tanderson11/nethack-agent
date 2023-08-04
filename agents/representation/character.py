@@ -12,7 +12,9 @@ import agents.representation.constants as constants
 import agents.representation.glyphs as gd
 import agents.representation.inventory as inv
 import agents.representation.monster_messages as monster_messages
+import agents.representation.threat as threat
 import agents.advice.preferences as preferences
+
 from utilities import ARS
 
 @dataclass
@@ -103,6 +105,15 @@ class Character():
 
     def has_intrinsic(self, intrinsic):
         return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
+
+    def resists(self, damage_type):
+        relevant_resistances = threat.threat_to_resist.get(damage_type, [])
+        if not isinstance(relevant_resistances, list): relevant_resistances = [relevant_resistances]
+
+        for r in relevant_resistances:
+            if self.has_intrinsic(r):
+                return True
+        return False
 
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
@@ -323,7 +334,9 @@ class Character():
     unsafe_hp_loss = 0.5
     def death_by_passive(self, spoiler):
         trajectory = self.average_time_to_kill_monster_in_melee(spoiler)
-        return spoiler.passive_damage_over_encounter(spoiler, trajectory) + spoiler.death_damage_over_encounter(spoiler) > self.unsafe_hp_loss * self.current_hp
+        looks_like_death = spoiler.passive_damage_over_encounter(self, trajectory) + spoiler.death_damage_over_encounter(self) > self.unsafe_hp_loss * self.current_hp
+        #if looks_like_death: import pdb; pdb.set_trace()
+        return looks_like_death
 
     #def threatened_by(self, monster):
     #    if not isinstance(monster, gd.MonsterGlyph):
@@ -342,6 +355,13 @@ class Character():
 
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
+
+    def desire_to_eat_corpses(self, neighborhood):
+        # not if we're satiated
+        if self.hunger_state == 0: return False
+        # not if we're in a store
+        if neighborhood.in_shop: return False
+        return True
 
     def desperate_for_food(self):
         if self.hunger_state == 0:

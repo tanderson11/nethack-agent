@@ -565,14 +565,14 @@ class FloodMap():
 class ThreatMap(FloodMap):
     INVISIBLE_DAMAGE_THREAT = 6 # gotta do something lol
 
-    def __init__(self, raw_visible_glyphs, monsters, monster_squares, player_location_in_vision):
+    def __init__(self, character, raw_visible_glyphs, monsters, monster_squares, player_location_in_vision):
         # take the section of the observed glyphs that is relevant
         self.raw_glyph_grid = raw_visible_glyphs
         self.monsters = monsters
         self.monster_squares = monster_squares
         self.player_location_in_glyph_grid = player_location_in_vision
 
-        self.calculate_threat()
+        self.calculate_threat(character)
         #self.calculate_implied_threat()
 
     @classmethod
@@ -610,37 +610,47 @@ class ThreatMap(FloodMap):
 
         return can_hit_mask
 
-    def calculate_threat(self):
+    def calculate_threat(self, character):
         melee_n_threat = np.zeros_like(self.raw_glyph_grid)
-        melee_damage_threat = np.zeros_like(self.raw_glyph_grid)
+        melee_damage_threat = np.zeros_like(self.raw_glyph_grid, dtype=float)
+        melee_threat_type = np.zeros_like(self.raw_glyph_grid, dtype=int)
 
         ranged_n_threat = np.zeros_like(self.raw_glyph_grid)
-        ranged_damage_threat = np.zeros_like(self.raw_glyph_grid)
+        ranged_damage_threat = np.zeros_like(self.raw_glyph_grid, dtype=float)
+        ranged_threat_type = np.zeros_like(self.raw_glyph_grid, dtype=int)
 
         for i, monster in enumerate(self.monsters):
             monster_square = physics.Square(self.monster_squares[0][i], self.monster_squares[1][i])
             if isinstance(monster, gd.SwallowGlyph):
-                melee_damage_threat.fill(gd.GLYPH_NUMERAL_LOOKUP[monster.swallowing_monster_offset].monster_spoiler.engulf_attack_bundle.max_damage) # while we're swallowed, all threat can be homogeneous
-                melee_n_threat.fill(1) # we're only ever threatened once while swallowed
+                swallowing_monster = gd.GLYPH_NUMERAL_LOOKUP[monster.swallowing_monster_offset]
+                # while we're swallowed, all threat can be homogeneous
+                engulf_damage, engulf_types = swallowing_monster.monster_spoiler.expected_engulf_damage_to_character(character)
+                melee_damage_threat.fill(engulf_damage)
+                melee_threat_type.fill(engulf_types)
+                # we're only ever threatened once while swallowed
+                melee_n_threat.fill(1)
 
             is_invis = isinstance(monster, gd.InvisibleGlyph)
             if isinstance(monster, gd.MonsterGlyph) or is_invis:
                 if not (isinstance(monster, gd.MonsterGlyph) and monster.single_always_peaceful()): # always peaceful monsters don't need to threaten
                     ### SHARED ###
-                    can_occupy_mask = self.__class__.calculate_can_occupy(monster, monster_square, self.raw_glyph_grid)
+                    can_occupy_mask = self.calculate_can_occupy(monster, monster_square, self.raw_glyph_grid)
                     ###
 
                     ### MELEE ###
                     if is_invis or monster.has_melee:
-                        can_hit_mask = self.__class__.calculate_melee_can_hit(can_occupy_mask)
+                        can_hit_mask = self.calculate_melee_can_hit(can_occupy_mask)
 
                         melee_n_threat[can_hit_mask] += 1 # monsters threaten their own squares in this implementation OK? TK 
 
                         if isinstance(monster, gd.MonsterGlyph):
-                            melee_damage_threat[can_hit_mask] += monster.monster_spoiler.melee_attack_bundle.max_damage
-
-                        if is_invis:
-                            melee_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
+                            melee_damage, melee_types = monster.monster_spoiler.expected_melee_damage_to_character(character)
+                            melee_damage_threat[can_hit_mask] += melee_damage
+                            melee_threat_type[can_hit_mask] = np.bitwise_or(melee_threat_type[can_hit_mask], melee_types)
+                        elif is_invis:
+                            melee_damage_threat[can_hit_mask] += self.INVISIBLE_DAMAGE_THREAT # how should we imagine the threat of invisible monsters?
+                        else:
+                            assert False, "what kinda monster is this?"
                     ###
 
                     ### RANGED ###
@@ -648,16 +658,23 @@ class ThreatMap(FloodMap):
                         can_hit_mask = self.calculate_ranged_can_hit_mask(can_occupy_mask, self.raw_glyph_grid)
                         ranged_n_threat[can_hit_mask] += 1
                         if is_invis:
-                            ranged_damage_threat[can_hit_mask] += self.__class__.INVISIBLE_DAMAGE_THREAT
+                            ranged_damage_threat[can_hit_mask] += self.INVISIBLE_DAMAGE_THREAT
                         else:
-                            ranged_damage_threat[can_hit_mask] += monster.monster_spoiler.ranged_attack_bundle.max_damage
+                            ranged_damage, ranged_types = monster.monster_spoiler.expected_ranged_damage_to_character(character)
+                            ranged_damage_threat[can_hit_mask] += ranged_damage
+                            ranged_threat_type[can_hit_mask] = np.bitwise_or(ranged_threat_type[can_hit_mask], ranged_types)
                     ###
 
         self.melee_n_threat = melee_n_threat
         self.melee_damage_threat = melee_damage_threat
+        self.melee_threat_type = melee_threat_type
 
         self.ranged_n_threat = ranged_n_threat
         self.ranged_damage_threat = ranged_damage_threat
+        self.ranged_threat_type = ranged_threat_type
+
+        #if self.ranged_threat_type.any():
+        #    import pdb; pdb.set_trace()
 
     @classmethod
     def calculate_ranged_can_hit_mask(cls, can_occupy_mask, glyph_grid, attack_range=None, **kwargs):
