@@ -312,7 +312,7 @@ class Character():
 
     def ready_for_mines(self):
         #if self.base_class == constants.BaseRole.Caveperson: return True
-        return self.experience_level > 9 or self.overpowered()
+        return self.experience_level > 9
     
     def eager_for_mines1(self):
         return self.base_class == constants.BaseRole.Caveperson
