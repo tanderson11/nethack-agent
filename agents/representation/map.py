@@ -101,13 +101,13 @@ class DMap():
             new_targets[Branches.DungeonsOfDoom] = first_novel_dcoord
 
         # Sokoban
-        current_dcoord = self.target_dcoords.get(Branches.Sokoban, None)
-        if current_dcoord is None:
+        current_target = self.target_dcoords.get(Branches.Sokoban, None)
+        if current_target is None:
             pass
         else:
-            level_map = self.dlevels.get(current_dcoord, None)
+            level_map = self.dlevels.get(current_target, None)
             if level_map and level_map.special_level and not level_map.solved:
-                new_targets[Branches.Sokoban] = current_dcoord
+                new_targets[Branches.Sokoban] = current_target
 
         # Mines
         if character.eager_for_mines1():
