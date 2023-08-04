@@ -43,8 +43,8 @@ Arch Priest,@,25,0,12,7,70,fsep,W4d10 2d8 M2d8+ M2d8+
 arch-lich,L,25,0,9,-6,90,FCsep,5d6C M0d0+
 Archon,A,19,0,16,-6,80,fcsep,W2d4 W2d4 G2d6b 1d8 M4d6+
 Ashikaga Takauji,@,15,0,12,0,40,*,W2d6 W2d6 2d6-
-Asmodeus,&,105,0,12,-7,90,fcp,4d4 M6d6C
-Baalzebub,&,89,0,9,-5,85,fp,2d6P G2d6s
+Asmodeus,&,49,0,12,-7,90,fcp,4d4 M6d6C
+Baalzebub,&,41,0,9,-5,85,fp,2d6P G2d6s
 black dragon,D,15,0,9,-1,20,D,B4d10D 3d8 1d4 1d4
 chameleon,:,6,0,5,6,10,,4d2
 Chromatic Dragon,D,16,0,12,0,30,FCSDEPa*,B6d8z M0d0+ 2d8- 4d8 4d8 1d6
@@ -53,19 +53,19 @@ Croesus,@,20,0,15,0,40,,W4d10
 Cyclops,H,18,0,12,0,0,*,W4d8 W4d8 2d6-
 Dark One,@,15,0,12,0,80,*,W1d6 W1d6 1d4- M0d0+
 Death,&,30,0,12,-5,100,fcsep*,8d8z 8d8z
-Demogorgon,&,106,0,15,-8,95,fp,M8d6+ 1d4V 1d6# 1d6#
+Demogorgon,&,50,0,15,-8,95,fp,M8d6+ 1d4V 1d6# 1d6#
 disenchanter,R,12,0,12,-10,0,,"4d4"" (0d0"")"
-Dispater,&,78,0,15,-2,80,fp,W4d6 M6d6+
+Dispater,&,36,0,15,-2,80,fp,W4d6 M6d6+
 electric eel,;,7,0,10,-3,0,E,4d6E 0d0w
 Famine,&,30,0,12,-5,100,fcsep*,8d8z 8d8z
-Geryon,&,72,0,3,-3,75,fp,3d6 3d6 2d4P
+Geryon,&,33,0,3,-3,75,fp,3d6 3d6 2d4P
 giant eel,;,5,0,9,-1,0,,3d6 0d0w
 Grand Master,@,25,0,12,0,70,fsep,4d10 2d8 M2d8+ M2d8+
 green dragon,D,15,0,9,-1,20,P,B4d6P 3d8 1d4 1d4
 high priest,@,25,0,15,7,70,fsep,W4d10 2d8 M2d8+ M2d8+
 incubus,&,6,0,12,0,70,fp,0d0& 1d3 1d3
 Ixoth,D,15,0,12,-1,20,F*,B8d6F 4d8 M0d0+ 2d4 2d4-
-Juiblex,&,50,0,3,-7,65,fpa*,E4d10# S3d6A
+Juiblex,&,22,0,3,-7,65,fpa*,E4d10# S3d6A
 ki-rin,A,16,0,18,-5,90,,2d4 2d4 3d6 M2d6+
 kraken,;,20,0,3,6,0,,2d4 2d4 H2d6w 5d4
 Lord Surtur,H,15,0,12,2,50,F*,W2d10 W2d10 2d6-
@@ -78,7 +78,7 @@ Minion of Huhetotl,&,16,0,12,-2,75,fp*,W8d4 W4d6 M0d0+ 2d6-
 mountain nymph,n,3,0,12,9,20,,0d0- 0d0-
 nalfeshnee,&,11,0,9,-1,65,fp,1d4 1d4 2d4 M0d0+
 Nalzok,&,16,0,12,-2,85,fp*,W8d4 W4d6 M0d0+ 2d6-
-Orcus,&,66,0,9,-6,85,fp,W3d6 3d4 3d4 M8d6+ 2d4P
+Orcus,&,30,0,9,-6,85,fp,W3d6 3d4 3d4 M8d6+ 2d4P
 Pestilence,&,30,0,12,-5,100,fcsep*,8d8z 8d8z
 Scorpius,s,15,0,12,10,0,P*,2d6 2d6- 1d4#
 succubus,&,6,0,12,0,70,fp,0d0& 1d3 1d3
@@ -88,7 +88,7 @@ Vlad the Impaler,V,14,0,18,-3,80,sp,W1d10 1d10V
 water nymph,n,3,0,12,9,20,,0d0- 0d0-
 Wizard of Yendor,@,30,0,12,-8,100,FP,2d12- M0d0+
 wood nymph,n,3,0,12,9,20,,0d0- 0d0-
-Yeenoghu,&,56,0,18,-5,80,fp,W3d6 W2d8c W1d6. M2d6M
+Yeenoghu,&,25,0,18,-5,80,fp,W3d6 W2d8c W1d6. M2d6M
 floating eye,e,2,0,1,9,10,,(3d70.)
 demilich,L,14,1,9,-2,60,Csp,3d4C M0d0+
 lich,L,11,1,6,0,30,Csp,1d10C M0d0+
