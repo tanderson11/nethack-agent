@@ -594,7 +594,7 @@ class RunState():
                 self.time_hung += 1
         else:
             self.time_hung = 0
-        if self.time_hung > 100:
+        if self.time_hung > 200:
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
