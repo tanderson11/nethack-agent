@@ -82,18 +82,13 @@ class DMap():
         # Dungeons of Doom
         current_dcoord = self.target_dcoords[Branches.DungeonsOfDoom]
         current_map = self.dlevels.get(current_dcoord, None)
-
-        go_next = False
         if current_map is None or not current_map.clear:
             new_targets[Branches.DungeonsOfDoom] = current_dcoord
         elif not character.desperate_for_food() and character.comfortable_depth() <= current_dcoord.level:
-            go_next = character.overpowered()
-            if character.overpowered(): print("Going deeper because overpowered")
+            new_targets[Branches.DungeonsOfDoom] = current_dcoord
         else:
             if character.desperate_for_food():
                 print("Going deeper looking for food")
-
-        if go_next:
             first_novel_dcoord = current_dcoord
             while True:
                 level_map = self.dlevels.get(first_novel_dcoord, None)
@@ -101,8 +96,6 @@ class DMap():
                     break
                 first_novel_dcoord = DCoord(first_novel_dcoord.branch, first_novel_dcoord.level + 1)
             new_targets[Branches.DungeonsOfDoom] = first_novel_dcoord
-        else:
-            new_targets[Branches.DungeonsOfDoom] = current_dcoord
 
         # Sokoban
         current_dcoord = self.target_dcoords.get(Branches.Sokoban, None)
