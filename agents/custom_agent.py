@@ -954,7 +954,7 @@ class CustomAgent():
             level_map = run_state.dmap.make_level_map(dcoord, time, observation['glyphs'], player_location)
 
         if run_state.character:
-            run_state.dmap.update_target_dcoords(run_state.character)
+            run_state.dmap.update_target_dcoords(run_state.character, dcoord)
 
         if not run_state.character and run_state.step_count > 2:
             # The first action should always be to look at attributes

@@ -76,20 +76,23 @@ class DMap():
             #import pdb; pdb.set_trace()
             self.target_dcoords.pop(Branches.Sokoban)
 
-    def update_target_dcoords(self, character):
+    def update_target_dcoords(self, character, current_dcoord):
         new_targets = {}
 
+        actual_current_level = self.dlevels.get(current_dcoord)
+        if actual_current_level.long_wait:
+            if environment.env.debug: import pdb; pdb.set_trace()
         # Dungeons of Doom
-        current_dcoord = self.target_dcoords[Branches.DungeonsOfDoom]
-        current_map = self.dlevels.get(current_dcoord, None)
-        if current_map is None or not current_map.clear:
-            new_targets[Branches.DungeonsOfDoom] = current_dcoord
-        elif not character.desperate_for_food() and character.comfortable_depth() <= current_dcoord.level:
-            new_targets[Branches.DungeonsOfDoom] = current_dcoord
+        current_target = self.target_dcoords[Branches.DungeonsOfDoom]
+        target_map = self.dlevels.get(current_target, None)
+        if target_map is None or not target_map.clear:
+            new_targets[Branches.DungeonsOfDoom] = current_target
+        elif not character.desperate_for_food() and character.comfortable_depth() <= current_target.level:
+            new_targets[Branches.DungeonsOfDoom] = current_target
         else:
             if character.desperate_for_food():
                 print("Going deeper looking for food")
-            first_novel_dcoord = current_dcoord
+            first_novel_dcoord = current_target
             while True:
                 level_map = self.dlevels.get(first_novel_dcoord, None)
                 if level_map is None or not level_map.clear:
@@ -257,6 +260,7 @@ class DLevelMap():
 
         self.time_of_recent_arrival = time
         self.time_of_new_square = time
+        self.long_wait = False
 
         # These are our map layers
         self.dungeon_feature_map = np.zeros(constants.GLYPHS_SHAPE, dtype=int)
@@ -377,9 +381,10 @@ class DLevelMap():
         self.player_location = player_location
         if self.visits_count_map[self.player_location] == 0:
             self.time_of_new_square = time
-        if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 1_000):
-            #import pdb; pdb.set_trace()
-            pass
+        if environment.env.debug and not self.clear and (time - self.time_of_new_square > 1_000) and (time - self.time_of_recent_arrival > 10_000):
+            self.long_wait = True
+        else:
+            self.long_wait = False
         if self.visits_count_map[self.player_location] == 0:
             self.visits_count_map[self.player_location] += 1
         else:
@@ -411,7 +416,7 @@ class DLevelMap():
             (adjacent_to_fog)
         )
 
-        self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map) == 0)
+        self.clear = (np.count_nonzero(self.frontier_squares & ~self.exhausted_travel_map & ~self.boulder_map) == 0)
 
         if self.special_level is None:
             self.special_level = self.special_level_searcher.match_level(self, player_location)
