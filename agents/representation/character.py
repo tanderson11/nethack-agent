@@ -312,7 +312,7 @@ class Character():
 
     def ready_for_mines(self):
         #if self.base_class == constants.BaseRole.Caveperson: return True
-        return self.experience_level > 9
+        return self.experience_level > 9# or self.overpowered()
     
     def eager_for_mines1(self):
         return self.base_class == constants.BaseRole.Caveperson
@@ -355,6 +355,9 @@ class Character():
 
     def comfortable_depth(self):
         return self.exp_lvl_to_max_mazes_lvl.get(self.experience_level, 60)
+
+    def overpowered(self):
+        return self.AC < -20 and self.current_hp > 50
 
     def desire_to_eat_corpses(self, neighborhood):
         # not if we're satiated
