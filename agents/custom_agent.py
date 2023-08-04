@@ -430,7 +430,7 @@ class RunState():
 
         if environment.env.log_video:
             self.video_deque = collections.deque()
-            assert environment.env.log_runs
+            assert environment.env.log_runs, "video log enabled by logging disabled"
         else:
             self.video_deque = None
 

@@ -1,51 +1,51 @@
-NAME,JAPANESE_NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,COST,WEIGHT,PROB,CHARGES,MAGIC,TONAL,TYPE
-large box,,none,2095,large box,FALSE,8,350,40,,FALSE,,container
-chest,,none,2096,chest,FALSE,16,600,35,,FALSE,,container
-ice box,,none,2097,ice box,FALSE,42,900,5,,FALSE,,container
-sack,,desire one,2098,bag,FALSE,2.00,15,35,,FALSE,,container
-oilskin sack,,desire one,2099,bag,FALSE,100,15,5,,FALSE,,container
-bag of holding,,desire one,2100,bag,FALSE,100,15,20,,TRUE,,container
-bag of tricks,,none,2101,bag,FALSE,100,15,20,20,TRUE,,container
-tin whistle,,none,2126,whistle,FALSE,10,3,100,,FALSE,,whistle
-magic whistle,,none,2127,whistle,FALSE,10,3,30,,TRUE,,whistle
-wooden flute,,desire one,2128,flute,FALSE,12,5,4,,FALSE,,tonal instrument
-magic flute,,desire one,2129,flute,FALSE,36,5,2,8,TRUE,,tonal instrument
-tooled horn,,desire one,2130,horn,FALSE,15,18,5,,FALSE,,tonal instrument
-frost horn,,desire one,2131,horn,FALSE,50,18,2,8,TRUE,,tonal instrument
-fire horn,,desire one,2132,horn,FALSE,50,18,2,8,TRUE,,tonal instrument
-horn of plenty,,desire one,2133,horn,FALSE,50,18,2,20,TRUE,,tonal instrument
-wooden harp,koto,desire one,2134,harp,FALSE,50,30,4,,FALSE,,tonal instrument
-magic harp,,desire one,2135,harp,FALSE,50,30,2,8,TRUE,,tonal instrument
-bell,,none,2136,bell,FALSE,50,30,2,,FALSE,,atonal instrument
-bugle,,desire one,2137,bugle,FALSE,15,10,4,,FALSE,,tonal instrument
-leather drum,,none,2138,drum,FALSE,25,25,4,,FALSE,,atonal instrument
-drum of earthquake,,none,2139,drum,FALSE,25,25,2,8,TRUE,,atonal instrument
-Bell of Opening,,desire all,2144,silver bell,FALSE,5000,10,0,3,TRUE,,atonal instrument
-tallow candle,,desire seven,2105,candle,FALSE,10,2,20,,FALSE,,candles
-wax candle,,desire seven,2106,candle,FALSE,20,2,5,,FALSE,,candles
-brass lantern,,none,2107,brass lantern,FALSE,12,30,30,1499,FALSE,,light source
-oil lamp,,none,2108,lamp,FALSE,10,20,45,1499,FALSE,,light source
-magic lamp,,desire all,2109,lamp,FALSE,50,20,15,,TRUE,,light source
-Candelabrum of Invocation,,desire all,2143,candelabrum,FALSE,5000,10,0,,TRUE,,light source
-expensive camera,,desire all,2110,expensive camera,FALSE,200,12,15,99,FALSE,,misc
-mirror,,none,2111,looking glass,FALSE,10,13,45,,FALSE,,misc
-crystal ball,,none,2112,glass orb,FALSE,60,150,15,5,TRUE,,misc
-pair of lenses,,none,2113,pair of lenses,FALSE,80,3,5,,FALSE,,misc
-blindfold,,desire one,2114,blindfold,FALSE,20,2,50,,FALSE,,misc
-towel,,desire one,2115,towel,FALSE,50,2,50,,FALSE,,misc
-saddle,,none,2116,saddle,FALSE,150,200,5,,FALSE,,misc
-leash,,none,2117,leash,FALSE,20,12,65,,FALSE,,misc
-stethoscope,,desire one,2118,stethoscope,FALSE,75,4,25,,FALSE,,misc
-tinning kit,,none,2119,tinning kit,FALSE,30,100,15,99,FALSE,,misc
-tin opener,,none,2120,tin opener,FALSE,30,4,35,,FALSE,,misc
-can of grease,,desire all,2121,can of grease,FALSE,20,15,15,25,FALSE,,misc
-figurine,,none,2122,figurine,FALSE,80,50,25,,TRUE,,misc
-magic marker,,desire all,2123,magic marker,FALSE,50,2,15,99!,TRUE,,misc
-land mine,,none,2124,land mine,FALSE,180,300,0,,FALSE,,trap
-beartrap,,none,2125,beartrap,FALSE,60,200,0,,FALSE,,trap
-skeleton key,,desire one,2102,key,FALSE,10,3,80,,FALSE,,unlocking
-lock pick,osaku,desire one,2103,lock pick,FALSE,20,4,60,,FALSE,,unlocking
-credit card,,desire one,2104,credit card,FALSE,10,1,15,,FALSE,,unlocking
-pick-axe,,desire one,2140,pick-axe,FALSE,50,100,20,,FALSE,,weapon
-grappling hook,,none,2141,iron hook,FALSE,50,30,5,,FALSE,,weapon
-unicorn horn,,desire one,2142,unicorn horn,FALSE,100,20,0,,TRUE,,weapon
+NAME,JAPANESE_NAME,IDENTITY_DESIRABILITY,GLYPH,APPEARANCE,SHUFFLED,COST,WEIGHT,PROB,CHARGES,MAGIC,TONAL,TYPE,WORN_INTRINSICS
+large box,,none,2095,large box,FALSE,8,350,40,,FALSE,,container,
+chest,,none,2096,chest,FALSE,16,600,35,,FALSE,,container,
+ice box,,none,2097,ice box,FALSE,42,900,5,,FALSE,,container,
+sack,,desire one,2098,bag,FALSE,2,15,35,,FALSE,,container,
+oilskin sack,,desire one,2099,bag,FALSE,100,15,5,,FALSE,,container,
+bag of holding,,desire one,2100,bag,FALSE,100,15,20,,TRUE,,container,
+bag of tricks,,none,2101,bag,FALSE,100,15,20,20,TRUE,,container,
+tin whistle,,none,2126,whistle,FALSE,10,3,100,,FALSE,,whistle,
+magic whistle,,none,2127,whistle,FALSE,10,3,30,,TRUE,,whistle,
+wooden flute,,desire one,2128,flute,FALSE,12,5,4,,FALSE,,tonal instrument,
+magic flute,,desire one,2129,flute,FALSE,36,5,2,8,TRUE,,tonal instrument,
+tooled horn,,desire one,2130,horn,FALSE,15,18,5,,FALSE,,tonal instrument,
+frost horn,,desire one,2131,horn,FALSE,50,18,2,8,TRUE,,tonal instrument,
+fire horn,,desire one,2132,horn,FALSE,50,18,2,8,TRUE,,tonal instrument,
+horn of plenty,,desire one,2133,horn,FALSE,50,18,2,20,TRUE,,tonal instrument,
+wooden harp,koto,desire one,2134,harp,FALSE,50,30,4,,FALSE,,tonal instrument,
+magic harp,,desire one,2135,harp,FALSE,50,30,2,8,TRUE,,tonal instrument,
+bell,,none,2136,bell,FALSE,50,30,2,,FALSE,,atonal instrument,
+bugle,,desire one,2137,bugle,FALSE,15,10,4,,FALSE,,tonal instrument,
+leather drum,,none,2138,drum,FALSE,25,25,4,,FALSE,,atonal instrument,
+drum of earthquake,,none,2139,drum,FALSE,25,25,2,8,TRUE,,atonal instrument,
+Bell of Opening,,desire all,2144,silver bell,FALSE,5000,10,0,3,TRUE,,atonal instrument,
+tallow candle,,desire seven,2105,candle,FALSE,10,2,20,,FALSE,,candles,
+wax candle,,desire seven,2106,candle,FALSE,20,2,5,,FALSE,,candles,
+brass lantern,,none,2107,brass lantern,FALSE,12,30,30,1499,FALSE,,light source,
+oil lamp,,none,2108,lamp,FALSE,10,20,45,1499,FALSE,,light source,
+magic lamp,,desire all,2109,lamp,FALSE,50,20,15,,TRUE,,light source,
+Candelabrum of Invocation,,desire all,2143,candelabrum,FALSE,5000,10,0,,TRUE,,light source,
+expensive camera,,desire all,2110,expensive camera,FALSE,200,12,15,99,FALSE,,misc,
+mirror,,none,2111,looking glass,FALSE,10,13,45,,FALSE,,misc,
+crystal ball,,none,2112,glass orb,FALSE,60,150,15,5,TRUE,,misc,
+pair of lenses,,none,2113,pair of lenses,FALSE,80,3,5,,FALSE,,misc,
+blindfold,,desire one,2114,blindfold,FALSE,20,2,50,,FALSE,,misc,
+towel,,desire one,2115,towel,FALSE,50,2,50,,FALSE,,misc,
+saddle,,none,2116,saddle,FALSE,150,200,5,,FALSE,,misc,
+leash,,none,2117,leash,FALSE,20,12,65,,FALSE,,misc,
+stethoscope,,desire one,2118,stethoscope,FALSE,75,4,25,,FALSE,,misc,
+tinning kit,,none,2119,tinning kit,FALSE,30,100,15,99,FALSE,,misc,
+tin opener,,none,2120,tin opener,FALSE,30,4,35,,FALSE,,misc,
+can of grease,,desire all,2121,can of grease,FALSE,20,15,15,25,FALSE,,misc,
+figurine,,none,2122,figurine,FALSE,80,50,25,,TRUE,,misc,
+magic marker,,desire all,2123,magic marker,FALSE,50,2,15,99!,TRUE,,misc,
+land mine,,none,2124,land mine,FALSE,180,300,0,,FALSE,,trap,
+beartrap,,none,2125,beartrap,FALSE,60,200,0,,FALSE,,trap,
+skeleton key,,desire one,2102,key,FALSE,10,3,80,,FALSE,,unlocking,
+lock pick,osaku,desire one,2103,lock pick,FALSE,20,4,60,,FALSE,,unlocking,
+credit card,,desire one,2104,credit card,FALSE,10,1,15,,FALSE,,unlocking,
+pick-axe,,desire one,2140,pick-axe,FALSE,50,100,20,,FALSE,,weapon,
+grappling hook,,none,2141,iron hook,FALSE,50,30,5,,FALSE,,weapon,
+unicorn horn,,desire one,2142,unicorn horn,FALSE,100,20,0,,TRUE,,weapon,

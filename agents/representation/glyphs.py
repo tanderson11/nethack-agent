@@ -759,6 +759,7 @@ OBJECT_SPOILERS = ObjectSpoilers()
 
 class IdentityLike():
     desirability_if_unidentified = preferences.IdentityDesirability.desire_none
+    wearable = False
 
     def __init__(self, idx) -> None:
         self.idx = idx.copy().sort_values()
@@ -894,6 +895,26 @@ class IdentityLike():
         
         if self.is_identified():
             print(f"Identified by price id! name={self.name()}")
+
+    def extrinsics_by_colname(self, column):
+        extrinsics = constants.Intrinsics.NONE
+        values = self.find_values(column)
+        if not values:
+            return extrinsics
+        for intrinsic_str in values.split(','):
+            #import pdb; pdb.set_trace()
+            try:
+                extrinsic = constants.Intrinsics[intrinsic_str]
+            except KeyError:
+                print(f"Failed to know about intrinsic {intrinsic_str}")
+                extrinsic = constants.Intrinsics.NONE
+            extrinsics |= extrinsic
+        return extrinsics
+
+    def worn_extrinsics(self):
+        if not self.is_identified(): return constants.Intrinsics.NONE
+        if not self.wearable: return constants.Intrinsics.NONE
+        return self.extrinsics_by_colname('WORN_INTRINSICS')
     
     def process_message(self, message_obj, action):
         pass
@@ -975,7 +996,8 @@ class SpellbookIdentity(SpellbookLike, NumeralIdentity):
 ### Rings
 class RingLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-    desirability_if_unidentified = preferences.IdentityDesirability.desire_all    
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
 
 class AmbiguousRingIdentity(RingLike, AmbiguousIdentity):
     pass
@@ -986,6 +1008,8 @@ class RingIdentity(RingLike, NumeralIdentity):
 class AmuletLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
+    slot = 'neck'
 
 class AmbiguousAmuletIdentity(AmuletLike, AmbiguousIdentity):
     pass
@@ -1046,13 +1070,14 @@ class FoodIdentity(FoodLike, NumeralIdentity):
 ### Tools
 class ToolLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
+    wearable = True
 
     def __init__(self, type) -> None:
         self.ranged = False
         self.thrown = False
         self.type = type
 
-class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity, ):
+class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity):
     def __init__(self, global_identity_map, possible_numerals) -> None:
         AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
         ToolLike.__init__(self, self.find_values('TYPE'))
@@ -1069,6 +1094,9 @@ class GemLike():
         self.thrown = False
         self.is_ammo = is_ammo
         self.ammo_type = ammo_type
+
+    def carried_extrinsics(self):
+        return self.extrinsics_by_colname('CARRIED_INTRINSICS')
 
 class AmbiguousGemIdentity(GemLike, AmbiguousIdentity):
     def __init__(self, global_identity_map, possible_numerals) -> None:
@@ -1156,6 +1184,7 @@ class WandIdentity(WandLike, NumeralIdentity):
 class ArmorLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
 
     def __init__(self, slot):
         self.slot = slot
@@ -1270,6 +1299,13 @@ class BareHandsIdentity(WeaponIdentity):
         return True
 
 ### Artifacts
+class ArtifactIdentity():
+    def wielded_extrinsics(self):
+        return self.extrinsics_by_colname('WIELDED_INTRINSICS')
+
+    def carried_extrinsics(self):
+        return self.extrinsics_by_colname('CARRIED_INTRINSICS')
+
 class ArtifactWeaponIdentity(WeaponIdentity):
     associated_glyph_class = WeaponGlyph
 
@@ -1288,7 +1324,6 @@ class ArtifactWeaponIdentity(WeaponIdentity):
         if pd.isna(mult): mult = 1
 
         self.artifact_damage = self.ArtifactWeaponDamage(bonus, mult)
-
         # keep idx pointed at the base item and override any methods with artifact specific stuff
 
 class ArtifactArmorIdentity(ArmorIdentity):
@@ -1575,3 +1610,6 @@ def monster_like_mask(numerals):
 #for k,v in MonsterGlyph.numeral_mapping().items():
 #    print(k, v)
 #print(MonsterGlyph.OFFSET)
+
+#for k,v in ArmorGlyph.numeral_mapping().items():
+#    print(k, v)
