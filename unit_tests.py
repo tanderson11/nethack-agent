@@ -704,6 +704,24 @@ class TestThreat(NeighborhoodBuildingTest):
         self.assertEqual(nbhd.absolute_player_location, (0, 0))
         self.assertEqual(nbhd.threat_types_on_player, threat.ThreatTypes.DISINTEGRATE)
 
+    def test_threat_map(self):
+        c = self.make_character()
+
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        xan = gd.get_by_name(gd.MonsterGlyph, 'xan').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): xan,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        nbhd = self.setup_neighborhood(glyphs, current_square, character=c)
+        self.assertEqual(nbhd.absolute_player_location, (0, 0))
+        self.assertEqual(nbhd.threat_types_on_player, threat.ThreatTypes.PRICK)
+
 class TestNeighborhood(NeighborhoodBuildingTest):
     def test_attributes(self):
         room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral

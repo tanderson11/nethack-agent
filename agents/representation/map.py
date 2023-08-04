@@ -613,11 +613,11 @@ class ThreatMap(FloodMap):
     def calculate_threat(self, character):
         melee_n_threat = np.zeros_like(self.raw_glyph_grid)
         melee_damage_threat = np.zeros_like(self.raw_glyph_grid, dtype=float)
-        melee_threat_type = np.zeros_like(self.raw_glyph_grid)
+        melee_threat_type = np.zeros_like(self.raw_glyph_grid, dtype=int)
 
         ranged_n_threat = np.zeros_like(self.raw_glyph_grid)
         ranged_damage_threat = np.zeros_like(self.raw_glyph_grid, dtype=float)
-        ranged_threat_type = np.zeros_like(self.raw_glyph_grid)
+        ranged_threat_type = np.zeros_like(self.raw_glyph_grid, dtype=int)
 
         for i, monster in enumerate(self.monsters):
             monster_square = physics.Square(self.monster_squares[0][i], self.monster_squares[1][i])
