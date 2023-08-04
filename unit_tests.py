@@ -629,7 +629,22 @@ class TestCMapGlyphs(unittest.TestCase):
         for k, v in true_labels.items():
             self.assertEqual(v, gd.CMapGlyph.is_room_floor_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
-class TestThreat(unittest.TestCase):
+class NeighborhoodBuildingTest(unittest.TestCase):
+    def setup_neighborhood(self, glyphs, current_square, failed_move_record=neighborhood.FailedMoveRecords(), character=None) -> neighborhood.Neighborhood:
+        dmap = map.DMap()
+        nbhd = neighborhood.Neighborhood(
+            10,
+            current_square,
+            failed_move_record,
+            glyphs,
+            dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
+            character,
+            None,
+            False,
+        )
+        return nbhd
+
+class TestThreat(NeighborhoodBuildingTest):
     def make_character(self, intrinsics=constants.Intrinsics.NONE, AC=10) -> None:
         c = agents.custom_agent.Character(
             base_class=constants.BaseRole.Tourist,
@@ -652,7 +667,7 @@ class TestThreat(unittest.TestCase):
 
     def ranged_threat(self, name, character):
         return self.get_spoiler(name).expected_ranged_damage_to_character(character)
-    # should have some that make neighborhoods
+
     def test_damage_threat(self):
         c = self.make_character()
         self.assertTrue(0 < self.melee_threat('giant ant', c).damage < self.melee_threat('soldier ant', c).damage < self.melee_threat('leocrotta', c).damage)
@@ -669,20 +684,27 @@ class TestThreat(unittest.TestCase):
         self.assertEqual(self.ranged_threat('black dragon', c).threat_type, threat.ThreatTypes.DISINTEGRATE)
         self.assertEqual(self.ranged_threat('black dragon', reflect_c).threat_type, threat.ThreatTypes.NO_SPECIAL)
 
-class TestNeighborhood(unittest.TestCase):
-    def _setup(self, glyphs, current_square, failed_move_record=neighborhood.FailedMoveRecords()):
-        dmap = map.DMap()
-        self.neighborhood = neighborhood.Neighborhood(
-            10,
-            current_square,
-            failed_move_record,
-            glyphs,
-            dmap.make_level_map(map.DCoord(0,1), 0, glyphs, (0,0)),
-            None,
-            None,
-            False,
-        )
 
+    def test_threat_map(self):
+        c = self.make_character()
+
+        room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
+        black_dragon = gd.get_by_name(gd.MonsterGlyph, 'black dragon').numeral
+        glyphs = make_glyphs({
+            (0,0): room_numeral,
+            (0,1): room_numeral,
+            (0,2): black_dragon,
+        })
+        current_square = neighborhood.CurrentSquare(
+            arrival_time=10,
+            location=(0,0),
+            dcoord=(0,1)
+        )
+        nbhd = self.setup_neighborhood(glyphs, current_square, character=c)
+        self.assertEqual(nbhd.absolute_player_location, (0, 0))
+        self.assertEqual(nbhd.threat_types_on_player, threat.ThreatTypes.DISINTEGRATE)
+
+class TestNeighborhood(NeighborhoodBuildingTest):
     def test_attributes(self):
         room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
         ruby_numeral = gd.get_by_name(gd.ObjectGlyph, 'ruby').numeral
@@ -696,8 +718,8 @@ class TestNeighborhood(unittest.TestCase):
             location=(0,0),
             dcoord=(0,1)
         )
-        self._setup(glyphs, current_square)
-        self.assertEqual(self.neighborhood.absolute_player_location, (0, 0))
+        nbhd = self.setup_neighborhood(glyphs, current_square)
+        self.assertEqual(nbhd.absolute_player_location, (0, 0))
 
     def test_pathfind(self):
         room_numeral = gd.get_by_name(gd.CMapGlyph, 'room').numeral
@@ -712,9 +734,9 @@ class TestNeighborhood(unittest.TestCase):
             location=(0,0),
             dcoord=(0,1)
         )
-        self._setup(glyphs, current_square)
+        nbhd = self.setup_neighborhood(glyphs, current_square)
         character = MagicMock(desire_to_eat_corpses=lambda x: True)
-        path = self.neighborhood.path_to_desirable_objects(character)
+        path = nbhd.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
     def test_boulder_block(self):
@@ -741,9 +763,9 @@ class TestNeighborhood(unittest.TestCase):
         fm_record = neighborhood.FailedMoveRecords()
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
 
-        self._setup(glyphs, current_square, failed_move_record=fm_record)
+        nbhd = self.setup_neighborhood(glyphs, current_square, failed_move_record=fm_record)
         character = MagicMock(desire_to_eat_corpses=lambda x: True)
-        path = self.neighborhood.path_to_desirable_objects(character)
+        path = nbhd.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.S)
 
     def test_boulder_was_blocking(self):
@@ -769,9 +791,9 @@ class TestNeighborhood(unittest.TestCase):
         )
         fm_record = neighborhood.FailedMoveRecords()
         fm_record.add_failed_move((0,0), 10, nethack.actions.CompassDirection.E, was_boulder=True)
-        self._setup(glyphs, current_square, failed_move_record=fm_record)
+        nbhd = self.setup_neighborhood(glyphs, current_square, failed_move_record=fm_record)
         character = MagicMock(desire_to_eat_corpses=lambda x: True)
-        path = self.neighborhood.path_to_desirable_objects(character)
+        path = nbhd.path_to_desirable_objects(character)
         self.assertEqual(path.path_action, nethack.actions.CompassDirection.E)
 
 def labeled_string_to_raw_and_expected(multiline_str):
