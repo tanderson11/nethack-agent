@@ -15,6 +15,7 @@ import agents.advice.preferences as preferences
 import agents.advice.menuplan as menuplan
 import agents.representation.neighborhood as neighborhood
 import agents.representation.glyphs as gd
+import agents.representation.threat as threat
 import agents.custom_agent
 import environment
 
@@ -629,8 +630,44 @@ class TestCMapGlyphs(unittest.TestCase):
             self.assertEqual(v, gd.CMapGlyph.is_room_floor_check(np.array([gd.get_by_name(gd.CMapGlyph, k).offset])).all(), k)
 
 class TestThreat(unittest.TestCase):
+    def make_character(self, intrinsics=constants.Intrinsics.NONE, AC=10) -> None:
+        c = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral',
+        )
+        c.set_class_skills()
+        c.innate_intrinsics = intrinsics
+        c.AC = AC
+        return c
+
+    def get_spoiler(self, name):
+        monster = gd.GLYPH_NAME_LOOKUP[name]
+        spoiler = monster.monster_spoiler
+        return spoiler
+
+    def melee_threat(self, name, character):
+        return self.get_spoiler(name).expected_melee_damage_to_character(character)
+
+    def ranged_threat(self, name, character):
+        return self.get_spoiler(name).expected_ranged_damage_to_character(character)
+    # should have some that make neighborhoods
     def test_damage_threat(self):
-        pass
+        c = self.make_character()
+        self.assertTrue(0 < self.melee_threat('giant ant', c).damage < self.melee_threat('soldier ant', c).damage < self.melee_threat('leocrotta', c).damage)
+
+    def test_resist(self):
+        c = self.make_character()
+        resist_c = self.make_character(constants.Intrinsics.fire_resistance)
+        self.assertTrue(0 < self.melee_threat('fire ant', resist_c).damage < self.melee_threat('fire ant', c).damage)
+        self.assertEqual(0, self.melee_threat('flaming sphere', resist_c).damage)
+
+    def test_reflect(self):
+        c = self.make_character()
+        reflect_c = self.make_character(constants.Intrinsics.reflection)
+        self.assertEqual(self.ranged_threat('black dragon', c).threat_type, threat.ThreatTypes.DISINTEGRATE)
+        self.assertEqual(self.ranged_threat('black dragon', reflect_c).threat_type, threat.ThreatTypes.NO_SPECIAL)
 
 class TestNeighborhood(unittest.TestCase):
     def _setup(self, glyphs, current_square, failed_move_record=neighborhood.FailedMoveRecords()):

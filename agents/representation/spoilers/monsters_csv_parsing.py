@@ -7,6 +7,7 @@ import numpy as np
 import enum
 
 import agents.representation.threat as threat
+import agents.representation.constants as constants
 
 class MonsterSpoiler():
     NORMAL_SPEED = 12
@@ -118,12 +119,16 @@ RESIST_MAPPING = {
 }
 
 class AttackDamage():
-    def __init__(self, dice_damage, damage_type, can_miss) -> None:
+    def __init__(self, dice_damage, damage_type, can_miss, instrument) -> None:
         self.dice_damage = dice_damage
         self.damage_type = damage_type
         self.can_miss = can_miss
+        self.instrument = instrument
 
     def expected_damage_to_character(self, character, mon_level):
+        reflected = character.has_intrinsic(constants.Intrinsics.reflection) and (self.instrument == 'gaze' or self.instrument == 'breath')
+        if reflected:
+            return threat.Threat(0, 0)
         resisted = character.resists(self.damage_type)
         return self.expected_damage(mon_level, character.AC, resisted)
 
@@ -148,6 +153,7 @@ class AttackDamage():
             damage = max(self.dice_damage-damage_reduction,1)
         else:
             damage = max(self.dice_damage-damage_reduction,0)
+
         damage = damage * chance_to_hit
         if resisted and self.damage_type & ~threat.resist_but_additional:
             damage = 0
@@ -221,7 +227,7 @@ class AttackBundle():
                 can_miss = False
             elif instrument == 'gaze':
                 can_miss = False
-            damage = AttackDamage(dice_damage, damage_type, can_miss)
+            damage = AttackDamage(dice_damage, damage_type, can_miss, instrument)
             self.attack_damages.append(damage)
 
         self.num_attacks = len(self.attack_damages)

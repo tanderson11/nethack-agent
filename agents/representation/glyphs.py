@@ -674,7 +674,6 @@ for klass in klasses:
     GLYPH_NUMERAL_LOOKUP.update(klass.numeral_mapping())
 
 
-#print(GLYPH_NUMERAL_LOOKUP)
 ks = GLYPH_NUMERAL_LOOKUP.keys()
 for i in range(0, 5977):
     if i not in ks:
@@ -1572,3 +1571,7 @@ def stackable_glyph(glyph):
 
 def monster_like_mask(numerals):
     return MonsterGlyph.class_mask(numerals) | InvisibleGlyph.class_mask(numerals) | SwallowGlyph.class_mask(numerals) | WarningGlyph.class_mask(numerals)
+
+#for k,v in MonsterGlyph.numeral_mapping().items():
+#    print(k, v)
+#print(MonsterGlyph.OFFSET)

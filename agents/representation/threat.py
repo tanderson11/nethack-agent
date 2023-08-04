@@ -72,7 +72,8 @@ class ThreatLevels(enum.Enum):
     annoying = ThreatTypes.STEAL | ThreatTypes.SEDUCE | ThreatTypes.HALLU | ThreatTypes.CONF | ThreatTypes.PRICK
     mild_annoying = ThreatTypes.GOLD
 
-def threat(damage_threat, threat_types, character):
+def character_threat(threat, character):
+    damage_threat, threat_types = threat
     # remove threats that we resist
     for intrinsic, threat in resist_to_threat.items():
         if character.has_intrinsic(intrinsic.value):
@@ -102,7 +103,7 @@ def threat(damage_threat, threat_types, character):
     return CharacterThreat.safe
 
 threat_to_resist = {
-    ThreatTypes.DISINTEGRATE: [Intrinsics.disint_resistance, Intrinsics.reflection],
+    ThreatTypes.DISINTEGRATE: Intrinsics.disint_resistance,
     ThreatTypes.FIRE: Intrinsics.fire_resistance,
     ThreatTypes.COLD: Intrinsics.cold_resistance,
     ThreatTypes.SLEEP: Intrinsics.sleep_resistance,
