@@ -1155,6 +1155,7 @@ class PlayerInventory():
         for item in self.all_items():
             #import pdb; pdb.set_trace()
             if item.equipped_status and item.equipped_status.status == 'worn':
+                if item.identity.is_artifact: import pdb; pdb.set_trace()
                 extrinsics |= item.identity.worn_extrinsics()
             if item.identity.is_artifact and item.equipped_status and item.equipped_status.status == 'wielded':
                 extrinsics |= item.identity.wielded_extrinsics()

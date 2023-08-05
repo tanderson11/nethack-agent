@@ -1,7 +1,7 @@
 IDX,ARTIFACT NAME,ARTIFACT APPEARANCE,BASE OCLASS,DAMAGE BONUS,DAMAGE MULT,BASE ITEM,ALIGNMENT,INTELLIGENT,WHEN_CARRIED,WHEN_USED,WHEN_INVOKED,Obtaining,CARRIED_INTRINSICS,WORN_INTRINSICS,WIELDED_INTRINSICS
 2084,Eye of the Aethiopica,The Eye of the Aethiopica,Amulet,,,amulet of ESP,neutral,Yes,Energy regeneration. Half spell damage.,Magic resistance. Telepathy.,Branchport.,Quest artifact of Wizards.,half_spell,"magic_resistance,telepathy",
 1985,Mitre of Holiness,The Mitre of Holiness,Armor,,,helm of brilliance,lawful,Yes,Fire resistance.,Protection. Half damage from undead and demons.,Energy boost.,Quest artifact of Priests.,fire_resistance,protection,
-2348,Heart of Ahriman,The Heart of Ahriman,Gem,,,luckstone,neutral,Yes,Stealth.,"As projectile, +d5 to-hit and double damage.",Levitation.,Quest artifact of Barbarians.,stealth,,
+2348,Heart of Ahriman,The Heart of Ahriman,Gem,,,luckstone,neutral,Yes,Stealth.,"As projectile, +d5 to-hit and double damage.",Levitation.,Quest artifact of Barbarians.,"stealth,luck",,
 2113,Eyes of the Overworld,The Eyes of the Overworld,Tool,,,pair of lenses,neutral,Yes,,Astral vision. Protection against blindness and gazes. Magic resistance.,Enlightenment.,Quest artifact of Monks.,,"magic_resistance,protective_lenses",
 2111,Magic Mirror of Merlin,The Magic Mirror of Merlin,Tool,,,mirror,lawful,Yes,Magic resistance. Telepathy. ×2 to some spell damage.,Rumors.,,Quest artifact of Knights.,"magic_resistance,telepathy",,
 2102,Master Key of Thievery,The Master Key of Thievery,Tool,,,skeleton key,chaotic,Yes,Warning. Half physical damage. Teleport control.,"Rumors. As of 3.6.1, automatically untraps when used to unlock.",Untraps.,Quest artifact of Rogues.,"half_physical,magic_resistance,teleport_control",,
