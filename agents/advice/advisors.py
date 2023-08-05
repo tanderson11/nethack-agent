@@ -363,6 +363,8 @@ class ConditionWaitAdvisor(WaitAdvisor):
 
 class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
+        if character.current_hp == character.max_hp:
+            return None
         return super().advice(rng, run_state, character, oracle)
 
 class SearchWithStethoscope(Advisor):
