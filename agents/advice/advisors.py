@@ -160,7 +160,9 @@ class Oracle():
 
     @utilities.cached_property
     def life_threatened(self):
-        return self.neighborhood.threat_on_player > self.character.current_hp
+        #if self.neighborhood.threat_on_player > 1: print(self.neighborhood.threat_on_player, self.character.current_hp)
+        #if self.neighborhood.threat_on_player > self.character.current_hp * 0.5: import pdb; pdb.set_trace()
+        return self.neighborhood.threat_on_player > self.character.current_hp * 0.5
 
     @utilities.cached_property
     def on_warning_engraving(self):
