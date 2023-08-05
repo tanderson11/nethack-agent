@@ -196,14 +196,14 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         self.extended_is_monster = extended_is_monster
         #import pdb; pdb.set_trace()
         monsters = np.where(extended_is_monster, extended_visible_raw_glyphs, False)
-        extended_is_dangerous_monster = np.full_like(monsters, False, dtype=bool)
-        extended_is_dangerous_monster[self.extended_is_monster] = utilities.vectorized_map(
+        unmeleeable_monsters = np.full_like(monsters, False, dtype=bool)
+        unmeleeable_monsters[self.extended_is_monster] = utilities.vectorized_map(
             lambda g: isinstance(gd.GLYPH_NUMERAL_LOOKUP[g], gd.MonsterGlyph) and not gd.GLYPH_NUMERAL_LOOKUP[g].monster_spoiler.char_would_tussle_with(character),
             monsters[self.extended_is_monster]
         )
         #if extended_is_dangerous_monster.any():
         #    import pdb; pdb.set_trace()
-        self.extended_is_dangerous_monster = extended_is_dangerous_monster
+        self.unmeleeable_monsters = unmeleeable_monsters
         self.extended_is_peaceful_monster = gd.MonsterGlyph.always_peaceful_mask(extended_visible_raw_glyphs)
         self.extended_possible_secret_mask = self.zoom_glyph_alike(self.level_map.possible_secrets, ViewField.Extended)
         self.extended_has_item_stack = gd.stackable_mask(extended_visible_raw_glyphs)
@@ -368,11 +368,11 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         monsters[self.neighborhood_view] = False
         return self.path_to_targets(monsters, target_monsters=True)
 
-    def path_to_nearest_weak_monster(self):
-        weak_monsters = (~self.extended_is_dangerous_monster) & self.extended_is_hostile_monster
-        weak_monsters[self.neighborhood_view] = False # only care about distant weak monsters
+    def path_to_nearest_meleeable_monster(self):
+        meleeable_monsters = (~self.unmeleeable_monsters) & self.extended_is_hostile_monster
+        meleeable_monsters[self.neighborhood_view] = False # only care about distant weak monsters
 
-        return self.path_to_targets(weak_monsters, target_monsters=True)
+        return self.path_to_targets(meleeable_monsters, target_monsters=True)
 
     def path_to_tactical_square(self):
         tactical_squares = gd.CMapGlyph.tactical_square_mask(self.vision_glyphs)

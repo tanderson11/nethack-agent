@@ -1996,7 +1996,7 @@ class PickupDesirableItems(Advisor):
 
 class HuntNearestEnemyWeWouldFight(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
-        return run_state.neighborhood.path_to_nearest_weak_monster()
+        return run_state.neighborhood.path_to_nearest_meleeable_monster()
 
 class HuntNearestEnemyAdvisor(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
