@@ -119,6 +119,13 @@ class Character():
                 return True
         return False
 
+    def speed(self):
+        # TK know about burden
+        # TK know about very fast
+        if self.has_intrinsic(constants.Intrinsics.speed):
+            return 16
+        return 12
+
     def wants_excalibur(self):
         if not self.base_alignment == 'lawful': return False
         return self.relevant_skills['long sword'] == True
