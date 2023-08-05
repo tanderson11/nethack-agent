@@ -659,7 +659,7 @@ class ItemParser():
         gd.WandGlyph: re.compile('wand of ([a-zA-Z ]+)$'),
         gd.ArmorGlyph: re.compile('(?:pair of )?([a-zA-Z -]+)$'),
         gd.RingGlyph: re.compile('ring of ([a-zA-Z ]+)$'),
-        gd.AmuletGlyph: re.compile('amulet of ([a-zA-Z ]+)$'),
+        gd.AmuletGlyph: re.compile('amulet (of|versus) ([a-zA-Z ]+)$'),
         gd.PotionGlyph: re.compile('potions? of (holy |unholy )?([a-zA-Z ]+)$'),
         gd.ScrollGlyph: re.compile('scrolls? of ([a-zA-Z0-9 ]+)$'), #NR9, multi word scrolls
         gd.SpellbookGlyph: re.compile('spellbook of ([a-zA-Z ]+)$'),
@@ -717,6 +717,7 @@ class ItemParser():
 
     @classmethod
     def extract_name_from_description_given_glyph_class(cls, global_identity_map, description, glyph_class):
+        #import pdb; pdb.set_trace()
         pattern = cls.defuzzing_identified_class_patterns.get(glyph_class, re.compile('([a-zA-Z -]+)'))
         match = re.search(pattern, description)
         if match:
@@ -725,6 +726,8 @@ class ItemParser():
                 #holiness = match[1]
                 # handled using full match string in potion init
                 defuzzed_name = match[2]
+            elif glyph_class == gd.AmuletGlyph:
+                defuzzed_name = match[0] # our data has "amulet of {foo}"
             else:
                 defuzzed_name = match[1]
 
@@ -778,6 +781,7 @@ class ItemParser():
     @classmethod
     def make_item_with_glyph(cls, global_identity_map, item_glyph, item_string, inventory_letter=None):
         identity = None
+        #import pdb; pdb.set_trace()
         try:
             match_components = cls.parse_inventory_item_string(global_identity_map, item_string)
         except BadStringOnWhitelist:
@@ -1145,6 +1149,20 @@ class PlayerInventory():
         self.inv_letters = inv_letters
         self.inv_oclasses = inv_oclasses
         self.inv_glyphs = inv_glyphs
+
+    def extrinsics(self):
+        extrinsics = constants.Intrinsics.NONE
+        for item in self.all_items():
+            #import pdb; pdb.set_trace()
+            if item.equipped_status and item.equipped_status.status == 'worn':
+                if item.identity.is_artifact: import pdb; pdb.set_trace()
+                extrinsics |= item.identity.worn_extrinsics()
+            if item.identity.is_artifact and item.equipped_status and item.equipped_status.status == 'wielded':
+                extrinsics |= item.identity.wielded_extrinsics()
+            if item.identity.is_artifact or isinstance(item.identity, gd.GemLike):
+                extrinsics |= item.identity.carried_extrinsics()
+
+        return extrinsics
 
     @utilities.cached_property
     def armaments(self):

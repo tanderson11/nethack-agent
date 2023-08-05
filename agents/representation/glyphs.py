@@ -759,6 +759,9 @@ OBJECT_SPOILERS = ObjectSpoilers()
 
 class IdentityLike():
     desirability_if_unidentified = preferences.IdentityDesirability.desire_none
+    wearable = False
+    has_carried_intrinsics = False
+    is_artifact = False
 
     def __init__(self, idx) -> None:
         self.idx = idx.copy().sort_values()
@@ -766,7 +769,6 @@ class IdentityLike():
         self.listened_price_id_methods = {}
         # whenever we find values, if it's unique, we store it in this dictionary
         # and don't have to touch the database repeatedly
-        self.is_artifact = False
 
     @classmethod
     def appearances(cls):
@@ -894,6 +896,19 @@ class IdentityLike():
         
         if self.is_identified():
             print(f"Identified by price id! name={self.name()}")
+
+    def extrinsics_by_colname(self, column):
+        extrinsics = constants.Intrinsics.NONE
+        values = self.find_values(column)
+        if not values or pd.isna(values):
+            return extrinsics
+
+        return constants.intrinsics_from_str(values)
+
+    def worn_extrinsics(self):
+        if not self.is_identified(): return constants.Intrinsics.NONE
+        if not self.wearable: return constants.Intrinsics.NONE
+        return self.extrinsics_by_colname('WORN_INTRINSICS')
     
     def process_message(self, message_obj, action):
         pass
@@ -975,7 +990,8 @@ class SpellbookIdentity(SpellbookLike, NumeralIdentity):
 ### Rings
 class RingLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[RingGlyph]
-    desirability_if_unidentified = preferences.IdentityDesirability.desire_all    
+    desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
 
 class AmbiguousRingIdentity(RingLike, AmbiguousIdentity):
     pass
@@ -986,6 +1002,8 @@ class RingIdentity(RingLike, NumeralIdentity):
 class AmuletLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[AmuletGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
+    slot = 'neck'
 
 class AmbiguousAmuletIdentity(AmuletLike, AmbiguousIdentity):
     pass
@@ -1046,13 +1064,14 @@ class FoodIdentity(FoodLike, NumeralIdentity):
 ### Tools
 class ToolLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ToolGlyph]
+    wearable = True
 
     def __init__(self, type) -> None:
         self.ranged = False
         self.thrown = False
         self.type = type
 
-class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity, ):
+class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity):
     def __init__(self, global_identity_map, possible_numerals) -> None:
         AmbiguousIdentity.__init__(self, global_identity_map, possible_numerals)
         ToolLike.__init__(self, self.find_values('TYPE'))
@@ -1064,11 +1083,15 @@ class ToolIdentity(ToolLike, NumeralIdentity):
 
 ### Gems
 class GemLike():
+    has_carried_intrinsics = True
     data = OBJECT_SPOILERS.object_spoilers_by_class[GemGlyph]
     def __init__(self, is_ammo, ammo_type) -> None:
         self.thrown = False
         self.is_ammo = is_ammo
         self.ammo_type = ammo_type
+
+    def carried_extrinsics(self):
+        return self.extrinsics_by_colname('CARRIED_INTRINSICS')
 
 class AmbiguousGemIdentity(GemLike, AmbiguousIdentity):
     def __init__(self, global_identity_map, possible_numerals) -> None:
@@ -1156,6 +1179,7 @@ class WandIdentity(WandLike, NumeralIdentity):
 class ArmorLike():
     data = OBJECT_SPOILERS.object_spoilers_by_class[ArmorGlyph]
     desirability_if_unidentified = preferences.IdentityDesirability.desire_all
+    wearable = True
 
     def __init__(self, slot):
         self.slot = slot
@@ -1270,7 +1294,34 @@ class BareHandsIdentity(WeaponIdentity):
         return True
 
 ### Artifacts
-class ArtifactWeaponIdentity(WeaponIdentity):
+class ArtifactIdentity(IdentityLike):
+    is_artifact = True
+    # we could tweak the find values method
+    # but intrinsics + bonus damage are basically the ONLY things that differ about artifacts
+    def artifact_extrinsics(self, extrinsic_type):
+        extrinsic_str = self.artifact_row[extrinsic_type]
+        if extrinsic_str is None or pd.isna(extrinsic_str):
+            return constants.Intrinsics.NONE
+        else:
+            return constants.intrinsics_from_str(extrinsic_str)
+
+    def wielded_extrinsics(self):
+        return self.artifact_extrinsics('WIELDED_INTRINSICS')
+
+    def carried_extrinsics(self):
+        if self.has_carried_intrinsics:
+            self.artifact_extrinsics('CARRIED_INTRINSICS') | super().carried_extrinsics()
+        return self.artifact_extrinsics('CARRIED_INTRINSICS')
+
+    def worn_extrinsics(self):
+        if self.wearable:
+            return self.artifact_extrinsics('WORN_INTRINSICS') | super().worn_extrinsics()
+
+    def __init__(self, artifact_name, artifact_row) -> None:
+        self.artifact_name = artifact_name
+        self.artifact_row = artifact_row
+
+class ArtifactWeaponIdentity(ArtifactIdentity, WeaponIdentity):
     associated_glyph_class = WeaponGlyph
 
     class ArtifactWeaponDamage(NamedTuple):
@@ -1278,9 +1329,8 @@ class ArtifactWeaponIdentity(WeaponIdentity):
         damage_mult: int = 1
 
     def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.artifact_name = artifact_name
-        self.is_artifact = True
+        ArtifactIdentity.__init__(self, artifact_name, artifact_row)
+        WeaponIdentity.__init__(self, idx, shuffle_class=shuffle_class)
 
         bonus = artifact_row['DAMAGE BONUS']
         if pd.isna(bonus): bonus = 0
@@ -1288,36 +1338,31 @@ class ArtifactWeaponIdentity(WeaponIdentity):
         if pd.isna(mult): mult = 1
 
         self.artifact_damage = self.ArtifactWeaponDamage(bonus, mult)
-
         # keep idx pointed at the base item and override any methods with artifact specific stuff
 
-class ArtifactArmorIdentity(ArmorIdentity):
+class ArtifactArmorIdentity(ArtifactIdentity, ArmorIdentity):
     associated_glyph_class = ArmorGlyph
     def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.artifact_name = artifact_name
-        self.is_artifact = True
+        ArtifactIdentity.__init__(self, artifact_name, artifact_row)
+        ArmorIdentity.__init__(self, idx, shuffle_class=shuffle_class)
 
-class ArtifactAmuletIdentity(AmuletIdentity):
+class ArtifactAmuletIdentity(ArtifactIdentity, AmuletIdentity):
     associated_glyph_class = AmuletGlyph
     def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.artifact_name = artifact_name
-        self.is_artifact = True
+        ArtifactIdentity.__init__(self, artifact_name, artifact_row)
+        AmuletIdentity.__init__(self, idx, shuffle_class=shuffle_class)
 
-class ArtifactGemIdentity(GemIdentity):
+class ArtifactGemIdentity(ArtifactIdentity, GemIdentity):
     associated_glyph_class = GemGlyph
     def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.artifact_name = artifact_name
-        self.is_artifact = True
+        ArtifactIdentity.__init__(self, artifact_name, artifact_row)
+        GemIdentity.__init__(self, idx, shuffle_class=shuffle_class)
 
-class ArtifactToolIdentity(ToolIdentity):
+class ArtifactToolIdentity(ArtifactIdentity, ToolIdentity):
     associated_glyph_class = ToolGlyph
     def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
-        self.artifact_name = artifact_name
-        self.is_artifact = True
+        ArtifactIdentity.__init__(self, artifact_name, artifact_row)
+        ToolIdentity.__init__(self, idx, shuffle_class=shuffle_class)
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
@@ -1575,3 +1620,6 @@ def monster_like_mask(numerals):
 #for k,v in MonsterGlyph.numeral_mapping().items():
 #    print(k, v)
 #print(MonsterGlyph.OFFSET)
+
+#for k,v in ArmorGlyph.numeral_mapping().items():
+#    print(k, v)

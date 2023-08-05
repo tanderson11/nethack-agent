@@ -104,7 +104,11 @@ class Character():
         self.innate_intrinsics = new_intrinsics
 
     def has_intrinsic(self, intrinsic):
-        return bool((self.innate_intrinsics | self.noninnate_intrinsics) & intrinsic)
+        if self.inventory is None:
+            intrinsics = (self.innate_intrinsics | self.noninnate_intrinsics)
+        else:
+            intrinsics = (self.innate_intrinsics | self.noninnate_intrinsics | self.inventory.extrinsics())
+        return bool(intrinsics & intrinsic)
 
     def resists(self, damage_type):
         relevant_resistances = threat.threat_to_resist.get(damage_type, [])

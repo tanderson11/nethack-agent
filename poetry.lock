@@ -1698,7 +1698,7 @@ files = [
 
 [[package]]
 name = "nle"
-version = "0.7.3+458e6ae"
+version = "0.7.3+61bfbb4"
 description = "The NetHack Learning Environment (NLE): a reinforcement learning environment based on NetHack"
 category = "main"
 optional = false

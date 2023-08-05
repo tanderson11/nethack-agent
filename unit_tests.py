@@ -174,6 +174,11 @@ class TestItemParsing(unittest.TestCase):
         ItemTestInputs(2349, "an uncursed gray stone"): ItemTestValues(inv.Gem, "loadstone", name_in_stack=None),
         ItemTestInputs(1942, "an uncursed runed broadsword"): ItemTestValues(inv.Weapon, "elven broadsword", name_in_stack=None),
         ItemTestInputs(2311, "a long wand"): ItemTestValues(inv.Wand, None),
+        ItemTestInputs(2032, "a blessed +0 tattered cape (being worn)"): ItemTestValues(inv.Armor, None),
+        ItemTestInputs(1989, "a +0 silver dragon scale mail (being worn)"): ItemTestValues(inv.Armor, 'silver dragon scale mail'),
+        ItemTestInputs(2064, "a ring of protection from shape changers (on right hand)"): ItemTestValues(inv.Ring, 'protection from shape changers'),
+        ItemTestInputs(2088, "an amulet of magical breathing (being worn)"): ItemTestValues(inv.Amulet, 'amulet of magical breathing'),
+        ItemTestInputs(2084, "an amulet versus poison"): ItemTestValues(inv.Amulet, "amulet versus poison"),
     }
 
     test_elimination_values = {
@@ -954,6 +959,28 @@ class TestArtifacts(unittest.TestCase):
             self.assertEqual(artifact_name, result.item.identity.artifact_name)
             self.assertEqual(name, result.item.identity.name())
 
+    def test_in_inventory(self):
+        inventory = [
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['crystal ball'].numeral, inv.Tool, "a glass orb named The Orb of Fate", ord("f")), self.ArtifactValue('Orb of Fate', 'crystal ball')),
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['long sword'].numeral, inv.Weapon, "a long sword named Excalibur (weapon in hand)", ord("g")), self.ArtifactValue('Excalibur', 'long sword')),
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['silver saber'].numeral, inv.Weapon, "a silver saber named Grayswandir", ord("h")), self.ArtifactValue('Grayswandir', 'silver saber')),
+        ]
+        chr_to_test_value = {input.inventory_letter:test_value for input,test_value in inventory}
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, [i for i,_ in inventory])
+
+        for i in character.inventory.all_items():
+            test_value = chr_to_test_value[i.inventory_letter]
+            self.assertTrue(i.identity.is_artifact)
+            self.assertEqual(test_value.artifact_name, i.identity.artifact_name)
+            self.assertEqual(test_value.base_item_name, i.identity.name())
+
 class TestWeaponPickup(unittest.TestCase):
     test_header = "Pick up what?\n\nWeapons\n"
 
@@ -1264,6 +1291,40 @@ class TestWeaponWielding(unittest.TestCase):
 
         proposal = character.inventory.proposed_weapon_changes(character)
         assert proposal is None
+
+class TestExtrinsics(unittest.TestCase):
+    def test_extrinsics(self):
+        character = agents.custom_agent.Character(
+            base_class=constants.BaseRole.Tourist,
+            base_race=constants.BaseRace.human,
+            base_sex='male',
+            base_alignment='neutral'
+        )
+        character.set_class_skills()
+        inventory = [
+            (ItemTestInputs(2032, inv.Armor, "a blessed +0 tattered cape (being worn)", ord("a")), constants.Intrinsics.NONE), # could be MR, but it's not ID'd
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['silver dragon scale mail'].numeral, inv.Armor, "a +0 silver dragon scale mail (being worn)", ord("b")), constants.Intrinsics.reflection),
+            (ItemTestInputs(2064, inv.Ring, "a ring of protection from shape changers (on right hand)", ord("c")), constants.Intrinsics.protection_from_shape_changers),
+            (ItemTestInputs(2088, inv.Amulet, "an amulet of magical breathing (being worn)", ord("d")),constants.Intrinsics.magical_breathing),
+            (ItemTestInputs(2084, inv.Amulet, "an amulet versus poison", ord("e")),constants.Intrinsics.NONE), # an unworn amulet
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['crystal ball'].numeral, inv.Tool, "a glass orb named The Orb of Fate", ord("f")), constants.Intrinsics.luck|constants.Intrinsics.half_physical|constants.Intrinsics.half_spell|constants.Intrinsics.warning),
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['long sword'].numeral, inv.Weapon, "a long sword named Excalibur (weapon in hand)", ord("g")), constants.Intrinsics.drain_resistance|constants.Intrinsics.searching),
+            (ItemTestInputs(gd.GLYPH_NAME_LOOKUP['silver saber'].numeral, inv.Weapon, "a silver saber named Grayswandir", ord("h")), constants.Intrinsics.NONE), # no hallu resistance when not wielded
+        ]
+
+        global_identity_map = gd.GlobalIdentityMap()
+        character.inventory = make_inventory(global_identity_map, [i for i,_ in inventory])
+        extrinsics = character.inventory.extrinsics()
+
+        expected_extrinsics = constants.Intrinsics.NONE
+        for _,extrinsic in inventory:
+            expected_extrinsics |= extrinsic
+
+        print(expected_extrinsics)
+        print(extrinsics)
+
+        self.assertEqual(extrinsics, expected_extrinsics), extrinsics, expected_extrinsics
+        self.assertTrue(character.has_intrinsic(constants.Intrinsics.reflection))
 
 class TestArmorWearing(unittest.TestCase):
     def test_good_armor_vs_bad(self):

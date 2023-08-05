@@ -186,7 +186,7 @@ class AttackBundle():
             if a[0] not in self.prefix_set and not (self.matches_no_prefix and re.match(self.digit_pattern, a[0])):
                 # this type of attack doesn't apply to our bundle
                 continue
-            
+
             if re.match(self.digit_pattern, a[0]):
                 prefix = None
                 instrument = None
@@ -216,7 +216,7 @@ class AttackBundle():
                 dice_damage = num_dice * (num_sides + 1)/2
             else:
                 dice_damage = 0
-            
+
             can_miss = True
             if self.never_misses:
                 can_miss = False

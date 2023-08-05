@@ -40,7 +40,7 @@ def commit(path, branch='assets', push=False):
     # pop the stash if there were local changes
     if did_stash:
         subprocess.run(['git', 'stash', 'pop'])
-    
+
     return commit_sha
-    
+
 

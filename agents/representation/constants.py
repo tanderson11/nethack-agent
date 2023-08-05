@@ -110,6 +110,7 @@ class Intrinsics(enum.Flag):
     teleportitis = enum.auto()
     teleport_control = enum.auto()
     polymorphitis = enum.auto()
+    polymorph_control = enum.auto()
     levitation = enum.auto()
     stealth = enum.auto()
     aggravate_monster = enum.auto()
@@ -120,6 +121,7 @@ class Intrinsics(enum.Flag):
     hunger = enum.auto()
     telepathy = enum.auto()
     speed = enum.auto()
+    extrinsic_speed = enum.auto()
     food_appraisal = enum.auto()
     magical_breathing = enum.auto()
     amphibiousness = enum.auto()
@@ -128,6 +130,27 @@ class Intrinsics(enum.Flag):
     reflection = enum.auto()
     free_action = enum.auto()
     magic_resistance = enum.auto()
+    acid_resistance = enum.auto()
+    esp = enum.auto()
+    slippery = enum.auto()
+    protective_lenses = enum.auto()
+    hallu_resistance = enum.auto()
+    half_physical = enum.auto()
+    half_spell = enum.auto()
+    luck = enum.auto()
+    drain_resistance = enum.auto()
+
+def intrinsics_from_str(intrinsic_str):
+    extrinsics = Intrinsics.NONE
+    for i_str in intrinsic_str.split(','):
+        try:
+            extrinsic = Intrinsics[i_str]
+        except KeyError:
+            print(f"Failed to know about intrinsic {i_str}")
+            extrinsic = Intrinsics.NONE
+
+        extrinsics |= extrinsic
+    return extrinsics
 
 ROLE_TO_INTRINSIC = {
     BaseRole.Archeologist: {
