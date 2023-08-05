@@ -62,7 +62,6 @@ class MonsterSpoiler():
         if cumulative_safety < threat.CharacterThreat.high:
             return True
 
-        print(f"Wouldn't tussle with {self.name}!")
         return False
 
     def expected_melee_damage_to_character(self, character):
@@ -213,6 +212,9 @@ class AttackBundle():
 
             if attack_does_physical_damage:
                 dice_damage = num_dice * (num_sides + 1)/2
+
+                if instrument == 'weapon':
+                    dice_damage += 4.5 # roughly approximate weapon damage as +1d8
             else:
                 dice_damage = 0
 
