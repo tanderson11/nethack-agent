@@ -99,7 +99,7 @@ def evaluate_threat_damage(threat, character):
     if damage_threat >= character.current_hp * 0.5:
         return CharacterThreat.deadly
 
-    if damage_threat >= character.current_hp * 0.2:
+    if damage_threat >= character.current_hp * 0.15:
         return CharacterThreat.high
 
     if damage_threat > 0:
