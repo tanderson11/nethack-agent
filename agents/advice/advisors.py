@@ -19,6 +19,7 @@ from utilities import ARS
 import agents.representation.inventory as inv
 import agents.representation.constants as constants
 import agents.advice.preferences as preferences
+import agents.representation.threat as threat
 
 class Oracle():
     def __init__(self, run_state, character, neighborhood, message, blstats):
@@ -1293,12 +1294,14 @@ class PassiveMonsterRangedAttackAdvisor(RangedAttackAdvisor):
 class MeleeRangedAttackIfPreferred(RangedAttackAdvisor):
     preference = preferences.ranged_powerful | preferences.RangedAttackPreference.adjacent
     def targets(self, neighborhood, character, **kwargs):
-        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and m.monster_spoiler.death_damage_over_encounter(character) < character.current_hp/2, **kwargs)
+        return neighborhood.target_monsters(lambda m: isinstance(m, gd.MonsterGlyph) and max(m.monster_spoiler.passive_threat(character)) > threat.CharacterThreat.low, **kwargs)
 
     def advice(self, rng, run_state, character, oracle):
         if not character.prefer_ranged():
             return None
-        return super().advice(rng, run_state, character, oracle)
+        adv = super().advice(rng, run_state, character, oracle)
+        if adv is not None: import pdb; pdb.set_trace()
+        return adv
 
 class AdjustEscapePlanDummy(Advisor):
     def advice(self, rng, run_state, character, oracle):

@@ -46,7 +46,7 @@ new_advisors = [
         TameCarnivores(),
         BlindFearfulWithCamera(),
         EngraveElberethAdvisor(oracle_consultation=lambda o: o.very_low_hp),
-        MeleeRangedAttackIfPreferred(),
+        #MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
     ]),

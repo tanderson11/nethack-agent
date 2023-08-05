@@ -107,6 +107,9 @@ def evaluate_threat_damage(threat, character):
 
     return CharacterThreat.safe
 
+def evaluate_threat(threat, character):
+    return (evaluate_threat_damage(threat,character), evaluate_threat_type(threat,character))
+
 threat_to_resist = {
     ThreatTypes.DISINTEGRATE: Intrinsics.disint_resistance,
     ThreatTypes.FIRE: Intrinsics.fire_resistance,

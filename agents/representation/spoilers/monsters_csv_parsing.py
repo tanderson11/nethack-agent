@@ -35,6 +35,10 @@ class MonsterSpoiler():
 
         self.resists = resists
 
+    def passive_threat(self, character):
+        passive_threat = threat.evaluate_threat(self.expected_passive_damage_to_character(character))
+        return passive_threat
+
     def char_would_tussle_with(self, character):
         c = character
         ranged = self.expected_ranged_damage_to_character(c)
