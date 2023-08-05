@@ -39,6 +39,20 @@ class MonsterSpoiler():
         passive_threat = threat.evaluate_threat(self.expected_passive_damage_to_character(character))
         return passive_threat
 
+    def ranged_threat(self, character):
+        ranged_threat = threat.evaluate_threat(self.expected_ranged_damage_to_character(character), character)
+        return ranged_threat
+
+    def melee_threat(self, character):
+        melee_threat = threat.evaluate_threat(self.expected_melee_damage_to_character(character), character)
+        return melee_threat
+
+    def active_threat(self, character):
+        ranged_threat = self.ranged_threat(character)
+        melee_threat = self.melee_threat(character)
+
+        return max(melee_threat, ranged_threat)
+
     def char_would_tussle_with(self, character):
         c = character
         ranged = self.expected_ranged_damage_to_character(c)

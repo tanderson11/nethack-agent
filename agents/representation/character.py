@@ -63,7 +63,6 @@ class Character():
     def set_class_skills(self):
         self.class_skills = constants.CLASS_SKILLS[self.base_class.value].to_dict()
         self.relevant_skills = constants.CLASS_SKILLS[self.base_class.value + "-relevant"].to_dict()
-        self.set_role_tier_mod()
 
     def set_base_spells(self):
         if self.base_class == constants.BaseRole.Wizard:
@@ -107,7 +106,7 @@ class Character():
         if self.inventory is None:
             intrinsics = (self.innate_intrinsics | self.noninnate_intrinsics)
         else:
-            intrinsics = (self.innate_intrinsics | self.noninnate_intrinsics | self.inventory.extrinsics())
+            intrinsics = (self.innate_intrinsics | self.noninnate_intrinsics | self.inventory.extrinsics)
         return bool(intrinsics & intrinsic)
 
     def resists(self, damage_type):
@@ -143,37 +142,6 @@ class Character():
         #    return False
         long_sword = self.inventory.get_item(inv.Weapon, name='long sword', instance_selector=lambda i: not i.identity.is_artifact)
         return long_sword is not None
-
-    def set_role_tier_mod(self):
-        if self.base_class == constants.BaseRole.Tourist or self.base_class == constants.BaseRole.Healer: self.role_tier_mod = 2
-        elif self.base_class == constants.BaseRole.Wizard or self.base_class == constants.BaseRole.Rogue or self.base_class == constants.BaseRole.Archeologist: self.role_tier_mod = 1
-        elif self.base_class == constants.BaseRole.Valkyrie or self.base_class == constants.BaseRole.Monk or self.base_class == constants.BaseRole.Samurai or self.base_class == constants.BaseRole.Barbarian: self.role_tier_mod = -1
-
-    def calculate_tier(self):
-        AC_mod = min(((10 - self.AC) // 5)/2, 5)
-        HP_mod = min((self.max_hp // 18)/2, 2.5)
-        if self.attributes.strength < 18: strength_mod = 0
-        elif self.attributes.strength == 18 and self.attributes.strength_pct < 51: strength_mod = 0.5
-        else: strength_mod = 1.0
-
-        if self.attributes.dexterity_to_hit(self.attributes.dexterity) < 0: dex_mod = -0.5
-        elif self.attributes.dexterity_to_hit(self.attributes.dexterity) >= 2: dex_mod = 0.5
-        else: dex_mod = 0.0
-
-        weapon_mod = 0
-        if self.inventory is not None:
-            if self.inventory.wielded_weapon.melee_damage(self, None) > 5: weapon_mod += 0.5
-            if self.inventory.wielded_weapon.melee_damage(self, None) > 10: weapon_mod += 0.5
-            if not self.inventory.wielded_weapon.uses_relevant_skill(self): weapon_mod -= 0.5
-
-        speed_mod = 0.5 if self.has_intrinsic(constants.Intrinsics.speed) else 0
-        #import pdb; pdb.set_trace()
-        return min(10, np.ceil(10 - AC_mod - HP_mod - speed_mod - strength_mod - weapon_mod - dex_mod))
-
-    def fearful_tier(self, tier):
-        if tier < 0: return False
-        #import pdb; pdb.set_trace()
-        return tier < self.tier
 
     def update_from_observation(self, blstats):
         old_experience_level = self.experience_level
@@ -215,8 +183,6 @@ class Character():
         old_energy = self.current_energy
         if old_energy != blstats.get('energy'):
             self.current_energy = blstats.get('energy')
-
-        self.tier = self.calculate_tier()
 
     def want_less_weight(self):
         if self.near_burdened or self.carrying_too_much_for_diagonal:
@@ -337,11 +303,15 @@ class Character():
         self.blinding_attempts = {k:v for k,v in self.blinding_attempts.items() if v >= time - 10}
 
     def scared_by(self, monster):
+        if isinstance(monster, gd.InvisibleGlyph):
+            return True
         if not isinstance(monster, gd.MonsterGlyph):
             return False
 
         spoiler = monster.monster_spoiler
-        return self.fearful_tier(spoiler.tier)
+        is_scary = max(spoiler.active_threat(self)) > threat.CharacterThreat.low
+        #if is_scary: import pdb; pdb.set_trace()
+        return is_scary
     
     unsafe_hp_loss = 0.5
     def death_by_passive(self, spoiler):
@@ -349,11 +319,6 @@ class Character():
         looks_like_death = spoiler.passive_damage_over_encounter(self, trajectory) + spoiler.death_damage_over_encounter(self) > self.unsafe_hp_loss * self.current_hp
         #if looks_like_death: import pdb; pdb.set_trace()
         return looks_like_death
-
-    #def threatened_by(self, monster):
-    #    if not isinstance(monster, gd.MonsterGlyph):
-    #        return False
-    #    return monster.monster_spoiler()
 
     exp_lvl_to_max_mazes_lvl = {
         1: 1,

@@ -66,8 +66,8 @@ class ThreatLevels(enum.Enum):
     deadly = ThreatTypes.DISINTEGRATE | ThreatTypes.WRAP | ThreatTypes.STONE | ThreatTypes.SLIME | ThreatTypes.DISEASE | ThreatTypes.RIDER
     really_bad = ThreatTypes.PARALYSIS | ThreatTypes.SLEEP | ThreatTypes.LYCAN | ThreatTypes.D_INT
     mid_bad = ThreatTypes.STUN | ThreatTypes.SPELL | ThreatTypes.DIGEST
-    little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND | ThreatTypes.STICK | ThreatTypes.DRAIN
-    not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX
+    little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND  | ThreatTypes.DRAIN
+    not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX | ThreatTypes.STICK
     degrading = ThreatTypes.DISENCHANT | ThreatTypes.RUST | ThreatTypes.ROT
     annoying = ThreatTypes.STEAL | ThreatTypes.SEDUCE | ThreatTypes.HALLU | ThreatTypes.CONF | ThreatTypes.PRICK
     mild_annoying = ThreatTypes.GOLD

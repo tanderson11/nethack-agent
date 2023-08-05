@@ -1150,6 +1150,7 @@ class PlayerInventory():
         self.inv_oclasses = inv_oclasses
         self.inv_glyphs = inv_glyphs
 
+    @utilities.cached_property
     def extrinsics(self):
         extrinsics = constants.Intrinsics.NONE
         for item in self.all_items():
