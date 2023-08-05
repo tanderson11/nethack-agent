@@ -121,7 +121,8 @@ class Character():
 
     def speed(self):
         # TK know about burden
-        # TK know about very fast
+        if self.has_intrinsic(constants.Intrinsics.extrinsic_speed):
+            return 20
         if self.has_intrinsic(constants.Intrinsics.speed):
             return 16
         return 12
