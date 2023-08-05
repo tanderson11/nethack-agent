@@ -1155,6 +1155,9 @@ class PlayerInventory():
         extrinsics = constants.Intrinsics.NONE
         for item in self.all_items():
             #import pdb; pdb.set_trace()
+            if item.identity is None:
+                if environment.env.debug: import pdb; pdb.set_trace()
+                continue
             if item.equipped_status and item.equipped_status.status == 'worn':
                 if item.identity.is_artifact: import pdb; pdb.set_trace()
                 extrinsics |= item.identity.worn_extrinsics()

@@ -900,6 +900,9 @@ class IdentityLike():
     def extrinsics_by_colname(self, column):
         extrinsics = constants.Intrinsics.NONE
         values = self.find_values(column)
+        if isinstance(values, list) and environment.env.debug:
+            import pdb; pdb.set_trace()
+
         if not values or pd.isna(values):
             return extrinsics
 
