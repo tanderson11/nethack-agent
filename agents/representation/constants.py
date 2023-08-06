@@ -139,6 +139,8 @@ class Intrinsics(enum.Flag):
     half_spell = enum.auto()
     luck = enum.auto()
     drain_resistance = enum.auto()
+    displacement = enum.auto()
+    slow_digestion = enum.auto()
 
 def intrinsics_from_str(intrinsic_str):
     extrinsics = Intrinsics.NONE

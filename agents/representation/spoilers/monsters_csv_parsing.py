@@ -6,6 +6,8 @@ import re
 import numpy as np
 import enum
 
+from utilities import ARS
+
 import agents.representation.threat as threat
 import agents.representation.constants as constants
 
@@ -33,14 +35,57 @@ class MonsterSpoiler():
 
         self.resists = resists
 
+    def passive_threat(self, character):
+        passive_threat = threat.evaluate_threat(self.expected_passive_damage_to_character(character))
+        return passive_threat
+
+    def ranged_threat(self, character):
+        ranged_threat = threat.evaluate_threat(self.expected_ranged_damage_to_character(character), character)
+        return ranged_threat
+
+    def melee_threat(self, character):
+        melee_threat = threat.evaluate_threat(self.expected_melee_damage_to_character(character), character)
+        return melee_threat
+
+    def active_threat(self, character):
+        ranged_threat = self.ranged_threat(character)
+        melee_threat = self.melee_threat(character)
+
+        return max(melee_threat, ranged_threat)
+
+    def char_would_tussle_with(self, character):
+        c = character
+        ranged = self.expected_ranged_damage_to_character(c)
+        melee = self.expected_melee_damage_to_character(c)
+        active_danger_from_types = max(threat.evaluate_threat_type(ranged, c), threat.evaluate_threat_type(melee, c))
+        active_danger_from_damage = max(threat.evaluate_threat_damage(ranged, c), threat.evaluate_threat_damage(melee, c))
+        active_danger = max(active_danger_from_damage, active_danger_from_types)
+        # if someone will just beat us up, we can't fret the passives too much
+        if active_danger > threat.CharacterThreat.safe:
+            return True
+
+        # TK implement avoidance of deadly melee combatants (but pursuit of deadly ranged combatants that are weak in melee)
+        cumulative_safety = threat.CharacterThreat.safe
+        passive_damage = self.expected_passive_damage_to_character(c)
+        # Don't evaluate passive damage TYPE because in general there is avoiding that
+        # recall that floating eyes' paralysis will be recorded as damage damage so they will still be unsafe
+        cumulative_safety = max(threat.evaluate_threat_damage(passive_damage, c), cumulative_safety)
+        death_damage = self.expected_death_damage_to_character(c)
+        cumulative_safety = max(threat.evaluate_threat_damage(death_damage, c), threat.evaluate_threat_type(death_damage, c), cumulative_safety)
+
+        if cumulative_safety < threat.CharacterThreat.high:
+            return True
+
+        return False
+
     def expected_melee_damage_to_character(self, character):
-        return self.melee_attack_bundle.expected_damage_to_character(character, self.max_level)
+        return self.melee_attack_bundle.expected_damage_to_character(character, self.max_level, self.speed)
 
     def expected_ranged_damage_to_character(self, character):
-        return self.ranged_attack_bundle.expected_damage_to_character(character, self.max_level)
-    
+        return self.ranged_attack_bundle.expected_damage_to_character(character, self.max_level, self.speed)
+
     def expected_engulf_damage_to_character(self, character):
-        return self.engulf_attack_bundle.expected_damage_to_character(character, self.max_level)
+        return self.engulf_attack_bundle.expected_damage_to_character(character, self.max_level, self.speed)
 
     def expected_passive_damage_to_character(self, character):
         return self.passive_attack_bundle.expected_damage_to_character(character, self.max_level)
@@ -51,42 +96,6 @@ class MonsterSpoiler():
     def actions_per_unit_time(self):
         # assume player has speed 12
         return self.speed / self.NORMAL_SPEED
-
-    def melee_dps(self, character):
-        return self.expected_melee_damage_to_character(character).damage * self.actions_per_unit_time()
-
-    def passive_damage_over_encounter(self, character, kill_trajectory):
-        #import pdb; pdb.set_trace()
-        return self.expected_passive_damage_to_character(character).damage * kill_trajectory.swings_to_kill
-
-    def death_damage_over_encounter(self, character):
-        return self.expected_death_damage_to_character(character).damage
-
-    def excepted_hp_loss_in_melee(self, character, kill_trajectory):
-        excepted_hp_loss = self.melee_dps(character) * kill_trajectory.time_to_kill + self.passive_damage_over_encounter(character, kill_trajectory) + self.death_damage_over_encounter(character)
-        return excepted_hp_loss
-
-    class FightOutcome(NamedTuple):
-        exepected_hp_loss: float
-        kill_trajectory: tuple
-
-    def fight_outcome(self, character):
-        kill_trajectory = character.average_time_to_kill_monster_in_melee(self)
-        excepted_hp_loss = self.excepted_hp_loss_in_melee(character, kill_trajectory)
-        #print(self.name, kill_trajectory)
-        return self.FightOutcome(excepted_hp_loss, kill_trajectory)
-
-    def dangerous_to_player(self, character, time, latest_monster_flight, hp_fraction_tolerance=0.6):
-        # if we've recently seen a monster of this type flee, let's assume it's not dangerous
-        if latest_monster_flight and (time - latest_monster_flight.time) < 15 and self.name == latest_monster_flight.monster_name:
-            return False
-
-        excepted_hp_loss, kill_trajectory = self.fight_outcome(character)
-
-        if excepted_hp_loss < hp_fraction_tolerance * character.current_hp:
-            return False
-        else:
-            return True
 
     def average_hp(self):
         # know about special things in https://nethackwiki.com/wiki/Hit_points#Monster
@@ -125,14 +134,14 @@ class AttackDamage():
         self.can_miss = can_miss
         self.instrument = instrument
 
-    def expected_damage_to_character(self, character, mon_level):
+    def expected_damage_to_character(self, character, mon_level, mon_speed=None):
         reflected = character.has_intrinsic(constants.Intrinsics.reflection) and (self.instrument == 'gaze' or self.instrument == 'breath')
         if reflected:
             return threat.Threat(0, 0)
         resisted = character.resists(self.damage_type)
-        return self.expected_damage(mon_level, character.AC, resisted)
+        return self.expected_damage(mon_level, character.AC, resisted, character.speed(), mon_speed=mon_speed)
 
-    def expected_damage(self, mon_level, AC, resisted):
+    def expected_damage(self, mon_level, AC, resisted, character_speed, mon_speed=None):
         if self.can_miss:
             if AC >= 0:
                 hit_threshold = 10 + mon_level + AC
@@ -155,6 +164,9 @@ class AttackDamage():
             damage = max(self.dice_damage-damage_reduction,0)
 
         damage = damage * chance_to_hit
+        # mon_speed might be None for non-active attacks
+        if mon_speed is not None:
+            damage *= mon_speed / character_speed
         if resisted and self.damage_type & ~threat.resist_but_additional:
             damage = 0
 
@@ -170,11 +182,11 @@ class AttackBundle():
     digit_pattern = re.compile('[0-9]')
     suffix_pattern = re.compile('([^0-9\)\]]+)(?:\)|\])?$')
 
-    def expected_damage_to_character(self, character, level):
+    def expected_damage_to_character(self, character, level, mon_speed=None):
         cum_damage = 0
         damage_types = threat.ThreatTypes.NO_SPECIAL
         for attack in self.attack_damages:
-            damage, damage_type = attack.expected_damage_to_character(character, level)
+            damage, damage_type = attack.expected_damage_to_character(character, level, mon_speed=mon_speed)
             cum_damage += damage
             damage_types |= damage_type
         return threat.Threat(cum_damage, damage_types)
@@ -214,6 +226,9 @@ class AttackBundle():
 
             if attack_does_physical_damage:
                 dice_damage = num_dice * (num_sides + 1)/2
+
+                if instrument == 'weapon':
+                    dice_damage += 4.5 # roughly approximate weapon damage as +1d8
             else:
                 dice_damage = 0
 

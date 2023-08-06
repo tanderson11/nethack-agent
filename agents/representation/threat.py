@@ -66,17 +66,17 @@ class ThreatLevels(enum.Enum):
     deadly = ThreatTypes.DISINTEGRATE | ThreatTypes.WRAP | ThreatTypes.STONE | ThreatTypes.SLIME | ThreatTypes.DISEASE | ThreatTypes.RIDER
     really_bad = ThreatTypes.PARALYSIS | ThreatTypes.SLEEP | ThreatTypes.LYCAN | ThreatTypes.D_INT
     mid_bad = ThreatTypes.STUN | ThreatTypes.SPELL | ThreatTypes.DIGEST
-    little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND | ThreatTypes.STICK | ThreatTypes.DRAIN
-    not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX
+    little_bad = ThreatTypes.SHOCK | ThreatTypes.FIRE | ThreatTypes.COLD | ThreatTypes.POISON | ThreatTypes.SLOW | ThreatTypes.BLIND  | ThreatTypes.DRAIN
+    not_bad = ThreatTypes.INTRINSIC | ThreatTypes.ENERGY | ThreatTypes.TELEPORT | ThreatTypes.D_DEX | ThreatTypes.STICK
     degrading = ThreatTypes.DISENCHANT | ThreatTypes.RUST | ThreatTypes.ROT
     annoying = ThreatTypes.STEAL | ThreatTypes.SEDUCE | ThreatTypes.HALLU | ThreatTypes.CONF | ThreatTypes.PRICK
     mild_annoying = ThreatTypes.GOLD
 
-def character_threat(threat, character):
-    damage_threat, threat_types = threat
+def evaluate_threat_type(threat, character):
+    _, threat_types = threat
     # remove threats that we resist
     for intrinsic, threat in resist_to_threat.items():
-        if character.has_intrinsic(intrinsic.value):
+        if character.has_intrinsic(intrinsic):
             threat_types &= ~threat
 
     present_levels = []
@@ -85,22 +85,30 @@ def character_threat(threat, character):
             present_levels.append(level)
     present_levels = set(present_levels)
 
-    if damage_threat >= character.hp * 0.5:
-        return CharacterThreat.deadly
-
     if ThreatLevels.deadly in present_levels or ThreatLevels.really_bad in present_levels:
         return CharacterThreat.deadly
 
-    if damage_threat >= character.hp * 0.2:
+    if ThreatLevels.mid_bad in present_levels or ThreatLevels.annoying in present_levels or ThreatLevels.little_bad in present_levels or ThreatLevels.degrading in present_levels:
         return CharacterThreat.high
 
-    if ThreatLevels.mid_bad in present_levels or ThreatLevels.annoying in present_levels or ThreatLevels.little_bad in present_levels or ThreatLevels.degrading in present_levels:
+    return CharacterThreat.safe
+
+def evaluate_threat_damage(threat, character):
+    damage_threat, _ = threat
+
+    if damage_threat >= character.current_hp * 0.5:
+        return CharacterThreat.deadly
+
+    if damage_threat >= character.current_hp * 0.15:
         return CharacterThreat.high
 
     if damage_threat > 0:
         return CharacterThreat.low
 
     return CharacterThreat.safe
+
+def evaluate_threat(threat, character):
+    return (evaluate_threat_damage(threat,character), evaluate_threat_type(threat,character))
 
 threat_to_resist = {
     ThreatTypes.DISINTEGRATE: Intrinsics.disint_resistance,

@@ -46,7 +46,7 @@ new_advisors = [
         TameCarnivores(),
         BlindFearfulWithCamera(),
         EngraveElberethAdvisor(oracle_consultation=lambda o: o.very_low_hp),
-        MeleeRangedAttackIfPreferred(),
+        #MeleeRangedAttackIfPreferred(),
         MeleeHoldingMonster(),
         MeleePriorityTargets(),
     ]),
@@ -66,12 +66,8 @@ new_advisors = [
     #EngraveElberethStuckByMonster(),
     UnsafeMeleeAttackAdvisor(oracle_consultation=lambda o: o.adjacent_monsters > 0 and not o.have_moves),
     # HUNT WEAK
-    HuntNearestWeakEnemyAdvisor(),
-    # DISTANT THREAT
-    RandomCompositeAdvisor(oracle_consultation=lambda o: o.am_threatened, advisors={
-        RandomMoveAdvisor(square_threat_tolerance=0.): 95,
-        HuntNearestEnemyAdvisor(): 5, # any enemy, not weak, thus we prefer to let them come to us if we can by doing evasive moves
-    }),
+    HuntNearestEnemyWeWouldFight(),
+    #HuntDistantThreat(),
     ConditionWaitAdvisor(oracle_consultation=lambda o: o.in_shop and o.blind),
     ConditionWaitAdvisor(oracle_consultation=lambda o: o.nuisance_condition and not (o.am_threatened or o.recently_damaged)),
     ###### OUT OF DANGER ###### ()

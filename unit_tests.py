@@ -660,6 +660,7 @@ class TestThreat(NeighborhoodBuildingTest):
         c.set_class_skills()
         c.innate_intrinsics = intrinsics
         c.AC = AC
+        c.current_hp = 50
         return c
 
     def get_spoiler(self, name):
@@ -1314,7 +1315,7 @@ class TestExtrinsics(unittest.TestCase):
 
         global_identity_map = gd.GlobalIdentityMap()
         character.inventory = make_inventory(global_identity_map, [i for i,_ in inventory])
-        extrinsics = character.inventory.extrinsics()
+        extrinsics = character.inventory.extrinsics
 
         expected_extrinsics = constants.Intrinsics.NONE
         for _,extrinsic in inventory:
