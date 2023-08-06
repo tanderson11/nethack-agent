@@ -194,7 +194,8 @@ class SpecialItemPickupResponse(MenuResponse):
         self.items = items
 
     def value(self, message_obj, expect_getline=True):
-        return ord(' ')
+        return None
+        #return ord(' ')
 
     def action_message(self, message_obj):
         try:
@@ -210,8 +211,12 @@ class SpecialItemPickupResponse(MenuResponse):
                     break
             #import pdb; pdb.set_trace()
             real_version.identity.give_name(name)
+            print(f"Gave name to specially found item: {real_version.identity}, {name}")
         val = self.value(message_obj)
         return val
+
+    def __repr__(self):
+        return(f"SpecialItemPickupResponse: {self.items}")
 
 class WishMoreMenuResponse(MenuResponse):
     def __init__(self, character):
