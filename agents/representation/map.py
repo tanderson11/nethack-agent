@@ -421,7 +421,8 @@ class DLevelMap():
         if self.special_level is None:
             self.special_level = self.special_level_searcher.match_level(self, player_location)
             if self.dcoord.branch == Branches.Sokoban and environment.env.debug:
-                import pdb; pdb.set_trace()
+                pass
+                #import pdb; pdb.set_trace()
             if self.special_level is not None:
                 self.diggable_floor = self.special_level.diggable_floor
                 self.teleportable = self.special_level.teleportable

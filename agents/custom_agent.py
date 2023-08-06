@@ -14,7 +14,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import agents.advice.advisors as advs
-from agents.advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+from agents.advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, ReplayMenuAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
 import agents.advice.advisor_sets as advisor_sets
 
 import agents.advice.menuplan as menuplan
@@ -478,6 +478,7 @@ class RunState():
             if self.replay_index > 0 and self.replay_index == len(self.replay_log):
                 self.stall_detection_on=True
                 print("FINISHED REPLAY")
+                if environment.env.debug: import pdb; pdb.set_trace()
                 self.replay_index += 1
                 if self.respond_to_issue:
                     self.step_hook = self.step_count + 40
@@ -487,7 +488,9 @@ class RunState():
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
         self.replay_index += 1
-        return ReplayAdvice(action=action, is_menu_action=menu_action)
+        if menu_action:
+            return ReplayMenuAdvice(action=action)
+        return ReplayAdvice(action=action)
 
     attribute_pattern_1 = re.compile("You are an? [A-Z][a-z]+, a level 1 (female|male)? ?([a-z]+) ([A-Z][a-z]+).")
     attribute_pattern_2 = re.compile("You are (neutral|lawful|chaotic), on a mission for (.+?)  ")
@@ -783,8 +786,10 @@ class RunState():
         messages = []
         for m,a in zip(reversed(self.message_log), reversed(self.advice_log)):
             messages.append(m)
-            hit_space = (isinstance(a, advs.MenuAdvice) and a.keypress == nethack.actions.TextCharacters.SPACE)
-            replayed_space = (isinstance(a, advs.ReplayAdvice) and a.is_menu_action and a.action == nethack.actions.TextCharacters.SPACE)
+            hit_space = False
+            replayed_space = (isinstance(a, advs.ReplayMenuAdvice) and a.action == nethack.actions.TextCharacters.SPACE)
+            if not replayed_space:
+                hit_space = (isinstance(a, advs.MenuAdvice) and a.keypress == nethack.actions.TextCharacters.SPACE)
             if not (hit_space or replayed_space):
                 break
         out_message = ""
@@ -877,10 +882,7 @@ class RunState():
 
         # TODO lots of compatiblility cruft here
 
-        if isinstance(advice, MenuAdvice):
-            return
-
-        if isinstance(advice, ReplayAdvice) and advice.is_menu_action:
+        if isinstance(advice, MenuAdvice): # catches ReplayMenuAdvice as well
             return
 
         self.action_log.append(advice.action)

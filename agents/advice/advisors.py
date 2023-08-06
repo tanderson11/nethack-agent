@@ -313,9 +313,10 @@ class MenuAdvice(Advice):
 @dataclass
 class ReplayAdvice(Advice):
     action: int
-    is_menu_action: bool
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
+class ReplayMenuAdvice(ReplayAdvice, MenuAdvice):
+    pass
 
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
     def advice(self, rng, run_state, character, oracle):
