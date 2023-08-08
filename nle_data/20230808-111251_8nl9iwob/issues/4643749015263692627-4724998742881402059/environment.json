@@ -1,1 +1,0 @@
-{"num_environments": 1, "num_runners": 1, "num_episodes": 32, "debug": true, "print_seed": true, "log_runs": true, "log_video": true, "target_roles": ["Valkyrie"], "wizard": true, "use_seed_whitelist": false, "max_score": 10000000}
