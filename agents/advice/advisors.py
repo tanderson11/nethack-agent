@@ -281,6 +281,7 @@ class AttackAdvice(ActionAdvice):
 
 @dataclass
 class SokobanAdvice(ActionAdvice):
+    sokoban_move_index: int = 0
     sokoban_move: tuple = None
 
 @dataclass
@@ -316,6 +317,10 @@ class ReplayAdvice(Advice):
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
 class ReplayMenuAdvice(ReplayAdvice, MenuAdvice):
+    pass
+
+@dataclass
+class ReplaySokobanAdvice(ReplayAdvice, SokobanAdvice):
     pass
 
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
@@ -2309,7 +2314,7 @@ class SolveSokoban(Advisor):
         position_in_level = special_level.offset_in_level(run_state.neighborhood.absolute_player_location)
         #print(position_in_level)
         if position_in_level == sokoban_move.start_square:
-            return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move)
+            return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move, sokoban_move_index=level_map.sokoban_move_index)
 
         return None
 
