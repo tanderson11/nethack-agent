@@ -309,6 +309,10 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
         threat: float
 
     def path_to_targets(self, target_mask, target_monsters=False, be_prudent=True):
+        if target_monsters:
+            # we only need to be adjacent to monsters to attack them
+            target_mask = map.FloodMap.flood_one_level_from_mask(target_mask)
+
         if be_prudent:
             target_mask = target_mask & ~self.imprudent
         if not target_mask.any():
@@ -317,10 +321,6 @@ class Neighborhood(): # goal: mediates all access to glyphs by advisors
             walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster & ~self.imprudent
         else:
             walkable_mesh = self.extended_walkable & ~self.extended_boulders & ~self.extended_is_monster
-
-        if target_monsters:
-            # we only need to be adjacent to monsters to attack them
-            target_mask = map.FloodMap.flood_one_level_from_mask(target_mask)
 
         pathfinder = Pathfinder(
             walkable_mesh=walkable_mesh,
