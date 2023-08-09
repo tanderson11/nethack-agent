@@ -900,8 +900,6 @@ class RunState():
             with open(self.replay_log_path, 'a') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
                 listening_identity_numeral = self.active_menu_plan.listening_item.identity.numeral if self.active_menu_plan and self.active_menu_plan.listening_item and self.active_menu_plan.listening_item.identity else ''
-                if isinstance(self.active_menu_plan.listening_item, inv.Wand):
-                    import pdb; pdb.set_trace()
                 writer.writerow({
                     'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),
                     'run_number': self.replay_run_number,

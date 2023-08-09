@@ -2025,6 +2025,7 @@ class PathfindInvisibleMonstersSokoban(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
+        #import pdb; pdb.set_trace()
         if run_state.neighborhood.level_map.solved:
             return None
         return run_state.neighborhood.path_invisible_monster()
