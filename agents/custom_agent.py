@@ -14,7 +14,7 @@ from nle import nethack
 from agents.base import BatchedAgent
 
 import agents.advice.advisors as advs
-from agents.advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor
+from agents.advice.advisors import Advice, ActionAdvice, AttackAdvice, ConditionWaitAdvisor, MenuAdvice, ReplayAdvice, ReplayMenuAdvice, SearchDeadEndAdvisor, StethoscopeAdvice, WaitForHPAdvisor, SokobanAdvice, ReplaySokobanAdvice
 import agents.advice.advisor_sets as advisor_sets
 
 import agents.advice.menuplan as menuplan
@@ -279,7 +279,7 @@ class RunState():
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
-    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action']
+    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action', 'listening_numeral', 'sokoban_action', 'sokoban_move_index']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -430,7 +430,7 @@ class RunState():
 
         if environment.env.log_video:
             self.video_deque = collections.deque()
-            assert environment.env.log_runs, "video log enabled by logging disabled"
+            assert environment.env.log_runs, "video log enabled but logging disabled"
         else:
             self.video_deque = None
 
@@ -478,6 +478,7 @@ class RunState():
             if self.replay_index > 0 and self.replay_index == len(self.replay_log):
                 self.stall_detection_on=True
                 print("FINISHED REPLAY")
+                if environment.env.debug: import pdb; pdb.set_trace()
                 self.replay_index += 1
                 if self.respond_to_issue:
                     self.step_hook = self.step_count + 40
@@ -486,8 +487,23 @@ class RunState():
         self.is_replaying = True
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
+        listening_numeral = self.replay_log[self.replay_index]['listening_numeral']
+        listening_numeral = int(listening_numeral) if listening_numeral != '' else None
+        sokoban_action = self.replay_log[self.replay_index]['sokoban_action'] == 'True'
+        if sokoban_action:
+            sokoban_move_index = int(self.replay_log[self.replay_index]['sokoban_move_index'])
         self.replay_index += 1
-        return ReplayAdvice(action=action, is_menu_action=menu_action)
+        if menu_action:
+            fake_menuplan = menuplan.ListeningMockMenu(listening_numeral)
+            self.active_menu_plan = fake_menuplan
+            return ReplayMenuAdvice(action=action)
+        if sokoban_action:
+            #import pdb; pdb.set_trace()
+            lmap = self.dmap.dlevels[self.current_square.dcoord]
+            sokoban_move = lmap.special_level.sokoban_solution[lmap.sokoban_move_index]
+            return ReplaySokobanAdvice(action=action, sokoban_move=sokoban_move, sokoban_move_index=sokoban_move_index, from_advisor=None)
+
+        return ReplayAdvice(action=action)
 
     attribute_pattern_1 = re.compile("You are an? [A-Z][a-z]+, a level 1 (female|male)? ?([a-z]+) ([A-Z][a-z]+).")
     attribute_pattern_2 = re.compile("You are (neutral|lawful|chaotic), on a mission for (.+?)  ")
@@ -594,7 +610,7 @@ class RunState():
                 self.time_hung += 1
         else:
             self.time_hung = 0
-        if self.time_hung > 100:
+        if self.time_hung > 200:
             if environment.env.debug: pdb.set_trace()
             pass
         self.time = new_time
@@ -783,8 +799,10 @@ class RunState():
         messages = []
         for m,a in zip(reversed(self.message_log), reversed(self.advice_log)):
             messages.append(m)
-            hit_space = (isinstance(a, advs.MenuAdvice) and a.keypress == nethack.actions.TextCharacters.SPACE)
-            replayed_space = (isinstance(a, advs.ReplayAdvice) and a.is_menu_action and a.action == nethack.actions.TextCharacters.SPACE)
+            hit_space = False
+            replayed_space = (isinstance(a, advs.ReplayMenuAdvice) and a.action == nethack.actions.TextCharacters.SPACE)
+            if not replayed_space:
+                hit_space = (isinstance(a, advs.MenuAdvice) and a.keypress == nethack.actions.TextCharacters.SPACE)
             if not (hit_space or replayed_space):
                 break
         out_message = ""
@@ -796,6 +814,8 @@ class RunState():
         self.message_log.append(message.message)
         self.score_against_message_log.append(self.reward)
 
+        lmap = self.dmap.dlevels[self.current_square.dcoord]
+
         item_on_square = None
         if self.character is not None:
             self.character.listen_for_intrinsics(message.message)
@@ -805,13 +825,23 @@ class RunState():
             self.current_square.item_on_square = item_on_square
 
         if item_on_square is not None:
-            if self.neighborhood is not None and self.neighborhood.level_map is not None:
-                self.neighborhood.level_map.lootable_squares_map[self.current_square.location] = True
+            lmap.lootable_squares_map[self.current_square.location] = True
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
-            name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
-            if name_action is not None:
-                self.queued_name_action = name_action
+            listening_item = self.active_menu_plan.listening_item
+            if isinstance(listening_item, gd.IdentityLike) or isinstance(listening_item, int):
+                if isinstance(listening_item, gd.IdentityLike):
+                    listening_identity = listening_item
+                elif isinstance(listening_item, int):
+                    gim = self.character.global_identity_map
+                    listening_identity = gim.identity_by_numeral[listening_item]
+                listening_identity.process_message(message, self.last_non_menu_action)
+            elif isinstance(listening_item, inv.Item):
+                name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+                if name_action is not None:
+                    self.queued_name_action = name_action
+            else:
+                raise TypeError("invalid type for message listener. Should be item, numeral, or identity")
 
         if self.character is not None:
             dropped = inv.ItemParser.listen_for_dropped_item(self.character.global_identity_map, message.message)
@@ -820,20 +850,21 @@ class RunState():
             inv.ItemParser.listen_for_price_offer(self.character, message.message, last_dropped=self.last_dropped_item)
 
         if len(self.advice_log) > 0 and isinstance(self.advice_log[-1], advs.SokobanAdvice):
-            absolute_player_end = self.advice_log[-1].sokoban_move.end_square + self.neighborhood.level_map.special_level.initial_offset
-            absolute_boulder_end = self.advice_log[-1].sokoban_move.boulder_end + self.neighborhood.level_map.special_level.initial_offset
+            lmap = self.dmap.dlevels[self.current_square.dcoord]
+            absolute_player_end = self.advice_log[-1].sokoban_move.end_square + lmap.special_level.initial_offset
+            absolute_boulder_end = self.advice_log[-1].sokoban_move.boulder_end + lmap.special_level.initial_offset
             if absolute_player_end == physics.Square(*self.current_square.location):
-                self.neighborhood.level_map.sokoban_move_index += 1
+                lmap.sokoban_move_index += 1
                 #import pdb;pdb.set_trace()
-                self.neighborhood.level_map.sokoban_boulders[absolute_player_end] = False
+                lmap.sokoban_boulders[absolute_player_end] = False
                 if not self.advice_log[-1].sokoban_move.expect_plug:
-                    self.neighborhood.level_map.sokoban_boulders[absolute_boulder_end] = True
+                    lmap.sokoban_boulders[absolute_boulder_end] = True
 
-                if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message) and environment.env.debug:
+                if self.advice_log[-1].sokoban_move.expect_plug and not ("The boulder falls into and plugs a hole" in message.message or "The boulder fills a pit" in message.message or "Kerplunk! You no longer feel the boulder") and environment.env.debug:
                     import pdb; pdb.set_trace()
-                if self.neighborhood.level_map.sokoban_move_index == len(self.neighborhood.level_map.special_level.sokoban_solution):
+                if lmap.sokoban_move_index == len(lmap.special_level.sokoban_solution):
                     #import pdb; pdb.set_trace()
-                    self.neighborhood.level_map.solved = True
+                    lmap.solved = True
             else:
                 if environment.env.debug: import pdb; pdb.set_trace()
                 pass
@@ -868,19 +899,25 @@ class RunState():
         if self.replay_log_path and not isinstance(advice, ReplayAdvice):
             with open(self.replay_log_path, 'a') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
+                if self.active_menu_plan and self.active_menu_plan.listening_item and  self.active_menu_plan and self.active_menu_plan.listening_item.identity and isinstance(self.active_menu_plan.listening_item.identity, gd.AmbiguousIdentity):
+                    if environment.env.debug: import pdb; pdb.set_trace()
+                    listening_identity_numeral = ''
+                else:
+                    listening_identity_numeral = self.active_menu_plan.listening_item.identity.numeral if self.active_menu_plan and self.active_menu_plan.listening_item and self.active_menu_plan.listening_item.identity else ''
+
                 writer.writerow({
                     'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),
                     'run_number': self.replay_run_number,
                     'dcoord': str(astuple(self.current_square.dcoord)),
                     'menu_action': isinstance(advice, MenuAdvice),
+                    'listening_numeral': listening_identity_numeral,
+                    'sokoban_action': isinstance(advice, SokobanAdvice),
+                    'sokoban_move_index': advice.sokoban_move_index if isinstance(advice, SokobanAdvice) else '',
                 })
 
         # TODO lots of compatiblility cruft here
 
-        if isinstance(advice, MenuAdvice):
-            return
-
-        if isinstance(advice, ReplayAdvice) and advice.is_menu_action:
+        if isinstance(advice, MenuAdvice): # catches ReplayMenuAdvice as well
             return
 
         self.action_log.append(advice.action)
@@ -954,7 +991,7 @@ class CustomAgent():
             level_map = run_state.dmap.make_level_map(dcoord, time, observation['glyphs'], player_location)
 
         if run_state.character:
-            run_state.dmap.update_target_dcoords(run_state.character)
+            run_state.dmap.update_target_dcoords(run_state.character, dcoord)
 
         if not run_state.character and run_state.step_count > 2:
             # The first action should always be to look at attributes
@@ -1212,7 +1249,7 @@ class CustomAgent():
             return replay_advice
 
         menu_plan_retval = None
-        if message:
+        if message is not None:
             menu_plan_retval = run_state.run_menu_plan(message)
             ### GET MENU_PLAN RETVAL ###
 

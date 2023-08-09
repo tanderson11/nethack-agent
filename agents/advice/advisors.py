@@ -281,6 +281,7 @@ class AttackAdvice(ActionAdvice):
 
 @dataclass
 class SokobanAdvice(ActionAdvice):
+    sokoban_move_index: int = 0
     sokoban_move: tuple = None
 
 @dataclass
@@ -313,9 +314,14 @@ class MenuAdvice(Advice):
 @dataclass
 class ReplayAdvice(Advice):
     action: int
-    is_menu_action: bool
     new_menu_plan: menuplan.MenuPlan = None # Advising to set this as the new one
 
+class ReplayMenuAdvice(ReplayAdvice, MenuAdvice):
+    pass
+
+@dataclass
+class ReplaySokobanAdvice(ReplayAdvice, SokobanAdvice):
+    pass
 
 class BackgroundActionsAdvisor(Advisor): # dummy advisor to hold background menu plans
     def advice(self, rng, run_state, character, oracle):
@@ -363,6 +369,8 @@ class ConditionWaitAdvisor(WaitAdvisor):
 
 class WaitForHPAdvisor(WaitAdvisor):
     def advice(self, rng, run_state, character, oracle):
+        if character.current_hp == character.max_hp:
+            return None
         return super().advice(rng, run_state, character, oracle)
 
 class SearchWithStethoscope(Advisor):
@@ -2017,6 +2025,7 @@ class PathfindInvisibleMonstersSokoban(PathAdvisor):
     def find_path(self, rng, run_state, character, oracle):
         if run_state.neighborhood.level_map.dcoord.branch != map.Branches.Sokoban:
             return None
+        #import pdb; pdb.set_trace()
         if run_state.neighborhood.level_map.solved:
             return None
         return run_state.neighborhood.path_invisible_monster()
@@ -2306,7 +2315,7 @@ class SolveSokoban(Advisor):
         position_in_level = special_level.offset_in_level(run_state.neighborhood.absolute_player_location)
         #print(position_in_level)
         if position_in_level == sokoban_move.start_square:
-            return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move)
+            return SokobanAdvice(self, sokoban_move.action, sokoban_move=sokoban_move, sokoban_move_index=level_map.sokoban_move_index)
 
         return None
 

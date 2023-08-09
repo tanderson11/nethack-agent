@@ -900,6 +900,9 @@ class IdentityLike():
     def extrinsics_by_colname(self, column):
         extrinsics = constants.Intrinsics.NONE
         values = self.find_values(column)
+        if isinstance(values, list) and environment.env.debug:
+            import pdb; pdb.set_trace()
+
         if not values or pd.isna(values):
             return extrinsics
 
@@ -940,15 +943,21 @@ class AmbiguousIdentity(IdentityLike):
 
         return super().restrict_by_base_prices(base_prices, method)
 
+    def process_message(self, message_obj, action):
+        if environment.env.debug: import pdb; pdb.set_trace()
+        return None
+
 class NumeralIdentity(IdentityLike):
     '''
     Mediates access to the underlying dataframe of spoilers by intelligently handling shuffled glyphs.
 
     Listens to messages to gain knowledge about the identity of the object.
     '''
-    def __init__(self, idx, shuffle_class=None):
+    def __init__(self, idx, numeral, shuffle_class=None):
         idx = pd.Index(idx, dtype=int).copy()
         super().__init__(idx)
+
+        self.numeral = numeral
 
         self.shuffle_class_idx = shuffle_class
         self.is_shuffled = shuffle_class is not None
@@ -964,8 +973,9 @@ class AmbiguousScrollIdentity(AmbiguousIdentity, ScrollLike):
     pass
 
 class ScrollIdentity(ScrollLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        super().__init__(idx, shuffle_class=shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
+        ScrollLike.__init__(self)
         self.listened_actions = {}
 
     def process_message(self, message_obj, action):
@@ -1041,8 +1051,8 @@ class AmbiguousFoodIdentity(FoodLike, AmbiguousIdentity):
         FoodLike.__init__(self, nutrition, taming_type)
 
 class FoodIdentity(FoodLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
         try:
             self.nutrition = int(self.find_values('NUTRITION'))
         except Exception:
@@ -1077,8 +1087,8 @@ class AmbiguousToolIdentity(ToolLike, AmbiguousIdentity):
         ToolLike.__init__(self, self.find_values('TYPE'))
 
 class ToolIdentity(ToolLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class)
         ToolLike.__init__(self, self.find_values('TYPE'))
 
 ### Gems
@@ -1105,8 +1115,8 @@ class AmbiguousGemIdentity(GemLike, AmbiguousIdentity):
         GemLike.__init__(self, is_ammo, ammo_type)
 
 class GemIdentity(GemLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
         is_ammo = False
         ammo_type = None
@@ -1126,8 +1136,8 @@ class RockLike():
         self.ammo_type = "flint stone"
 
 class RockIdentity(RockLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class)
         RockLike.__init__(self)
 
 class CoinIdentity(NumeralIdentity):
@@ -1220,8 +1230,8 @@ class AmbiguousArmorIdentity(ArmorLike, AmbiguousIdentity):
         ArmorLike.__init__(self, slot)
 
 class ArmorIdentity(ArmorLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
         slot = self.find_values('SLOT')
         ArmorLike.__init__(self, slot)
 
@@ -1265,8 +1275,8 @@ class AmbiguousWeaponIdentity(WeaponLike, AmbiguousIdentity):
         WeaponLike.__init__(self)
 
 class WeaponIdentity(WeaponLike, NumeralIdentity):
-    def __init__(self, idx, shuffle_class=None):
-        NumeralIdentity.__init__(self, idx, shuffle_class)
+    def __init__(self, idx, numeral, shuffle_class=None):
+        NumeralIdentity.__init__(self, idx, numeral, shuffle_class)
         WeaponLike.__init__(self)
 
     def process_message(self, message_obj, action):
@@ -1328,9 +1338,9 @@ class ArtifactWeaponIdentity(ArtifactIdentity, WeaponIdentity):
         damage_mod: int = 0
         damage_mult: int = 1
 
-    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+    def __init__(self, idx, numeral, artifact_name, artifact_row, shuffle_class=None):
         ArtifactIdentity.__init__(self, artifact_name, artifact_row)
-        WeaponIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        WeaponIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
         bonus = artifact_row['DAMAGE BONUS']
         if pd.isna(bonus): bonus = 0
@@ -1342,27 +1352,27 @@ class ArtifactWeaponIdentity(ArtifactIdentity, WeaponIdentity):
 
 class ArtifactArmorIdentity(ArtifactIdentity, ArmorIdentity):
     associated_glyph_class = ArmorGlyph
-    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+    def __init__(self, idx, numeral, artifact_name, artifact_row, shuffle_class=None):
         ArtifactIdentity.__init__(self, artifact_name, artifact_row)
-        ArmorIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        ArmorIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
 class ArtifactAmuletIdentity(ArtifactIdentity, AmuletIdentity):
     associated_glyph_class = AmuletGlyph
-    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+    def __init__(self, idx, numeral, artifact_name, artifact_row, shuffle_class=None):
         ArtifactIdentity.__init__(self, artifact_name, artifact_row)
-        AmuletIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        AmuletIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
 class ArtifactGemIdentity(ArtifactIdentity, GemIdentity):
     associated_glyph_class = GemGlyph
-    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+    def __init__(self, idx, numeral, artifact_name, artifact_row, shuffle_class=None):
         ArtifactIdentity.__init__(self, artifact_name, artifact_row)
-        GemIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        GemIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
 class ArtifactToolIdentity(ArtifactIdentity, ToolIdentity):
     associated_glyph_class = ToolGlyph
-    def __init__(self, idx, artifact_name, artifact_row, shuffle_class=None):
+    def __init__(self, idx, numeral, artifact_name, artifact_row, shuffle_class=None):
         ArtifactIdentity.__init__(self, artifact_name, artifact_row)
-        ToolIdentity.__init__(self, idx, shuffle_class=shuffle_class)
+        ToolIdentity.__init__(self, idx, numeral, shuffle_class=shuffle_class)
 
 class GlobalIdentityMap():
     identity_by_glyph_class = {
@@ -1465,7 +1475,14 @@ class GlobalIdentityMap():
             #base_idx = self.identity_by_name[(glyph_class, row["BASE ITEM"])].idx
             artifact_name = row["ARTIFACT NAME"]
 
-            artifact_identity = artifact_identity_class([row["IDX"]], artifact_name, row)
+            # find numeral or report None for Mitre/Eye
+            #import pdb; pdb.set_trace()
+            numeral = self.identity_by_name.get(row["BASE ITEM"], None)
+            idx = [row["IDX"]]
+            if numeral is not None:
+                numeral = numeral.idx
+
+            artifact_identity = artifact_identity_class(idx, numeral, artifact_name, row)
             self.artifact_identity_by_name[artifact_name] = artifact_identity
             self.generated_artifacts[artifact_name] = False
             self.artifact_identity_by_appearance_name[row['ARTIFACT APPEARANCE']] = artifact_identity
@@ -1524,7 +1541,8 @@ class GlobalIdentityMap():
                 idx = same_shuffle_class.index[same_shuffle_class]
                 shuffle_class_idx = same_shuffle_class.index[same_shuffle_class]
 
-            identity = identity_class(idx, shuffle_class=shuffle_class_idx)
+            #print(identity_class)
+            identity = identity_class(idx, numeral, shuffle_class=shuffle_class_idx)
 
         self.identity_by_numeral[numeral] = identity
 
