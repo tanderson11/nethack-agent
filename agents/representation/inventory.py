@@ -822,7 +822,6 @@ class ItemParser():
                 global_identity_map.associate_identity_and_name(identity, name)
 
         item_class = cls.item_class_by_glyph_class.get(glyph_class, Item)
-
         return item_class(identity, match_components, inventory_letter=inventory_letter)
 
     @classmethod

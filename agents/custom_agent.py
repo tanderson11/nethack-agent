@@ -279,7 +279,7 @@ class RunState():
         return "||".join([nethack.ACTIONS[utilities.ACTION_LOOKUP[num]].name for num in self.action_log[(-1 * total):]])
 
     LOG_HEADER = ['race', 'class', 'level', 'exp points', 'depth', 'branch', 'branch_level', 'time', 'hp', 'max_hp', 'AC', 'encumberance', 'hunger', 'message_log', 'action_log', 'wielded_weapon', 'score', 'last_pray_time', 'last_pray_reason', 'scummed', 'ascended', 'step_count', 'l1_advised_step_count', 'l1_need_downstairs_step_count', 'search_efficiency', 'total damage', 'adjacent monster turns', 'died in shop']
-    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action', 'sokoban_action', 'sokoban_move_index']
+    REPLAY_HEADER = ['action', 'run_number', 'dcoord', 'menu_action', 'listening_numeral', 'sokoban_action', 'sokoban_move_index']
 
     def log_final_state(self, final_reward, ascended):
         # self.blstats is intentionally one turn stale, i.e. wasn't updated after done=True was observed
@@ -430,7 +430,7 @@ class RunState():
 
         if environment.env.log_video:
             self.video_deque = collections.deque()
-            assert environment.env.log_runs, "video log enabled by logging disabled"
+            assert environment.env.log_runs, "video log enabled but logging disabled"
         else:
             self.video_deque = None
 
@@ -475,7 +475,7 @@ class RunState():
 
     def replay_advice(self):
         if self.replay_index >= len(self.replay_log):
-            if self.replay_index>0 and self.replay_index == len(self.replay_log)+1:
+            if self.replay_index > 0 and self.replay_index == len(self.replay_log):
                 self.stall_detection_on=True
                 print("FINISHED REPLAY")
                 if environment.env.debug: import pdb; pdb.set_trace()
@@ -824,9 +824,20 @@ class RunState():
             lmap.lootable_squares_map[self.current_square.location] = True
 
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
-            name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
-            if name_action is not None:
-                self.queued_name_action = name_action
+            listening_item = self.active_menu_plan.listening_item
+            if isinstance(listening_item, gd.IdentityLike) or isinstance(listening_item, int):
+                if isinstance(listening_item, int):
+                    listening_identity = listening_item
+                elif isinstance(listening_item, int):
+                    gim = self.character.global_identity_map
+                    listening_identity = gim.identity_by_numeral[listening_item]
+                listening_identity.process_message(message, self.last_non_menu_action)
+            elif isinstance(listening_item, inv.Item):
+                name_action = self.active_menu_plan.listening_item.process_message(message, self.last_non_menu_action)
+                if name_action is not None:
+                    self.queued_name_action = name_action
+            else:
+                raise TypeError("invalid type for message listener. Should be item, numeral, or identity")
 
         if self.character is not None:
             dropped = inv.ItemParser.listen_for_dropped_item(self.character.global_identity_map, message.message)
@@ -884,11 +895,15 @@ class RunState():
         if self.replay_log_path and not isinstance(advice, ReplayAdvice):
             with open(self.replay_log_path, 'a') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
+                listening_identity_numeral = self.active_menu_plan.listening_item.identity.numeral if self.active_menu_plan and self.active_menu_plan.listening_item and self.active_menu_plan.listening_item.identity else ''
+                if listening_identity_numeral != '':
+                    import pdb; pdb.set_trace()
                 writer.writerow({
                     'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),
                     'run_number': self.replay_run_number,
                     'dcoord': str(astuple(self.current_square.dcoord)),
                     'menu_action': isinstance(advice, MenuAdvice),
+                    'listening_numeral': listening_identity_numeral,
                     'sokoban_action': isinstance(advice, SokobanAdvice),
                     'sokoban_move_index': advice.sokoban_move_index if isinstance(advice, SokobanAdvice) else '',
                 })
