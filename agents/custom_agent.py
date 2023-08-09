@@ -487,11 +487,15 @@ class RunState():
         self.is_replaying = True
         action = int(self.replay_log[self.replay_index]['action'])
         menu_action = self.replay_log[self.replay_index]['menu_action'] == 'True'
+        listening_numeral = self.replay_log[self.replay_index]['listening_numeral']
+        listening_numeral = int(listening_numeral) if listening_numeral != '' else None
         sokoban_action = self.replay_log[self.replay_index]['sokoban_action'] == 'True'
         if sokoban_action:
             sokoban_move_index = int(self.replay_log[self.replay_index]['sokoban_move_index'])
         self.replay_index += 1
         if menu_action:
+            fake_menuplan = menuplan.ListeningMockMenu(listening_numeral)
+            self.active_menu_plan = fake_menuplan
             return ReplayMenuAdvice(action=action)
         if sokoban_action:
             #import pdb; pdb.set_trace()
@@ -826,7 +830,7 @@ class RunState():
         if self.active_menu_plan is not None and self.active_menu_plan.listening_item:
             listening_item = self.active_menu_plan.listening_item
             if isinstance(listening_item, gd.IdentityLike) or isinstance(listening_item, int):
-                if isinstance(listening_item, int):
+                if isinstance(listening_item, gd.IdentityLike):
                     listening_identity = listening_item
                 elif isinstance(listening_item, int):
                     gim = self.character.global_identity_map
@@ -896,7 +900,7 @@ class RunState():
             with open(self.replay_log_path, 'a') as log_file:
                 writer = csv.DictWriter(log_file, fieldnames=self.REPLAY_HEADER)
                 listening_identity_numeral = self.active_menu_plan.listening_item.identity.numeral if self.active_menu_plan and self.active_menu_plan.listening_item and self.active_menu_plan.listening_item.identity else ''
-                if listening_identity_numeral != '':
+                if isinstance(self.active_menu_plan.listening_item, inv.Wand):
                     import pdb; pdb.set_trace()
                 writer.writerow({
                     'action': int(advice.keypress) if isinstance(advice, MenuAdvice) else int(advice.action),

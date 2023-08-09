@@ -260,6 +260,14 @@ class ExtendedCommandResponse(PhraseMenuResponse):
                 pdb.set_trace()
             return super().value(message_obj, expect_getline=False)
 
+class ListeningMockMenu():
+    def __init__(self, listening_numeral) -> None:
+        self.listening_item = listening_numeral
+        self.fallback = None
+
+    def interact(self, _):
+        return None
+
 class MenuPlan():
     def __init__(self, name, advisor, menu_responses, fallback=None, interactive_menu=None, listening_item=None):
         self.name = name
