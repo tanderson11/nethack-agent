@@ -1246,7 +1246,7 @@ class CustomAgent():
             return replay_advice
 
         menu_plan_retval = None
-        if message:
+        if message is not None:
             menu_plan_retval = run_state.run_menu_plan(message)
             ### GET MENU_PLAN RETVAL ###
 
