@@ -62,7 +62,7 @@ The following default file structure is in place as provided in the starter kit.
 
 ## Agent
 
-The code for the agent is layed out as follows:
+The code for the agent is laid out as follows:
 
 ```
 .
